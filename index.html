@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1517,18 +1517,26 @@ document.getElementById('btnUturn').addEventListener('click',e=>{ e.preventDefau
 document.getElementById('btnRecenter').addEventListener('click',e=>{ e.preventDefault(); recenterCamera(); });
 document.getElementById('btnGuide').addEventListener('click',e=>{ e.preventDefault(); MAP.guide=!MAP.guide; e.currentTarget.classList.toggle('on',MAP.guide);
   routeMesh.visible = MAP.guide && state.route && !!routePts && routePts.length>1; });   // GUIDE also kills the 3D blue route line immediately
-function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     // held at a dead-end T: pick the way and roll
+function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     // held at a T: turn LEFT/RIGHT onto the cross street
   const b=DRIVE.toN, a=DRIVE.fromN; if(!b) return false;
   const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(hx,hz)||1;
+  const cand=b.adj.filter(e=>e.to!==a); if(!cand.length) return false;
+  const cnt=new Map(); for(const e of cand){ if(e.name) cnt.set(e.name,(cnt.get(e.name)||0)+1); }
+  const legal=cand.filter(e=>!e.wrong);                                        // NEVER turn onto a wrong-way (opposite) carriageway — that was the Gates St → Henry Ave "wrong side" bug
+  const through=legal.filter(e=>e.name && cnt.get(e.name)>=2);                 // the arterial / cross street we're turning ONTO (its legal carriageway) — a divided road with only one legal direction here lands you on that one whichever way you tap
+  const pool=through.length?through : (legal.length?legal:cand);              // fall back to a wrong-way edge only if there is literally no legal option
   let best=null,bd=-1e9;
-  for(const e of b.adj){ if(e.to===a) continue; const dx=e.to.x-b.x,dz=e.to.z-b.z,l=Math.hypot(dx,dz)||1;
+  for(const e of pool){ const dx=e.to.x-b.x,dz=e.to.z-b.z,l=Math.hypot(dx,dz)||1;
     const cross=(hx*dz-hz*dx)/(hl*l), score=dir*cross; if(score>bd){ bd=score; best=e.to; } }
   if(!best) return false;
   DRIVE.fromN=b; DRIVE.toN=best; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return true; }
 function chooseStraight(){ if(!DRIVE.atChoice) return false; const b=DRIVE.toN, a=DRIVE.fromN; if(!b) return false;   // held at a fork: keep going the straightest legal way
-  let best=null,bd=-1e9; for(const e of b.adj){ if(e.to===a) continue; const s=branchForwardness(a,b,e.to)-(e.wrong?2:0); if(s>bd){ bd=s; best=e.to; } }
-  if(!best) return false;
-  DRIVE.fromN=b; DRIVE.toN=best; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return true; }
+  let best=null,bd=-1e9, bestAny=null,ba=-1e9;
+  for(const e of b.adj){ if(e.to===a) continue; const f=branchForwardness(a,b,e.to);
+    if(f>ba){ ba=f; bestAny=e.to; }
+    if(!e.wrong && f>bd){ bd=f; best=e.to; } }                                 // straightest LEGAL branch; only fall back to a wrong-way one if nothing legal exists
+  const pick=best||bestAny; if(!pick) return false;
+  DRIVE.fromN=b; DRIVE.toN=pick; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return true; }
 document.getElementById('btnLeft').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(-1)) pullOut(-1); });
 document.getElementById('btnRight').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(1)) pullOut(1); });
 function setDriveSpeed(v){ DRIVE.speed=Math.max(6,Math.min(70,v)); popup(Math.round(DRIVE.speed*2.237)+' MPH'); }   // world u/s ≈ m/s → mph; cap ~156 mph
@@ -1935,13 +1943,13 @@ function pullOut(dir){ if(!DRIVE.parked) return; const n=DRIVE.stationNode||near
   DRIVE.fromN=n; DRIVE.toN=best; DRIVE.t=0; DRIVE.parked=false; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); }
 function chooseTurn(wx,wz){ const j=nextJunction(), branches=j.node?j.node.adj.filter(e=>e.to!==j.from):[]; if(branches.length<2) return;
   const tx=wx-j.node.x,tz=wz-j.node.z,tl=Math.hypot(tx,tz)||1; let best=null,bd=-2;
-  for(const e of branches){ const dx=e.to.x-j.node.x,dz=e.to.z-j.node.z,l=Math.hypot(dx,dz)||1; const dot=(tx*dx+tz*dz)/(tl*l); if(dot>bd){bd=dot;best=e.to;} }
+  for(const e of branches){ const dx=e.to.x-j.node.x,dz=e.to.z-j.node.z,l=Math.hypot(dx,dz)||1; const dot=(tx*dx+tz*dz)/(tl*l)-(e.wrong?9:0); if(dot>bd){bd=dot;best=e.to;} }   // prefer a legal branch; a wrong-way carriageway only if nothing legal exists
   DRIVE.pending={at:j.node,next:best};
   const hx=j.node.x-j.from.x,hz=j.node.z-j.from.z, dx=best.x-j.node.x,dz=best.z-j.node.z, cross=hx*dz-hz*dx;   // >0 = right on a heading-up map (verify)
   DRIVE.arrow = cross>0?1:-1; DRIVE.arrowT=4; }
 function setHeading(wx,wz){ const n=DRIVE.t<0.5?DRIVE.fromN:DRIVE.toN; if(!n||!n.adj.length) return;   // while stopped: aim the parked truck toward the tapped road (choose your way out)
   const tx=wx-n.x,tz=wz-n.z,tl=Math.hypot(tx,tz)||1; let best=null,bd=-2;
-  for(const e of n.adj){ const dx=e.to.x-n.x,dz=e.to.z-n.z,l=Math.hypot(dx,dz)||1; const dot=(tx*dx+tz*dz)/(tl*l); if(dot>bd){bd=dot;best=e.to;} }
+  for(const e of n.adj){ const dx=e.to.x-n.x,dz=e.to.z-n.z,l=Math.hypot(dx,dz)||1; const dot=(tx*dx+tz*dz)/(tl*l)-(e.wrong?9:0); if(dot>bd){bd=dot;best=e.to;} }   // don't aim out the wrong way down a one-way unless it's the only road
   if(best){ DRIVE.fromN=n; DRIVE.toN=best; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; driveOrient(); } }
 function mapBranchPoint(node,next,name,want){ const cn=canonStreet(name); let a=node,b=next,walk=0,ux=1,uz=0,g=0;
   while(b&&g++<12){ const dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1; ux=dx/l; uz=dz/l;
