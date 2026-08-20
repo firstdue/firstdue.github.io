@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14b";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1374,7 +1374,7 @@ function updateTiltMap(dt){                                                    /
   camera.up.set(0,1,0); camera.fov=CONFIG.render.fov+6; camera.updateProjectionMatrix();
   camera.position.set(truck.x-rfx*back, h+CAMLOOK.pitch*20, truck.z-rfz*back);
   camera.lookAt(truck.x+rfx*ahead, 0, truck.z+rfz*ahead);
-  const tileZ=Math.max(14,Math.min(19,Math.round(17-Math.log2(tz))));         // zoom in → higher tile detail (z18), out → wider (z16)
+  const tileZ=Math.max(15,Math.min(19,Math.round(18-Math.log2(tz))));         // sharper base (z18); zoom out → wider/lower detail
   LIVE3D.update(truck.x, truck.z, tileZ, 340*tz); }
 function toggleRoute(){ state.route=!state.route; document.getElementById('btnRoute').classList.toggle('on',state.route);
   routeMesh.visible=state.route && MAP.guide && !!routePts && routePts.length>1; }
@@ -2044,12 +2044,15 @@ LIVE3D.group.visible=false; scene.add(LIVE3D.group);
 const FLATCITY={ group:new THREE.Group(), built:false }; FLATCITY.group.visible=false; scene.add(FLATCITY.group);
 function buildFlatCity(){ genCityData(); if(FLATCITY.built||!buildData.length) return; FLATCITY.built=true;
   const dummy=new THREE.Object3D(), col=new THREE.Color();
-  const wallPal=[0xf3f2ee,0xeceae4,0xe6e4dc,0xf0eee8,0xe9e7df,0xf1efe9,0xe4e6ea], roofPal=[0xd6d4cd,0xcccabf,0xdad8d0,0xd0cdc4,0xc9ccd0];
+  // base ground plane under the whole city so distant buildings (beyond the live tiles) sit on ground, not floating over the horizon
+  const gw=(WB.maxX-WB.minX)+1600, gd=(WB.maxZ-WB.minZ)+1600, gcx=(WB.minX+WB.maxX)/2, gcz=(WB.minZ+WB.maxZ)/2;
+  const grd=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),new THREE.MeshBasicMaterial({color:0xe7e3d8})); grd.rotation.x=-Math.PI/2; grd.position.set(gcx,-0.06,gcz); grd.renderOrder=-1; FLATCITY.group.add(grd);
+  const wallPal=[0xe4e2da,0xd7d5cc,0xdedcd2,0xcfd2d6,0xe0ded4,0xd2d0c6,0xd9dce0], roofPal=[0xb9b6ad,0xc2bfb5,0xadb0b6,0xc6c3b9,0xb2b5ba];   // more contrast: light-grey walls, distinctly darker roofs
   const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),Math.max(1,buildData.length));
-  buildData.forEach((b,i)=>{ dummy.position.set(b.x,b.h/2,b.z); dummy.scale.set(b.w,b.h,b.d); dummy.rotation.set(0,0,0); dummy.updateMatrix(); bm.setMatrixAt(i,dummy.matrix); bm.setColorAt(i,col.setHex(wallPal[i%wallPal.length])); });
+  buildData.forEach((b,i)=>{ const bh=b.h*1.35+2; dummy.position.set(b.x,bh/2,b.z); dummy.scale.set(b.w,bh,b.d); dummy.rotation.set(0,0,0); dummy.updateMatrix(); bm.setMatrixAt(i,dummy.matrix); bm.setColorAt(i,col.setHex(wallPal[i%wallPal.length])); });
   bm.count=buildData.length; bm.instanceMatrix.needsUpdate=true; if(bm.instanceColor)bm.instanceColor.needsUpdate=true; FLATCITY.group.add(bm);
-  const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),Math.max(1,buildData.length));   // slightly darker roof caps so blocks read as separate from above
-  buildData.forEach((b,i)=>{ dummy.position.set(b.x,b.h+0.14,b.z); dummy.scale.set(b.w*1.02,0.28,b.d*1.02); dummy.rotation.set(0,0,0); dummy.updateMatrix(); caps.setMatrixAt(i,dummy.matrix); caps.setColorAt(i,col.setHex(roofPal[i%roofPal.length])); });
+  const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),Math.max(1,buildData.length));   // darker roof caps → blocks read as separate from the nav angle
+  buildData.forEach((b,i)=>{ const bh=b.h*1.35+2; dummy.position.set(b.x,bh+0.16,b.z); dummy.scale.set(b.w*1.03,0.34,b.d*1.03); dummy.rotation.set(0,0,0); dummy.updateMatrix(); caps.setMatrixAt(i,dummy.matrix); caps.setColorAt(i,col.setHex(roofPal[i%roofPal.length])); });
   caps.count=buildData.length; caps.instanceMatrix.needsUpdate=true; if(caps.instanceColor)caps.instanceColor.needsUpdate=true; FLATCITY.group.add(caps); }
 
 function drawMapView(dt){ try{ const c=MAP.ctx; if(!c) return;
@@ -2335,8 +2338,8 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
   el.innerHTML=h; }
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
 const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD];                 // frame() calls drawMapView (the only view now)
-MAP.on=true; document.body.classList.add('mapmode');
-state.cam=2; { const b=document.getElementById('btnCam'); if(b) b.textContent='\uD83D\uDDFA\uFE0F MAP'; }   // start in 2D map; camera toggles directly between map and chase
+MAP.on=false; document.body.classList.remove('mapmode');
+state.cam=3; LIVE3D.group.visible=true; { const b=document.getElementById('btnCam'); if(b) b.textContent='\uD83E\uDDED TILT'; }   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
 let radioQueue='', radioShown='', radioT=0, lastIdx=-1;
 function radio(m){ radioQueue=m; radioShown=''; radioT=0; }
@@ -2408,7 +2411,7 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
   if(state.running){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
   if(MAP.on){ for(const sp of LBL.pool) sp.visible=false; updateParkedStreetChoices(); drawMapView(dt); }                           // 2D map draws its own labels — park the 3D sprites
-  else if(state.cam===3){ LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
+  else if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
   else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
