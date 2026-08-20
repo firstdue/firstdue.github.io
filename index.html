@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v13w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v13x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1349,12 +1349,26 @@ document.getElementById('btnRoute').addEventListener('click',toggleRoute);
 document.getElementById('btnNight').addEventListener('click',toggleNight);
 document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx.muted; document.getElementById('btnMute').textContent=sfx.muted?'🔇 MUTED':'🔊 SOUND'; if(AC){ if(sfx.muted){ sfx.eg.gain.value=0; sfx.sg.gain.value=0; } if(sfx.mg) sfx.mg.gain.value=sfx.muted?0:sfx.musicVol; } });
 function toggleSiren(){ state.siren=!state.siren; document.getElementById('btnSiren').classList.toggle('on',state.siren); }
-function toggleCam(){ state.cam=state.cam===0?2:0; const b=document.getElementById('btnCam');
+function toggleCam(){ state.cam = state.cam===2 ? 3 : (state.cam===3 ? 0 : 2); const b=document.getElementById('btnCam');   // cycle: MAP -> TILT -> CHASE
+  LIVE3D.group.visible = state.cam===3;
   if(state.cam===0 && !__built3D){ popup('Building 3D view…'); build3D(); }   // 🎥 Chase: build the deferred 3D scene once, on first use
   MAP.on = state.cam===2; document.body.classList.toggle('mapmode',MAP.on);
   if(!MAP.on){ AUTO.active=false; }
   routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1;
-  b.textContent = state.cam===0?'\uD83C\uDFA5 CHASE' : '\uD83D\uDDFA\uFE0F MAP'; }
+  b.textContent = state.cam===0?'\uD83C\uDFA5 CHASE' : (state.cam===3?'\uD83E\uDDED TILT' : '\uD83D\uDDFA\uFE0F MAP'); }
+function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
+  truckG.position.y=0.24;                                                     // tile ground is FLAT at y=0 — ignore terrain elevation so the truck sits on the tiles
+  truckG.rotation.set(0,truck.theta,0);                                       // no pitch/roll on flat ground
+  for(const sp of LBL.pool){ if(sp.visible) sp.position.y=2.6; }              // keep callouts just above the flat tiles
+  if(beaconG.visible) beaconG.position.y=0.1;
+  routeMesh.visible=false;                                                     // the 3D route ribbon is terrain-baked; a flat tile-hugging route comes in phase 2
+  const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta), spd=Math.hypot(truck.vx,truck.vz);
+  const back=30+spd*0.3, h=33+spd*0.25, ahead=16;                             // pitch ~= atan(h/(back+ahead)) ~= 39deg, nav-style
+  const cyw=Math.cos(CAMLOOK.yaw), syw=Math.sin(CAMLOOK.yaw), rfx=fx*cyw-fz*syw, rfz=fx*syw+fz*cyw;   // drag-to-look yaw
+  camera.up.set(0,1,0); camera.fov=CONFIG.render.fov+6; camera.updateProjectionMatrix();
+  camera.position.set(truck.x-rfx*back, h+CAMLOOK.pitch*20, truck.z-rfz*back);
+  camera.lookAt(truck.x+rfx*ahead, 0, truck.z+rfz*ahead);
+  LIVE3D.update(truck.x, truck.z, 17, 340); }
 function toggleRoute(){ state.route=!state.route; document.getElementById('btnRoute').classList.toggle('on',state.route);
   routeMesh.visible=state.route && MAP.guide && !!routePts && routePts.length>1; }
 function toggleNight(){ if(!FLAGS.night) return; state.night=!state.night; document.getElementById('btnNight').classList.toggle('on',state.night);
@@ -1985,6 +1999,35 @@ function makeTileLayer(tileUrl, opts){ opts=opts||{}; const m=SAT_TILES.meta, LA
   return { draw, st }; }
 const LIVE=makeTileLayer((z,x,y)=>'https://'+['a','b','c','d'][(x+y)&3]+'.basemaps.cartocdn.com/rastertiles/'+TILE_STYLE+'/'+z+'/'+x+'/'+y+'.png');                        // 🌐 CARTO street basemap
 const SATLIVE=makeTileLayer((z,x,y)=>'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'+z+'/'+y+'/'+x, {maxZ:19});   // 🛰️ live Esri World Imagery — sharp at every zoom, whole city (Esri uses z/y/x order)
+// ── 🗺️ WebGL tilted-map: live tiles textured onto the 3D ground plane (Google-nav look) ──
+function makeTileLayer3D(tileUrl, opts){ opts=opts||{}; const m=SAT_TILES.meta, LAT0=m.lat0, LON0=m.lon0, cosLat=Math.cos(LAT0*Math.PI/180);
+  const minZ=opts.minZ||14, maxZ=opts.maxZ||19;
+  const tx2lon=(tx,n)=>tx/n*360-180, ty2lat=(ty,n)=>Math.atan(Math.sinh(Math.PI*(1-2*ty/n)))*180/Math.PI;
+  const w2lon=x=>LON0+x/(cosLat*111320), w2lat=zc=>LAT0-zc/110540;
+  const lon2tx=(lon,n)=>(lon+180)/360*n, lat2ty=(lat,n)=>(1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2*n;
+  const group=new THREE.Group(); const loader=new THREE.TextureLoader(); loader.setCrossOrigin('anonymous');
+  const pool=[], texCache=new Map(); const st={ok:false,err:0};
+  function getMesh(){ let mesh=null; for(const p of pool){ if(!p.userData.active){ mesh=p; break; } }
+    if(!mesh){ mesh=new THREE.Mesh(new THREE.PlaneGeometry(1,1), new THREE.MeshBasicMaterial({depthWrite:true})); mesh.rotation.x=-Math.PI/2; mesh.renderOrder=0; group.add(mesh); pool.push(mesh); } return mesh; }
+  function getTex(z,x,y){ const key=z+'/'+x+'/'+y; if(texCache.has(key)) return texCache.get(key);
+    const tex=loader.load(tileUrl(z,x,y), ()=>{ st.ok=true; }, undefined, ()=>{ st.err++; texCache.set(key,null); });
+    if('colorSpace' in tex && THREE.SRGBColorSpace) tex.colorSpace=THREE.SRGBColorSpace;
+    texCache.set(key,tex); if(texCache.size>360){ const k=texCache.keys().next().value, old=texCache.get(k); if(old&&old.dispose) old.dispose(); texCache.delete(k); } return tex; }
+  function update(cx,cz,z,R){ z=Math.max(minZ,Math.min(maxZ,Math.round(z))); const n=Math.pow(2,z);
+    for(const p of pool) p.userData.active=false;
+    let tx0=Math.floor(lon2tx(w2lon(cx-R),n)), tx1=Math.floor(lon2tx(w2lon(cx+R),n));
+    let ty0=Math.floor(lat2ty(w2lat(cz-R),n)), ty1=Math.floor(lat2ty(w2lat(cz+R),n)); if(ty0>ty1){const t=ty0;ty0=ty1;ty1=t;}
+    tx0=Math.max(0,tx0);ty0=Math.max(0,ty0);tx1=Math.min(n-1,tx1);ty1=Math.min(n-1,ty1);
+    if((tx1-tx0+1)*(ty1-ty0+1)>160) return;                                       // safety cap
+    for(let x=tx0;x<=tx1;x++)for(let y=ty0;y<=ty1;y++){ const tex=getTex(z,x,y); if(!tex) continue;
+      const lonW=tx2lon(x,n),lonE=tx2lon(x+1,n),latN=ty2lat(y,n),latS=ty2lat(y+1,n);
+      const xL=(lonW-LON0)*cosLat*111320, xR=(lonE-LON0)*cosLat*111320, zT=(LAT0-latN)*110540, zB=(LAT0-latS)*110540;
+      const mesh=getMesh(); mesh.userData.active=true; mesh.visible=true; mesh.material.map=tex; mesh.material.needsUpdate=true;
+      mesh.position.set((xL+xR)/2, 0.04, (zT+zB)/2); mesh.scale.set(Math.abs(xR-xL)+0.5, Math.abs(zB-zT)+0.5, 1); }
+    for(const p of pool){ if(!p.userData.active) p.visible=false; } }
+  return { group, update, st }; }
+const LIVE3D=makeTileLayer3D((z,x,y)=>'https://'+['a','b','c','d'][(x+y)&3]+'.basemaps.cartocdn.com/rastertiles/'+TILE_STYLE+'/'+z+'/'+x+'/'+y+'.png');
+LIVE3D.group.visible=false; scene.add(LIVE3D.group);
 
 function drawMapView(dt){ try{ const c=MAP.ctx; if(!c) return;
   { const r=MAP.cv.getBoundingClientRect(); if(Math.abs((r.width||MAP.w)-MAP.w)>1||Math.abs((r.height||MAP.h)-MAP.h)>1) MAP.resize(); }
@@ -2342,7 +2385,8 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
   if(state.running){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
   if(MAP.on){ for(const sp of LBL.pool) sp.visible=false; updateParkedStreetChoices(); drawMapView(dt); }                           // 2D map draws its own labels — park the 3D sprites
-  else { updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
+  else if(state.cam===3){ LIVE3D.group.visible=true; updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map
+  else { LIVE3D.group.visible=false; updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
 </script>
