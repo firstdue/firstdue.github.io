@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2408,6 +2408,8 @@ updateBest();
 /* ============================ 11. MAIN LOOP (fixed timestep) ============================ */
 let GT=0, last=performance.now(), acc=0;
 function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=now; if(dt>CONFIG.maxDt) dt=CONFIG.maxDt; GT=now/1000;
+  if(!MAP.on){ const pr=renderer.getPixelRatio(), tw=Math.round(innerWidth*pr), th=Math.round(innerHeight*pr);   // 3D views: keep the WebGL canvas full-screen (mobile address-bar/viewport changes can leave it short → a gap below the render)
+    if(tw>2 && th>2 && (renderer.domElement.width!==tw || renderer.domElement.height!==th)) onResize(); }
   if(state.running){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
   if(MAP.on){ for(const sp of LBL.pool) sp.visible=false; updateParkedStreetChoices(); drawMapView(dt); }                           // 2D map draws its own labels — park the 3D sprites
