@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -991,6 +991,7 @@ function updateStreetLabels(dt){
     const addBranch=(node,e,first=null,from=null)=>{                               // one pooled sign per street + hundred block
       const nm=e.name||streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);
       if(!nm||nm==='—'||canonStreet(nm)===curKey) return;
+      if(e.wrong) return;                                                         // don't offer a wrong-way turn (one-way / divided-road carriageway)
       const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1;
       const off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));             // at the house keep the sign close to the corner, inside the Chase frame
       const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=hundredBlock(lx,lz,nm),key=canonStreet(nm)+'|'+block;
@@ -1752,6 +1753,7 @@ function pickTurn(sign){ const j=nextJunction(); if(!j.node||!j.from) return;   
   const branches=j.node.adj.filter(e=>e.to!==j.from); if(!branches.length) return;
   let best=null,bd=0.12,bc=0;                                                                        // require a REAL branch toward the tapped side; else no-op (truck keeps straight)
   for(const e of branches){ const dx=e.to.x-j.node.x,dz=e.to.z-j.node.z,l=Math.hypot(dx,dz)||1; const cross=(hx*dz-hz*dx)/(hl*l);   // cross>0 = right
+    if(e.wrong) continue;                                                              // never turn the WRONG way down a one-way / divided-road carriageway
     if(sign*cross>bd){ bd=sign*cross; best=e.to; bc=cross; } }
   if(best){ DRIVE.pending={at:j.node,next:best}; DRIVE.arrow=bc>0?1:-1; DRIVE.arrowT=4; } }
 function takeParkedStreet(sp){ const p=sp&&sp._pick; if(!p||!p.root||!p.next||INTRO.active) return false;
@@ -1850,6 +1852,7 @@ function sameStreetOn(a,b){ if(!b) return null;
   const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(hx,hz)||1;
   let same=null,sd=-2;
   for(const e of b.adj){ if(e.to===a) continue;
+    if(e.wrong) continue;                                                       // divided arterial: the same-named continuation on the OPPOSITE carriageway is wrong-way — never follow it (this was the Henry Ave false WRONG-WAY)
     const dx=e.to.x-b.x,dz=e.to.z-b.z,l=Math.hypot(dx,dz)||1, dot=(hx*dx+hz*dz)/(hl*l);
     let nm=e.name||streetName((b.x+e.to.x)/2,(b.z+e.to.z)/2);
     if(l<3){ const nx=straightest(b,e.to); if(nx) nm=edgeName(e.to,nx)||nm; }   // 1m fragment → judge by what lies beyond it
@@ -1863,7 +1866,7 @@ function branchForwardness(a,b,next){ const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(
   const dx=pb.x-b.x,dz=pb.z-b.z,l=Math.hypot(dx,dz)||1; return (hx*dx+hz*dz)/(hl*l); }
 function roadContinuation(a,b){ if(!b) return null;
   const same=sameStreetOn(a,b); if(same) return same;
-  const choices=b.adj.filter(e=>e.to!==a);
+  const choices=b.adj.filter(e=>e.to!==a && !e.wrong);                          // never auto-continue the WRONG way down a one-way / divided carriageway — stop and ask instead
   if(choices.length===1) return branchForwardness(a,b,choices[0].to)>-0.25?choices[0].to:null;
   if(choices.length>1){ const scored=choices.map(e=>({to:e.to,s:branchForwardness(a,b,e.to)-(e.wrong?2:0)})).sort((p,q)=>q.s-p.s);
     if(scored[0].s>0.55 && (scored[0].s-scored[1].s)>0.3) return scored[0].to; }   // one branch is a clear straight-through (e.g. an interchange) — keep rolling instead of forcing a stop; never picks a wrong-way one-way or a reversal
@@ -1915,7 +1918,7 @@ function pullOut(dir){ if(!DRIVE.parked) return; const n=DRIVE.stationNode||near
     if(onSt.length) cand=onSt; }
   let best=null,bd=-1e9;
   for(const e of cand){ const dx=e.to.x-n.x,dz=e.to.z-n.z,l=Math.hypot(dx,dz)||1;
-    const cross=(fx*dz-fz*dx)/l, score=dir*cross;                                               // same convention as chooseTurn: cross>0 = right
+    const cross=(fx*dz-fz*dx)/l, score=dir*cross-(e.wrong?2:0);                                 // same convention as chooseTurn: cross>0 = right; avoid pulling out the WRONG way down a one-way
     if(score>bd){bd=score;best=e.to;} }
   if(!best) return;
   DRIVE.fromN=n; DRIVE.toN=best; DRIVE.t=0; DRIVE.parked=false; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); }
@@ -1938,6 +1941,7 @@ function mapBranchPoint(node,next,name,want){ const cn=canonStreet(name); let a=
   return {x:b?b.x:a.x,z:b?b.z:a.z,dx:ux,dz:uz}; }
 function mapChoiceCandidates(){ const out=[],seen=new Set(),spd=Math.max(8,DRIVE.speed||15),far=Math.min(320,70+spd*4.5),cur=streetName(truck.x,truck.z),curKey=canonStreet((DRIVE.parked&&DRIVE.faces)||cur),limit=10;
   const add=(node,e,first=null,from=null)=>{ const nm=e.name||edgeName(node,e.to); if(!nm||canonStreet(nm)===curKey) return;
+    if(e.wrong) return;                                                        // never offer a turn that goes the WRONG way down a one-way / divided-road carriageway
     const p=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null); if(!p) return;
     const key=node.x+','+node.z+'|'+e.to.x+','+e.to.z; if(seen.has(key)) return; seen.add(key);
     const pt=mapBranchPoint(node,e.to,nm,DRIVE.parked?38:42),x=pt.x,z=pt.z;
