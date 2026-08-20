@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v13v";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v13w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2053,18 +2053,24 @@ function drawMapView(dt){ try{ const c=MAP.ctx; if(!c) return;
   const pulse=DRIVE.going?1:(1+0.14*Math.sin(GT*4.5));
   c.beginPath(); c.arc(0,0,30*pulse,0,6.2832); c.fillStyle=DRIVE.going?'rgba(43,109,246,.13)':'rgba(255,60,40,.12)'; c.fill();
   c.lineWidth=3; c.strokeStyle=DRIVE.going?'rgba(43,109,246,.7)':'rgba(255,60,40,.8)'; c.stroke();
-  // detailed top-down fire engine (nose = -y): ground shadow, wheels, body, cab, ladder, reflective rear chevron
-  c.save(); c.translate(1.4,2.4); c.fillStyle='rgba(0,0,0,.16)'; roundRect(c,-11,-25,22,50,6); c.fill(); c.restore();        // soft ground shadow
-  c.fillStyle='#25272b'; for(const wy of [-17,-3,13]){ c.fillRect(-12.6,wy,3.2,8); c.fillRect(9.4,wy,3.2,8); }               // three axles a side
-  c.fillStyle='#d8342b'; roundRect(c,-11,-25,22,50,6); c.fill(); c.strokeStyle='#9c1f17'; c.lineWidth=1.4; c.stroke();       // body
-  c.fillStyle='#c22a21'; roundRect(c,-10,-24,20,13,5); c.fill();                                                             // cab at the nose
-  c.fillStyle='#c2dcec'; roundRect(c,-8,-22,16,6.5,2); c.fill();                                                             // windshield
-  c.fillStyle='rgba(255,255,255,.45)'; c.fillRect(-10,-11.4,20,1.2);                                                        // cab/body seam
-  c.fillStyle='#ff3b30'; roundRect(c,-5.6,-13.6,5,2.4,1); c.fill(); c.fillStyle='#2f7bff'; roundRect(c,0.6,-13.6,5,2.4,1); c.fill();   // lightbar
-  c.strokeStyle='#cbd0d6'; c.lineWidth=1.5; c.beginPath(); c.moveTo(-3.6,-7); c.lineTo(-3.6,19); c.moveTo(3.6,-7); c.lineTo(3.6,19); c.stroke();   // aerial ladder rails
-  c.lineWidth=1; for(let ry=-5;ry<=18;ry+=3.1){ c.beginPath(); c.moveTo(-3.6,ry); c.lineTo(3.6,ry); c.stroke(); }            // ladder rungs
-  c.fillStyle='#ffd23b'; roundRect(c,-11,19,22,6,2); c.fill();                                                               // reflective rear band
-  c.strokeStyle='#e5352b'; c.lineWidth=1.8; for(const cxx of [-8,-2,4]){ c.beginPath(); c.moveTo(cxx,24); c.lineTo(cxx+3,20); c.lineTo(cxx+6,24); c.stroke(); }   // chevrons
+  // top-down PFD pumper (nose = -y): white cab, red body, gold stripe, yellow hose bed under a black cargo net
+  c.save(); c.translate(1.4,2.4); c.fillStyle='rgba(0,0,0,.16)'; roundRect(c,-11,-25,22,50,6); c.fill(); c.restore();          // ground shadow
+  c.fillStyle='#2a2c30'; for(const wy of [-16,-2,12]){ c.fillRect(-12.6,wy,3.2,8); c.fillRect(9.4,wy,3.2,8); }                 // three axles a side
+  c.fillStyle='#d0342b'; roundRect(c,-11,-25,22,50,6); c.fill();                                                              // red body
+  c.fillStyle='#f1bd2b'; c.fillRect(-10.4,-24,1.1,48); c.fillRect(9.3,-24,1.1,48);                                            // gold side stripes
+  c.fillStyle='#f2f1ec'; roundRect(c,-10,-24,20,13.5,5); c.fill();                                                            // white cab roof (front)
+  c.fillStyle='#20252e'; roundRect(c,-8.6,-23,17.2,4.6,2); c.fill();                                                          // dark windshield
+  c.fillStyle='#ff3b30'; roundRect(c,-5.6,-14.6,5,2.2,1); c.fill(); c.fillStyle='#2f7bff'; roundRect(c,0.6,-14.6,5,2.2,1); c.fill();   // roof lightbar
+  c.fillStyle='#9c1f17'; c.fillRect(-10,-9.8,20,0.9);                                                                         // cab/pump seam
+  c.fillStyle='#e6c229'; roundRect(c,-7.4,-8.6,14.8,29,2); c.fill();                                                          // yellow hose bed
+  c.strokeStyle='rgba(18,18,20,.8)'; c.lineWidth=0.85;                                                                        // black cargo net over the hose bed
+  for(let ny=-7;ny<=20;ny+=3){ c.beginPath(); c.moveTo(-7.4,ny); c.lineTo(7.4,ny); c.stroke(); }
+  for(let nx2=-6;nx2<=6;nx2+=3){ c.beginPath(); c.moveTo(nx2,-8.6); c.lineTo(nx2,20.4); c.stroke(); }
+  c.strokeStyle='#17181b'; c.lineWidth=2; c.lineCap='round';                                                                  // black hard-suction hoses along the top edges
+  c.beginPath(); c.moveTo(-8.7,-8); c.lineTo(-8.7,19); c.stroke(); c.beginPath(); c.moveTo(8.7,-8); c.lineTo(8.7,19); c.stroke(); c.lineCap='butt';
+  c.strokeStyle='#9c1f17'; c.lineWidth=1.3; roundRect(c,-11,-25,22,50,6); c.stroke();                                         // body outline
+  c.fillStyle='#cfd3d9'; c.fillRect(-11,-25.6,22,2.3); c.fillRect(-11,23.3,22,2.3);                                           // chrome front + rear bumpers
+  c.fillStyle='#d21f1f'; c.fillRect(-9.5,22.2,3,2); c.fillStyle='#ff8a1e'; c.fillRect(6.5,22.2,3,2);                          // rear beacons
   c.restore();
   { const num=engNum(DRIVE.stationId||'');                                                                                   // 🚒 your engine number, floated just above the truck, always screen-upright
     if(num){ c.save(); c.translate(truck.x,truck.z); c.rotate(-rot); c.scale(1/ppm,1/ppm);
