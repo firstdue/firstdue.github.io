@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14a";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14b";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1368,13 +1368,14 @@ function updateTiltMap(dt){                                                    /
   for(const sp of LBL.pool){ if(sp.visible) sp.position.y=2.6; }              // keep callouts just above the flat tiles
   if(beaconG.visible) beaconG.position.y=0.1;
   routeMesh.visible=false; routeMeshFlat.visible = !!(state.route && MAP.guide && routePts && routePts.length>1);   // flat tile-hugging blue route
-  const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta), spd=Math.hypot(truck.vx,truck.vz);
-  const back=30+spd*0.3, h=33+spd*0.25, ahead=16;                             // pitch ~= atan(h/(back+ahead)) ~= 39deg, nav-style
+  const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta), spd=Math.hypot(truck.vx,truck.vz), tz=(MAP.tiltZoom=MAP.tiltZoom||1);   // pinch-zoom factor (0.55 close … 2.4 far)
+  const back=(30+spd*0.3)*tz, h=(33+spd*0.25)*tz, ahead=16*tz;                // pitch held ~39deg while zooming
   const cyw=Math.cos(CAMLOOK.yaw), syw=Math.sin(CAMLOOK.yaw), rfx=fx*cyw-fz*syw, rfz=fx*syw+fz*cyw;   // drag-to-look yaw
   camera.up.set(0,1,0); camera.fov=CONFIG.render.fov+6; camera.updateProjectionMatrix();
   camera.position.set(truck.x-rfx*back, h+CAMLOOK.pitch*20, truck.z-rfz*back);
   camera.lookAt(truck.x+rfx*ahead, 0, truck.z+rfz*ahead);
-  LIVE3D.update(truck.x, truck.z, 17, 340); }
+  const tileZ=Math.max(14,Math.min(19,Math.round(17-Math.log2(tz))));         // zoom in → higher tile detail (z18), out → wider (z16)
+  LIVE3D.update(truck.x, truck.z, tileZ, 340*tz); }
 function toggleRoute(){ state.route=!state.route; document.getElementById('btnRoute').classList.toggle('on',state.route);
   routeMesh.visible=state.route && MAP.guide && !!routePts && routePts.length>1; }
 function toggleNight(){ if(!FLAGS.night) return; state.night=!state.night; document.getElementById('btnNight').classList.toggle('on',state.night);
@@ -1802,14 +1803,17 @@ function worldTap3D(clientX,clientY){ if(MAP.on||!state.running) return;
   if(DRIVE.atChoice){ _tv.set(truckG.position.x,truckG.position.y+1.6,truckG.position.z).project(camera);   // stopped at a junction: tap the left / right half to pick the branch
     const tsx=(_tv.x*0.5+0.5)*rect.width, lx=clientX-rect.left; chooseAtT(lx < (_tv.z>=1?rect.width/2:tsx) ? -1 : 1); return; }
   DRIVE.going=!DRIVE.going; }                                                     // any tap on the map surface = GO / STOP (street-name bubbles are DOM buttons that catch their own taps first)
-(function init3DTap(){ const el=renderer.domElement, ps=new Map(); let moved=false, px=0, py=0;   // drag = look around (orbit the cam); clean tap = go/stop or turn
-  el.addEventListener('pointerdown',e=>{ ps.clear(); ps.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false; px=e.clientX; py=e.clientY; try{el.setPointerCapture(e.pointerId);}catch(_){} });
-  el.addEventListener('pointermove',e=>{ const p=ps.get(e.pointerId); if(!p||ps.size!==1||MAP.on) return;
-    if(Math.hypot(e.clientX-p.x,e.clientY-p.y)>12) moved=true;
-    if(moved){ CAMLOOK.yaw -= (e.clientX-px)*0.009; CAMLOOK.pitch = Math.max(-0.5,Math.min(0.9, CAMLOOK.pitch - (e.clientY-py)*0.005)); }   // drag the WORLD: pull left → view swings left
-    px=e.clientX; py=e.clientY; });
-  const up=e=>{ const had=ps.has(e.pointerId); ps.clear(); if(had&&!moved) worldTap3D(e.clientX,e.clientY); };
-  el.addEventListener('pointerup',up); el.addEventListener('pointercancel',()=>ps.clear()); el.addEventListener('lostpointercapture',()=>ps.clear()); addEventListener('blur',()=>ps.clear()); })();
+(function init3DTap(){ const el=renderer.domElement, ps=new Map(); let moved=false, lastX=0, lastY=0, pinchD=0;   // 1 finger drag = look around; 2 fingers = pinch-zoom the tilt map; clean tap = go/stop or turn
+  const twoDist=()=>{ const a=[...ps.values()]; return a.length>=2?Math.hypot(a[0].cx-a[1].cx,a[0].cy-a[1].cy):0; };
+  el.addEventListener('pointerdown',e=>{ if(ps.size===0) moved=false; ps.set(e.pointerId,{dx:e.clientX,dy:e.clientY,cx:e.clientX,cy:e.clientY}); lastX=e.clientX; lastY=e.clientY; if(ps.size>=2) pinchD=twoDist(); try{el.setPointerCapture(e.pointerId);}catch(_){} });
+  el.addEventListener('pointermove',e=>{ const p=ps.get(e.pointerId); if(!p||MAP.on) return; p.cx=e.clientX; p.cy=e.clientY;
+    if(ps.size>=2){ moved=true; const d=twoDist(); if(pinchD>0&&d>0&&state.cam===3) MAP.tiltZoom=Math.max(0.55,Math.min(2.4,(MAP.tiltZoom||1)*(pinchD/d))); pinchD=d; return; }   // spread fingers → zoom in
+    if(ps.size!==1) return;
+    if(Math.hypot(e.clientX-p.dx,e.clientY-p.dy)>12) moved=true;
+    if(moved){ CAMLOOK.yaw -= (e.clientX-lastX)*0.009; CAMLOOK.pitch = Math.max(-0.5,Math.min(0.9, CAMLOOK.pitch - (e.clientY-lastY)*0.005)); }   // drag the WORLD: pull left → view swings left
+    lastX=e.clientX; lastY=e.clientY; });
+  const up=e=>{ const solo=ps.size===1, had=ps.has(e.pointerId); ps.delete(e.pointerId); if(ps.size<2) pinchD=0; if(had&&!moved&&solo) worldTap3D(e.clientX,e.clientY); };
+  el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); el.addEventListener('lostpointercapture',up); addEventListener('blur',()=>ps.clear()); })();
 function mapRot(){ const base = MAP.northUp ? 0 : (-Math.PI/2 - Math.atan2(-Math.cos(truck.theta),-Math.sin(truck.theta))); return base + (MAP.userRot||0); }   // + user twist (training mode)
 // ==== Road-following driving: the truck rides its road; tap it to GO/STOP, tap a street to pick the next turn ====
 const DRIVE={ going:false, parked:false, atChoice:false, stationId:null, stationNode:null, fromN:null, toN:null, t:0, speed:15, pending:null, arrow:0, arrowT:0 };
