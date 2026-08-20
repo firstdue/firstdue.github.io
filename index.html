@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v13y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v13z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1796,12 +1796,10 @@ function updateParkedStreetChoices(){ const root=PARK_UI.root, rect=renderer.dom
   hideFrom(count); root.classList.toggle('show',count>0); }
 function worldTap3D(clientX,clientY){ if(MAP.on||!state.running) return;
   const rect=renderer.domElement.getBoundingClientRect(); if(rect.width<2||rect.height<2) return;
-  if(DRIVE.parked) return;                                                        // parked street choices are screen-clamped DOM bubbles above the canvas
-  _tv.set(truck.x,truck.y+2,truck.z).project(camera); const behind=_tv.z>=1;
-  const tsx=(_tv.x*0.5+0.5)*rect.width, tsy=(-_tv.y*0.5+0.5)*rect.height, lx=clientX-rect.left, ly=clientY-rect.top;
-  if(!behind && Math.hypot(lx-tsx,ly-tsy)<64){ if(!DRIVE.atChoice) DRIVE.going=!DRIVE.going; return; } // tap the truck = go/stop, except while choosing
-  if(DRIVE.atChoice){ chooseAtT(lx < (behind?rect.width/2:tsx) ? -1 : 1); return; }                     // stopped at junction: tap either side to choose
-  return; }                                                                         // ordinary road taps never guess the next street; tap its exact name bubble
+  if(DRIVE.parked) return;                                                        // parked street choices are DOM bubbles above the canvas
+  if(DRIVE.atChoice){ _tv.set(truckG.position.x,truckG.position.y+1.6,truckG.position.z).project(camera);   // stopped at a junction: tap the left / right half to pick the branch
+    const tsx=(_tv.x*0.5+0.5)*rect.width, lx=clientX-rect.left; chooseAtT(lx < (_tv.z>=1?rect.width/2:tsx) ? -1 : 1); return; }
+  DRIVE.going=!DRIVE.going; }                                                     // any tap on the map surface = GO / STOP (street-name bubbles are DOM buttons that catch their own taps first)
 (function init3DTap(){ const el=renderer.domElement, ps=new Map(); let moved=false, px=0, py=0;   // drag = look around (orbit the cam); clean tap = go/stop or turn
   el.addEventListener('pointerdown',e=>{ ps.clear(); ps.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false; px=e.clientX; py=e.clientY; try{el.setPointerCapture(e.pointerId);}catch(_){} });
   el.addEventListener('pointermove',e=>{ const p=ps.get(e.pointerId); if(!p||ps.size!==1||MAP.on) return;
@@ -2360,7 +2358,7 @@ function newDispatch(){ if(MAP.bounds||DRAW.on) return;                         
 function completeDispatch(){ const t=state.target; state.saves++; const reward=Math.round(CONFIG.reward.base*state.combo); state.cash+=reward; sfx.ding(); sfx.splash();   // no timer → flat reward
   popup('🔥 FIRE OUT · '+state.saves+(state.saves===1?' SAVE':' SAVES'),'green'); radio('🔥 OUT at '+t.name+'! '+t.f); const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta);
   for(let i=0;i<Math.min(60,water.n);i++) emit(water,truck.x+fx*3,2.4,truck.z+fz*3,Math.cos(i/60*6.28)*6+Math.random()*3,6+Math.random()*7,Math.sin(i/60*6.28)*6+Math.random()*3,0.9+Math.random()*0.5);
-  state.target=null; clearRivals(); setTimeout(()=>{ if(state.running) newDispatch(); },2600); }
+  state.target=null; state.onScene=false; state.douse=0; clearRivals(); setTimeout(()=>{ if(state.running) newDispatch(); },2600); }   // clear the on-scene/douse latches so the next run arms cleanly
 function saveBest(){ if(state.saves>best.saves||(state.saves===best.saves&&state.cash>best.cash)){ best={saves:state.saves,cash:state.cash}; try{ localStorage.setItem('pfd_ef_best',JSON.stringify(best)); }catch(e){} } }
 function gameOver(){ state.running=false; state.over=true; saveBest(); document.getElementById('finalCash').textContent='$'+state.cash;
   document.getElementById('finalStats').textContent=state.saves+' dispatches completed on the riverfront'; document.getElementById('finalBest').textContent='BEST RUN: '+best.saves+' saves · $'+best.cash;
