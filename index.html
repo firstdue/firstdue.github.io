@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -912,9 +912,9 @@ function addCol(x0,z0,x1,z1){ colliders.push({x0,z0,x1,z1}); }
 // and a big memory slice on every load that never touches 3D. Builders below are
 // pushed as anonymous closures (source order preserved) and run once by build3D().
 const __b3d=[]; let __built3D=false;
-let PROC_OBJ=[];   // the procedural 3D world (terrain/roads/buildings) — hidden in tilt-map mode (tiles replace it), shown in Chase
+let PROC_OBJ=[], PROPS_OBJ=[];   // the procedural 3D world (terrain/roads/buildings, deferred) + firehouse/landmark props (built at load) — both hidden in tilt-map mode (tiles replace them), shown in Chase
 function build3D(){ if(__built3D) return; __built3D=true; const before=new Set(scene.children); for(const f of __b3d) f(); PROC_OBJ=scene.children.filter(o=>!before.has(o)); }
-function setProcVisible(b){ for(const o of PROC_OBJ) o.visible=b; }
+function setProcVisible(b){ for(const o of PROC_OBJ) o.visible=b; for(const o of PROPS_OBJ) o.visible=b; }
 __b3d.push(function(){ const gw=(WB.maxX-WB.minX)+1200, gd=(WB.maxZ-WB.minZ)+1200, cx=(WB.minX+WB.maxX)/2, cz=(WB.minZ+WB.maxZ)/2;
   const g=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),lambert(0xc4cead)); g.rotation.x=-Math.PI/2; g.position.set(cx,-0.05,cz); scene.add(g);
   if(FLAGS.elevation){ const nx=HM.nx,nz=HM.nz, pos=new Float32Array(nx*nz*3), idx=[];   // one indexed heightfield draw call
@@ -1119,6 +1119,7 @@ function stationRoad(st){ let best=null,bd=1e18; const gx=Math.floor(st.x/SEGCEL
                                                     // and points the wrong way here; flip it so E39 parks on its real curb (Cinnaminson left, Lemonte right).
   if(st.curbFlip){ nx=-nx; nz=-nz; }                // explicit correction when a station point is too close to the road centerline to determine its parcel side
   return {cx:best.c.cx, cz:best.c.cz, nx, nz, cls:s.cls}; }
+const __beforeProps=new Set(scene.children);
 (function props(){
   for(const st of stations){ const R=stationRoad(st);
     const nx=R?R.nx:st.perp.x, nz=R?R.nz:st.perp.z, half=R?CLASSW[R.cls]/2:10;
@@ -1163,6 +1164,7 @@ function stationRoad(st){ let best=null,bd=1e18; const gx=Math.floor(st.x/SEGCEL
           if(clearsAll(px,pz)){ bx=px; bz=pz; found=true; } } } }
     L.bx=bx; L.bz=bz;                                                                    // remember for the fire/beacon placement
     box(9,6,9,c,bx,groundHeight(bx,bz)+3,bz); } })();
+PROPS_OBJ=scene.children.filter(o=>!__beforeProps.has(o));   // firehouses + landmark boxes (built at load) — hidden in tilt map so they don't block the parked-start view
 
 const colGrid=new Map();
 (function hashCols(){ for(const c of colliders){ for(let gx=Math.floor(c.x0/40);gx<=Math.floor(c.x1/40);gx++)
