@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1866,10 +1866,21 @@ function branchForwardness(a,b,next){ const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(
   const dx=pb.x-b.x,dz=pb.z-b.z,l=Math.hypot(dx,dz)||1; return (hx*dx+hz*dz)/(hl*l); }
 function roadContinuation(a,b){ if(!b) return null;
   const same=sameStreetOn(a,b); if(same) return same;
-  const choices=b.adj.filter(e=>e.to!==a && !e.wrong);                          // never auto-continue the WRONG way down a one-way / divided carriageway — stop and ask instead
-  if(choices.length===1) return branchForwardness(a,b,choices[0].to)>-0.25?choices[0].to:null;
-  if(choices.length>1){ const scored=choices.map(e=>({to:e.to,s:branchForwardness(a,b,e.to)-(e.wrong?2:0)})).sort((p,q)=>q.s-p.s);
-    if(scored[0].s>0.55 && (scored[0].s-scored[1].s)>0.3) return scored[0].to; }   // one branch is a clear straight-through (e.g. an interchange) — keep rolling instead of forcing a stop; never picks a wrong-way one-way or a reversal
+  const fwd=b.adj.filter(e=>e.to!==a);                                          // every physical branch (incl. wrong-way carriageways)
+  const choices=fwd.filter(e=>!e.wrong);                                        // never auto-continue the WRONG way down a one-way / divided carriageway
+  // a street present on 2+ branches here PASSES THROUGH this node — an arterial's two directions, or a divided
+  // road's legal + opposite carriageway. Reaching it means we're T-ing ONTO a through road, so never auto-turn:
+  // stop and let the player pick left/right. (This is the Gates St → Henry Ave "it just turned by itself" case.)
+  const cnt=new Map(); for(const e of fwd){ if(e.name) cnt.set(e.name,(cnt.get(e.name)||0)+1); }
+  const through=e=> e.name && cnt.get(e.name)>=2;
+  if(choices.length===1){ const c=choices[0], s=branchForwardness(a,b,c.to);
+    const sameName=c.name && edgeName(a,b)===c.name;                           // our OWN road, narrowly missed by sameStreetOn (a sharp same-street bend)
+    if(sameName && fwd.length===1) return s>-0.25?c.to:null;                   // keep flowing around the bend of our own road
+    if(through(c)) return null;                                                // T-ing onto a through road (an arterial) — stop and ask left/right
+    return s>0.5?c.to:null; }                                                  // a name-change / turn onto another street: auto-roll ONLY if near-straight; a real turn (e.g. Fountain St → Henry Ave at 66°) stops to ask
+  if(choices.length>1){ const scored=choices.map(e=>({e,s:branchForwardness(a,b,e.to)})).sort((p,q)=>q.s-p.s);
+    if(through(scored[0].e)) return null;                                      // straightest option is a turn onto a through road — stop and ask
+    if(scored[0].s>0.55 && (scored[0].s-scored[1].s)>0.3) return scored[0].e.to; }   // a clear straight-through name change (e.g. an interchange) — keep rolling
   return null; }
 function keepStreet(a,b){ return roadContinuation(a,b); }                    // labels + guide preview the exact automatic continuation
 function nextJunction(){ let a=DRIVE.fromN,b=DRIVE.toN,g=0; while(g++<400){ if(!b) break; const fwd=b.adj.filter(e=>e.to!==a); if(fwd.length!==1) return {node:b,from:a}; a=b; b=fwd[0].to; } return {node:b,from:a}; }
