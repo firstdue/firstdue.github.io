@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14i";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1519,17 +1519,30 @@ document.getElementById('btnGuide').addEventListener('click',e=>{ e.preventDefau
   routeMesh.visible = MAP.guide && state.route && !!routePts && routePts.length>1; });   // GUIDE also kills the 3D blue route line immediately
 function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     // held at a T: turn LEFT/RIGHT onto the cross street
   const b=DRIVE.toN, a=DRIVE.fromN; if(!b) return false;
-  const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(hx,hz)||1;
-  const cand=b.adj.filter(e=>e.to!==a); if(!cand.length) return false;
-  const cnt=new Map(); for(const e of cand){ if(e.name) cnt.set(e.name,(cnt.get(e.name)||0)+1); }
-  const legal=cand.filter(e=>!e.wrong);                                        // NEVER turn onto a wrong-way (opposite) carriageway — that was the Gates St → Henry Ave "wrong side" bug
-  const through=legal.filter(e=>e.name && cnt.get(e.name)>=2);                 // the arterial / cross street we're turning ONTO (its legal carriageway) — a divided road with only one legal direction here lands you on that one whichever way you tap
-  const pool=through.length?through : (legal.length?legal:cand);              // fall back to a wrong-way edge only if there is literally no legal option
+  const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(hx,hz)||1;                         // approach heading — left/right is judged against it
+  // Gather turn candidates from the LOCAL junction cluster: b's own branches, plus one hop across a SHORT connector.
+  // A divided road (real Henry Ave) splits the intersection into sibling nodes ~10-40m apart — the OTHER carriageway
+  // (needed to travel the opposite way) lives on a sibling, reached by a short jog. Without this, "go right" onto a
+  // divided road could only offer the near carriageway (whose right-hand edge is the wrong-way one).
+  const cands=[];                                                              // {toN, viaN|null, wrong, name, cross}
+  const addFrom=(pivot,viaN)=>{ for(const e of pivot.adj){ const back=viaN?viaN:a; if(e.to===back) continue; if(pivot!==b && e.to===b) continue;
+      const dx=e.to.x-pivot.x,dz=e.to.z-pivot.z,l=Math.hypot(dx,dz)||1;
+      cands.push({toN:e.to, viaN:pivot===b?null:pivot, wrong:!!e.wrong, name:e.name, cross:(hx*dz-hz*dx)/(hl*l)}); } };
+  addFrom(b,null);
+  for(const e of b.adj){ if(e.to===a) continue; if(Math.hypot(e.to.x-b.x,e.to.z-b.z)<55) addFrom(e.to,b); }   // step across a short connector to a sibling carriageway
+  if(!cands.length) return false;
+  const cnt=new Map(); for(const c of cands){ if(c.name) cnt.set(c.name,(cnt.get(c.name)||0)+1); }
   let best=null,bd=-1e9;
-  for(const e of pool){ const dx=e.to.x-b.x,dz=e.to.z-b.z,l=Math.hypot(dx,dz)||1;
-    const cross=(hx*dz-hz*dx)/(hl*l), score=dir*cross; if(score>bd){ bd=score; best=e.to; } }
+  for(const c of cands){ let s=dir*c.cross;                                    // prefer the tapped side...
+    if(c.wrong) s-=100;                                                        // ...never a wrong-way carriageway unless nothing legal exists
+    if(c.name && cnt.get(c.name)>=2) s+=0.4;                                   // ...prefer turning ONTO the arterial (the through road), not the side street
+    if(c.viaN) s-=0.15;                                                        // ...slight preference for a direct turn over a jog to a sibling carriageway
+    if(s>bd){ bd=s; best=c; } }
   if(!best) return false;
-  DRIVE.fromN=b; DRIVE.toN=best; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return true; }
+  DRIVE.fromN=b; DRIVE.t=0; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true;
+  if(best.viaN){ DRIVE.toN=best.viaN; DRIVE.pending={at:best.viaN,next:best.toN}; }   // jog to the sibling node, then turn onto its carriageway
+  else { DRIVE.toN=best.toN; DRIVE.pending=null; }
+  driveOrient(); return true; }
 function chooseStraight(){ if(!DRIVE.atChoice) return false; const b=DRIVE.toN, a=DRIVE.fromN; if(!b) return false;   // held at a fork: keep going the straightest legal way
   let best=null,bd=-1e9, bestAny=null,ba=-1e9;
   for(const e of b.adj){ if(e.to===a) continue; const f=branchForwardness(a,b,e.to);
