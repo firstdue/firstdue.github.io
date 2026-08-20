@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v13u";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v13v";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1191,29 +1191,36 @@ const truckG=new THREE.Group();
   box(2.5,1.7,4.3,RED,0,1.75,1.45,truckG);                           // rear pump body (red core)
   for(const sx of [-1.27,1.27]){ box(0.06,0.8,4.16,SILVER,sx,1.28,1.45,truckG);                 // silver roll-up compartment panels
     box(0.05,0.92,0.05,0x8f9399,sx,1.28,-0.2,truckG); box(0.05,0.92,0.05,0x8f9399,sx,1.28,1.45,truckG); box(0.05,0.92,0.05,0x8f9399,sx,1.28,3.1,truckG);   // door seams
-    box(0.08,0.2,4.2,GOLD,sx,SY+0.32,1.45,truckG); }                                             // gold belt stripe (body)
+    box(0.09,0.3,4.24,GOLD,sx,SY+0.28,1.45,truckG); }                                            // bold gold belt stripe (body)
   box(2.44,0.14,4.32,REDK,0,2.62,1.45,truckG);                       // body top rail
   box(2.3,0.1,4.12,CHROME,0,2.71,1.45,truckG);                       // diamond-plate deck / walkway
   box(2.42,0.95,2.5,RED,0,1.35,-2.55,truckG);                        // lower cab (red)
   box(2.44,1.02,2.52,WHITE,0,2.34,-2.55,truckG);                     // upper cab + roof (white two-tone)
-  for(const sx of [-1.22,1.22]) box(0.07,0.2,2.5,GOLD,sx,SY,-2.55,truckG);                       // gold stripe wraps the cab
+  for(const sx of [-1.22,1.22]) box(0.08,0.3,2.5,GOLD,sx,SY+0.28,-2.55,truckG);                  // gold stripe wraps the cab (aligned w/ body)
   box(2.18,0.66,0.14,GLASS,0,2.12,-3.79,truckG);                     // windshield (dark)
   box(0.12,0.6,1.5,GLASS,-1.22,2.05,-2.45,truckG); box(0.12,0.6,1.5,GLASS,1.22,2.05,-2.45,truckG);   // side windows
   box(1.86,0.86,0.16,0x101216,0,1.18,-3.86,truckG);                  // black grille
   for(const gx of [-0.6,0,0.6]) box(0.46,0.72,0.06,0x2a2d33,gx,1.18,-3.94,truckG);               // grille slats
   box(2.56,0.44,0.42,CHROME,0,0.82,-4.02,truckG);                    // chrome front bumper
+  box(2.5,0.18,0.12,GOLD,0,0.86,-4.24,truckG);                       // yellow band across the front bumper
   box(2.5,0.42,0.32,CHROME,0,0.8,3.5,truckG);                        // rear step (diamond plate)
   for(const hx of [-0.78,0.78]) box(0.32,0.24,0.16,0xf3ead0,hx,1.12,-3.97,truckG);               // headlights
   var lightbar=new THREE.Mesh(new THREE.BoxGeometry(1.7,0.2,0.5),new THREE.MeshBasicMaterial({color:0xff2d4d})); lightbar.position.set(0,2.9,-2.72); truckG.add(lightbar);   // roof lightbar (siren color animated)
   for(const bx of [-0.66,0.66]){ const bc=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.17,0.2,10),new THREE.MeshBasicMaterial({color:0xd21f1f})); bc.position.set(bx,3.0,-2.05); truckG.add(bc); }   // red beacons
   const amber=new THREE.Mesh(new THREE.SphereGeometry(0.13,8,6),new THREE.MeshBasicMaterial({color:0xff8a1e})); amber.position.set(0,3.02,3.35); truckG.add(amber);   // rear amber marker
-  // hose bed on top of the pump body — low coaming, open at the rear, packed with hose
+  for(const [sx,cc] of [[-1.05,0xf3ead0],[1.05,0xf3ead0]]){ const sl=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,0.12,12),new THREE.MeshBasicMaterial({color:cc})); sl.rotation.x=Math.PI/2; sl.position.set(sx,3.34,3.3); truckG.add(sl); }   // rear scene lights
+  for(const [sx,cc] of [[-1.18,0xd21f1f],[1.18,0xff8a1e]]){ const rb=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.13,0.16,10),new THREE.MeshBasicMaterial({color:cc})); rb.position.set(sx,3.18,3.35); truckG.add(rb); }   // rear red + amber beacons
+  // hose bed on top of the pump body — YELLOW hose under a black cargo net at the rear
   box(0.1,0.36,4.2,REDK,-1.18,2.9,1.5,truckG); box(0.1,0.36,4.2,REDK,1.18,2.9,1.5,truckG);
   box(2.46,0.36,0.1,REDK,0,2.9,-0.55,truckG);
-  { const hose=[0x2a2d33,0xb23a2f,0xd8d2c2,0x2a2d33]; let hi=0; for(let hx=-0.95;hx<=0.96;hx+=0.275){ box(0.24,0.24,3.95,hose[hi%hose.length],hx,2.82,1.5,truckG); hi++; } }
-  // ground ladders on the RIGHT (officer) body side
-  for(const ly of [1.66,2.34]) box(0.08,0.1,3.9,LADDER,1.33,ly,1.5,truckG);
-  for(let lz=-0.3;lz<=3.35;lz+=0.4) box(0.1,0.72,0.08,LADDER,1.33,2.0,lz,truckG);
+  { const hose=[0xe6c229,0xd8b41e,0xecca3a,0xd8b41e]; let hi=0; for(let hx=-0.95;hx<=0.96;hx+=0.275){ box(0.24,0.24,3.95,hose[hi%hose.length],hx,2.82,1.5,truckG); hi++; } }
+  { const nc=document.createElement('canvas'); nc.width=128; nc.height=96; const nx2=nc.getContext('2d'); nx2.clearRect(0,0,128,96); nx2.strokeStyle='rgba(14,15,17,0.96)'; nx2.lineWidth=6;
+    for(let x=8;x<=120;x+=16){ nx2.beginPath(); nx2.moveTo(x,0); nx2.lineTo(x,96); nx2.stroke(); } for(let y=8;y<=88;y+=16){ nx2.beginPath(); nx2.moveTo(0,y); nx2.lineTo(128,y); nx2.stroke(); }
+    const nt=new THREE.CanvasTexture(nc); const net=new THREE.Mesh(new THREE.PlaneGeometry(2.3,1.0), new THREE.MeshBasicMaterial({map:nt,transparent:true,side:THREE.DoubleSide,depthWrite:false})); net.position.set(0,2.95,3.44); net.renderOrder=1; truckG.add(net);   // black cargo net over the rear hose bed
+    for(const sx of [-1.16,1.16]) box(0.1,1.05,0.1,RED,sx,2.98,3.42,truckG); box(2.42,0.1,0.1,CHROME,0,3.46,3.42,truckG); }   // red net frame posts + top bar
+  // hard-suction hoses stored on the top outer edges (black corrugated) with chrome couplings
+  for(const sx of [-1.13,1.13]){ const h=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,3.7,10),lambert(0x17181b)); h.rotation.x=Math.PI/2; h.position.set(sx,2.83,1.3); truckG.add(h);
+    const cp=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,0.22,10),lambert(0xbdc2c8)); cp.rotation.x=Math.PI/2; cp.position.set(sx,2.83,-0.62); truckG.add(cp); }
   // pump panel (driver side, behind the cab): recessed silver panel + gauges + discharge outlet caps
   box(0.05,1.0,1.5,0x9aa0a7,-1.28,1.45,-0.35,truckG);
   for(const gz of [-0.85,-0.35,0.15]){ const gA=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.06,12),lambert(0x20242b)); gA.rotation.z=Math.PI/2; gA.position.set(-1.33,1.78,gz); truckG.add(gA);
@@ -1237,7 +1244,8 @@ const truckG=new THREE.Group();
   var wheels=[];
   for(const [wx,wz] of [[-1.24,-2.3],[1.24,-2.3],[-1.24,1.35],[1.24,1.35],[-1.24,2.65],[1.24,2.65]]){
     const w=new THREE.Mesh(new THREE.CylinderGeometry(0.78,0.78,0.55,16),lambert(0x121417)); w.rotation.z=Math.PI/2; w.position.set(wx,0.78,wz); truckG.add(w); wheels.push(w);
-    const hub=new THREE.Mesh(new THREE.CylinderGeometry(0.36,0.36,0.58,12),lambert(0xd7dade)); hub.rotation.z=Math.PI/2; hub.position.set(wx,0.78,wz); truckG.add(hub); wheels.push(hub); } }
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(0.43,0.43,0.6,16),lambert(0xe9edf1)); hub.rotation.z=Math.PI/2; hub.position.set(wx,0.78,wz); truckG.add(hub); wheels.push(hub);
+    const lug=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,0.62,10),lambert(0x9aa0a8)); lug.rotation.z=Math.PI/2; lug.position.set(wx,0.78,wz); truckG.add(lug); wheels.push(lug); } }   // polished chrome wheels w/ hub + lug ring
 scene.add(truckG);
 // GPS route line (blue, follows real streets; visible in BOTH camera views)
 const routeMesh=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2b7cff,transparent:true,opacity:0.92,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
