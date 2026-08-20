@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v13x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v13y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -912,7 +912,9 @@ function addCol(x0,z0,x1,z1){ colliders.push({x0,z0,x1,z1}); }
 // and a big memory slice on every load that never touches 3D. Builders below are
 // pushed as anonymous closures (source order preserved) and run once by build3D().
 const __b3d=[]; let __built3D=false;
-function build3D(){ if(__built3D) return; __built3D=true; for(const f of __b3d) f(); }
+let PROC_OBJ=[];   // the procedural 3D world (terrain/roads/buildings) — hidden in tilt-map mode (tiles replace it), shown in Chase
+function build3D(){ if(__built3D) return; __built3D=true; const before=new Set(scene.children); for(const f of __b3d) f(); PROC_OBJ=scene.children.filter(o=>!before.has(o)); }
+function setProcVisible(b){ for(const o of PROC_OBJ) o.visible=b; }
 __b3d.push(function(){ const gw=(WB.maxX-WB.minX)+1200, gd=(WB.maxZ-WB.minZ)+1200, cx=(WB.minX+WB.maxX)/2, cz=(WB.minZ+WB.maxZ)/2;
   const g=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),lambert(0xc4cead)); g.rotation.x=-Math.PI/2; g.position.set(cx,-0.05,cz); scene.add(g);
   if(FLAGS.elevation){ const nx=HM.nx,nz=HM.nz, pos=new Float32Array(nx*nz*3), idx=[];   // one indexed heightfield draw call
@@ -1250,6 +1252,8 @@ scene.add(truckG);
 // GPS route line (blue, follows real streets; visible in BOTH camera views)
 const routeMesh=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2b7cff,transparent:true,opacity:0.92,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
 routeMesh.frustumCulled=false; routeMesh.visible=false; routeMesh.renderOrder=2; scene.add(routeMesh);
+const routeMeshFlat=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2b6df6,transparent:true,opacity:0.9,side:THREE.DoubleSide,depthWrite:false}));   // FLAT route for the tilted tile map (y≈0.2), separate from the terrain-baked routeMesh
+routeMeshFlat.frustumCulled=false; routeMeshFlat.visible=false; routeMeshFlat.renderOrder=2; scene.add(routeMeshFlat);
 const beaconG=new THREE.Group();
 const beam=new THREE.Mesh(new THREE.CylinderGeometry(8,8,120,16,1,true),new THREE.MeshBasicMaterial({color:0xff3b30,transparent:true,opacity:0.4,side:THREE.DoubleSide,depthWrite:false})); beam.position.y=55; beaconG.add(beam);
 const ring=new THREE.Mesh(new THREE.RingGeometry(6.4,8.6,26),new THREE.MeshBasicMaterial({color:0xff6b52,transparent:true,opacity:0.85,side:THREE.DoubleSide,depthWrite:false})); ring.rotation.x=-Math.PI/2; ring.position.y=0.3; beaconG.add(ring);
@@ -1361,7 +1365,7 @@ function updateTiltMap(dt){                                                    /
   truckG.rotation.set(0,truck.theta,0);                                       // no pitch/roll on flat ground
   for(const sp of LBL.pool){ if(sp.visible) sp.position.y=2.6; }              // keep callouts just above the flat tiles
   if(beaconG.visible) beaconG.position.y=0.1;
-  routeMesh.visible=false;                                                     // the 3D route ribbon is terrain-baked; a flat tile-hugging route comes in phase 2
+  routeMesh.visible=false; routeMeshFlat.visible = !!(state.route && MAP.guide && routePts && routePts.length>1);   // flat tile-hugging blue route
   const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta), spd=Math.hypot(truck.vx,truck.vz);
   const back=30+spd*0.3, h=33+spd*0.25, ahead=16;                             // pitch ~= atan(h/(back+ahead)) ~= 39deg, nav-style
   const cyw=Math.cos(CAMLOOK.yaw), syw=Math.sin(CAMLOOK.yaw), rfx=fx*cyw-fz*syw, rfz=fx*syw+fz*cyw;   // drag-to-look yaw
@@ -1625,13 +1629,17 @@ function updateMinimap(dt){ if(!FLAGS.minimap||!MINI.ctx) return;
   c.fillStyle='rgba(255,255,255,.75)'; c.font='bold 11px sans-serif'; c.textAlign='center'; c.textBaseline='top'; c.fillText('N',P/2,4); }
 // GPS route: A* on the street graph, cached; recompute on new call or when the truck strays off it.
 let routePts=null, routeDirty=false, routeTimer=0;
-function setRouteGeom(){ const old=routeMesh.geometry;
-  if(!routePts||routePts.length<2){ routeMesh.visible=false; routeMesh.geometry=new THREE.BufferGeometry(); old.dispose(); return; }
-  const pts=routePts.filter((p,i)=>!i||Math.hypot(p.x-routePts[i-1].x,p.z-routePts[i-1].z)>.2),pos=[],idx=[],hw=.72,RY=(x,z)=>groundHeight(x,z)+0.42;
-  for(let i=0;i<pts.length;i++){ const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,ox=-dz/l*hw,oz=dx/l*hw;
-    pos.push(p.x+ox,RY(p.x+ox,p.z+oz),p.z+oz,p.x-ox,RY(p.x-ox,p.z-oz),p.z-oz); if(i){ const k=i*2; idx.push(k-2,k-1,k,k-1,k+1,k); } }
+function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geometry;
+  if(!routePts||routePts.length<2){ routeMesh.visible=false; routeMeshFlat.visible=false; routeMesh.geometry=new THREE.BufferGeometry(); routeMeshFlat.geometry=new THREE.BufferGeometry(); old.dispose(); oldF.dispose(); return; }
+  const pts=routePts.filter((p,i)=>!i||Math.hypot(p.x-routePts[i-1].x,p.z-routePts[i-1].z)>.2),pos=[],posF=[],idx=[],hw=.72,hwF=1.6,RY=(x,z)=>groundHeight(x,z)+0.42;   // wider ribbon on the flat tile map
+  for(let i=0;i<pts.length;i++){ const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
+    pos.push(p.x+nx*hw,RY(p.x+nx*hw,p.z+nz*hw),p.z+nz*hw, p.x-nx*hw,RY(p.x-nx*hw,p.z-nz*hw),p.z-nz*hw);
+    posF.push(p.x+nx*hwF,0.2,p.z+nz*hwF, p.x-nx*hwF,0.2,p.z-nz*hwF);
+    if(i){ const k=i*2; idx.push(k-2,k-1,k,k-1,k+1,k); } }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals();
-  routeMesh.geometry=g; old.dispose(); routeMesh.visible=!MAP.on && state.route && MAP.guide; }
+  const gf=new THREE.BufferGeometry(); gf.setAttribute('position',new THREE.Float32BufferAttribute(posF,3)); gf.setIndex(idx.slice());
+  routeMesh.geometry=g; routeMeshFlat.geometry=gf; old.dispose(); oldF.dispose();
+  routeMesh.visible=(state.cam!==3)&&!MAP.on && state.route && MAP.guide; routeMeshFlat.visible=(state.cam===3)&&state.route&&MAP.guide; }
 function routeLength(path){ let d=0; for(let i=1;i<path.length;i++) d+=Math.hypot(path[i].x-path[i-1].x,path[i].z-path[i-1].z); return d; }
 function streamRoute(anchor,path){ const raw=[anchor]; if(path) for(const n of path){ const p=raw[raw.length-1]; if(Math.hypot(n.x-p.x,n.z-p.z)>.2) raw.push({x:n.x,z:n.z}); }
   let cut=-1,bd=1e18; for(let i=2;i<Math.min(raw.length,14);i++){ const d=closestSeg(anchor.x,anchor.z,{ax:raw[i-1].x,az:raw[i-1].z,bx:raw[i].x,bz:raw[i].z}).d; if(d<bd){bd=d;cut=i;} }
@@ -2385,8 +2393,8 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
   if(state.running){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
   if(MAP.on){ for(const sp of LBL.pool) sp.visible=false; updateParkedStreetChoices(); drawMapView(dt); }                           // 2D map draws its own labels — park the 3D sprites
-  else if(state.cam===3){ LIVE3D.group.visible=true; updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map
-  else { LIVE3D.group.visible=false; updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
+  else if(state.cam===3){ LIVE3D.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map (procedural world hidden — tiles replace it)
+  else { LIVE3D.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
 </script>
