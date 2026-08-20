@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v13z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14a";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1041,7 +1041,7 @@ const buildData=[], treeData=[];
 function nearRoadEdge(x,z){ let best=1e9; for(const s of segNear(x,z)){ const e=closestSeg(x,z,s).d-CLASSW[s.cls]/2; if(e<best) best=e; } return best; }
 function footprintClearsRoad(cx,cz,w,d){ const hw=w/2,hd=d/2;   // every corner + center must be off the asphalt
   return [[0,0],[hw,hd],[-hw,hd],[hw,-hd],[-hw,-hd]].every(o=>nearRoadEdge(cx+o[0],cz+o[1])>0.5); }
-__b3d.push(function(){ const rng=mulberry(19129),
+function genCityData(){ if(buildData.length) return; const rng=mulberry(19129),   // idempotent: procedural building/tree data, reused by both the Chase city and the flat tilt-map city
   pal=[0xe9e2d2,0xded4c0,0xd2c6ae,0xe4dbc9,0xd8cfbc,0xcbc0aa,0xd6d8dc,0xc8ccd2,0xe6dfd2,0xcfc4b0,0xdcd0b8,0xc2b9a6,0xe0dacd,0xccd0d5,0xbfb7a4];   // warm map-style creams/tans/greys with enough spread to read as separate rowhomes
   const grid=new Map(), gk=(x,z)=>((x/10)|0)+':'+((z/10)|0), step=CONFIG.world.buildStep, SW=CONFIG.world.sidewalk;
   const focus=[...stations,...LMK], score=r=>{const p=r[2],x=(p[0][0]+p[p.length-1][0])/2,z=(p[0][1]+p[p.length-1][1])/2;let d=1e18;for(const q of focus){const v=(x-q.x)**2+(z-q.z)**2;if(v<d)d=v;}return d;};
@@ -1073,7 +1073,8 @@ __b3d.push(function(){ const rng=mulberry(19129),
   // validation: flag any building collider intersecting a road ribbon (should be 0)
   let roadHits=0; for(const b of buildData){ if(!footprintClearsRoad(b.x,b.z,b.w,b.d)) roadHits++; }
   window.__roadHits=roadHits;
-  if(roadHits) console.warn('[genCity] '+roadHits+'/'+buildData.length+' building colliders intersect a road'); else console.log('[genCity] clean — 0/'+buildData.length+' buildings in road'); });
+  if(roadHits) console.warn('[genCity] '+roadHits+'/'+buildData.length+' building colliders intersect a road'); else console.log('[genCity] clean — 0/'+buildData.length+' buildings in road'); }
+__b3d.push(genCityData);   // Chase build runs the same data gen (then instanceCity builds the elevated meshes)
 // unit gable-roof prism: base 1x1 at y=0, ridge along z at y=1 (x=0); scaled per building
 function gableGeo(){ const g=new THREE.BufferGeometry();
   const v=[-.5,0,-.5, .5,0,-.5, .5,0,.5, -.5,0,.5,  0,1,-.5, 0,1,.5];  // b0 b1 b2 b3 r0 r1
@@ -1355,6 +1356,7 @@ document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx
 function toggleSiren(){ state.siren=!state.siren; document.getElementById('btnSiren').classList.toggle('on',state.siren); }
 function toggleCam(){ state.cam = state.cam===2 ? 3 : (state.cam===3 ? 0 : 2); const b=document.getElementById('btnCam');   // cycle: MAP -> TILT -> CHASE
   LIVE3D.group.visible = state.cam===3;
+  if(state.cam===3 && !FLATCITY.built){ popup('Building 3D city…'); buildFlatCity(); }
   if(state.cam===0 && !__built3D){ popup('Building 3D view…'); build3D(); }   // 🎥 Chase: build the deferred 3D scene once, on first use
   MAP.on = state.cam===2; document.body.classList.toggle('mapmode',MAP.on);
   if(!MAP.on){ AUTO.active=false; }
@@ -2034,6 +2036,17 @@ function makeTileLayer3D(tileUrl, opts){ opts=opts||{}; const m=SAT_TILES.meta, 
   return { group, update, st }; }
 const LIVE3D=makeTileLayer3D((z,x,y)=>'https://'+['a','b','c','d'][(x+y)&3]+'.basemaps.cartocdn.com/rastertiles/'+TILE_STYLE+'/'+z+'/'+x+'/'+y+'.png');
 LIVE3D.group.visible=false; scene.add(LIVE3D.group);
+// ── 🏙️ flat extruded buildings for the tilt map (procedural footprints, pale Google-style, sitting on y=0) ──
+const FLATCITY={ group:new THREE.Group(), built:false }; FLATCITY.group.visible=false; scene.add(FLATCITY.group);
+function buildFlatCity(){ genCityData(); if(FLATCITY.built||!buildData.length) return; FLATCITY.built=true;
+  const dummy=new THREE.Object3D(), col=new THREE.Color();
+  const wallPal=[0xf3f2ee,0xeceae4,0xe6e4dc,0xf0eee8,0xe9e7df,0xf1efe9,0xe4e6ea], roofPal=[0xd6d4cd,0xcccabf,0xdad8d0,0xd0cdc4,0xc9ccd0];
+  const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),Math.max(1,buildData.length));
+  buildData.forEach((b,i)=>{ dummy.position.set(b.x,b.h/2,b.z); dummy.scale.set(b.w,b.h,b.d); dummy.rotation.set(0,0,0); dummy.updateMatrix(); bm.setMatrixAt(i,dummy.matrix); bm.setColorAt(i,col.setHex(wallPal[i%wallPal.length])); });
+  bm.count=buildData.length; bm.instanceMatrix.needsUpdate=true; if(bm.instanceColor)bm.instanceColor.needsUpdate=true; FLATCITY.group.add(bm);
+  const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),Math.max(1,buildData.length));   // slightly darker roof caps so blocks read as separate from above
+  buildData.forEach((b,i)=>{ dummy.position.set(b.x,b.h+0.14,b.z); dummy.scale.set(b.w*1.02,0.28,b.d*1.02); dummy.rotation.set(0,0,0); dummy.updateMatrix(); caps.setMatrixAt(i,dummy.matrix); caps.setColorAt(i,col.setHex(roofPal[i%roofPal.length])); });
+  caps.count=buildData.length; caps.instanceMatrix.needsUpdate=true; if(caps.instanceColor)caps.instanceColor.needsUpdate=true; FLATCITY.group.add(caps); }
 
 function drawMapView(dt){ try{ const c=MAP.ctx; if(!c) return;
   { const r=MAP.cv.getBoundingClientRect(); if(Math.abs((r.width||MAP.w)-MAP.w)>1||Math.abs((r.height||MAP.h)-MAP.h)>1) MAP.resize(); }
@@ -2391,8 +2404,8 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
   if(state.running){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
   if(MAP.on){ for(const sp of LBL.pool) sp.visible=false; updateParkedStreetChoices(); drawMapView(dt); }                           // 2D map draws its own labels — park the 3D sprites
-  else if(state.cam===3){ LIVE3D.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map (procedural world hidden — tiles replace it)
-  else { LIVE3D.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
+  else if(state.cam===3){ LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
+  else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
 </script>
