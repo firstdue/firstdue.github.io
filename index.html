@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14i";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14j";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1529,7 +1529,7 @@ function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     /
       const dx=e.to.x-pivot.x,dz=e.to.z-pivot.z,l=Math.hypot(dx,dz)||1;
       cands.push({toN:e.to, viaN:pivot===b?null:pivot, wrong:!!e.wrong, name:e.name, cross:(hx*dz-hz*dx)/(hl*l)}); } };
   addFrom(b,null);
-  for(const e of b.adj){ if(e.to===a) continue; if(Math.hypot(e.to.x-b.x,e.to.z-b.z)<55) addFrom(e.to,b); }   // step across a short connector to a sibling carriageway
+  for(const e of b.adj){ if(Math.hypot(e.to.x-b.x,e.to.z-b.z)<55) addFrom(e.to,b); }   // step across a short connector to a sibling carriageway — INCLUDING the node we came from (a): on a divided road the correct carriageway is often back across the short median connector we just drove through
   if(!cands.length) return false;
   const cnt=new Map(); for(const c of cands){ if(c.name) cnt.set(c.name,(cnt.get(c.name)||0)+1); }
   let best=null,bd=-1e9;
