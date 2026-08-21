@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1468,6 +1468,13 @@ function updateTiltMap(dt){                                                    /
     if(!FLATCITY.job && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.requestRebuild(truck.x,truck.z); }
   truckG.position.y=0.24;                                                     // tile ground is FLAT at y=0 — ignore terrain elevation so the truck sits on the tiles
   truckG.rotation.set(0,truck.theta,0);                                       // no pitch/roll on flat ground
+  { let tgt=0;                                                                // 🚚 lane offset: the graph rides the street CENTRELINE, so the truck straddled the yellow line — shift the VISUAL into the right-hand lane like a real nav app (DRIVE/route/logic untouched)
+    if(!DRIVE.parked && !INTRO.active){ let bhw=0,bd=1e9;
+      for(const sg of segNear(truck.x,truck.z)){ const c=closestSeg(truck.x,truck.z,sg); if(c.d<bd){bd=c.d;bhw=CLASSW[sg.cls]/2;} }
+      if(bhw) tgt=Math.max(1.6,Math.min(3.0,bhw*0.5)); }
+    MAP.laneOff=(MAP.laneOff||0)+(tgt-(MAP.laneOff||0))*Math.min(1,dt*3);     // ease so junction width changes and parking don't pop
+    const lfx=-Math.sin(truck.theta), lfz=-Math.cos(truck.theta);             // right of travel = (-fz, fx)
+    truckG.position.x=truck.x-lfz*MAP.laneOff; truckG.position.z=truck.z+lfx*MAP.laneOff; }
   for(const sp of LBL.pool){ if(sp.visible) sp.position.y=2.6; }              // keep callouts just above the flat tiles
   if(beaconG.visible) beaconG.position.y=0.1;
   routeMesh.visible=false; routeMeshFlat.visible = routeEdgeFlat.visible = !!(state.route && MAP.guide && routePts && routePts.length>1);   // flat road-hugging blue-purple route + its darker border
@@ -2220,6 +2227,12 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
   const ends=new Map(), ek=(x,z)=>(Math.round(x/2))+','+(Math.round(z/2));     // junction map: how many segments share the endpoint + the widest street's half-width there
   for(const s of list){ const hwv=CLASSW[s.cls]/2;
     for(const k of [ek(s.ax,s.az),ek(s.bx,s.bz)]){ const e=ends.get(k); if(e){ e.n++; if(hwv>e.hw)e.hw=hwv; } else ends.set(k,{n:1,hw:hwv}); } }
+  for(const s of list){ for(const q of [[s.ax,s.az],[s.bx,s.bz]]){ const e=ends.get(ek(q[0],q[1]));   // T-junctions: the side street's endpoint touches the through street MID-segment, so no endpoint is shared — probe for it (the missed case let sidewalks bar across Ridge at every T)
+    if(!e||e.n>=3) continue;
+    for(const o of segNear(q[0],q[1])){ if(o===s||o.name===s.name) continue;
+      if(Math.hypot(o.ax-q[0],o.az-q[1])<3||Math.hypot(o.bx-q[0],o.bz-q[1])<3) continue;             // shares an endpoint — the first pass already counted it
+      const ohw=CLASSW[o.cls]/2;
+      if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; break; } } } }
   return {cx,cz,list,ends,ek,i:0,B:[],T:[],S:[],grid:new Map()};
 }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
