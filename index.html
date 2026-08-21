@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14k";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2427,7 +2427,10 @@ function newDispatch(){ if(MAP.bounds||DRAW.on) return;                         
 function completeDispatch(){ const t=state.target; state.saves++; const reward=Math.round(CONFIG.reward.base*state.combo); state.cash+=reward; sfx.ding(); sfx.splash();   // no timer → flat reward
   popup('🔥 FIRE OUT · '+state.saves+(state.saves===1?' SAVE':' SAVES'),'green'); radio('🔥 OUT at '+t.name+'! '+t.f); const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta);
   for(let i=0;i<Math.min(60,water.n);i++) emit(water,truck.x+fx*3,2.4,truck.z+fz*3,Math.cos(i/60*6.28)*6+Math.random()*3,6+Math.random()*7,Math.sin(i/60*6.28)*6+Math.random()*3,0.9+Math.random()*0.5);
-  state.target=null; state.onScene=false; state.douse=0; clearRivals(); setTimeout(()=>{ if(state.running) newDispatch(); },2600); }   // clear the on-scene/douse latches so the next run arms cleanly
+  state.target=null; state.onScene=false; state.douse=0; clearRivals();
+  setTimeout(()=>{ if(!state.running) return; returnToStation(); newDispatch(); },2600); }   // back to quarters, then the next box comes in — every run starts from the firehouse
+function returnToStation(){ const st=stations.find(s=>s.id===DRIVE.stationId)||stations[0]; if(!st) return;   // teleport back to the firehouse curb and re-park (pull-out prompt returns)
+  parkAtStation(st); camTheta=truck.theta; CAMLOOK.yaw=0; CAMLOOK.pitch=0; radio('🏠 Back in quarters — '+st.companies[0]+' available.'); }
 function saveBest(){ if(state.saves>best.saves||(state.saves===best.saves&&state.cash>best.cash)){ best={saves:state.saves,cash:state.cash}; try{ localStorage.setItem('pfd_ef_best',JSON.stringify(best)); }catch(e){} } }
 function gameOver(){ state.running=false; state.over=true; saveBest(); document.getElementById('finalCash').textContent='$'+state.cash;
   document.getElementById('finalStats').textContent=state.saves+' dispatches completed on the riverfront'; document.getElementById('finalBest').textContent='BEST RUN: '+best.saves+' saves · $'+best.cash;
