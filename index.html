@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14t";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -917,6 +917,38 @@ function gradeSeparatedCrossing(A,B,X,Z){ return NO_XCUT.some(q=>
     take(r); const c=kids.get(r); if(c) for(const m of c) take(m);
     r.adj=[...seen.values()]; }
   for(const [k,n] of [...gnodes]) if(rep.has(n)) gnodes.delete(k); })();
+// BRIDGE STREET BREAKS. The baked geometry leaves ~900 spots where a street plainly continues straight ahead
+// but the two halves share no edge (10–30m gaps, usually where the source data splits a road). The router then
+// detours or dead-ends and the truck stops instead of just driving on. Reconnect a gap only when BOTH sides
+// carry the same street name and each side's own geometry points along the gap, and inherit the one-way sense
+// from the edges either side so a bridge can never create an illegal shortcut.
+(function bridgeBreaks(){ const cell=40, grid=new Map(), all=[...gnodes.values()];
+  for(const n of all){ const k=Math.floor(n.x/cell)+':'+Math.floor(n.z/cell); let a=grid.get(k); if(!a){a=[];grid.set(k,a);} a.push(n); }
+  const MAXGAP=32, added=[];
+  const sameNameEdge=(n,nm,ux,uz,want)=>{ let best=null,bd=-2;                        // n's edge on street nm most aligned with (want * gap direction)
+    for(const e of n.adj){ if(e.name!==nm) continue; const dx=e.to.x-n.x,dz=e.to.z-n.z,l=Math.hypot(dx,dz)||1; const dot=(dx*ux+dz*uz)/l*want; if(dot>bd){bd=dot;best=e;} }
+    return bd>0.72?best:null; };
+  for(const n of all){
+    const gx=Math.floor(n.x/cell), gz=Math.floor(n.z/cell);
+    for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const arr=grid.get(a+':'+b); if(!arr) continue;
+      for(const m of arr){ if(m===n||m.x<n.x||(m.x===n.x&&m.z<=n.z)) continue;         // each pair once
+        const dx=m.x-n.x, dz=m.z-n.z, dist=Math.hypot(dx,dz); if(dist<2||dist>MAXGAP) continue;
+        if(n.adj.some(e=>e.to===m)) continue;                                          // already joined
+        const ux=dx/dist, uz=dz/dist;
+        let nm=null, back=null;
+        for(const e of n.adj){ if(!e.name) continue; const bk=sameNameEdge(n,e.name,ux,uz,-1); if(!bk) continue;   // street arrives at n from behind the gap
+          const carries=m.adj.some(x=>x.name===e.name);                                  // the far side is the same street…
+          if(!carries) continue;
+          if(!sameNameEdge(m,e.name,ux,uz,1) && dist>16) continue;                        // …and either continues straight on, or the gap is short enough that direction can't be judged
+          nm=e.name; back=bk; break; }
+        if(!nm) continue;
+        const rev=back.to.adj.find(x=>x.to===n);                                       // one-way sense of the street behind the gap
+        let wNM=false, wMN=false;
+        if(rev){ if(back.wrong===false && rev.wrong===true) { wNM=true; wMN=false; }    // flow runs n→back, i.e. against the gap
+          else if(back.wrong===true && rev.wrong===false){ wNM=false; wMN=true; } }     // flow runs back→n, i.e. along the gap
+        n.adj.push({to:m,w:dist,name:nm,wrong:wNM}); m.adj.push({to:n,w:dist,name:nm,wrong:wMN}); added.push(dist);
+      } } }
+  window.__bridged=added.length; })();
 const NCELL=90, ngrid=new Map();
 for(const n of gnodes.values()){ const k=Math.floor(n.x/NCELL)+':'+Math.floor(n.z/NCELL); let a=ngrid.get(k); if(!a){a=[];ngrid.set(k,a);} a.push(n); }
 function nearestNode(x,z){ let best=null,bd=1e18; const gx=Math.floor(x/NCELL),gz=Math.floor(z/NCELL);
@@ -1416,7 +1448,8 @@ function toggleCam(){ state.cam = state.cam===3 ? 2 : 3; const b=document.getEle
   routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1;
   b.textContent = state.cam===3?'\uD83E\uDDED TILT' : '\uD83D\uDDFA\uFE0F MAP'; }
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
-  if(FLATCITY.built && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.rebuild(truck.x,truck.z);   // keep the dense block of buildings/trees centred on the truck as it drives across the city
+  if(FLATCITY.built){ FLATCITY.tick();                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
+    if(!FLATCITY.job && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.requestRebuild(truck.x,truck.z); }
   truckG.position.y=0.24;                                                     // tile ground is FLAT at y=0 — ignore terrain elevation so the truck sits on the tiles
   truckG.rotation.set(0,truck.theta,0);                                       // no pitch/roll on flat ground
   for(const sp of LBL.pool){ if(sp.visible) sp.position.y=2.6; }              // keep callouts just above the flat tiles
@@ -2146,42 +2179,66 @@ const FLATCITY={ group:new THREE.Group(), built:false }; FLATCITY.group.visible=
 // ground. Instead generate a DENSE block of buildings + trees within a radius of the truck and refresh it as
 // it moves, so anywhere in Philadelphia looks like a real street. Placement is hashed off rounded coordinates,
 // so the same corner always grows the same building/tree (no popping when the block is rebuilt).
-const LOCAL={ R:760, step:17, maxB:1400, maxT:900 };
+const LOCAL={ R:760, step:17, maxB:1400, maxT:900, maxS:1100 };
 function hash2(x,z){ let h=(x*73856093)^(z*19349663); h=Math.imul(h^h>>>13,1274126177); return ((h^h>>>16)>>>0)/4294967296; }
-function genLocalCity(cx,cz){ const B=[],T=[],grid=new Map(), gk=(x,z)=>((x/11)|0)+':'+((z/11)|0), R=LOCAL.R, R2=R*R;
+function startLocalCity(cx,cz){ const R=LOCAL.R;                                          // resumable job: gather the streets once, then chew through them a few ms per frame
   const segs=new Set(), c0=Math.floor((cx-R)/SEGCELL), c1=Math.floor((cx+R)/SEGCELL), d0=Math.floor((cz-R)/SEGCELL), d1=Math.floor((cz+R)/SEGCELL);
   for(let a=c0;a<=c1;a++) for(let b=d0;b<=d1;b++){ const l=segGrid.get(a+':'+b); if(l) for(const s of l) segs.add(s); }
   const list=[...segs].filter(s=>s.cls<=3);
   list.sort((p,q)=>((p.ax-cx)**2+(p.az-cz)**2)-((q.ax-cx)**2+(q.az-cz)**2));   // nearest streets first so the caps fill the view around the truck
-  for(const s of list){ if(B.length>=LOCAL.maxB && T.length>=LOCAL.maxT) break;
+  return {cx,cz,list,i:0,B:[],T:[],S:[],grid:new Map()};
+}
+function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
+  const {cx,cz,B,T,S,grid}=J;
+  while(J.i<J.list.length){
+    if(B.length>=LOCAL.maxB && T.length>=LOCAL.maxT && S.length>=LOCAL.maxS) break;
+    if(performance.now()-t0>budgetMs) return false;                                        // out of time — resume next frame
+    const s=J.list[J.i++];
     const rh=CLASSW[s.cls]/2; let dx=s.bx-s.ax, dz=s.bz-s.az; const sl=Math.hypot(dx,dz)||1; dx/=sl; dz/=sl; const nx=-dz,nz=dx;
+    if(sl>=6 && S.length<LOCAL.maxS){                                                      // 🛣️ kerb / sidewalk slab down each side of this street
+      const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2;
+      if((mx-cx)**2+(mz-cz)**2<=R2){ const walk=s.cls<=1?4.2:3.2, ang=Math.atan2(dx,dz);
+        for(const side of [1,-1]) S.push({x:mx+nx*(rh+walk/2)*side, z:mz+nz*(rh+walk/2)*side, len:sl, w:walk, ang}); } }
     for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
       if((px-cx)**2+(pz-cz)**2>R2) continue;
       for(const side of [1,-1]){ const rv=hash2(Math.round(px)*2+ (side>0?1:0), Math.round(pz));
         if(rv<0.27){ if(T.length>=LOCAL.maxT) continue;                                    // street tree just past the sidewalk
           const to=rh+3+rv*10, tx=Math.round(px+nx*to*side), tz=Math.round(pz+nz*to*side), tk=gk(tx,tz);
-          if(grid.has(tk)||inWater(tx,tz)) continue; grid.set(tk,1); T.push({x:tx,z:tz,s:0.85+rv*1.5}); continue; }   // no road probe for trees — the offset already clears this road, and a tree near a crossing kerb is harmless (the probe cost ~half the rebuild)
+          if(grid.has(tk)||inWater(tx,tz)) continue; grid.set(tk,1); T.push({x:tx,z:tz,s:0.85+rv*1.5}); continue; }   // no road probe for trees — the offset already clears this road
         if(B.length>=LOCAL.maxB) continue;
         const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=rh+3.2+reach;
         const bx=Math.round(px+nx*off*side), bz=Math.round(pz+nz*off*side), k=gk(bx,bz);
         if(grid.has(k)||inWater(bx,bz)) continue;
-        if(nearRoadEdge(bx,bz)<reach*0.8) continue;                                        // one cheap clearance probe (the 5-corner test cost ~half the rebuild budget)
+        if(nearRoadEdge(bx,bz)<reach*0.8) continue;                                        // one cheap clearance probe
         let clear=true; for(const st of stations){ if(st.curated&&Math.hypot(bx-st.x,bz-st.z)<62){ clear=false; break; } }   // keep the curated firehouse forecourts open
         if(!clear) continue;
         grid.set(k,1);
         const tall=hash2(bx,bz*3), h = s.cls<=1 ? (9+tall*9+(tall>0.85?tall*16:0)) : (6+tall*5+(tall>0.92?tall*8:0));
         B.push({x:bx,z:bz,w,d,h,roof:h<12.5&&tall<0.62,roofH:2.2+tall*2.2}); } } }
-  return {B,T};
+  return true;                                                                             // finished
 }
+function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCity(J,1e9)); return J; }   // synchronous (first build only)
 function buildFlatCity(){ if(FLATCITY.built) return; FLATCITY.built=true;
   const gw=(WB.maxX-WB.minX)+1600, gd=(WB.maxZ-WB.minZ)+1600, gcx=(WB.minX+WB.maxX)/2, gcz=(WB.minZ+WB.maxZ)/2;   // base ground under everything so the horizon isn't empty past the live tiles
   const grd=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),new THREE.MeshBasicMaterial({color:0xe7e3d8})); grd.rotation.x=-Math.PI/2; grd.position.set(gcx,-0.06,gcz); grd.renderOrder=-1; FLATCITY.group.add(grd);
   FLATCITY.rebuild(truck.x,truck.z); }
 FLATCITY.parts=[];
-FLATCITY.rebuild=function(cx,cz){ const dummy=new THREE.Object3D(), col=new THREE.Color();
+// Refresh the block WITHOUT a frame hitch: generation runs a few ms per frame while the old scenery stays up,
+// and the meshes are swapped in one go when it finishes. (A full synchronous rebuild cost ~20-90ms = a visible stutter.)
+FLATCITY.tick=function(){ if(!FLATCITY.job) return;
+  if(!stepLocalCity(FLATCITY.job,3.5)) return;                                  // still working — try again next frame
+  const J=FLATCITY.job; FLATCITY.job=null; FLATCITY.commit(J);
+};
+FLATCITY.requestRebuild=function(cx,cz){ if(FLATCITY.job) return;               // one job at a time
+  FLATCITY.cx=cx; FLATCITY.cz=cz; FLATCITY.job=startLocalCity(cx,cz); };
+FLATCITY.rebuild=function(cx,cz){ FLATCITY.job=null; FLATCITY.cx=cx; FLATCITY.cz=cz; FLATCITY.commit(genLocalCity(cx,cz)); };
+FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Color();
   for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); o.geometry.dispose(); o.material.dispose(); }
   FLATCITY.parts=[];
-  const {B,T}=genLocalCity(cx,cz); FLATCITY.cx=cx; FLATCITY.cz=cz;
+  const B=J.B, T=J.T, S=J.S;
+  if(S&&S.length){ const sw=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xdedbd2}),S.length);   // kerb slabs: pale, 14cm proud of the roadway
+    S.forEach((p,i)=>{ dummy.position.set(p.x,0.07,p.z); dummy.scale.set(p.w,0.14,p.len); dummy.rotation.set(0,p.ang,0); dummy.updateMatrix(); sw.setMatrixAt(i,dummy.matrix); });
+    sw.instanceMatrix.needsUpdate=true; FLATCITY.group.add(sw); FLATCITY.parts.push(sw); }
   const wallPal=[0xe4e2da,0xd7d5cc,0xdedcd2,0xcfd2d6,0xe0ded4,0xd2d0c6,0xd9dce0], roofPal=[0xb9b6ad,0xc2bfb5,0xadb0b6,0xc6c3b9,0xb2b5ba];
   if(B.length){ const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),B.length);
     const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),B.length);
