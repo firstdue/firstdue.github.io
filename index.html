@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2217,8 +2217,9 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
   for(let a=c0;a<=c1;a++) for(let b=d0;b<=d1;b++){ const l=segGrid.get(a+':'+b); if(l) for(const s of l) segs.add(s); }
   const list=[...segs].filter(s=>s.cls<=3);
   list.sort((p,q)=>((p.ax-cx)**2+(p.az-cz)**2)-((q.ax-cx)**2+(q.az-cz)**2));   // nearest streets first so the caps fill the view around the truck
-  const ends=new Map(), ek=(x,z)=>(Math.round(x/2))+','+(Math.round(z/2));     // endpoint-share count → junction detection for crosswalks/dash gaps
-  for(const s of list){ for(const k of [ek(s.ax,s.az),ek(s.bx,s.bz)]) ends.set(k,(ends.get(k)||0)+1); }
+  const ends=new Map(), ek=(x,z)=>(Math.round(x/2))+','+(Math.round(z/2));     // junction map: how many segments share the endpoint + the widest street's half-width there
+  for(const s of list){ const hwv=CLASSW[s.cls]/2;
+    for(const k of [ek(s.ax,s.az),ek(s.bx,s.bz)]){ const e=ends.get(k); if(e){ e.n++; if(hwv>e.hw)e.hw=hwv; } else ends.set(k,{n:1,hw:hwv}); } }
   return {cx,cz,list,ends,ek,i:0,B:[],T:[],S:[],grid:new Map()};
 }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
@@ -2231,7 +2232,10 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
     if(sl>=6 && S.length<LOCAL.maxS){                                                      // 🛣️ kerb / sidewalk slab down each side of this street
       const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2;
       if((mx-cx)**2+(mz-cz)**2<=R2){ const walk=s.cls<=1?4.2:3.2, ang=Math.atan2(dx,dz);
-        for(const side of [1,-1]) S.push({x:mx+nx*(rh+walk/2)*side, z:mz+nz*(rh+walk/2)*side, len:sl, w:walk, ang}); } }
+        const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));              // trim the slab short of each junction by the CROSSING street's width — full-length slabs shot white bars across intersections and boxed the corners
+        const t0=(eA&&eA.n>=3)?eA.hw+walk+0.6:0, t1=(eB&&eB.n>=3)?eB.hw+walk+0.6:0, len2=sl-t0-t1;
+        if(len2>2){ const tc=(t0+(sl-t1))/2, px2=s.ax+dx*tc, pz2=s.az+dz*tc;
+          for(const side of [1,-1]) S.push({x:px2+nx*(rh+walk/2)*side, z:pz2+nz*(rh+walk/2)*side, len:len2, w:walk, ang}); } } }
     for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
       if((px-cx)**2+(pz-cz)**2>R2) continue;
       for(const side of [1,-1]){ const rv=hash2(Math.round(px)*2+ (side>0?1:0), Math.round(pz));
@@ -2281,10 +2285,11 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       const ax=s.ax-ex, az=s.az-ez, bx=s.bx+ex, bz=s.bz+ez;
       rp.push(ax+nx,ROAD_Y,az+nz, bx+nx,ROAD_Y,bz+nz, bx-nx,ROAD_Y,bz-nz,
               ax+nx,ROAD_Y,az+nz, bx-nx,ROAD_Y,bz-nz, ax-nx,ROAD_Y,az-nz);
-      const jA=(J.ends.get(J.ek(s.ax,s.az))||0)>=3, jB=(J.ends.get(J.ek(s.bx,s.bz))||0)>=3;   // does either end meet a junction?
+      const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));
+      const jA=!!eA&&eA.n>=3, jB=!!eB&&eB.n>=3;                                            // does either end meet a junction?
       if(s.cls<=2 && l>14 && mk.length<160000){
         const dash=3.4, gap=4.6, hwm=s.cls<=1?0.30:0.26;
-        const m0=jA?hw+5:2, m1=jB?hw+5:2;                                                  // dashes STOP short of a junction (real lane lines end at the stop bar, they do not run through the box)
+        const m0=jA?eA.hw+4.5:2, m1=jB?eB.hw+4.5:2;                                        // dashes STOP short of a junction, scaled to the CROSSING street's width
         const oneway=!!s.ow;                                                               // twin lane dividers ONLY on one-ways (twin dashes on two-way Ridge read as 3 lanes — user caught it)
         const lanes = (oneway&&s.cls<=1) ? [-hw*0.45, hw*0.45] : [0];
         const arr = oneway ? mk : my;                                                      // two-way centre line is YELLOW like a real US road; one-way lane lines stay white
@@ -2294,8 +2299,8 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn,
                     p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); } } }
       if(s.cls<=2 && l>18 && mk.length<160000){                                            // 🚸 zebra crosswalk across each junction approach — what makes an intersection read as an intersection
-        for(const q of [[jA,s.ax,s.az,dx,dz],[jB,s.bx,s.bz,-dx,-dz]]){
-          if(!q[0]) continue; const inset=hw+2.6, cxw=q[1]+q[3]*inset, czw=q[2]+q[4]*inset;
+        for(const q of [[jA,s.ax,s.az,dx,dz,eA],[jB,s.bx,s.bz,-dx,-dz,eB]]){
+          if(!q[0]) continue; const inset=(q[5]?q[5].hw:hw)+2.2, cxw=q[1]+q[3]*inset, czw=q[2]+q[4]*inset;   // zebra sits just outside the crossing roadway, whatever its width
           const bl=1.3, nxu=-q[4], nzu=q[3];                                               // bars elongated ALONG travel, arrayed across the road
           for(let o=-hw*0.82; o<=hw*0.82; o+=1.15){
             const bx=cxw+nxu*o, bz=czw+nzu*o, ax2=q[3]*bl, az2=q[4]*bl, sx2=nxu*0.28, sz2=nzu*0.28;
