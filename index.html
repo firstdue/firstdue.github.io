@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1056,7 +1056,7 @@ function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x
 // Map-style abbreviation for the 3D callouts only (display text; the sprite still stores the full name for logic)
 const LBL_ABBR=[[/\bStreet\b/g,'St'],[/\bAvenue\b/g,'Ave'],[/\bLane\b/g,'Ln'],[/\bDrive\b/g,'Dr'],[/\bRoad\b/g,'Rd'],[/\bBoulevard\b/g,'Blvd'],[/\bPlace\b/g,'Pl'],[/\bCourt\b/g,'Ct'],[/\bTerrace\b/g,'Ter'],[/\bParkway\b/g,'Pkwy'],[/\bHighway\b/g,'Hwy'],[/\bCircle\b/g,'Cir'],[/\bSquare\b/g,'Sq'],[/\bExtension\b/g,'Ext'],[/\bMemorial\b/g,'Mem'],[/^West\b/,'W'],[/^East\b/,'E'],[/^North\b/,'N'],[/^South\b/,'S']];
 function abbrevStreet(n){ let s=String(n||''); for(const [re,to] of LBL_ABBR) s=s.replace(re,to); return s; }
-function labelTex(name,block){ const bl=blockLine(block), key=name+'|'+bl; if(LBL.cache[key]) return LBL.cache[key];
+function labelTex(name,block,wrong){ const bl=wrong?'⛔ ONE WAY':blockLine(block), key=name+'|'+bl+(wrong?'|W':''); if(LBL.cache[key]) return LBL.cache[key];
   name=abbrevStreet(name);                                                         // shorten long names so the pill stays small (W School House Ln)
   const S=2,pad=9*S,ptr=5*S,fs=15*S,bfs=8.5*S,r=8*S;                               // two-line sign: hundred block above the street name (compact)
   const fnt='600 '+fs+'px -apple-system,"Helvetica Neue",Arial,sans-serif', bfnt='800 '+bfs+'px -apple-system,"Helvetica Neue",Arial,sans-serif';
@@ -1064,10 +1064,10 @@ function labelTex(name,block){ const bl=blockLine(block), key=name+'|'+bl; if(LB
   const tw=Math.max(nw,Math.ceil(mc.measureText(bl).width)),w=tw+pad*2,bh=Math.round(fs+bfs+pad*1.25),h=bh+ptr;
   const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const c=cv.getContext('2d'); c.textAlign='center'; c.textBaseline='middle';
   c.shadowColor='rgba(0,0,0,0.42)'; c.shadowBlur=8*S; c.shadowOffsetY=3*S;
-  c.fillStyle=SIGN_BG; roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.fill();
+  c.fillStyle=wrong?'#d0342c':SIGN_BG; roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.fill();
   c.beginPath(); c.moveTo(w/2-ptr,bh-1); c.lineTo(w/2+ptr,bh-1); c.lineTo(w/2,bh+ptr-1); c.closePath(); c.fill();
-  c.shadowColor='transparent'; c.strokeStyle=SIGN_EDGE; c.lineWidth=1.5*S; roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.stroke();
-  c.shadowColor='rgba(0,0,0,.38)'; c.shadowBlur=2*S; c.shadowOffsetY=1*S; c.fillStyle=SIGN_FG;
+  c.shadowColor='transparent'; c.strokeStyle=wrong?'#8f1d14':SIGN_EDGE; c.lineWidth=1.5*S; roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.stroke();
+  c.shadowColor='rgba(0,0,0,.38)'; c.shadowBlur=2*S; c.shadowOffsetY=1*S; c.fillStyle=wrong?'#ffffff':SIGN_FG;
   c.font=bfnt; c.fillText(bl,w/2,bh*0.4); c.font=fnt; c.fillText(name,w/2,bh*0.78); c.shadowColor='transparent';
   const t=new THREE.CanvasTexture(cv); t.anisotropy=4; t.minFilter=THREE.LinearFilter; t.generateMipmaps=false;
   return (LBL.cache[key]={tex:t,aspect:w/h}); }
@@ -1083,13 +1083,14 @@ function updateStreetLabels(dt){
     const addBranch=(node,e,first=null,from=null)=>{                               // one pooled sign per street + hundred block
       const nm=e.name||streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);
       if(!nm||nm==='—'||canonStreet(nm)===curKey) return;
-      if(e.wrong) return;                                                         // don't offer a wrong-way turn (one-way / divided-road carriageway)
       const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1;
       const off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));             // at the house keep the sign close to the corner, inside the Chase frame
       const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=hundredBlock(lx,lz,nm),key=canonStreet(nm)+'|'+block;
-      if(seen[key]) return; seen[key]=1;
       const pick=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null);
-      cand.push({name:nm,block,x:lx,z:lz,pick}); };
+      const prev=seen[key];                                                       // a wrong-way branch gets a RED sign, not silence — tapping it still turns (user: 'if you have to you still can')
+      if(prev!==undefined){ if(cand[prev]&&cand[prev].wrong&&!e.wrong) cand[prev]={name:nm,block,x:lx,z:lz,pick,wrong:false}; return; }   // legal beats wrong for the same street+block
+      seen[key]=cand.length;
+      cand.push({name:nm,block,x:lx,z:lz,pick,wrong:!!e.wrong}); };
     let a=DRIVE.fromN, b=DRIVE.toN, guard=0;
     if(DRIVE.parked&&DRIVE.stationNode){                                           // parked engines have no fromN/toN: preview the first real cross street both ways
       const root=DRIVE.stationNode, scan=Math.min(LBL._far,180);
@@ -1113,7 +1114,7 @@ function updateStreetLabels(dt){
     if(cand.length>LBL.showCap) cand.length=LBL.showCap;                         // nearest choices only: prevent a stack of future-intersection signs
     for(let i=0;i<LBL.pool.length;i++){ const sp=LBL.pool[i], cd=cand[i];
       if(!cd){ sp.visible=false; sp._name=null; sp._key=null; sp._block=null; sp._pick=null; continue; }
-      const key=cd.name+'|'+cd.block; if(sp._key!==key){ const info=labelTex(cd.name,cd.block); sp.material.map=info.tex; sp.material.needsUpdate=true; sp._key=key; sp._name=cd.name; sp._aspect=info.aspect; }
+      const key=cd.name+'|'+cd.block+(cd.wrong?'|W':''); if(sp._key!==key){ const info=labelTex(cd.name,cd.block,cd.wrong); sp.material.map=info.tex; sp.material.needsUpdate=true; sp._key=key; sp._name=cd.name; sp._aspect=info.aspect; }
       sp._block=cd.block; sp._pick=cd.pick||null;
       sp.position.set(cd.x,groundHeight(cd.x,cd.z)+LBL.float,cd.z); sp.visible=true; } }
   const curNow=streetName(truck.x,truck.z);                                            // hide the street you're on every frame (no throttle-lag flash when you turn onto it)
@@ -1645,7 +1646,7 @@ function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     /
   const cnt=new Map(); for(const c of cands){ if(c.name) cnt.set(c.name,(cnt.get(c.name)||0)+1); }
   let best=null,bd=-1e9;
   for(const c of cands){ let s=dir*c.cross;                                    // prefer the tapped side...
-    if(c.wrong) s-=100;                                                        // ...never a wrong-way carriageway unless nothing legal exists
+    if(c.wrong) s-=0.6;                                                        // ...legal wins when both exist on that side, but a deliberate turn onto a lone one-way is allowed (red sign + WRONG WAY banner warn)
     if(c.name && cnt.get(c.name)>=2) s+=0.4;                                   // ...prefer turning ONTO the arterial (the through road), not the side street
     if(c.viaN) s-=0.15;                                                        // ...slight preference for a direct turn over a jog to a sibling carriageway
     if(s>bd){ bd=s; best=c; } }
@@ -1889,8 +1890,8 @@ function pickTurn(sign){ const j=nextJunction(); if(!j.node||!j.from) return;   
   const branches=j.node.adj.filter(e=>e.to!==j.from); if(!branches.length) return;
   let best=null,bd=0.12,bc=0;                                                                        // require a REAL branch toward the tapped side; else no-op (truck keeps straight)
   for(const e of branches){ const dx=e.to.x-j.node.x,dz=e.to.z-j.node.z,l=Math.hypot(dx,dz)||1; const cross=(hx*dz-hz*dx)/(hl*l);   // cross>0 = right
-    if(e.wrong) continue;                                                              // never turn the WRONG way down a one-way / divided-road carriageway
-    if(sign*cross>bd){ bd=sign*cross; best=e.to; bc=cross; } }
+    const sc=sign*cross-(e.wrong?0.6:0);                                               // wrong-way is a CHOICE now, not a wall: a legal branch on the tapped side still wins, but a lone one-way (red sign) is taken — the WRONG WAY banner warns after
+    if(sc>bd){ bd=sc; best=e.to; bc=cross; } }
   if(best){ DRIVE.pending={at:j.node,next:best}; DRIVE.arrow=bc>0?1:-1; DRIVE.arrowT=4; } }
 function takeParkedStreet(sp){ const p=sp&&sp._pick; if(!p||!p.root||!p.next||INTRO.active) return false;
   DRIVE.parked=false; DRIVE.going=true; DRIVE.atChoice=false; DRIVE.t=0; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.pending=null;
@@ -2073,7 +2074,7 @@ function pullOut(dir){ if(!DRIVE.parked) return; const n=DRIVE.stationNode||near
   DRIVE.fromN=n; DRIVE.toN=best; DRIVE.t=0; DRIVE.parked=false; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); }
 function chooseTurn(wx,wz){ const j=nextJunction(), branches=j.node?j.node.adj.filter(e=>e.to!==j.from):[]; if(branches.length<2) return;
   const tx=wx-j.node.x,tz=wz-j.node.z,tl=Math.hypot(tx,tz)||1; let best=null,bd=-2;
-  for(const e of branches){ const dx=e.to.x-j.node.x,dz=e.to.z-j.node.z,l=Math.hypot(dx,dz)||1; const dot=(tx*dx+tz*dz)/(tl*l)-(e.wrong?9:0); if(dot>bd){bd=dot;best=e.to;} }   // prefer a legal branch; a wrong-way carriageway only if nothing legal exists
+  for(const e of branches){ const dx=e.to.x-j.node.x,dz=e.to.z-j.node.z,l=Math.hypot(dx,dz)||1; const dot=(tx*dx+tz*dz)/(tl*l)-(e.wrong?0.5:0); if(dot>bd){bd=dot;best=e.to;} }   // prefer legal on an ambiguous tap, but a tap AT the one-way takes it (its sign is red)
   DRIVE.pending={at:j.node,next:best};
   const hx=j.node.x-j.from.x,hz=j.node.z-j.from.z, dx=best.x-j.node.x,dz=best.z-j.node.z, cross=hx*dz-hz*dx;   // >0 = right on a heading-up map (verify)
   DRIVE.arrow = cross>0?1:-1; DRIVE.arrowT=4; }
@@ -2800,8 +2801,8 @@ const homeEl=document.getElementById('home');
       const head=document.createElement('div'); head.className='bnHead';
       head.innerHTML='<span>'+(bn?ordinalBn(bn)+' BATTALION':'OTHER')+'</span><span class="bnCount">'+grp.length+'</span>';
       list.appendChild(head);
-      for(const st of grp){ const b=document.createElement('button'); b.className='btn stbtn'+(st.curated?' feat':'');
-        b.innerHTML='<span class="eBadge">'+st.num+'</span><span class="stTxt"><span class="stName">Engine '+st.num+(st.ladder?' · Ladder '+st.ladder:'')+(st.curated?' <span class="star">★</span>':'')+'</span><span class="sub2">'+st.address+'</span></span>';
+      for(const st of grp){ const b=document.createElement('button'); b.className='btn stbtn';
+        b.innerHTML='<span class="eBadge">'+st.num+'</span><span class="stTxt"><span class="stName">Engine '+st.num+(st.ladder?' · Ladder '+st.ladder:'')+'</span><span class="sub2">'+st.address+'</span></span>';
         b.addEventListener('click',()=>startShift(st)); list.appendChild(b); }
     }
   }
