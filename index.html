@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14u";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14v";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2025,15 +2025,17 @@ function parkAtStation(st){ DRIVE.parked=true; DRIVE.going=false; DRIVE.pending=
   DRIVE.fromN=null; DRIVE.toN=null; DRIVE.stDir=null; DRIVE.stPerp=null;
   // anchor to the street the firehouse actually faces (Ridge Ave / Main St) — not just the nearest road
   let ax=st.x, az=st.z, px=st.perp?st.perp.x:0, pz=st.perp?st.perp.z:1, faceCls=-1;
-  if(st.faces){ let best=null,bd=1e18; const gx=Math.floor(st.x/SEGCELL),gz=Math.floor(st.z/SEGCELL);
-    for(let r=0;r<=4&&!best;r++){ for(let a=gx-r;a<=gx+r;a++)for(let b2=gz-r;b2<=gz+r;b2++){ const l=segGrid.get(a+':'+b2); if(!l) continue;
-      for(const s of l){ if(s.name!==st.faces) continue; const c=closestSeg(st.x,st.z,s); if(c.d<bd){ bd=c.d; best={c,s}; } } }
-      if(best&&r>=1) break; }
+  { let best=null,bd=1e18; const gx=Math.floor(st.x/SEGCELL),gz=Math.floor(st.z/SEGCELL);
+    if(st.faces){ for(let r=0;r<=4&&!best;r++){ for(let a=gx-r;a<=gx+r;a++)for(let b2=gz-r;b2<=gz+r;b2++){ const l=segGrid.get(a+':'+b2); if(!l) continue;
+        for(const s of l){ if(s.name!==st.faces) continue; const c=closestSeg(st.x,st.z,s); if(c.d<bd){ bd=c.d; best={c,s}; } } }
+        if(best&&r>=1) break; } }
+    else { for(const s of segNear(st.x,st.z)){ const c=closestSeg(st.x,st.z,s); if(c.d<bd){ bd=c.d; best={c,s}; } } }   // the 55 citywide houses carry no faces street; anchor to the road they actually sit on so the curb offset scales to ITS width (a flat 7m parked them out past the asphalt on class 3/4 streets)
     if(best){ ax=best.c.cx; az=best.c.cz; faceCls=best.s.cls; const dx=best.s.bx-best.s.ax, dz=best.s.bz-best.s.az, l=Math.hypot(dx,dz)||1;
       DRIVE.stDir={x:dx/l, z:dz/l};                                                             // direction the street runs — the parked camera looks down it
       px=-dz/l; pz=dx/l;
+      const sx=st.siteX!==undefined?st.siteX:st.x, sz=st.siteZ!==undefined?st.siteZ:st.z;        // the real firehouse point — a station's stored x/z can sit exactly ON the centerline, which makes the side test degenerate
       if(st._nx!==undefined){ if(px*st._nx+pz*st._nz<0){ px=-px; pz=-pz; } }                    // use the SAME side the firehouse was built on (station coords alone can be on the centerline)
-      else if((st.x-ax)*px+(st.z-az)*pz<0){ px=-px; pz=-pz; } } }                               // normal pointing toward the firehouse side
+      else if((sx-ax)*px+(sz-az)*pz<0){ px=-px; pz=-pz; } } }                                   // normal pointing toward the firehouse side
   DRIVE.stationNode=nearestNode(ax,az); DRIVE.faces=st.faces||null;
   const off = faceCls>=0 ? Math.max(3, CLASSW[faceCls]/2 - 1) : 7;                              // sit at the curb (inner edge of the asphalt), scaled to the street width — not out on the grass
   DRIVE.stPerp={x:px, z:pz}; DRIVE.stOff=off;                                                   // unit normal toward the firehouse side + the curb offset (the intro pulls the truck up along this)
