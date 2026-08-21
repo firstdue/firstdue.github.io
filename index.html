@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14r";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -945,8 +945,8 @@ scene.fog=new THREE.Fog(0xb9d3e8,CONFIG.render.fogNear,CONFIG.render.fogFar);
 const camera=new THREE.PerspectiveCamera(CONFIG.render.fov,innerWidth/innerHeight,0.5,2400);
 function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
 addEventListener('resize',onResize); addEventListener('orientationchange',()=>setTimeout(onResize,120));
-const hemi=new THREE.HemisphereLight(0xe8eef0,0x6b6f66,0.62); scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffefd2,0.72); sun.position.set(-240,300,-160); scene.add(sun);   // softer light: pale map-style surfaces keep their shading instead of clipping to white
+const hemi=new THREE.HemisphereLight(0xeaf2f6,0x8d8e86,0.78); scene.add(hemi);   // brighter sky bounce + lighter ground bounce = the soft, evenly-lit look of a nav map
+const sun=new THREE.DirectionalLight(0xfff3de,0.62); sun.position.set(-240,300,-160); scene.add(sun);   // gentler key so pale map-style surfaces shade softly instead of harsh-contrasting
 const DAYBG=new THREE.Color(0xb9d3e8), NIGHTBG=new THREE.Color(CONFIG.env.nightBg);   // soft map-style daylight / night targets
 const lambert=c=>new THREE.MeshLambertMaterial({color:c});
 function box(w,h,d,c,x,y,z,grp){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lambert(c)); m.position.set(x,y,z); (grp||scene).add(m); return m; }
@@ -1416,6 +1416,7 @@ function toggleCam(){ state.cam = state.cam===3 ? 2 : 3; const b=document.getEle
   routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1;
   b.textContent = state.cam===3?'\uD83E\uDDED TILT' : '\uD83D\uDDFA\uFE0F MAP'; }
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
+  if(FLATCITY.built && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.rebuild(truck.x,truck.z);   // keep the dense block of buildings/trees centred on the truck as it drives across the city
   truckG.position.y=0.24;                                                     // tile ground is FLAT at y=0 — ignore terrain elevation so the truck sits on the tiles
   truckG.rotation.set(0,truck.theta,0);                                       // no pitch/roll on flat ground
   for(const sp of LBL.pool){ if(sp.visible) sp.position.y=2.6; }              // keep callouts just above the flat tiles
@@ -2140,7 +2141,69 @@ const HYD_LAYER=(function(){ const n=HYDRANTS.length, pos=new Float32Array(n*3);
   const pts=new THREE.Points(g,m); pts.renderOrder=4; LIVE3D.group.add(pts); return pts; })();
 // ── 🏙️ flat extruded buildings for the tilt map (procedural footprints, pale Google-style, sitting on y=0) ──
 const FLATCITY={ group:new THREE.Group(), built:false }; FLATCITY.group.visible=false; scene.add(FLATCITY.group);
-function buildFlatCity(){ genCityData(); if(FLATCITY.built||!buildData.length) return; FLATCITY.built=true;
+// Scenery around the truck. The one-time citywide pass (2200 buildings / 600 trees) was sized for a single
+// neighbourhood — spread over the whole city it left ~29 buildings and 6 trees per view, which read as bare
+// ground. Instead generate a DENSE block of buildings + trees within a radius of the truck and refresh it as
+// it moves, so anywhere in Philadelphia looks like a real street. Placement is hashed off rounded coordinates,
+// so the same corner always grows the same building/tree (no popping when the block is rebuilt).
+const LOCAL={ R:760, step:17, maxB:1400, maxT:900 };
+function hash2(x,z){ let h=(x*73856093)^(z*19349663); h=Math.imul(h^h>>>13,1274126177); return ((h^h>>>16)>>>0)/4294967296; }
+function genLocalCity(cx,cz){ const B=[],T=[],grid=new Map(), gk=(x,z)=>((x/11)|0)+':'+((z/11)|0), R=LOCAL.R, R2=R*R;
+  const segs=new Set(), c0=Math.floor((cx-R)/SEGCELL), c1=Math.floor((cx+R)/SEGCELL), d0=Math.floor((cz-R)/SEGCELL), d1=Math.floor((cz+R)/SEGCELL);
+  for(let a=c0;a<=c1;a++) for(let b=d0;b<=d1;b++){ const l=segGrid.get(a+':'+b); if(l) for(const s of l) segs.add(s); }
+  const list=[...segs].filter(s=>s.cls<=3);
+  list.sort((p,q)=>((p.ax-cx)**2+(p.az-cz)**2)-((q.ax-cx)**2+(q.az-cz)**2));   // nearest streets first so the caps fill the view around the truck
+  for(const s of list){ if(B.length>=LOCAL.maxB && T.length>=LOCAL.maxT) break;
+    const rh=CLASSW[s.cls]/2; let dx=s.bx-s.ax, dz=s.bz-s.az; const sl=Math.hypot(dx,dz)||1; dx/=sl; dz/=sl; const nx=-dz,nz=dx;
+    for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
+      if((px-cx)**2+(pz-cz)**2>R2) continue;
+      for(const side of [1,-1]){ const rv=hash2(Math.round(px)*2+ (side>0?1:0), Math.round(pz));
+        if(rv<0.27){ if(T.length>=LOCAL.maxT) continue;                                    // street tree just past the sidewalk
+          const to=rh+3+rv*10, tx=Math.round(px+nx*to*side), tz=Math.round(pz+nz*to*side), tk=gk(tx,tz);
+          if(grid.has(tk)||inWater(tx,tz)) continue; grid.set(tk,1); T.push({x:tx,z:tz,s:0.85+rv*1.5}); continue; }   // no road probe for trees — the offset already clears this road, and a tree near a crossing kerb is harmless (the probe cost ~half the rebuild)
+        if(B.length>=LOCAL.maxB) continue;
+        const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=rh+3.2+reach;
+        const bx=Math.round(px+nx*off*side), bz=Math.round(pz+nz*off*side), k=gk(bx,bz);
+        if(grid.has(k)||inWater(bx,bz)) continue;
+        if(nearRoadEdge(bx,bz)<reach*0.8) continue;                                        // one cheap clearance probe (the 5-corner test cost ~half the rebuild budget)
+        let clear=true; for(const st of stations){ if(st.curated&&Math.hypot(bx-st.x,bz-st.z)<62){ clear=false; break; } }   // keep the curated firehouse forecourts open
+        if(!clear) continue;
+        grid.set(k,1);
+        const tall=hash2(bx,bz*3), h = s.cls<=1 ? (9+tall*9+(tall>0.85?tall*16:0)) : (6+tall*5+(tall>0.92?tall*8:0));
+        B.push({x:bx,z:bz,w,d,h,roof:h<12.5&&tall<0.62,roofH:2.2+tall*2.2}); } } }
+  return {B,T};
+}
+function buildFlatCity(){ if(FLATCITY.built) return; FLATCITY.built=true;
+  const gw=(WB.maxX-WB.minX)+1600, gd=(WB.maxZ-WB.minZ)+1600, gcx=(WB.minX+WB.maxX)/2, gcz=(WB.minZ+WB.maxZ)/2;   // base ground under everything so the horizon isn't empty past the live tiles
+  const grd=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),new THREE.MeshBasicMaterial({color:0xe7e3d8})); grd.rotation.x=-Math.PI/2; grd.position.set(gcx,-0.06,gcz); grd.renderOrder=-1; FLATCITY.group.add(grd);
+  FLATCITY.rebuild(truck.x,truck.z); }
+FLATCITY.parts=[];
+FLATCITY.rebuild=function(cx,cz){ const dummy=new THREE.Object3D(), col=new THREE.Color();
+  for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); o.geometry.dispose(); o.material.dispose(); }
+  FLATCITY.parts=[];
+  const {B,T}=genLocalCity(cx,cz); FLATCITY.cx=cx; FLATCITY.cz=cz;
+  const wallPal=[0xe4e2da,0xd7d5cc,0xdedcd2,0xcfd2d6,0xe0ded4,0xd2d0c6,0xd9dce0], roofPal=[0xb9b6ad,0xc2bfb5,0xadb0b6,0xc6c3b9,0xb2b5ba];
+  if(B.length){ const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),B.length);
+    const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),B.length);
+    B.forEach((b,i)=>{ const bh=b.h; dummy.position.set(b.x,bh/2,b.z); dummy.scale.set(b.w,bh,b.d); dummy.rotation.set(0,0,0); dummy.updateMatrix(); bm.setMatrixAt(i,dummy.matrix); bm.setColorAt(i,col.setHex(wallPal[i%wallPal.length]));
+      dummy.position.set(b.x,bh+0.16,b.z); dummy.scale.set(b.w*1.03,0.34,b.d*1.03); dummy.updateMatrix(); caps.setMatrixAt(i,dummy.matrix); caps.setColorAt(i,col.setHex(roofPal[i%roofPal.length])); });
+    bm.instanceMatrix.needsUpdate=true; if(bm.instanceColor)bm.instanceColor.needsUpdate=true;
+    caps.instanceMatrix.needsUpdate=true; if(caps.instanceColor)caps.instanceColor.needsUpdate=true;
+    FLATCITY.group.add(bm); FLATCITY.group.add(caps); FLATCITY.parts.push(bm,caps);
+    const pitched=B.filter(b=>b.roof);                                                   // 🏠 pitched roofs break up the flat-topped skyline
+    if(pitched.length){ const rf=new THREE.InstancedMesh(new THREE.ConeGeometry(0.72,1,4),new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}),pitched.length), rPal=[0xa89a8c,0x9c8f82,0xb3a596,0x8f8377];
+      pitched.forEach((b,i)=>{ const rh=Math.min(3.4,b.roofH); dummy.position.set(b.x,b.h+rh/2,b.z); dummy.scale.set(Math.max(b.w,b.d)*1.44,rh,Math.max(b.w,b.d)*1.44); dummy.rotation.set(0,Math.PI/4,0); dummy.updateMatrix(); rf.setMatrixAt(i,dummy.matrix); rf.setColorAt(i,col.setHex(rPal[i%rPal.length])); });
+      rf.instanceMatrix.needsUpdate=true; if(rf.instanceColor)rf.instanceColor.needsUpdate=true; FLATCITY.group.add(rf); FLATCITY.parts.push(rf); } }
+  if(T.length){ const leafPal=[0x7fb069,0x6d9c58,0x8cbd77,0x74a862,0x94c485];             // 🌳 street trees — what makes a nav map feel like a place
+    const cano=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}),T.length);
+    const trunk=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x8a6a4a}),T.length);
+    T.forEach((t,i)=>{ const s=t.s*2.2, th=s*1.6;
+      dummy.position.set(t.x,th+s*0.7,t.z); dummy.scale.set(s,s*1.15,s); dummy.rotation.set(0,i*1.7,0); dummy.updateMatrix(); cano.setMatrixAt(i,dummy.matrix); cano.setColorAt(i,col.setHex(leafPal[i%leafPal.length]));
+      dummy.position.set(t.x,th/2,t.z); dummy.scale.set(s*0.2,th,s*0.2); dummy.rotation.set(0,0,0); dummy.updateMatrix(); trunk.setMatrixAt(i,dummy.matrix); });
+    cano.instanceMatrix.needsUpdate=true; if(cano.instanceColor)cano.instanceColor.needsUpdate=true; trunk.instanceMatrix.needsUpdate=true;
+    FLATCITY.group.add(trunk); FLATCITY.group.add(cano); FLATCITY.parts.push(trunk,cano); }
+};
+function __oldBuildFlatCity(){ genCityData(); if(!buildData.length) return;
   const dummy=new THREE.Object3D(), col=new THREE.Color();
   // base ground plane under the whole city so distant buildings (beyond the live tiles) sit on ground, not floating over the horizon
   const gw=(WB.maxX-WB.minX)+1600, gd=(WB.maxZ-WB.minZ)+1600, gcx=(WB.minX+WB.maxX)/2, gcz=(WB.minZ+WB.maxZ)/2;
@@ -2151,7 +2214,24 @@ function buildFlatCity(){ genCityData(); if(FLATCITY.built||!buildData.length) r
   bm.count=buildData.length; bm.instanceMatrix.needsUpdate=true; if(bm.instanceColor)bm.instanceColor.needsUpdate=true; FLATCITY.group.add(bm);
   const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),Math.max(1,buildData.length));   // darker roof caps → blocks read as separate from the nav angle
   buildData.forEach((b,i)=>{ const bh=b.h*1.35+2; dummy.position.set(b.x,bh+0.16,b.z); dummy.scale.set(b.w*1.03,0.34,b.d*1.03); dummy.rotation.set(0,0,0); dummy.updateMatrix(); caps.setMatrixAt(i,dummy.matrix); caps.setColorAt(i,col.setHex(roofPal[i%roofPal.length])); });
-  caps.count=buildData.length; caps.instanceMatrix.needsUpdate=true; if(caps.instanceColor)caps.instanceColor.needsUpdate=true; FLATCITY.group.add(caps); }
+  caps.count=buildData.length; caps.instanceMatrix.needsUpdate=true; if(caps.instanceColor)caps.instanceColor.needsUpdate=true; FLATCITY.group.add(caps);
+  // 🌳 STREET TREES — the flat grey blocks alone read as a bare model; trees are what make a nav map feel like a place.
+  // Low-poly canopy + trunk, instanced (2 draw calls for all 600), using the same treeData the removed chase view used.
+  if(treeData.length){ const leafPal=[0x7fb069,0x6d9c58,0x8cbd77,0x74a862,0x94c485];
+    const cano=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}),treeData.length);
+    const trunk=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x8a6a4a}),treeData.length);
+    treeData.forEach((t,i)=>{ const s=t.s*2.1, th=s*1.5;                       // canopy radius ~2m, trunk under it
+      dummy.position.set(t.x,th+s*0.72,t.z); dummy.scale.set(s,s*1.15,s); dummy.rotation.set(0,i*1.7,0); dummy.updateMatrix(); cano.setMatrixAt(i,dummy.matrix); cano.setColorAt(i,col.setHex(leafPal[i%leafPal.length]));
+      dummy.position.set(t.x,th/2,t.z); dummy.scale.set(s*0.22,th,s*0.22); dummy.rotation.set(0,0,0); dummy.updateMatrix(); trunk.setMatrixAt(i,dummy.matrix); });
+    cano.instanceMatrix.needsUpdate=true; if(cano.instanceColor)cano.instanceColor.needsUpdate=true; trunk.instanceMatrix.needsUpdate=true;
+    FLATCITY.group.add(trunk); FLATCITY.group.add(cano); }
+  // 🏠 PITCHED ROOFS on the shorter rowhomes — breaks up the flat-topped box skyline (data already generated, was chase-only)
+  { const pitched=buildData.filter(b=>b.roof); if(pitched.length){
+      const rf=new THREE.InstancedMesh(new THREE.ConeGeometry(0.72,1,4),new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}),pitched.length);
+      const rPal=[0xa89a8c,0x9c8f82,0xb3a596,0x8f8377];
+      pitched.forEach((b,i)=>{ const bh=b.h*1.35+2, rh=Math.min(3.4,b.roofH); dummy.position.set(b.x,bh+rh/2,b.z);
+        dummy.scale.set(Math.max(b.w,b.d)*1.44,rh,Math.max(b.w,b.d)*1.44); dummy.rotation.set(0,Math.PI/4,0); dummy.updateMatrix(); rf.setMatrixAt(i,dummy.matrix); rf.setColorAt(i,col.setHex(rPal[i%rPal.length])); });
+      rf.instanceMatrix.needsUpdate=true; if(rf.instanceColor)rf.instanceColor.needsUpdate=true; FLATCITY.group.add(rf); } } }
 
 function drawMapView(dt){ try{ const c=MAP.ctx; if(!c) return;
   { const r=MAP.cv.getBoundingClientRect(); if(Math.abs((r.width||MAP.w)-MAP.w)>1||Math.abs((r.height||MAP.h)-MAP.h)>1) MAP.resize(); }
