@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15b";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1462,7 +1462,7 @@ function toggleCam(){ state.cam = state.cam===3 ? 2 : 3; const b=document.getEle
   if(!MAP.on){ AUTO.active=false; }
   routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1;
   b.textContent = state.cam===3?'\uD83E\uDDED TILT' : '\uD83D\uDDFA\uFE0F MAP'; }
-const TILTCAM={back:15,h:30,ahead:17};                                     // GPS-nav camera rig — steeper (~43° like Google nav) so the frame is streetscape, not horizon
+const TILTCAM={back:18,h:26,ahead:27};                                     // GPS-nav camera rig — ~30°: tilted enough to see well down the street (user asked; 43° was too top-down, 23° was all horizon)
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
   if(FLATCITY.built){ FLATCITY.tick();                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
     if(!FLATCITY.job && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.requestRebuild(truck.x,truck.z); }
@@ -2397,6 +2397,12 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         dummy.position.set(h[0],HH*0.74,h[1]); dummy.updateMatrix(); bonnet.setMatrixAt(i,dummy.matrix);
         dummy.position.set(h[0],HH*0.42,h[1]); dummy.rotation.set(Math.PI/2,0,rot); dummy.updateMatrix(); outlet.setMatrixAt(i,dummy.matrix); });   // side outlet across the body
       for(const m of [body,bonnet,outlet]){ m.instanceMatrix.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); } } }
+  if(T.length&&B.length){ const bg=new Map(), BC=16, bk=(x,z)=>((x/BC)|0)+':'+((z/BC)|0);   // 🌲❌ trees vs buildings: the 11m dedupe grid lets a tree land against/inside a building face — cull any tree overlapping a footprint (+2m)
+    for(const b of B){ const k=bk(b.x,b.z); let a=bg.get(k); if(!a){a=[];bg.set(k,a);} a.push(b); }
+    for(let i=T.length-1;i>=0;i--){ const t2=T[i], gx=(t2.x/BC)|0, gz=(t2.z/BC)|0; let hit=false;
+      for(let a=gx-1;a<=gx+1&&!hit;a++)for(let c=gz-1;c<=gz+1&&!hit;c++){ const l2=bg.get(a+':'+c); if(!l2) continue;
+        for(const b of l2){ if(Math.abs(t2.x-b.x)<b.w/2+2&&Math.abs(t2.z-b.z)<b.d/2+2){ hit=true; break; } } }
+      if(hit) T.splice(i,1); } }
   if(T.length){ const leafPal=[0x9ccb8b,0x8fc07f,0xa9d69a,0x97c688,0xb0dba1];             // 🌳 street trees — pale nav-map green (was a darker forest palette)
     const cano=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true})),T.length);
     const trunk=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x9b7d5d}),T.length);
