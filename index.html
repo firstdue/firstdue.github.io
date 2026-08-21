@@ -290,7 +290,7 @@
   <button class="abtn" id="btnSiren">🚨 SIREN</button>
   <button class="abtn on" id="btnGuide">🔵 GUIDE</button>
   <button class="abtn" id="btnBounds">🟩 BOUNDARIES</button>
-  <button class="abtn" id="btnDue">🚒 DUE: ALL</button>
+  <button class="abtn on" id="btnDue">🚒 DUE: 1ST</button>
   <button class="abtn on" id="btnRivals">🚑 RIVALS</button>
   <button class="abtn" id="btnView">🧭 HEADING</button>
   <button class="abtn on" id="btnSat">🌐 LIVE MAP</button>
@@ -397,7 +397,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v14m";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1719,7 +1719,7 @@ function updatePeds(dt){ if(!FLAGS.pedestrians) return; const C=CONFIG.ped;
     _pm.position.set(pd.x,groundHeight(pd.x,pd.z)+0.95,pd.z); _pm.rotation.set(0,-pd.hd,0); _pm.updateMatrix(); pedMesh.setMatrixAt(i,_pm.matrix); }
   pedMesh.instanceMatrix.needsUpdate=true; }
 /* ============================ 2D MAP MODE (offline, drawn from the real OSM data) ============================ */
-const MAP={ on:false, cv:document.getElementById('mapView'), ctx:null, dpr:1, ppm:3.1, bbox:null, grid:null, cell:640, guide:true, northUp:false, bounds:false, sat:false, live:true, free:false, viewX:0, viewZ:0, userRot:0, dueLevel:0, w:0, h:0, turnChoices:[], turnHits:[] };   // dueLevel 0=all calls, 1..4 = first..fourth-due area only; live = CARTO live street basemap (hosted only; artifact CSP blocks it → auto vector fallback)
+const MAP={ on:false, cv:document.getElementById('mapView'), ctx:null, dpr:1, ppm:3.1, bbox:null, grid:null, cell:640, guide:true, northUp:false, bounds:false, sat:false, live:true, free:false, viewX:0, viewZ:0, userRot:0, dueLevel:1, w:0, h:0, turnChoices:[], turnHits:[] };   // dueLevel 0=all calls, 1..4 = first..fourth-due area only (default 1 = your own first-due, so you run out of quarters first-due every time); live = CARTO live street basemap (hosted only; artifact CSP blocks it → auto vector fallback)
 function mapCenter(){ return MAP.free ? [MAP.viewX, MAP.viewZ] : [truck.x, truck.z]; }   // the world point the map is centred on (truck, unless panned in training mode)
 (function initMap(){ if(!MAP.cv){ MAP.cv=document.createElement('canvas'); MAP.cv.id='mapView'; document.getElementById('wrap').appendChild(MAP.cv); }
   MAP.ctx=MAP.cv.getContext('2d');
@@ -2325,9 +2325,11 @@ const engNum=id=>String(id).replace(/\D/g,'');
 function stDist(st,x,z){ return Math.hypot(st.x-x,st.z-z); }
 function computeResponders(x,z){                                                                     // REAL first-due (PFD zone containment) + real neighboring firehouses
   const roster=PFD_ROSTER; const byDist=roster.slice().sort((a,b)=>stDist(a,x,z)-stDist(b,x,z));
-  const fdE=pfdZoneAt(x,z); let firstDue=fdE!=null?roster.find(s=>s.num===fdE):null;                  // whose real first-due zone holds the fire
-  if(!firstDue) firstDue=byDist[0];                                                                   // outside every known zone → nearest house is first-due
+  let fdE=pfdZoneAt(x,z);                                                                             // whose real first-due zone holds the fire
   const playerH=roster.find(s=>s.id===DRIVE.stationId);                                               // your selected house — always shown on the board
+  if(playerH){ const pz=PFD_ZONE_BY_E.get(playerH.num); if(pz&&ptInRing(x,z,pz)) fdE=playerH.num; }   // a fire in YOUR own first-due zone makes you first-due (resolves border overlaps from the simplified polygons)
+  let firstDue=fdE!=null?roster.find(s=>s.num===fdE):null;
+  if(!firstDue) firstDue=byDist[0];                                                                   // outside every known zone → nearest house is first-due
   const out=[firstDue];
   for(const s of byDist){ const cap=(playerH&&out.indexOf(playerH)<0)?3:4; if(out.length>=cap) break; if(out.indexOf(s)<0) out.push(s); }   // fill with nearest neighbors, holding a slot for you
   if(playerH&&out.indexOf(playerH)<0) out.push(playerH);
@@ -2341,13 +2343,14 @@ function computeBox(firstDue,x,z){ const eng=engNum(firstDue.id).padStart(2,'0')
   const scale = maxR>1 ? dSt/maxR : Math.min(dSt,3000)/3000;                                           // fraction of the way to the far edge
   const sub=Math.max(1,Math.min(99,Math.round(scale*98)+1));
   return eng+String(sub).padStart(2,'0'); }
-function assignBox(){ if(!state.target) return; const fd=computeResponders(state.target.x,state.target.z)[0];
-  state.target.firstDue=fd.id; state.target.box=computeBox(fd,state.target.x,state.target.z); }
+function assignBox(){ if(!state.target) return; const t=state.target, cx=t.bx!==undefined?t.bx:t.x, cz=t.bz!==undefined?t.bz:t.z;   // classify by the BUILDING point (same point the dispatch filter uses) so you're reliably first-due for your own calls
+  const fd=computeResponders(cx,cz)[0]; t.firstDue=fd.id; t.box=computeBox(fd,cx,cz); }
 function clearRivals(){ RIVALS.list=[]; RIVALS.responders=[]; RIVALS.order=[]; RIVALS.playerPlaced=false; renderRivalHUD(); }
 function spawnRivals(){ clearRivals();
   if(!RIVALS.on||!state.target) return; const tx=state.target.x, tz=state.target.z;
   RIVALS.fire={x:tx,z:tz}; RIVALS.playerD0=Math.max(1,Math.hypot(truck.x-tx,truck.z-tz));   // your starting distance to the fire (for your live % progress)
-  const resp=computeResponders(tx,tz);
+  const bx=state.target.bx!==undefined?state.target.bx:tx, bz=state.target.bz!==undefined?state.target.bz:tz;   // responder set from the building point (matches assignBox + the due filter); rivals still race to the road point
+  const resp=computeResponders(bx,bz);
   RIVALS.responders=resp.map((s,i)=>({ id:s.id, num:engNum(s.id), isPlayer:s.id===DRIVE.stationId, firstDue:i===0 }));
   for(const st of resp){ if(st.id===DRIVE.stationId) continue;                                        // that responder is the human player
     const path=streamRoute({x:st.x,z:st.z}, routeNodes(st.x,st.z,tx,tz)); if(!path||path.length<2) continue;
