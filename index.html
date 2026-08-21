@@ -360,7 +360,7 @@
 <div id="home" class="overlay show"><div class="card">
   <h1>🚒 PHILLY FIRE DISPATCH</h1>
   <div class="sub" style="color:#ffe14d; letter-spacing:1px; font-weight:800">CHOOSE YOUR FIREHOUSE</div>
-  <div class="sub">Every Philadelphia Fire Department engine house, at its real address, grouped by battalion. Pick any to run out of — ★ houses have a full 3D firehouse &amp; briefing.</div>
+  <div class="sub">Every Philadelphia Fire Department engine house, at its real address, grouped by battalion. Pick any to run out of.</div>
   <div id="stationList"></div>
   <button class="btn" id="btnBoundaryHome" style="background:#245d9e;box-shadow:none">🗺️ VIEW FIRST-DUE PROGRESS</button>
   <div class="best" id="bestLine">BEST RUN: —</div>
@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v14z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15a";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1772,8 +1772,9 @@ function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geomet
   const pts=routePts.filter((p,i)=>!i||Math.hypot(p.x-routePts[i-1].x,p.z-routePts[i-1].z)>.2),pos=[],posF=[],posE=[],idx=[],hw=.72,hwF=1.55,hwE=2.25,RY=(x,z)=>groundHeight(x,z)+0.42;   // wider ribbon on the flat map + a slightly wider border pass
   for(let i=0;i<pts.length;i++){ const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
     pos.push(p.x+nx*hw,RY(p.x+nx*hw,p.z+nz*hw),p.z+nz*hw, p.x-nx*hw,RY(p.x-nx*hw,p.z-nz*hw),p.z-nz*hw);
-    posF.push(p.x+nx*hwF,0.52,p.z+nz*hwF, p.x-nx*hwF,0.52,p.z-nz*hwF);
-    posE.push(p.x+nx*hwE,0.46,p.z+nz*hwE, p.x-nx*hwE,0.46,p.z-nz*hwE);   // lifted well clear of the road/marking/kerb planes — 0.24 z-fought at distance (flicker)
+    const LN=2.4;                                                                          // shift the flat ribbon into the right-hand lane so it runs under the lane-offset truck (nx,nz is already right-of-travel)
+    posF.push(p.x+nx*(LN+hwF),0.52,p.z+nz*(LN+hwF), p.x+nx*(LN-hwF),0.52,p.z+nz*(LN-hwF));
+    posE.push(p.x+nx*(LN+hwE),0.46,p.z+nz*(LN+hwE), p.x+nx*(LN-hwE),0.46,p.z+nz*(LN-hwE));   // lifted well clear of the road/marking/kerb planes — 0.24 z-fought at distance (flicker)
     if(i){ const k=i*2; idx.push(k-2,k-1,k,k-1,k+1,k); } }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals();
   const gf=new THREE.BufferGeometry(); gf.setAttribute('position',new THREE.Float32BufferAttribute(posF,3)); gf.setIndex(idx.slice());
@@ -2248,7 +2249,14 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
         const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));              // trim the slab short of each junction by the CROSSING street's width — full-length slabs shot white bars across intersections and boxed the corners
         const t0=(eA&&eA.n>=3)?eA.hw+walk+0.6:0, t1=(eB&&eB.n>=3)?eB.hw+walk+0.6:0, len2=sl-t0-t1;
         if(len2>2){ const tc=(t0+(sl-t1))/2, px2=s.ax+dx*tc, pz2=s.az+dz*tc;
-          for(const side of [1,-1]) S.push({x:px2+nx*(rh+walk/2)*side, z:pz2+nz*(rh+walk/2)*side, len:len2, w:walk, ang}); } } }
+          for(const side of [1,-1]){
+            if(s.ow){ let med=false; const qx=px2+nx*(rh+walk+6)*side, qz=pz2+nz*(rh+walk+6)*side;   // divided road? probe past the slab for the SAME street's other carriageway — no sidewalk in the median (Henry Ave filled its median with white)
+              for(const o of segNear(qx,qz)){ if(o===s||o.name!==s.name) continue;
+                const odx=o.bx-o.ax, odz=o.bz-o.az, ol=Math.hypot(odx,odz)||1;
+                if(Math.abs((odx*dx+odz*dz)/ol)<0.8) continue;                                       // must be the parallel twin, not a cross piece
+                if(closestSeg(qx,qz,o).d<CLASSW[o.cls]/2+4){ med=true; break; } }
+              if(med){ S.push({x:px2+nx*(rh+walk/2)*side, z:pz2+nz*(rh+walk/2)*side, len:len2, w:walk, ang, g:1}); continue; } }   // grass median strip instead — real Henry Ave has one
+            S.push({x:px2+nx*(rh+walk/2)*side, z:pz2+nz*(rh+walk/2)*side, len:len2, w:walk, ang}); } } } }
     for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
       if((px-cx)**2+(pz-cz)**2>R2) continue;
       for(const side of [1,-1]){ const rv=hash2(Math.round(px)*2+ (side>0?1:0), Math.round(pz));
@@ -2304,7 +2312,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         const dash=3.4, gap=4.6, hwm=s.cls<=1?0.30:0.26;
         const m0=jA?eA.hw+4.5:2, m1=jB?eB.hw+4.5:2;                                        // dashes STOP short of a junction, scaled to the CROSSING street's width
         const oneway=!!s.ow;                                                               // twin lane dividers ONLY on one-ways (twin dashes on two-way Ridge read as 3 lanes — user caught it)
-        const lanes = (oneway&&s.cls<=1) ? [-hw*0.45, hw*0.45] : [0];
+        const lanes = (oneway&&s.cls===0) ? [-hw*0.45, hw*0.45] : [0];                    // one dash row per carriageway on cls1 one-ways — twin rows on both halves of a divided road read as line soup
         const arr = oneway ? mk : my;                                                      // two-way centre line is YELLOW like a real US road; one-way lane lines stay white
         for(const lo of lanes){ const lx=-dz*lo, lz=dx*lo;
           for(let t=m0; t<l-m1; t+=dash+gap){ const t2=Math.min(l-m1,t+dash); if(t2-t<1.2) break;
@@ -2325,9 +2333,13 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       const ml=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xf5f6f8})); ml.renderOrder=2; FLATCITY.group.add(ml); FLATCITY.parts.push(ml); }
     if(my.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(my,3));
       const ml=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xe8c85a})); ml.renderOrder=2; FLATCITY.group.add(ml); FLATCITY.parts.push(ml); } }
-  if(S&&S.length){ const sw=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xf3f0e8}),S.length);   // kerb slabs sit proud of the darker roadway
-    S.forEach((p,i)=>{ dummy.position.set(p.x,0.11,p.z); dummy.scale.set(p.w,0.22,p.len); dummy.rotation.set(0,p.ang,0); dummy.updateMatrix(); sw.setMatrixAt(i,dummy.matrix); });
-    sw.instanceMatrix.needsUpdate=true; FLATCITY.group.add(sw); FLATCITY.parts.push(sw); }
+  if(S&&S.length){ const walkS=S.filter(p=>!p.g), medS=S.filter(p=>p.g);
+    if(walkS.length){ const sw=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xf3f0e8}),walkS.length);   // kerb slabs sit proud of the darker roadway
+      walkS.forEach((p,i)=>{ dummy.position.set(p.x,0.11,p.z); dummy.scale.set(p.w,0.22,p.len); dummy.rotation.set(0,p.ang,0); dummy.updateMatrix(); sw.setMatrixAt(i,dummy.matrix); });
+      sw.instanceMatrix.needsUpdate=true; FLATCITY.group.add(sw); FLATCITY.parts.push(sw); }
+    if(medS.length){ const gm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xc8dcb0}),medS.length);   // 🌿 grass median between divided-road carriageways
+      medS.forEach((p,i)=>{ dummy.position.set(p.x,0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(0,p.ang,0); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
+      gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
   const wallPal=[0xeceae4,0xe3e1da,0xe8e6df,0xdfe1e4,0xe9e7e0,0xdcdad2,0xe2e4e7], roofPal=[0xc4c1b8,0xcbc8bf,0xb8bbc1,0xcfccc3,0xbdc0c5];   // cooler whites like the reference
   if(B.length){ const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),B.length);
     const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),B.length);
