@@ -272,6 +272,43 @@
   .stbtn .stTxt { display:flex; flex-direction:column; line-height:1.25; min-width:0; }
   .stbtn .stName { font-weight:800; font-size:clamp(13px,3vw,15px); }
   .stbtn .star { color:#ffe14d; }
+  /* ---------- 🗺️ CITYWIDE FIREHOUSE PICKER (home screen) ---------- */
+  #home.overlay { background:#070b16; align-items:stretch; justify-content:stretch; padding:0; }
+  #homeMapWrap { position:relative; flex:1; overflow:hidden; }
+  #homeMap { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  #homeHud { position:absolute; left:0; right:0; top:0; padding:calc(max(10px,env(safe-area-inset-top)) + 4px) 14px 26px;
+    text-align:center; pointer-events:none; background:linear-gradient(180deg,rgba(7,11,22,.94) 42%,rgba(7,11,22,0)); }
+  #homeHud h1 { font-family:"Arial Black",sans-serif; font-size:clamp(17px,4.6vw,27px); letter-spacing:1px; color:#ffe14d;
+    text-shadow:0 0 16px rgba(255,180,0,.55), 0 3px 0 #7a4a00; margin:0; }
+  #homeHud .tag { color:#9fc6e8; font-size:clamp(10px,2.6vw,12.5px); font-weight:800; letter-spacing:2px; margin-top:5px; }
+  #homeLegend { position:absolute; left:12px; bottom:calc(12px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:5px;
+    background:rgba(9,14,26,.82); border:1px solid rgba(255,255,255,.13); border-radius:11px; padding:8px 10px; pointer-events:none; }
+  #homeLegend div { display:flex; align-items:center; gap:7px; color:#cfe0f2; font-size:10.5px; font-weight:800; letter-spacing:.6px; }
+  #homeLegend i { width:10px; height:10px; border-radius:50%; box-shadow:0 0 7px currentColor; background:currentColor; }
+  #btnListView { position:absolute; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:3;
+    background:rgba(9,14,26,.9); color:#ffe14d; border:1px solid rgba(255,225,77,.45); border-radius:11px;
+    padding:11px 15px; font-weight:900; font-size:12px; letter-spacing:1px; cursor:pointer; }
+  #btnFirstDueHome { position:absolute; right:12px; bottom:calc(60px + env(safe-area-inset-bottom)); z-index:3;
+    background:rgba(9,14,26,.9); color:#8fd0ff; border:1px solid rgba(143,208,255,.4); border-radius:11px;
+    padding:9px 13px; font-weight:900; font-size:11px; letter-spacing:.8px; cursor:pointer; }
+  #houseCard { position:absolute; left:50%; transform:translate(-50%,140%); bottom:calc(12px + env(safe-area-inset-bottom));
+    width:min(430px,92vw); background:linear-gradient(180deg,#161b31,#0d1122); border:2px solid #ffe14d; border-radius:16px;
+    padding:13px 15px 15px; box-shadow:0 0 34px rgba(255,200,0,.28), 0 18px 44px rgba(0,0,0,.65); z-index:4;
+    transition:transform .26s cubic-bezier(.2,.9,.3,1); }
+  #houseCard.up { transform:translate(-50%,0); }
+  #homeLegend, #btnListView, #btnFirstDueHome { transition:opacity .2s, transform .2s; }
+  #homeMapWrap.picking #homeLegend, #homeMapWrap.picking #btnListView, #homeMapWrap.picking #btnFirstDueHome {
+    opacity:0; transform:translateY(14px); pointer-events:none; }   /* the card owns the bottom edge while a house is selected */
+  #houseCard .hcName { font-weight:900; font-size:clamp(15px,4vw,19px); color:#fff; }
+  #houseCard .hcAddr { color:#9fc6e8; font-size:clamp(11px,2.8vw,13px); font-weight:700; margin-top:3px; }
+  #houseCard .hcBn { color:#ffb648; font-size:11px; font-weight:900; letter-spacing:1px; margin-top:5px; }
+  #houseCard .hcGo { display:block; width:100%; margin-top:11px; background:linear-gradient(180deg,#e63946,#a4232e); color:#fff;
+    border:none; border-radius:11px; padding:13px; font-weight:900; font-size:14px; letter-spacing:1.4px; cursor:pointer;
+    box-shadow:0 6px 18px rgba(230,57,70,.4); }
+  #houseCard .hcX { position:absolute; top:8px; right:11px; color:#8195b5; font-size:19px; font-weight:900; cursor:pointer; line-height:1; }
+  #homeListPane { position:absolute; inset:0; z-index:6; display:none; align-items:center; justify-content:center;
+    background:rgba(5,8,16,.93); padding:10px; }
+  #homeListPane.show { display:flex; }
   .stbtn .sub2 { opacity:.64; font-weight:600; font-size:.8em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #brHouse { color:#9fd7ff; font-weight:800; letter-spacing:.4px; }
   .fact2 { font-size:clamp(12px,2.8vw,14px); line-height:1.55; color:#d7deea; background:rgba(255,255,255,.05);
@@ -357,14 +394,33 @@
   <div class="tbtn" id="bGas">GAS</div><div class="tbtn" id="bBrake">BRAKE</div><div class="tbtn" id="bDrift">DRIFT</div><div class="tbtn" id="bJump">JUMP</div>
 </div>
 <div id="hint"><kbd>W A S D</kbd>/<kbd>←↑↓→</kbd> drive · <kbd>Space</kbd> drift · <kbd>Shift/E</kbd> jump · <kbd>C</kbd> camera · <kbd>F</kbd> siren</div>
-<div id="home" class="overlay show"><div class="card">
-  <h1>🚒 PHILLY FIRE DISPATCH</h1>
-  <div class="sub" style="color:#ffe14d; letter-spacing:1px; font-weight:800">CHOOSE YOUR FIREHOUSE</div>
-  <div class="sub">Every Philadelphia Fire Department engine house, at its real address, grouped by battalion. Pick any to run out of.</div>
-  <div id="stationList"></div>
-  <button class="btn" id="btnBoundaryHome" style="background:#245d9e;box-shadow:none">🗺️ VIEW FIRST-DUE PROGRESS</button>
-  <div class="best" id="bestLine">BEST RUN: —</div>
-</div></div>
+<div id="home" class="overlay show">
+  <div id="homeMapWrap">
+    <canvas id="homeMap"></canvas>
+    <div id="homeHud">
+      <h1>🚒 PHILLY FIRE DISPATCH</h1>
+      <div class="tag">TAP A FIREHOUSE TO RIDE OUT</div>
+    </div>
+    <div id="homeLegend"></div>
+    <button id="btnFirstDueHome">🗺️ FIRST-DUE MAP</button>
+    <button id="btnListView">☰ LIST VIEW</button>
+    <div id="houseCard">
+      <span class="hcX" id="hcClose">×</span>
+      <div class="hcName" id="hcName"></div>
+      <div class="hcAddr" id="hcAddr"></div>
+      <div class="hcBn" id="hcBn"></div>
+      <button class="hcGo" id="hcGo">🚒 RIDE OUT</button>
+    </div>
+    <div id="homeListPane"><div class="card">
+      <h1>🚒 CHOOSE YOUR FIREHOUSE</h1>
+      <div class="sub">Every Philadelphia Fire Department engine house, at its real address, grouped by battalion. Pick any to run out of.</div>
+      <div id="stationList"></div>
+      <button class="btn" id="btnBoundaryHome" style="background:#245d9e;box-shadow:none">🗺️ VIEW FIRST-DUE PROGRESS</button>
+      <div class="best" id="bestLine">BEST RUN: —</div>
+      <button class="btn" id="btnCloseList" style="background:#333a55;box-shadow:none">✖ BACK TO MAP</button>
+    </div></div>
+  </div>
+</div>
 <div id="over" class="overlay"><div class="card">
   <h1>⏰ SHIFT OVER</h1><div class="big" id="finalCash">$0</div>
   <div class="sub" id="finalStats">0 dispatches completed</div><div class="best" id="finalBest"></div>
@@ -410,7 +466,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -842,7 +898,7 @@ function closeBoundaryMap(){ boundaryOverlay.classList.remove('show');boundaryOv
 document.getElementById('btnSettings').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggleSettings();});
 document.getElementById('btnSettingsClose').addEventListener('click',closeSettings);
 settingsShade.addEventListener('click',closeSettings);
-document.getElementById('btnBoundaryMap').addEventListener('click',openBoundaryMap);document.getElementById('btnBoundaryHome').addEventListener('click',openBoundaryMap);
+document.getElementById('btnBoundaryMap').addEventListener('click',openBoundaryMap);document.getElementById('btnBoundaryHome').addEventListener('click',openBoundaryMap);document.getElementById('btnFirstDueHome').addEventListener('click',openBoundaryMap);
 document.getElementById('btnBoundaryClose').addEventListener('click',closeBoundaryMap);boundaryOverlay.addEventListener('click',e=>{if(e.target===boundaryOverlay)closeBoundaryMap();});
 boundaryEngine.addEventListener('change',()=>{BOUNDARY_UI.engine=boundaryEngine.value;drawBoundaryOverview();});
 document.getElementById('btnBoundExport').addEventListener('click',()=>{ const id=BOUNDARY_UI.engine,pieces=boundaryPieces(id).map(q=>({id:q.id,engines:q.engines,complete:q.complete,pts:q.pts,labels:q.labels||[]}));   // export the shown engine's saved boundary sections so they can be baked in permanently
@@ -2817,8 +2873,155 @@ const homeEl=document.getElementById('home');
   }
 })();
 function updateBest(){ document.getElementById('bestLine').textContent = best.saves>0 ? ('BEST RUN: '+best.saves+' saves · $'+best.cash) : 'BEST RUN: — first shift!'; }
-function goHome(){ document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); }
-function startShift(st){ homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show');
+/* ============ \U0001f5fa️ CITYWIDE FIREHOUSE PICKER =============================================
+   A dark citywide map is the first thing you see: every PFD engine house plotted at its real
+   location, coloured by Division. Tap one to read it, then RIDE OUT flies the camera down into
+   that firehouse and starts the shift. The battalion list still exists behind ☰ LIST VIEW.
+   The city is rasterised ONCE to an offscreen canvas (arterials + water only, ~9k pieces) and
+   blitted with a transform for the flight, so the animation costs nothing per frame.          */
+const HOMEMAP={ ready:false, base:null, bw:0, bh:0, sel:null, t0:0, fly:null, raf:0, dots:[] };
+const DIV_COL={1:'#ff5a3c', 2:'#ffc32b', 3:'#37c6ff'};                       // PFD Divisions 1/2/3
+function homeCityPts(){                                                       // sparse sample of the real city outline (road vertices), for the fit
+  if(HOMEMAP.pts) return HOMEMAP.pts;
+  const out=[]; for(let i=0;i<RB.st.length;i+=3){ const pts=RB.st[i][2];
+    for(let j=0;j<pts.length;j+=6) out.push(pts[j]); }
+  for(const st of stations) out.push([st.x,st.z]);
+  return (HOMEMAP.pts=out);
+}
+function homeBestRot(W,H){                                                    // Philadelphia runs diagonally NE–SW; spin it to fill the screen
+  const pts=homeCityPts(); let best=0,bs=-1;
+  for(let a=-90;a<90;a+=3){ const r=a*Math.PI/180, cs=Math.cos(r), sn=Math.sin(r);
+    let x0=1e18,x1=-1e18,z0=1e18,z1=-1e18;
+    for(const p of pts){ const x=p[0]*cs-p[1]*sn, z=p[0]*sn+p[1]*cs;
+      if(x<x0)x0=x; if(x>x1)x1=x; if(z<z0)z0=z; if(z>z1)z1=z; }
+    const sc=Math.min(W/Math.max(1,x1-x0), H/Math.max(1,z1-z0));
+    if(sc>bs){ bs=sc; best=r; } }
+  return best;
+}
+function homeProject(){                                                       // fit the whole city into the canvas, preserving aspect
+  const cv=document.getElementById('homeMap'), W=cv.clientWidth||360, H=cv.clientHeight||640;
+  const pad=0.05, aw=W*(1-pad*2), ah=H*(1-pad*2);
+  if(HOMEMAP.rot===undefined||HOMEMAP.rotW!==W||HOMEMAP.rotH!==H){ HOMEMAP.rot=homeBestRot(aw,ah); HOMEMAP.rotW=W; HOMEMAP.rotH=H; }
+  const r=HOMEMAP.rot, cs=Math.cos(r), sn=Math.sin(r), pts=homeCityPts();
+  let x0=1e18,x1=-1e18,z0=1e18,z1=-1e18;
+  for(const p of pts){ const x=p[0]*cs-p[1]*sn, z=p[0]*sn+p[1]*cs;
+    if(x<x0)x0=x; if(x>x1)x1=x; if(z<z0)z0=z; if(z>z1)z1=z; }
+  const sc=Math.min(aw/Math.max(1,x1-x0), ah/Math.max(1,z1-z0));
+  return { W, H, sc, cs, sn, ox:W/2-((x0+x1)/2)*sc, oz:H/2-((z0+z1)/2)*sc,
+           X:(x,z)=>(x*cs-z*sn)*sc + (W/2-((x0+x1)/2)*sc),
+           Z:(x,z)=>(x*sn+z*cs)*sc + (H/2-((z0+z1)/2)*sc) };
+}
+function buildHomeBase(){                                                     // one-time raster of the city skeleton
+  const P=homeProject(), dpr=Math.min(2,window.devicePixelRatio||1);
+  const cv=document.createElement('canvas'); cv.width=Math.round(P.W*dpr); cv.height=Math.round(P.H*dpr);
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
+  c.fillStyle='#0b1220'; c.fillRect(0,0,P.W,P.H);
+  const X=P.X, Z=P.Z;
+  c.fillStyle='#10243a';                                                      // rivers + reservoirs
+  for(const poly of RB.wa){ if(poly.length<3) continue; c.beginPath(); c.moveTo(X(poly[0][0],poly[0][1]),Z(poly[0][0],poly[0][1]));
+    for(let i=1;i<poly.length;i++) c.lineTo(X(poly[i][0],poly[i][1]),Z(poly[i][0],poly[i][1])); c.closePath(); c.fill(); }
+  c.lineCap='round'; c.lineJoin='round';
+  for(const pass of [[3,'#16233a',1.35],[2,'#22364f',1.0],[1,'#33506e',1.25],[0,'#5b7fa8',1.7]]){
+    c.strokeStyle=pass[1]; c.lineWidth=pass[2];
+    c.beginPath();
+    for(const st of RB.st){ if(st[1]!==pass[0]) continue; const pts=st[2]; if(pts.length<2) continue;
+      c.moveTo(X(pts[0][0],pts[0][1]),Z(pts[0][0],pts[0][1]));
+      for(let i=1;i<pts.length;i++) c.lineTo(X(pts[i][0],pts[i][1]),Z(pts[i][0],pts[i][1])); }
+    c.stroke();
+  }
+  HOMEMAP.base=cv; HOMEMAP.bw=P.W; HOMEMAP.bh=P.H; HOMEMAP.ready=true;
+}
+function homeDots(){                                                          // screen positions + label-collision flags
+  const P=homeProject(), out=[];
+  for(const st of stations) out.push({ st, x:P.X(st.x,st.z), y:P.Z(st.x,st.z), lab:true });
+  for(let i=0;i<out.length;i++) for(let j=i+1;j<out.length;j++)
+    if(Math.hypot(out[i].x-out[j].x,out[i].y-out[j].y)<19) out[j].lab=false;   // crowded downtown: dot only
+  HOMEMAP.dots=out; return out;
+}
+function drawHomeMap(now){
+  const cv=document.getElementById('homeMap'); if(!cv||!HOMEMAP.ready) return;
+  const dpr=Math.min(2,window.devicePixelRatio||1), W=cv.clientWidth, H=cv.clientHeight;
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
+  c.fillStyle='#070b16'; c.fillRect(0,0,W,H);
+  const el=(now-HOMEMAP.t0)/1000;
+  let k=1, fcx=W/2, fcy=H/2, fade=0;                                          // flight transform: zoom k about (fcx,fcy)
+  if(HOMEMAP.fly){ const f=Math.min(1,(now-HOMEMAP.fly.t0)/1150), e=f<.5?4*f*f*f:1-Math.pow(-2*f+2,3)/2;
+    k=1+e*5.2; fcx=HOMEMAP.fly.x; fcy=HOMEMAP.fly.y; fade=Math.max(0,(f-0.5)/0.5);   // hold the zoom short of where the city raster turns soft, and cross-fade into the shift
+    if(f>=1&&!HOMEMAP.fly.done){ HOMEMAP.fly.done=true; const st=HOMEMAP.fly.st; closeHomeMap(); startShift(st); return; } }
+  c.save(); c.translate(W/2,H/2); c.scale(k,k); c.translate(-fcx,-fcy);
+  const intro=Math.min(1,el/0.55);
+  c.globalAlpha=intro; c.drawImage(HOMEMAP.base,0,0,HOMEMAP.bw,HOMEMAP.bh); c.globalAlpha=1;
+  const dots=HOMEMAP.dots.length?HOMEMAP.dots:homeDots();
+  dots.forEach((d,i)=>{
+    const pop=Math.max(0,Math.min(1,(el-0.25-i*0.012)/0.4));                  // staggered pop-in
+    if(pop<=0) return;
+    const bump=pop<1?1+Math.sin(pop*Math.PI)*0.5:1;
+    const on=HOMEMAP.sel===d.st, col=DIV_COL[d.st.div]||'#ffc32b';
+    const r=(on?7.6:5.4)*bump/Math.max(1,k*0.55);                             // keep markers readable during the zoom
+    c.save(); c.translate(d.x,d.y);
+    if(on){ const pulse=1+Math.sin(now/220)*0.16; c.globalAlpha=0.32*pop;
+      c.fillStyle=col; c.beginPath(); c.arc(0,0,r*2.5*pulse,0,6.283); c.fill(); c.globalAlpha=1; }
+    c.shadowColor=col; c.shadowBlur=on?16:8; c.fillStyle=col;
+    c.beginPath(); c.arc(0,0,r,0,6.283); c.fill(); c.shadowBlur=0;
+    c.strokeStyle='rgba(255,255,255,.85)'; c.lineWidth=on?1.8:1; c.stroke();
+    if(d.lab&&k<2.2){ c.fillStyle='#07101d'; c.font='900 '+(r*1.15).toFixed(1)+'px -apple-system,Arial,sans-serif';
+      c.textAlign='center'; c.textBaseline='middle'; c.fillText(String(d.st.num),0,0.5); }
+    c.restore();
+  });
+  c.restore();
+  if(fade>0){ c.fillStyle='rgba(7,11,22,'+fade.toFixed(3)+')'; c.fillRect(0,0,W,H); }
+  HOMEMAP.raf=requestAnimationFrame(drawHomeMap);
+}
+function homeMapTap(clientX,clientY){
+  if(HOMEMAP.fly) return;
+  const cv=document.getElementById('homeMap'), b=cv.getBoundingClientRect();
+  const px=clientX-b.left, py=clientY-b.top;
+  let best=null,bd=34;                                                        // generous finger target
+  for(const d of (HOMEMAP.dots.length?HOMEMAP.dots:homeDots())){ const dd=Math.hypot(d.x-px,d.y-py); if(dd<bd){ bd=dd; best=d; } }
+  if(!best){ HOMEMAP.sel=null; hideHouseCard(); return; }
+  HOMEMAP.sel=best.st; showHouseCard(best.st);
+}
+function hideHouseCard(){ document.getElementById('houseCard').classList.remove('up');
+  document.getElementById('homeMapWrap').classList.remove('picking'); }
+function showHouseCard(st){
+  document.getElementById('hcName').textContent=st.name;
+  document.getElementById('hcAddr').textContent=st.address;
+  document.getElementById('hcBn').textContent=ordinalBn(st.bn)+' BATTALION · DIVISION '+st.div;
+  document.getElementById('houseCard').classList.add('up');
+  document.getElementById('homeMapWrap').classList.add('picking');
+}
+function flyToStation(st){                                                    // camera dives into the house, then the shift starts
+  const d=(HOMEMAP.dots.length?HOMEMAP.dots:homeDots()).find(q=>q.st===st); if(!d) { closeHomeMap(); startShift(st); return; }
+  hideHouseCard();
+  HOMEMAP.fly={ t0:performance.now(), x:d.x, y:d.y, st, done:false };
+}
+function openHomeMap(){
+  const cv=document.getElementById('homeMap'); if(!cv) return;
+  if(!HOMEMAP.ready||HOMEMAP.bw!==cv.clientWidth||HOMEMAP.bh!==cv.clientHeight){ HOMEMAP.ready=false; buildHomeBase(); HOMEMAP.dots=[]; }
+  HOMEMAP.sel=null; HOMEMAP.fly=null; HOMEMAP.t0=performance.now();
+  hideHouseCard();
+  document.getElementById('homeListPane').classList.remove('show');
+  if(!HOMEMAP.raf) HOMEMAP.raf=requestAnimationFrame(drawHomeMap);
+}
+function closeHomeMap(){ if(HOMEMAP.raf){ cancelAnimationFrame(HOMEMAP.raf); HOMEMAP.raf=0; } }
+(function initHomeMap(){
+  const leg=document.getElementById('homeLegend');
+  if(leg) leg.innerHTML=[1,2,3].map(d=>'<div style="color:'+DIV_COL[d]+'"><i></i><span style="color:#cfe0f2">DIVISION '+d+'</span></div>').join('');
+  const cv=document.getElementById('homeMap');
+  let sx=0,sy=0,moved=false;
+  cv.addEventListener('pointerdown',e=>{ sx=e.clientX; sy=e.clientY; moved=false; });
+  cv.addEventListener('pointermove',e=>{ if(Math.hypot(e.clientX-sx,e.clientY-sy)>12) moved=true; });
+  cv.addEventListener('pointerup',e=>{ if(!moved) homeMapTap(e.clientX,e.clientY); });
+  document.getElementById('hcGo').addEventListener('click',()=>{ if(HOMEMAP.sel) flyToStation(HOMEMAP.sel); });
+  document.getElementById('hcClose').addEventListener('click',()=>{ HOMEMAP.sel=null; hideHouseCard(); });
+  document.getElementById('btnListView').addEventListener('click',()=>document.getElementById('homeListPane').classList.add('show'));
+  document.getElementById('btnCloseList').addEventListener('click',()=>document.getElementById('homeListPane').classList.remove('show'));
+  window.addEventListener('resize',()=>{ if(homeEl.classList.contains('show')){ HOMEMAP.ready=false; HOMEMAP.dots=[]; HOMEMAP.rot=undefined; buildHomeBase(); } });
+  if(homeEl.classList.contains('show')) openHomeMap();
+})();
+function goHome(){ document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); openHomeMap(); }
+function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show');
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
   state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0;
