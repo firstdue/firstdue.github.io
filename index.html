@@ -485,7 +485,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15j";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15k";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2149,7 +2149,39 @@ function updateDrive(dt){ if(!state.running){ return; }
   let d=DRIVE.aim-truck.theta; while(d>Math.PI)d-=6.2832; while(d<-Math.PI)d+=6.2832;   // ease into the new heading — a road that bends (or a 1.4m stub edge) used to snap the truck ~29° in one frame
   truck.theta+=d*Math.min(1,dt*9);
   truck.vx=DRIVE.going?-Math.sin(truck.theta)*DRIVE.speed:0; truck.vz=DRIVE.going?-Math.cos(truck.theta)*DRIVE.speed:0; }
-function uTurn(){ if(DRIVE.parked) return; const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return; DRIVE.fromN=b; DRIVE.toN=a; DRIVE.t=1-DRIVE.t; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; driveOrient(); }
+/* ↩ U-TURN. On an ordinary two-way street this just reverses along the current edge. But a DIVIDED road
+   (S Broad St, Henry Ave — OSM maps them as two one-way carriageways) has no legal reversal on the same
+   side: turning around there put the truck against the flow and raised a false WRONG WAY, even though the
+   street as a whole carries both directions. So when the reversal would be illegal we hop to the SAME
+   street's opposite carriageway instead — which is what turning around on Broad actually means. */
+function uTurnEdgeIsWrong(a,b){ const back=b.adj.find(e=>e.to===a); return !!(back&&back.wrong); }
+function oppositeCarriageway(a,b,px,pz){
+  const nm=edgeName(a,b); const hx=b.x-a.x, hz=b.z-a.z, hl=Math.hypot(hx,hz)||1;
+  const gx=Math.floor(px/NCELL), gz=Math.floor(pz/NCELL);
+  let best=null,bd=1e18;
+  for(let r=0;r<=2;r++) for(let i=gx-r;i<=gx+r;i++) for(let j=gz-r;j<=gz+r;j++){
+    const arr=ngrid.get(i+':'+j); if(!arr) continue;
+    for(const n of arr) for(const e of n.adj){
+      if(e.wrong) continue;                                                   // must be legal in that direction
+      if(nm && (e.name||edgeName(n,e.to))!==nm) continue;                      // same street only
+      const dx=e.to.x-n.x, dz=e.to.z-n.z, l=Math.hypot(dx,dz)||1;
+      if((dx*hx+dz*hz)/(l*hl) > -0.7) continue;                                // must run roughly OPPOSITE to us
+      const d=closestSeg(px,pz,{ax:n.x,az:n.z,bx:e.to.x,bz:e.to.z}).d;
+      if(d<bd){ bd=d; best={n,to:e.to}; } } }
+  return (best&&bd<45)?best:null;                                             // within a real median’s width — 90m grabbed unrelated blocks on genuine one-ways (Parrish, Arch) and teleported the truck for nothing
+}
+function uTurn(){ if(DRIVE.parked) return; const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return;
+  if(uTurnEdgeIsWrong(a,b)){
+    const t=Math.max(0,Math.min(1,DRIVE.t||0)), px=a.x+(b.x-a.x)*t, pz=a.z+(b.z-a.z)*t;
+    const opp=oppositeCarriageway(a,b,px,pz);
+    if(opp){ const segL=Math.hypot(opp.to.x-opp.n.x,opp.to.z-opp.n.z)||1;
+      const c=closestSeg(px,pz,{ax:opp.n.x,az:opp.n.z,bx:opp.to.x,bz:opp.to.z});
+      DRIVE.fromN=opp.n; DRIVE.toN=opp.to;
+      DRIVE.t=Math.max(0,Math.min(1,Math.hypot(c.cx-opp.n.x,c.cz-opp.n.z)/segL));
+      truck.x=c.cx; truck.z=c.cz;                                             // slide across the median onto the other side
+      DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; DRIVE.wrongWay=false; DRIVE._wwLatch=false;
+      driveOrient(); popup('↩ CROSSED TO THE OTHER SIDE'); return; } }
+  DRIVE.fromN=b; DRIVE.toN=a; DRIVE.t=1-DRIVE.t; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; driveOrient(); }
 // Park at the firehouse curb, nose facing its street (Ridge Ave / Main St); pick LEFT or RIGHT to pull out.
 function parkAtStation(st){ DRIVE.parked=true; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false;
   DRIVE.stationId=st.id;
