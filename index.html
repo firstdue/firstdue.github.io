@@ -485,7 +485,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15i";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15j";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3031,7 +3031,7 @@ function homeDots(){                                                          //
     for(const d of out) if(Math.hypot(d.x-x,d.y-y)<11) return true; return false; };
   for(let i=0;i<out.length;i++){ const d=out[i];
     let crowded=false;
-    for(let j=0;j<out.length;j++) if(j!==i && Math.hypot(d.x-out[j].x,d.y-out[j].y)<17){ crowded=true; break; }
+    for(let j=0;j<out.length;j++) if(j!==i && Math.hypot(d.x-out[j].x,d.y-out[j].y)<11.5){ crowded=true; break; }   // only when the DOTS actually overlap (ø11) does the number step aside — 17 was over-cautious and kicked E8/E20 out of their circles for no reason
     if(!crowded){ taken.push({x:d.x,y:d.y}); continue; }                       // roomy: number sits in the dot
     let bx=0,by=0,ok=false;
     for(let a=0;a<8&&!ok;a++){ const ang=(-90+a*45)*Math.PI/180, cx=d.x+Math.cos(ang)*R, cy=d.y+Math.sin(ang)*R;
