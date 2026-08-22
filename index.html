@@ -487,7 +487,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15m";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15n";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2246,6 +2246,21 @@ function parkAtStation(st){ DRIVE.parked=true; DRIVE.going=false; DRIVE.pending=
   truck.x=ax+px*off; truck.z=az+pz*off; truck.theta=Math.atan2(px,pz);                          // forward(-sinθ,-cosθ) = -normal → nose toward the street
   truck.vx=0; truck.vz=0; }
 function onNamedStreet(x,z,name){ for(const s of segNear(x,z)){ if(s.name===name && closestSeg(x,z,s).d<CLASSW[s.cls]/2+4) return true; } return false; }
+/* Nearest graph edge under a point, on street `nm`, running roughly along (hx,hz). Legality is NOT filtered
+   here — the caller decides. Used to start driving from where the truck actually IS. */
+function edgeUnderTruckToward(px,pz,nm,hx,hz){
+  const hl=Math.hypot(hx,hz)||1, gx=Math.floor(px/NCELL), gz=Math.floor(pz/NCELL);
+  let best=null,bd=1e18;
+  for(let r=0;r<=2;r++) for(let i=gx-r;i<=gx+r;i++) for(let j=gz-r;j<=gz+r;j++){
+    const arr=ngrid.get(i+':'+j); if(!arr) continue;
+    for(const n2 of arr) for(const e of n2.adj){
+      if(nm && (e.name||edgeName(n2,e.to))!==nm) continue;
+      const dx=e.to.x-n2.x, dz=e.to.z-n2.z, l=Math.hypot(dx,dz)||1;
+      if((dx*hx+dz*hz)/(l*hl) < 0.5) continue;                                  // must run the way we want to travel
+      const q=closestSeg(px,pz,{ax:n2.x,az:n2.z,bx:e.to.x,bz:e.to.z});
+      if(q.d<bd){ bd=q.d; best={a:n2,b:e.to,c:q}; } } }
+  return (best&&bd<40)?best:null;
+}
 function pullOut(dir){ if(!DRIVE.parked) return; const n=DRIVE.stationNode||nearestNode(truck.x,truck.z); if(!n||!n.adj.length) return;
   const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta);                                    // facing the street
   let cand=n.adj;
@@ -2268,6 +2283,18 @@ function pullOut(dir){ if(!DRIVE.parked) return; const n=DRIVE.stationNode||near
         const c=carriagewayToward(nm, wrongPick.to.x-n.x, wrongPick.to.z-n.z, truck.x, truck.z);
         if(c){ DRIVE.parked=false; DRIVE.going=true; slideToCarriageway(c); return; } } } }
   if(!best) return;
+  /* ⚠️ START FROM THE CURB, NOT THE STATION NODE. The nearest graph node can be a long way off (Engine 2
+     parks 81m north of the 2nd & York junction), and snapping the truck onto it TELEPORTED it straight past
+     the first cross street — "it's already behind me and no chance to turn". Ride out from where the truck
+     actually sits, so every junction ahead is reachable. */
+  { const hx=best.x-n.x, hz=best.z-n.z;
+    const eu=edgeUnderTruckToward(truck.x,truck.z, edgeName(n,best), hx,hz);
+    if(eu && Math.hypot(eu.c.cx-truck.x,eu.c.cz-truck.z) < 40){
+      const segL=Math.hypot(eu.b.x-eu.a.x,eu.b.z-eu.a.z)||1;
+      DRIVE.fromN=eu.a; DRIVE.toN=eu.b;
+      DRIVE.t=Math.max(0,Math.min(1,Math.hypot(eu.c.cx-eu.a.x,eu.c.cz-eu.a.z)/segL));
+      truck.x=eu.c.cx; truck.z=eu.c.cz;
+      DRIVE.parked=false; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return; } }
   DRIVE.fromN=n; DRIVE.toN=best; DRIVE.t=0; DRIVE.parked=false; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); }
 function chooseTurn(wx,wz){ const j=nextJunction(), branches=j.node?j.node.adj.filter(e=>e.to!==j.from):[]; if(branches.length<2) return;
   const tx=wx-j.node.x,tz=wz-j.node.z,tl=Math.hypot(tx,tz)||1; let best=null,bd=-2;
