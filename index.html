@@ -40,6 +40,17 @@
   @keyframes cpulse { 50%{ transform:scale(1.1) rotate(-2deg); } }
   #saves { top:max(8px, env(safe-area-inset-top)); left:max(10px, env(safe-area-inset-left)); font-size:clamp(9px,2vw,12px);   /* top-left corner, above the responding strip (buttons are right-aligned) */
     font-weight:800; color:#9fd7ff; text-shadow:0 1px 3px #000; letter-spacing:1px; }
+  /* 🚨 DUE-ORDER CHIP — how due YOUR engine is at the spot you're standing on right now */
+  #dueChip { position:absolute; z-index:15; top:calc(max(8px,env(safe-area-inset-top)) + 15px); left:max(10px,env(safe-area-inset-left));
+    display:none; align-items:center; gap:6px; padding:4px 10px 4px 7px; border-radius:999px;
+    background:rgba(12,17,26,.92); border:1.5px solid currentColor; box-shadow:0 3px 12px rgba(0,0,0,.55);
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-weight:900; font-size:clamp(10px,2.4vw,12.5px);
+    letter-spacing:1.1px; pointer-events:none; white-space:nowrap; transform-origin:left center;
+    transition:color .25s, border-color .25s, transform .18s, box-shadow .18s; }
+  #dueChip.on { display:flex; }
+  #dueChip .dueDot { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; }
+  #dueChip .dueTxt { color:#fff; }
+  #dueChip .dueWho { color:#9fb4cc; font-weight:800; font-size:.86em; letter-spacing:.6px; }
   #cornerBtns { top:max(8px, env(safe-area-inset-top)); left:max(8px, env(safe-area-inset-left)); right:max(8px, env(safe-area-inset-right));
     display:flex; flex-direction:row; flex-wrap:wrap; gap:6px; justify-content:center; align-items:flex-start; pointer-events:auto; z-index:14; position:absolute; }
   .abtn { background:rgba(10,10,25,.72); border:2px solid #444; border-radius:10px; color:#ccc;
@@ -334,6 +345,7 @@
 </div>
 <div id="trainChip">🎓 TRAINING</div>
 <div id="rivals"></div>
+<div id="dueChip"><span class="dueDot"></span><span class="dueTxt">1ST IN</span><span class="dueWho"></span></div>
 <div id="satAttr">Imagery © Esri, Maxar, Earthstar Geographics</div>
 <div id="settingsShade"></div>
 <div id="settingsPanel" aria-hidden="true">
@@ -473,7 +485,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15i";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2776,6 +2788,46 @@ const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false };
 const ordinal=n=>['1st','2nd','3rd','4th','5th'][n-1]||(n+'th');
 const engNum=id=>String(id).replace(/\D/g,'');
 function stDist(st,x,z){ return Math.hypot(st.x-x,st.z-z); }
+/* 🚨 DUE ORDER AT THE TRUCK'S CURRENT SPOT ------------------------------------------------
+   Real fireground idea: you're 1st in inside your own first-due, and as you drive out of it you become
+   2nd/3rd/4th in on someone else's turf. Ranking mirrors computeResponders so the chip agrees with the
+   RESPONDING board: the zone owner is 1st, everyone else falls in by distance from their own house.   */
+const DUECHIP={ t:0, rank:0, owner:null, pend:0, pendN:0, flash:0 };
+function dueRankAt(x,z){
+  const pid=DRIVE.stationId; if(!pid||typeof PFD_ZONES==='undefined') return null;
+  const pn=+String(pid).replace(/\D/g,''); if(!pn) return null;
+  const owner=pfdZoneAt(x,z);
+  if(owner===pn) return {rank:1, owner:pn};                                  // standing in your own first-due
+  const order=[];
+  if(owner!=null){ const o=stations.find(q=>q.num===owner); if(o) order.push(o); }
+  const byDist=stations.slice().sort((a,b)=>stDist(a,x,z)-stDist(b,x,z));
+  for(const q of byDist) if(order.indexOf(q)<0) order.push(q);
+  const i=order.findIndex(q=>q.num===pn);
+  return { rank:i<0?99:i+1, owner:owner };
+}
+const DUE_STYLE=[null,{t:'1ST IN',c:'#3ddc84'},{t:'2ND IN',c:'#ffd23b'},{t:'3RD IN',c:'#ff9f2e'},{t:'4TH IN',c:'#ff6b4a'}];
+function updateDueChip(dt){
+  const el=document.getElementById('dueChip'); if(!el) return;
+  if(!state.running||MAP.bounds||DRAW.on||INTRO.active||homeEl.classList.contains('show')||boundaryOverlay.classList.contains('show')){ el.classList.remove('on'); return; }   // never over the picker or the first-due map
+  DUECHIP.t-=dt; if(DUECHIP.flash>0) DUECHIP.flash-=dt;
+  if(DUECHIP.t<=0){ DUECHIP.t=0.35;                                          // 60 zone tests + a sort — plenty at ~3x/second
+    const r=dueRankAt(truck.x,truck.z), nr=r?r.rank:0;
+    if(nr===DUECHIP.rank){ DUECHIP.pendN=0; if(r) DUECHIP.owner=r.owner; }
+    else if(nr===DUECHIP.pend){                                              // hysteresis: a new reading must hold 3x (~1.05s) before the chip changes.
+      if(++DUECHIP.pendN>=3){ DUECHIP.rank=nr; if(r) DUECHIP.owner=r.owner;  // driving ALONG a zone edge otherwise flickers 2-1-2-1
+        DUECHIP.pendN=0; DUECHIP.flash=0.9; } }
+    else { DUECHIP.pend=nr; DUECHIP.pendN=1; }
+  }
+  if(!DUECHIP.rank){ el.classList.remove('on'); return; }
+  const st=DUE_STYLE[DUECHIP.rank]||{t:'OUT OF AREA',c:'#8a94a6'};
+  el.style.color=st.c;
+  el.querySelector('.dueTxt').textContent=st.t;
+  const who=el.querySelector('.dueWho');
+  who.textContent=(DUECHIP.rank===1||DUECHIP.owner==null)?'':('\u2022 E'+DUECHIP.owner+"'S AREA");   // whose turf you're on once you leave yours
+  el.classList.add('on');
+  el.style.transform = DUECHIP.flash>0 ? ('scale('+(1+Math.sin(Math.min(1,DUECHIP.flash/0.9)*Math.PI)*0.13).toFixed(3)+')') : 'scale(1)';   // brief pop so a change is noticed mid-drive
+  el.style.boxShadow = DUECHIP.flash>0 ? ('0 3px 12px rgba(0,0,0,.55), 0 0 '+(16*DUECHIP.flash/0.9).toFixed(0)+'px currentColor') : '0 3px 12px rgba(0,0,0,.55)';
+}
 function computeResponders(x,z){                                                                     // REAL first-due (PFD zone containment) + real neighboring firehouses (all 63 houses)
   const roster=stations; const byDist=roster.slice().sort((a,b)=>stDist(a,x,z)-stDist(b,x,z));
   let fdE=pfdZoneAt(x,z);                                                                             // whose real first-due zone holds the fire
@@ -2842,7 +2894,7 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
     h+='<div class="'+cls+'" style="--p:'+row.p+'%"><span class="badge">'+row.num+'</span><span class="rvst">'+row.stat+'</span></div>'; });
   el.innerHTML=h; }
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
-const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD];                 // frame() calls drawMapView (the only view now)
+const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() calls drawMapView (the only view now)
 MAP.on=false; document.body.classList.remove('mapmode');
 state.cam=3; LIVE3D.group.visible=true; { const b=document.getElementById('btnCam'); if(b) b.textContent='\uD83E\uDDED TILT'; }   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
