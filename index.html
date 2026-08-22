@@ -410,7 +410,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1054,8 +1054,11 @@ __b3d.push(function(){ // decks + rails at fixed deck height (do NOT conform to 
 const LBL={ pool:[], cache:{}, cap:6, showCap:2, rNear:55, rFar:130, float:1.4, H:1.35, acc:0, pastFade:20, refDist:55, maxGrow:1.9 };   // six pooled sprites, but at most two Chase street-choice cards on screen (small, subtle labels; grow keeps distant names legible)
 function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 // Map-style abbreviation for the 3D callouts only (display text; the sprite still stores the full name for logic)
-const LBL_ABBR=[[/\bStreet\b/g,'St'],[/\bAvenue\b/g,'Ave'],[/\bLane\b/g,'Ln'],[/\bDrive\b/g,'Dr'],[/\bRoad\b/g,'Rd'],[/\bBoulevard\b/g,'Blvd'],[/\bPlace\b/g,'Pl'],[/\bCourt\b/g,'Ct'],[/\bTerrace\b/g,'Ter'],[/\bParkway\b/g,'Pkwy'],[/\bHighway\b/g,'Hwy'],[/\bCircle\b/g,'Cir'],[/\bSquare\b/g,'Sq'],[/\bExtension\b/g,'Ext'],[/\bMemorial\b/g,'Mem'],[/^West\b/,'W'],[/^East\b/,'E'],[/^North\b/,'N'],[/^South\b/,'S']];
-function abbrevStreet(n){ let s=String(n||''); for(const [re,to] of LBL_ABBR) s=s.replace(re,to); return s; }
+const LBL_ABBR=[[/\bStreet\b/g,'St'],[/\bAvenue\b/g,'Ave'],[/\bLane\b/g,'Ln'],[/\bDrive\b/g,'Dr'],[/\bRoad\b/g,'Rd'],[/\bBoulevard\b/g,'Blvd'],[/\bPlace\b/g,'Pl'],[/\bCourt\b/g,'Ct'],[/\bTerrace\b/g,'Ter'],[/\bParkway\b/g,'Pkwy'],[/\bHighway\b/g,'Hwy'],[/\bCircle\b/g,'Cir'],[/\bSquare\b/g,'Sq'],[/\bExtension\b/g,'Ext'],[/\bMemorial\b/g,'Mem']];
+const LBL_DIR=[[/^West\b/,'W'],[/^East\b/,'E'],[/^North\b/,'N'],[/^South\b/,'S']];
+function abbrevStreet(n){ let s=String(n||'');
+  if(s.split(' ').length>=3) for(const [re,to] of LBL_DIR) s=s.replace(re,to);   // 'South Broad Street'→'S Broad St', but SOUTH STREET keeps its name ('S St' was nonsense)
+  for(const [re,to] of LBL_ABBR) s=s.replace(re,to); return s; }
 function labelTex(name,block,wrong){ const bl=wrong?'⛔ ONE WAY':blockLine(block), key=name+'|'+bl+(wrong?'|W':''); if(LBL.cache[key]) return LBL.cache[key];
   name=abbrevStreet(name);                                                         // shorten long names so the pill stays small (W School House Ln)
   const S=2,pad=9*S,ptr=5*S,fs=15*S,bfs=8.5*S,r=8*S;                               // two-line sign: hundred block above the street name (compact)
@@ -1657,9 +1660,10 @@ function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     /
   driveOrient(); return true; }
 function chooseStraight(){ if(!DRIVE.atChoice) return false; const b=DRIVE.toN, a=DRIVE.fromN; if(!b) return false;   // held at a fork: keep going the straightest legal way
   let best=null,bd=-1e9, bestAny=null,ba=-1e9;
+  const ceS=a&&a.adj.find(e=>e.to===b), curWrongS=!!(ceS&&ceS.wrong);
   for(const e of b.adj){ if(e.to===a) continue; const f=branchForwardness(a,b,e.to);
     if(f>ba){ ba=f; bestAny=e.to; }
-    if(!e.wrong && f>bd){ bd=f; best=e.to; } }                                 // straightest LEGAL branch; only fall back to a wrong-way one if nothing legal exists
+    if((!e.wrong||curWrongS) && f>bd){ bd=f; best=e.to; } }                    // straightest LEGAL branch; wrong ones count too when already deliberately wrong-way
   const pick=best||bestAny; if(!pick) return false;
   DRIVE.fromN=b; DRIVE.toN=pick; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return true; }
 document.getElementById('btnLeft').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(-1)) pullOut(-1); });
@@ -1986,10 +1990,11 @@ function sameStreetOn(a,b){ if(!b) return null;
     for(const e of a.adj){ if(e.to===b)continue; const dx=e.to.x-a.x,dz=e.to.z-a.z,l=Math.hypot(dx,dz)||1,dot=(hx*dx+hz*dz)/(hl*l); if(e.name&&dot<bb){bb=dot;bn=e.name;} }
     if(bn && bb<-0.3) cur=bn; }
   if(!cur) return null;
+  const ceW=a.adj.find(e=>e.to===b), curWrong=!!(ceW&&ceW.wrong);               // already driving wrong-way (deliberate turn)? then a wrong continuation of the SAME street is fine — refusing it stalled the truck at every node ('keeps asking me left or right')
   const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(hx,hz)||1;
   let same=null,sd=-2;
   for(const e of b.adj){ if(e.to===a) continue;
-    if(e.wrong) continue;                                                       // divided arterial: the same-named continuation on the OPPOSITE carriageway is wrong-way — never follow it (this was the Henry Ave false WRONG-WAY)
+    if(e.wrong&&!curWrong) continue;                                            // divided arterial: the same-named continuation on the OPPOSITE carriageway is wrong-way — never follow it (this was the Henry Ave false WRONG-WAY)
     const dx=e.to.x-b.x,dz=e.to.z-b.z,l=Math.hypot(dx,dz)||1, dot=(hx*dx+hz*dz)/(hl*l);
     let nm=e.name||streetName((b.x+e.to.x)/2,(b.z+e.to.z)/2);
     if(l<3){ const nx=straightest(b,e.to); if(nx) nm=edgeName(e.to,nx)||nm; }   // 1m fragment → judge by what lies beyond it
@@ -2004,7 +2009,8 @@ function branchForwardness(a,b,next){ const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(
 function roadContinuation(a,b){ if(!b) return null;
   const same=sameStreetOn(a,b); if(same) return same;
   const fwd=b.adj.filter(e=>e.to!==a);                                          // every physical branch (incl. wrong-way carriageways)
-  const choices=fwd.filter(e=>!e.wrong);                                        // never auto-continue the WRONG way down a one-way / divided carriageway
+  const ceR=a.adj.find(e=>e.to===b), curWrongR=!!(ceR&&ceR.wrong);
+  const choices=fwd.filter(e=>!e.wrong||curWrongR);                             // never auto-continue the WRONG way — unless the player is ALREADY deliberately wrong-way, then keep flowing
   // a street present on 2+ branches here PASSES THROUGH this node — an arterial's two directions, or a divided
   // road's legal + opposite carriageway. Reaching it means we're T-ing ONTO a through road, so never auto-turn:
   // stop and let the player pick left/right. (This is the Gates St → Henry Ave "it just turned by itself" case.)
@@ -2246,7 +2252,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
     const rh=CLASSW[s.cls]/2; let dx=s.bx-s.ax, dz=s.bz-s.az; const sl=Math.hypot(dx,dz)||1; dx/=sl; dz/=sl; const nx=-dz,nz=dx;
     let EV=J.crossMap.get(s);                                                              // ⚠️ crossings happen MID-segment on both streets (no shared vertex — same trap as the v10a routing bug, but for scenery). True intersection events drive slab cuts, dash gaps, and crosswalks.
     if(!EV){ EV=[]; J.crossMap.set(s,EV); const cand=new Set();
-      for(let t=0;t<=sl;t+=90){ for(const o of segNear(s.ax+dx*t, s.az+dz*t)) if(o!==s&&o.name!==s.name) cand.add(o); }
+      for(let t=0;t<=sl;t+=90){ for(const o of segNear(s.ax+dx*t, s.az+dz*t)) if(o!==s&&o.name!==s.name&&o.cls<=3) cand.add(o); }   // cls4 alleys are not drawn as roads — their events cut sidewalks and painted zebras over nothing
       for(const o of cand){ const odx=o.bx-o.ax, odz=o.bz-o.az, ohw=CLASSW[o.cls]/2;
         const det=odx*dz-dx*odz;
         let hit=false;
@@ -2283,7 +2289,9 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
             if(a0<sl-T1) outs.push([a0,sl-T1]);
             for(const pc of outs){ const L=pc[1]-pc[0]; if(L<2) continue;
               const tc=(pc[0]+pc[1])/2, px2=s.ax+dx*tc, pz2=s.az+dz*tc;
-              S.push({x:px2+nx*(rh+walk/2)*side, z:pz2+nz*(rh+walk/2)*side, len:L, w:walk, ang, g:isMed?1:0});
+              const sx2=px2+nx*(rh+walk/2)*side, sz2=pz2+nz*(rh+walk/2)*side;
+              if(nearRoadEdge(sx2,sz2)<0.4) continue;                                      // the slab would sit ON another roadway's drawn band — stacked carriageways (Broad St) render as one wide road, so no strip of ANY colour belongs there; Henry Ave's real gaps pass this test and keep their grass
+              S.push({x:sx2, z:sz2, len:L, w:walk, ang, g:isMed?1:0});
               if(S.length>=LOCAL.maxS) break; } } } } }
     for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
       if((px-cx)**2+(pz-cz)**2>R2) continue;
@@ -2342,7 +2350,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         const dash=3.4, gap=4.6, hwm=s.cls<=1?0.30:0.26;
         const m0=jA?eA.hw+4.5:2, m1=jB?eB.hw+4.5:2;                                        // dashes STOP short of a junction, scaled to the CROSSING street's width
         const oneway=!!s.ow;                                                               // twin lane dividers ONLY on one-ways (twin dashes on two-way Ridge read as 3 lanes — user caught it)
-        const lanes = (oneway&&s.cls===0) ? [-hw*0.45, hw*0.45] : [0];                    // one dash row per carriageway on cls1 one-ways — twin rows on both halves of a divided road read as line soup
+        const lanes = [0];                                                                 // ONE dash row per roadway, period — Broad St's stacked carriageways turned twin rows into dash soup
         const arr = oneway ? mk : my;                                                      // two-way centre line is YELLOW like a real US road; one-way lane lines stay white
         for(const lo of lanes){ const lx=-dz*lo, lz=dx*lo;
           for(let t=m0; t<l-m1; t+=dash+gap){ const t2=Math.min(l-m1,t+dash); if(t2-t<1.2) break;
@@ -2356,11 +2364,12 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             const bx=cxw+nxu*o, bz=czw+nzu*o, ax2=fx2*bl, az2=fz2*bl, sx2=nxu*0.28, sz2=nzu*0.28;
             mk.push(bx-ax2+sx2,MARK_Y,bz-az2+sz2, bx+ax2+sx2,MARK_Y,bz+az2+sz2, bx+ax2-sx2,MARK_Y,bz+az2-sz2,
                     bx-ax2+sx2,MARK_Y,bz-az2+sz2, bx+ax2-sx2,MARK_Y,bz+az2-sz2, bx-ax2-sx2,MARK_Y,bz-az2-sz2); } };
-        for(const q of [[jA,s.ax,s.az,dx,dz,eA],[jB,s.bx,s.bz,-dx,-dz,eB]]){
-          if(!q[0]) continue; const inset=(q[5]?q[5].hw:hw)+2.2; zeb(q[1]+q[3]*inset, q[2]+q[4]*inset, q[3], q[4]); }
-        for(const ev of EV){ if(mk.length>=240000) break;                                  // both approaches of every crossing/T get a zebra
+        const placed=[]; const ok=tt=>{ for(const p2 of placed) if(Math.abs(p2-tt)<9) return false; placed.push(tt); return true; };   // Philly side streets come every ~50m — without spacing the zebras overlapped into zigzag soup on Broad St
+        if(jA){ const t0=((eA?eA.hw:hw)+2.2); if(ok(t0)) zeb(s.ax+dx*t0, s.az+dz*t0, dx, dz); }
+        if(jB){ const t1=l-((eB?eB.hw:hw)+2.2); if(ok(t1)) zeb(s.ax+dx*t1, s.az+dz*t1, dx, dz); }
+        for(const ev of EV){ if(mk.length>=240000||placed.length>=12) break;               // both approaches of every crossing/T get a zebra, spaced out
           for(const sgn of [-1,1]){ const tt=ev.t+sgn*(ev.hw+2.2); if(tt<3||tt>l-3) continue;
-            zeb(s.ax+dx*tt, s.az+dz*tt, dx, dz); } } } }
+            if(ok(tt)) zeb(s.ax+dx*tt, s.az+dz*tt, dx, dz); } } } }
     if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));
       const rd=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x8896a8})); rd.renderOrder=1; FLATCITY.group.add(rd); FLATCITY.parts.push(rd); }
     if(mk.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(mk,3));
