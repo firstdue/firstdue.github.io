@@ -473,7 +473,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -871,7 +871,7 @@ const settingsPanel=document.getElementById('settingsPanel'), settingsShade=docu
 const boundaryCanvas=document.getElementById('boundaryCanvas'), boundaryEngine=document.getElementById('boundaryEngine'), boundaryStats=document.getElementById('boundaryStats');
 function closeSettings(){ settingsPanel.classList.remove('show'); settingsShade.classList.remove('show'); settingsPanel.setAttribute('aria-hidden','true'); }
 function toggleSettings(){ const show=!settingsPanel.classList.contains('show'); settingsPanel.classList.toggle('show',show); settingsShade.classList.toggle('show',show); settingsPanel.setAttribute('aria-hidden',show?'false':'true'); }
-function boundaryEngineName(id){ const st=STATIONS_RAW.find(s=>s.id===id); return st?st.name:('Engine '+id.slice(1)+' (boundary only)'); }
+function boundaryEngineName(id){ const st=(typeof stations!=='undefined'&&stations.find(s=>s.id===id))||STATIONS_RAW.find(s=>s.id===id); return st?st.name:('Engine '+id.slice(1)+' (boundary only)'); }
 function boundaryPieces(id){ return RUN_BOUNDARIES.filter(q=>q.engines.includes(id)); }
 function boundaryOpenEnds(pieces){ const points=new Map();
   for(const q of pieces){ if(!q.pts||q.pts.length<2) continue; for(const p of [q.pts[0],q.pts[q.pts.length-1]]){ const k=p[0]+','+p[1],v=points.get(k); if(v) v.count++; else points.set(k,{p,count:1}); } }
@@ -879,10 +879,16 @@ function boundaryOpenEnds(pieces){ const points=new Map();
 function drawBoundaryOverview(){ const id=BOUNDARY_UI.engine,pieces=boundaryPieces(id),ends=boundaryOpenEnds(pieces),cv=boundaryCanvas,c=cv.getContext('2d');
   const W=Math.max(280,Math.round(cv.clientWidth||320)),H=Math.max(290,Math.round(cv.clientHeight||360)),dpr=Math.min(2,devicePixelRatio||1);
   cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); c.setTransform(dpr,0,0,dpr,0,0); c.fillStyle=MAP_LAND; c.fillRect(0,0,W,H);
-  const closed=pieces.filter(q=>q.complete).length; boundaryStats.textContent=pieces.length ? ('TRACED: '+pieces.length+' section'+(pieces.length===1?'':'s')+'  •  OPEN ENDS: '+ends.length+'  •  CLOSED: '+closed) : 'NO FIRST-DUE BOUNDARY PHOTOS MAPPED YET';
-  if(!pieces.length){ c.fillStyle='#59616b'; c.textAlign='center'; c.textBaseline='middle'; c.font='800 16px -apple-system,"Helvetica Neue",Arial'; c.fillText('No sourced boundary lines for '+boundaryEngineName(id),W/2,H/2-8);
+  const closed=pieces.filter(q=>q.complete).length;
+  { const z=(typeof duePolygon==='function')?duePolygon(id):null;
+    let a=0; if(z&&z.length>2){ for(let k=0;k<z.length;k++){ const q2=z[(k+1)%z.length]; a+=z[k][0]*q2[1]-q2[0]*z[k][1]; } a=Math.abs(a/2)/2589988.11; }
+    boundaryStats.textContent = (z&&z.length>2)
+      ? ('✅ REAL PFD FIRST-DUE ZONE  •  '+a.toFixed(2)+' sq mi'+(pieces.length?('  •  '+pieces.length+' hand-traced section'+(pieces.length===1?'':'s')):''))
+      : ('NO PFD ZONE ON FILE  •  '+pieces.length+' hand-traced section'+(pieces.length===1?'':'s')+'  •  OPEN ENDS: '+ends.length); }
+  if(!pieces.length && !((typeof duePolygon==='function') && duePolygon(id) && duePolygon(id).length)){ c.fillStyle='#59616b'; c.textAlign='center'; c.textBaseline='middle'; c.font='800 16px -apple-system,"Helvetica Neue",Arial'; c.fillText('No sourced boundary lines for '+boundaryEngineName(id),W/2,H/2-8);
     c.font='600 12px -apple-system,"Helvetica Neue",Arial'; c.fillText('Add an overlapping run-area photo to begin.',W/2,H/2+18); return; }
-  const all=pieces.flatMap(q=>q.pts),xs=all.map(p=>p[0]),zs=all.map(p=>p[1]); let minX=Math.min(...xs),maxX=Math.max(...xs),minZ=Math.min(...zs),maxZ=Math.max(...zs);
+  const zone=(typeof duePolygon==='function')?duePolygon(id):null;            // v14k brought in the REAL PFD first-due polygons — show those, not just the hand traces
+  const all=(zone&&zone.length?zone:[]).concat(pieces.flatMap(q=>q.pts)),xs=all.map(p=>p[0]),zs=all.map(p=>p[1]); let minX=Math.min(...xs),maxX=Math.max(...xs),minZ=Math.min(...zs),maxZ=Math.max(...zs);
   const spanX=Math.max(180,maxX-minX),spanZ=Math.max(180,maxZ-minZ),padX=spanX*.12,padZ=spanZ*.12; minX-=padX;maxX+=padX;minZ-=padZ;maxZ+=padZ;
   const scale=Math.min((W-34)/(maxX-minX),(H-34)/(maxZ-minZ)),ox=(W-(maxX-minX)*scale)/2,oy=(H-(maxZ-minZ)*scale)/2;
   const sx=x=>ox+(x-minX)*scale, sy=z=>H-oy-(z-minZ)*scale;
@@ -892,16 +898,41 @@ function drawBoundaryOverview(){ const id=BOUNDARY_UI.engine,pieces=boundaryPiec
   roads.sort((a,b)=>b[1]-a[1]); c.lineCap='round';c.lineJoin='round';
   for(const road of roads){const pts=road[2],cl=road[1];c.beginPath();c.moveTo(sx(pts[0][0]),sy(pts[0][1]));for(let i=1;i<pts.length;i++)c.lineTo(sx(pts[i][0]),sy(pts[i][1]));c.strokeStyle=RD_CASE[cl];c.lineWidth=Math.max(1.2,Math.min(7,(CLASSW[cl]+RD_CASEW[cl])*scale));c.stroke();}
   for(const road of roads){const pts=road[2],cl=road[1];c.beginPath();c.moveTo(sx(pts[0][0]),sy(pts[0][1]));for(let i=1;i<pts.length;i++)c.lineTo(sx(pts[i][0]),sy(pts[i][1]));c.strokeStyle=RD_FILL[cl];c.lineWidth=Math.max(.8,Math.min(5,CLASSW[cl]*scale));c.stroke();}
-  for(const q of pieces){const pts=q.pts;c.beginPath();c.moveTo(sx(pts[0][0]),sy(pts[0][1]));for(let i=1;i<pts.length;i++)c.lineTo(sx(pts[i][0]),sy(pts[i][1]));c.strokeStyle='rgba(255,255,255,.96)';c.lineWidth=8;c.stroke();c.strokeStyle='#14824b';c.lineWidth=4;c.stroke();}
-  const labels=new Map(); for(const q of pieces) for(const L of q.labels||[]){const k=L.engine+','+L.x+','+L.z;if(!labels.has(k))labels.set(k,L);}
+  if(zone&&zone.length>2 && typeof PFD_ZONES!=='undefined'){                   // neighbouring first-due zones, faint, so you can see how your turf fits the city
+    const me=+String(id).replace(/\D/g,'');
+    for(const z of PFD_ZONES){ if(z.e===me||!z.poly||z.poly.length<3) continue;
+      let vis=false; for(const q of z.poly){ const X=sx(q[0]),Y=sy(q[1]); if(X>-60&&X<W+60&&Y>-60&&Y<H+60){ vis=true; break; } }
+      if(!vis) continue;
+      c.beginPath(); c.moveTo(sx(z.poly[0][0]),sy(z.poly[0][1]));
+      for(let i=1;i<z.poly.length;i++) c.lineTo(sx(z.poly[i][0]),sy(z.poly[i][1])); c.closePath();
+      c.strokeStyle='rgba(90,105,125,.45)'; c.lineWidth=1.4; c.stroke();
+      const cx0=z.poly.reduce((a,q)=>a+q[0],0)/z.poly.length, cz0=z.poly.reduce((a,q)=>a+q[1],0)/z.poly.length;
+      const LX=sx(cx0), LY=sy(cz0);
+      if(LX>10&&LX<W-10&&LY>10&&LY<H-10){ c.fillStyle='rgba(70,84,102,.75)'; c.font='800 11px -apple-system,Arial';
+        c.textAlign='center'; c.textBaseline='middle'; c.fillText(String(z.e),LX,LY); } } }
+  if(zone&&zone.length>2){                                                    // ✅ REAL PFD first-due zone (public ArcGIS, baked v14k) — the authoritative area this engine runs
+    c.beginPath(); c.moveTo(sx(zone[0][0]),sy(zone[0][1]));
+    for(let i=1;i<zone.length;i++) c.lineTo(sx(zone[i][0]),sy(zone[i][1])); c.closePath();
+    c.fillStyle='rgba(20,130,75,.18)'; c.fill();
+    c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=6; c.stroke();
+    c.strokeStyle='#14824b'; c.lineWidth=3; c.stroke(); }
+  { const stn=stations.find(q=>q.id===id);                                     // where the house sits inside its own zone
+    if(stn){ const X=sx(stn.x), Y=sy(stn.z);
+      c.beginPath(); c.arc(X,Y,8,0,Math.PI*2); c.fillStyle='#e63946'; c.fill();
+      c.lineWidth=2.5; c.strokeStyle='#fff'; c.stroke();
+      c.fillStyle='#fff'; c.font='900 9px -apple-system,Arial'; c.textAlign='center'; c.textBaseline='middle';
+      c.fillText(String(stn.num),X,Y+0.5); } }
+  const showTraces=!(zone&&zone.length>2);                                    // the real zone IS the answer; hand traces + open-end markers only matter where no zone exists
+  if(showTraces) for(const q of pieces){const pts=q.pts;c.beginPath();c.moveTo(sx(pts[0][0]),sy(pts[0][1]));for(let i=1;i<pts.length;i++)c.lineTo(sx(pts[i][0]),sy(pts[i][1]));c.strokeStyle='rgba(255,255,255,.96)';c.lineWidth=8;c.stroke();c.strokeStyle='#14824b';c.lineWidth=4;c.stroke();}
+  const labels=new Map(); if(showTraces) for(const q of pieces) for(const L of q.labels||[]){const k=L.engine+','+L.x+','+L.z;if(!labels.has(k))labels.set(k,L);}
   for(const L of labels.values()){const x=sx(L.x),y=sy(L.z);if(x<13||x>W-13||y<13||y>H-13)continue;c.beginPath();c.arc(x,y,11,0,Math.PI*2);c.fillStyle=L.engine===id?'#202733':'#fff';c.fill();c.lineWidth=1.5;c.strokeStyle='#202733';c.stroke();c.fillStyle=L.engine===id?'#fff':'#202733';c.font='800 10px -apple-system,"Helvetica Neue",Arial';c.textAlign='center';c.textBaseline='middle';c.fillText(L.text,x,y+.5);}
-  for(const p of ends){c.beginPath();c.arc(sx(p[0]),sy(p[1]),7,0,Math.PI*2);c.fillStyle='#fff4e7';c.fill();c.lineWidth=3;c.strokeStyle='#f08a24';c.stroke();}
+  if(showTraces) for(const p of ends){c.beginPath();c.arc(sx(p[0]),sy(p[1]),7,0,Math.PI*2);c.fillStyle='#fff4e7';c.fill();c.lineWidth=3;c.strokeStyle='#f08a24';c.stroke();}
 }
 function openBoundaryMap(){ closeSettings(); if(typeof DRIVE!=='undefined') DRIVE.going=false; const active=(typeof DRIVE!=='undefined'&&DRIVE.stationId)||BOUNDARY_UI.engine;
   if([...boundaryEngine.options].some(o=>o.value===active)){BOUNDARY_UI.engine=active;boundaryEngine.value=active;} boundaryOverlay.classList.add('show');boundaryOverlay.setAttribute('aria-hidden','false');requestAnimationFrame(drawBoundaryOverview); }
 function closeBoundaryMap(){ boundaryOverlay.classList.remove('show');boundaryOverlay.setAttribute('aria-hidden','true'); }
-(function buildBoundaryEngineSelect(){ const ids=new Set(STATIONS_RAW.map(s=>s.id));for(const q of RUN_BOUNDARIES)for(const id of q.engines)ids.add(id);
-  for(const id of [...ids].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)))){const o=document.createElement('option'),n=boundaryPieces(id).length;o.value=id;o.textContent=boundaryEngineName(id)+(n?' · '+n+' traced':' · none yet');boundaryEngine.appendChild(o);} boundaryEngine.value=BOUNDARY_UI.engine; })();
+(function buildBoundaryEngineSelect(){ const ids=new Set(stations.map(s=>s.id));for(const s2 of STATIONS_RAW)ids.add(s2.id);for(const q of RUN_BOUNDARIES)for(const id of q.engines)ids.add(id);   // ALL 60 houses, not just the few with hand traces — every one has a real PFD zone to show
+  for(const id of [...ids].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)))){const o=document.createElement('option'),n=boundaryPieces(id).length;o.value=id;const hasZ=(typeof duePolygon==='function')&&duePolygon(id)&&duePolygon(id).length>2;o.textContent=boundaryEngineName(id)+(hasZ?' · ✅ PFD zone':(n?' · '+n+' traced':' · none yet'));boundaryEngine.appendChild(o);} boundaryEngine.value=BOUNDARY_UI.engine; })();
 document.getElementById('btnSettings').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggleSettings();});
 document.getElementById('btnSettingsClose').addEventListener('click',closeSettings);
 settingsShade.addEventListener('click',closeSettings);
@@ -2938,11 +2969,24 @@ function buildHomeBase(){                                                     //
   }
   HOMEMAP.base=cv; HOMEMAP.bw=P.W; HOMEMAP.bh=P.H; HOMEMAP.ready=true;
 }
-function homeDots(){                                                          // screen positions + label-collision flags
+function homeDots(){                                                          // exact screen positions + a label slot for EVERY house
   const P=homeProject(), out=[];
-  for(const st of stations) out.push({ st, x:P.X(st.x,st.z), y:P.Z(st.x,st.z), lab:true });
-  for(let i=0;i<out.length;i++) for(let j=i+1;j<out.length;j++)
-    if(Math.hypot(out[i].x-out[j].x,out[i].y-out[j].y)<19) out[j].lab=false;   // crowded downtown: dot only
+  for(const st of stations) out.push({ st, x:P.X(st.x,st.z), y:P.Z(st.x,st.z), lx:0, ly:0, off:false });
+  // Dots stay at their TRUE location (this is a learn-your-city map — never nudge a firehouse).
+  // Where dots crowd, the NUMBER moves to the best free slot around its dot instead of vanishing.
+  const R=13, taken=[];
+  const clash=(x,y)=>{ for(const t of taken) if(Math.hypot(t.x-x,t.y-y)<15) return true;
+    for(const d of out) if(Math.hypot(d.x-x,d.y-y)<11) return true; return false; };
+  for(let i=0;i<out.length;i++){ const d=out[i];
+    let crowded=false;
+    for(let j=0;j<out.length;j++) if(j!==i && Math.hypot(d.x-out[j].x,d.y-out[j].y)<17){ crowded=true; break; }
+    if(!crowded){ taken.push({x:d.x,y:d.y}); continue; }                       // roomy: number sits in the dot
+    let bx=0,by=0,ok=false;
+    for(let a=0;a<8&&!ok;a++){ const ang=(-90+a*45)*Math.PI/180, cx=d.x+Math.cos(ang)*R, cy=d.y+Math.sin(ang)*R;
+      if(!clash(cx,cy)){ bx=Math.cos(ang)*R; by=Math.sin(ang)*R; ok=true; } }
+    if(!ok){ bx=0; by=-R*1.5; }                                                // last resort: straight up
+    d.lx=bx; d.ly=by; d.off=true; taken.push({x:d.x+bx,y:d.y+by});
+  }
   HOMEMAP.dots=out; return out;
 }
 function drawHomeMap(now){
@@ -2972,8 +3016,20 @@ function drawHomeMap(now){
     c.shadowColor=col; c.shadowBlur=on?16:8; c.fillStyle=col;
     c.beginPath(); c.arc(0,0,r,0,6.283); c.fill(); c.shadowBlur=0;
     c.strokeStyle='rgba(255,255,255,.85)'; c.lineWidth=on?1.8:1; c.stroke();
-    if(d.lab&&k<2.2){ c.fillStyle='#07101d'; c.font='900 '+(r*1.15).toFixed(1)+'px -apple-system,Arial,sans-serif';
-      c.textAlign='center'; c.textBaseline='middle'; c.fillText(String(d.st.num),0,0.5); }
+    if(k<2.2){ const num=String(d.st.num);
+      c.textAlign='center'; c.textBaseline='middle';
+      if(d.off){ const fs=r*1.05, w=c.measureText(num).width;                  // crowded: number rides beside its dot in a small pill
+        c.font='900 '+fs.toFixed(1)+'px -apple-system,Arial,sans-serif';
+        const pw=Math.max(fs*1.5,c.measureText(num).width+fs*0.7), ph=fs*1.45;
+        c.globalAlpha=0.55*pop; c.strokeStyle=col; c.lineWidth=0.9;
+        c.beginPath(); c.moveTo(0,0); c.lineTo(d.lx*0.72,d.ly*0.72); c.stroke(); c.globalAlpha=pop;
+        c.fillStyle='rgba(7,16,29,.92)'; c.strokeStyle=col; c.lineWidth=1.1;
+        const rx=d.lx-pw/2, ry=d.ly-ph/2, rr=ph*0.42;
+        c.beginPath(); c.moveTo(rx+rr,ry); c.arcTo(rx+pw,ry,rx+pw,ry+ph,rr); c.arcTo(rx+pw,ry+ph,rx,ry+ph,rr);
+        c.arcTo(rx,ry+ph,rx,ry,rr); c.arcTo(rx,ry,rx+pw,ry,rr); c.closePath(); c.fill(); c.stroke();
+        c.fillStyle=col; c.fillText(num,d.lx,d.ly+0.5); c.globalAlpha=1;
+      } else { c.fillStyle='#07101d'; c.font='900 '+(r*1.15).toFixed(1)+'px -apple-system,Arial,sans-serif';
+        c.fillText(num,0,0.5); } }
     c.restore();
   });
   c.restore();
