@@ -309,6 +309,11 @@
   #homeListPane { position:absolute; inset:0; z-index:6; display:none; align-items:center; justify-content:center;
     background:rgba(5,8,16,.93); padding:10px; }
   #homeListPane.show { display:flex; }
+  #btnBackToMap { position:absolute; top:calc(max(8px,env(safe-area-inset-top)) + 6px); left:50%; transform:translateX(-50%);
+    z-index:8; background:rgba(12,18,34,.96); color:#ffe14d; border:2px solid #ffe14d; border-radius:999px;
+    padding:10px 20px; font-weight:900; font-size:13px; letter-spacing:1.2px; cursor:pointer; white-space:nowrap;
+    box-shadow:0 6px 20px rgba(0,0,0,.6); }   /* pinned: the list is ~4300px tall, so a bottom-only close button was unreachable */
+  #homeListPane .card { padding-top:58px; }   /* clear the pinned button */
   .stbtn .sub2 { opacity:.64; font-weight:600; font-size:.8em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #brHouse { color:#9fd7ff; font-weight:800; letter-spacing:.4px; }
   .fact2 { font-size:clamp(12px,2.8vw,14px); line-height:1.55; color:#d7deea; background:rgba(255,255,255,.05);
@@ -411,7 +416,9 @@
       <div class="hcBn" id="hcBn"></div>
       <button class="hcGo" id="hcGo">🚒 RIDE OUT</button>
     </div>
-    <div id="homeListPane"><div class="card">
+    <div id="homeListPane">
+      <button id="btnBackToMap">◀ BACK TO MAP</button>
+      <div class="card">
       <h1>🚒 CHOOSE YOUR FIREHOUSE</h1>
       <div class="sub">Every Philadelphia Fire Department engine house, at its real address, grouped by battalion. Pick any to run out of.</div>
       <div id="stationList"></div>
@@ -466,7 +473,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3016,7 +3023,10 @@ function closeHomeMap(){ if(HOMEMAP.raf){ cancelAnimationFrame(HOMEMAP.raf); HOM
   document.getElementById('hcGo').addEventListener('click',()=>{ if(HOMEMAP.sel) flyToStation(HOMEMAP.sel); });
   document.getElementById('hcClose').addEventListener('click',()=>{ HOMEMAP.sel=null; hideHouseCard(); });
   document.getElementById('btnListView').addEventListener('click',()=>document.getElementById('homeListPane').classList.add('show'));
-  document.getElementById('btnCloseList').addEventListener('click',()=>document.getElementById('homeListPane').classList.remove('show'));
+  const closeList=()=>document.getElementById('homeListPane').classList.remove('show');
+  document.getElementById('btnCloseList').addEventListener('click',closeList);
+  document.getElementById('btnBackToMap').addEventListener('click',closeList);
+  document.getElementById('homeListPane').addEventListener('click',e=>{ if(e.target.id==='homeListPane') closeList(); });   // tap the dimmed area outside the card
   window.addEventListener('resize',()=>{ if(homeEl.classList.contains('show')){ HOMEMAP.ready=false; HOMEMAP.dots=[]; HOMEMAP.rot=undefined; buildHomeBase(); } });
   if(homeEl.classList.contains('show')) openHomeMap();
 })();
