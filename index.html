@@ -485,7 +485,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15k";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2144,7 +2144,16 @@ function updateDrive(dt){ if(!state.running){ return; }
       if(!next) next=roadContinuation(a,b);                                                  // same street, or the only possible forward road
       if(!next){ const choices=b.adj.filter(e=>e.to!==a); DRIVE.t=1; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=choices.length>0; break; } // a sharp reversing continuation still waits for confirmation; a dead end simply stops
       DRIVE.fromN=b; DRIVE.toN=next; DRIVE.t=0; DRIVE.atChoice=false; } }
-  { const e=(DRIVE.going&&DRIVE.fromN&&DRIVE.toN)?DRIVE.fromN.adj.find(x=>x.to===DRIVE.toN):null; DRIVE.wrongWay=!!(e&&e.wrong); }   // one-way violation: this direction on this edge is illegal
+  { const e=(DRIVE.going&&DRIVE.fromN&&DRIVE.toN)?DRIVE.fromN.adj.find(x=>x.to===DRIVE.toN):null; DRIVE.wrongWay=!!(e&&e.wrong);
+    // 🛣️ DIVIDED ROAD SELF-CORRECT: on S Broad / Henry the two directions are separate one-way ways, so
+    // heading south on the northbound side is a PATHING artifact, not a decision the player made — the move
+    // they chose (go south on Broad) is perfectly legal, just on the other carriageway. Slide across.
+    // A genuine one-way has no legal twin, so the deliberate wrong-way drive from v15d is untouched.
+    if(DRIVE.wrongWay && DRIVE.fromN!==DRIVE._twinFrom){
+      DRIVE._twinFrom=DRIVE.fromN;                                            // try once per edge, never in a loop
+      const nm=edgeName(DRIVE.fromN,DRIVE.toN);
+      const c=carriagewayToward(nm, DRIVE.toN.x-DRIVE.fromN.x, DRIVE.toN.z-DRIVE.fromN.z, truck.x, truck.z);
+      if(c){ slideToCarriageway(c); popup('↩ OTHER SIDE OF '+(nm||'THE STREET').toUpperCase()); } } }
   driveOrient(true);
   let d=DRIVE.aim-truck.theta; while(d>Math.PI)d-=6.2832; while(d<-Math.PI)d+=6.2832;   // ease into the new heading — a road that bends (or a 1.4m stub edge) used to snap the truck ~29° in one frame
   truck.theta+=d*Math.min(1,dt*9);
@@ -2155,8 +2164,12 @@ function updateDrive(dt){ if(!state.running){ return; }
    street as a whole carries both directions. So when the reversal would be illegal we hop to the SAME
    street's opposite carriageway instead — which is what turning around on Broad actually means. */
 function uTurnEdgeIsWrong(a,b){ const back=b.adj.find(e=>e.to===a); return !!(back&&back.wrong); }
-function oppositeCarriageway(a,b,px,pz){
-  const nm=edgeName(a,b); const hx=b.x-a.x, hz=b.z-a.z, hl=Math.hypot(hx,hz)||1;
+/* Nearest LEGAL edge of street `nm` running roughly along (hx,hz), within a median's width of (px,pz).
+   This is what makes a divided road behave like the two-way street it really is: the southbound side of
+   S Broad is a different way in the data, ~12m across the median. 45m is deliberate — 90m reached unrelated
+   blocks on genuine one-ways (Parrish, Arch) and teleported the truck for nothing. */
+function carriagewayToward(nm,hx,hz,px,pz){
+  const hl=Math.hypot(hx,hz)||1;
   const gx=Math.floor(px/NCELL), gz=Math.floor(pz/NCELL);
   let best=null,bd=1e18;
   for(let r=0;r<=2;r++) for(let i=gx-r;i<=gx+r;i++) for(let j=gz-r;j<=gz+r;j++){
@@ -2165,10 +2178,21 @@ function oppositeCarriageway(a,b,px,pz){
       if(e.wrong) continue;                                                   // must be legal in that direction
       if(nm && (e.name||edgeName(n,e.to))!==nm) continue;                      // same street only
       const dx=e.to.x-n.x, dz=e.to.z-n.z, l=Math.hypot(dx,dz)||1;
-      if((dx*hx+dz*hz)/(l*hl) > -0.7) continue;                                // must run roughly OPPOSITE to us
+      if((dx*hx+dz*hz)/(l*hl) < 0.7) continue;                                 // must run the way we WANT to go
       const d=closestSeg(px,pz,{ax:n.x,az:n.z,bx:e.to.x,bz:e.to.z}).d;
       if(d<bd){ bd=d; best={n,to:e.to}; } } }
-  return (best&&bd<45)?best:null;                                             // within a real median’s width — 90m grabbed unrelated blocks on genuine one-ways (Parrish, Arch) and teleported the truck for nothing
+  return (best&&bd<45)?best:null;
+}
+function oppositeCarriageway(a,b,px,pz){ return carriagewayToward(edgeName(a,b), a.x-b.x, a.z-b.z, px, pz); }
+/* Put the truck on `edge` at the point nearest where it already is (used to cross a median). */
+function slideToCarriageway(c){
+  const segL=Math.hypot(c.to.x-c.n.x,c.to.z-c.n.z)||1;
+  const q=closestSeg(truck.x,truck.z,{ax:c.n.x,az:c.n.z,bx:c.to.x,bz:c.to.z});
+  DRIVE.fromN=c.n; DRIVE.toN=c.to;
+  DRIVE.t=Math.max(0,Math.min(1,Math.hypot(q.cx-c.n.x,q.cz-c.n.z)/segL));
+  truck.x=q.cx; truck.z=q.cz;
+  DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; DRIVE.wrongWay=false; DRIVE._wwLatch=false;
+  driveOrient();
 }
 function uTurn(){ if(DRIVE.parked) return; const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return;
   if(uTurnEdgeIsWrong(a,b)){
@@ -2183,7 +2207,7 @@ function uTurn(){ if(DRIVE.parked) return; const a=DRIVE.fromN,b=DRIVE.toN; if(!
       driveOrient(); popup('↩ CROSSED TO THE OTHER SIDE'); return; } }
   DRIVE.fromN=b; DRIVE.toN=a; DRIVE.t=1-DRIVE.t; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; driveOrient(); }
 // Park at the firehouse curb, nose facing its street (Ridge Ave / Main St); pick LEFT or RIGHT to pull out.
-function parkAtStation(st){ DRIVE.parked=true; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false;
+function parkAtStation(st){ DRIVE.parked=true; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE._twinFrom=null;
   DRIVE.stationId=st.id;
   DRIVE.fromN=null; DRIVE.toN=null; DRIVE.stDir=null; DRIVE.stPerp=null;
   // anchor to the street the firehouse actually faces (Ridge Ave / Main St) — not just the nearest road
@@ -2214,6 +2238,18 @@ function pullOut(dir){ if(!DRIVE.parked) return; const n=DRIVE.stationNode||near
   for(const e of cand){ const dx=e.to.x-n.x,dz=e.to.z-n.z,l=Math.hypot(dx,dz)||1;
     const cross=(fx*dz-fz*dx)/l, score=dir*cross-(e.wrong?2:0);                                 // same convention as chooseTurn: cross>0 = right; avoid pulling out the WRONG way down a one-way
     if(score>bd){bd=score;best=e.to;} }
+  // If the ONLY way to leave in the asked-for direction on the house's own street is a wrong-way edge
+  // (Engine 1 sits on Broad's northbound side, so 'LEFT' = south was rejected and dumped it on Kenilworth),
+  // cross the median and leave on the correct carriageway instead.
+  { let wrongPick=null,wd=-1e9;
+    for(const e of n.adj){ if(!e.wrong) continue; const dx=e.to.x-n.x,dz=e.to.z-n.z,l=Math.hypot(dx,dz)||1;
+      const cr=dir*((fx*dz-fz*dx)/l); if(cr>0.35 && cr>wd){ wd=cr; wrongPick=e; } }
+    if(wrongPick){
+      const bestIsSameStreet = best && edgeName(n,best)===(wrongPick.name||edgeName(n,wrongPick.to));
+      if(!bestIsSameStreet){
+        const nm=wrongPick.name||edgeName(n,wrongPick.to);
+        const c=carriagewayToward(nm, wrongPick.to.x-n.x, wrongPick.to.z-n.z, truck.x, truck.z);
+        if(c){ DRIVE.parked=false; DRIVE.going=true; slideToCarriageway(c); return; } } } }
   if(!best) return;
   DRIVE.fromN=n; DRIVE.toN=best; DRIVE.t=0; DRIVE.parked=false; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); }
 function chooseTurn(wx,wz){ const j=nextJunction(), branches=j.node?j.node.adj.filter(e=>e.to!==j.from):[]; if(branches.length<2) return;
