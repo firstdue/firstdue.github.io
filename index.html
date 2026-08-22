@@ -70,7 +70,8 @@
   .settingsGrid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
   #settingsPanel .abtn { width:100%; min-height:46px; background:#343c49; border:1px solid #697483; color:#fff; text-shadow:none; }
   #settingsPanel .abtn.on { background:#174f9f; border-color:#71a8ff; box-shadow:none; animation:none; }
-  #settingsPanel #btnRestart { grid-column:1/-1; background:#8d2c30; border-color:#d46b6f; }
+  #settingsPanel #btnRerun   { grid-column:1/-1; background:#1f5d84; border-color:#5aa9d6; }   /* redo THIS box from quarters */
+  #settingsPanel #btnRestart { grid-column:1/-1; background:#8d2c30; border-color:#d46b6f; }   /* back to the firehouse picker */
   #boundaryOverlay { position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center; padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom));
     background:rgba(8,12,18,.82); pointer-events:auto; }
   #boundaryOverlay.show { display:flex; }
@@ -361,6 +362,7 @@
   <button class="abtn on" id="btnRivals">🚑 RIVALS</button>
   <button class="abtn" id="btnView">🧭 HEADING</button>
   <button class="abtn on" id="btnSat">🌐 LIVE MAP</button>
+  <button class="abtn" id="btnRerun">🔁 RESTART RUN</button>
   <button class="abtn" id="btnRestart">↺ RESTART</button>
   <button class="abtn" id="btnMute">🔊 SOUND</button>
   </div>
@@ -485,7 +487,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15m";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1797,6 +1799,21 @@ document.getElementById('btnDue').addEventListener('click',e=>{ e.preventDefault
   else { const n=dueEngineSet(DRIVE.stationId,MAP.dueLevel).size; popup(DUE_LABELS[MAP.dueLevel].replace('🚒 ','')+' ONLY','green'); radio('📻 Only taking '+['','1st','2nd','3rd','4th'][MAP.dueLevel]+'-due calls'+(n>1?' ('+n+' engine areas)':'')+'.'); }
   if(state.running&&!MAP.bounds&&!DRAW.on){ state.target=null; state.onScene=false; newDispatch(); } });   // re-pick a call that fits the new area
 document.getElementById('btnRestart').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); state.running=false; DRIVE.going=false; DRIVE.parked=false; goHome(); });
+/* 🔁 RESTART RUN — redo the CURRENT box from quarters. Keeps the same fire, the same house and your saves;
+   just puts the truck back on the curb and restarts everyone's race. Distinct from ↺ RESTART, which drops
+   the whole shift and goes back to the firehouse picker. */
+function rerunCurrentBox(){
+  if(!state.running) return;
+  const tgt=state.target;
+  returnToStation();
+  state.onScene=false; state.douse=0;
+  DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false;
+  DRIVE.wrongWay=false; DRIVE._wwLatch=false; DRIVE._twinFrom=null;
+  if(tgt){ state.target=tgt; routeDirty=true; clearRivals(); spawnRivals();          // same fire, everyone starts over
+    radio('🔁 RUN RESTARTED — '+tgt.d); popup('🔁 BACK IN QUARTERS · SAME BOX'); }
+  else newDispatch();
+}
+document.getElementById('btnRerun').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); rerunCurrentBox(); });
 let hurryShown=false;
 function updateHUD(dt){
   elCash.childNodes[1].textContent='$'+state.cash;
