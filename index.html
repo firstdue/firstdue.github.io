@@ -487,7 +487,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15n";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15o";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2518,13 +2518,14 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
           const walk=s.cls<=1?4.2:3.2, to=rh+walk+1.3, tx=Math.round(px+nx*to*side), tz=Math.round(pz+nz*to*side), tk=gk(tx,tz);
           if(grid.has(tk)||inWater(tx,tz)) continue;
           if(nearRoadEdge(tx,tz)<1.0) continue;                                            // probe EVERY road — near a junction the offset clears this street but can land in the crossing one
+          { const hs=DRIVE.stationId&&stations.find(q=>q.id===DRIVE.stationId); if(hs&&Math.hypot(tx-hs.x,tz-hs.z)<42) continue; }   // no trees through the station house
           grid.set(tk,1); T.push({x:tx,z:tz,s:0.8+rv*6}); continue; }
         if(B.length>=LOCAL.maxB) continue;
         const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=rh+3.2+reach;
         const bx=Math.round(px+nx*off*side), bz=Math.round(pz+nz*off*side), k=gk(bx,bz);
         if(grid.has(k)||inWater(bx,bz)) continue;
         if(nearRoadEdge(bx,bz)<reach*0.8) continue;                                        // one cheap clearance probe
-        let clear=true; for(const st of stations){ if(st.curated&&Math.hypot(bx-st.x,bz-st.z)<62){ clear=false; break; } }   // keep the curated firehouse forecourts open
+        let clear=true; for(const st of stations){ if((st.curated||st.id===DRIVE.stationId)&&Math.hypot(bx-st.x,bz-st.z)<62){ clear=false; break; } }   // keep the curated + ACTIVE firehouse forecourts open (the station house mesh stands there now)
         if(!clear) continue;
         grid.set(k,1);
         const tall=hash2(bx,bz*3), h = s.cls<=1 ? (7+tall*7+(tall>0.9?tall*12:0)) : (5+tall*4+(tall>0.94?tall*6:0));   // lower-rise: nav maps read as streetscape, not canyon
@@ -3049,6 +3050,67 @@ function completeDispatch(){ const t=state.target; state.saves++; const reward=M
   for(let i=0;i<Math.min(60,water.n);i++) emit(water,truck.x+fx*3,2.4,truck.z+fz*3,Math.cos(i/60*6.28)*6+Math.random()*3,6+Math.random()*7,Math.sin(i/60*6.28)*6+Math.random()*3,0.9+Math.random()*0.5);
   state.target=null; state.onScene=false; state.douse=0; clearRivals();
   setTimeout(()=>{ if(!state.running) return; returnToStation(); newDispatch(); },2600); }   // back to quarters, then the next box comes in — every run starts from the firehouse
+/* 🏚️ STATION HOUSE — a low-poly firehouse for the ACTIVE engine, in the tilt world (modelled on the user's
+   Engine 2 reference: brick facade, dark curved parapet band, name lettering, bay order left→right =
+   AMBULANCE · LADDER · ENGINE; houses without a ladder company get two bays, ambulance + engine).
+   Only ONE station exists at a time (rebuilt on startShift), so the cost is negligible. */
+const STHOUSE={group:null};
+function buildStationHouse(st){
+  if(STHOUSE.group){ FLATCITY.group.remove(STHOUSE.group);
+    STHOUSE.group.traverse(o=>{ if(o.geometry)o.geometry.dispose(); if(o.material&&o.material.map)o.material.map.dispose(); if(o.material)o.material.dispose(); });
+    STHOUSE.group=null; }
+  if(!st||!DRIVE.stPerp) return;
+  const n=DRIVE.stPerp, yaw=Math.atan2(-n.x,-n.z);                            // local +Z faces the street
+  const g=new THREE.Group();
+  const lam=c=>new THREE.MeshLambertMaterial({color:c});
+  const box=(w,h,d,c,x,y,z)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lam(c)); m.position.set(x,y,z); g.add(m); return m; };
+  const bays = st.ladder ? 3 : 2;                                             // amb · (ladder) · engine
+  const bayW=7.4, W=bays*bayW+6, D=13, H=7.6;
+  // main brick mass + darker parapet band with a gentle arch
+  box(W,H,D,0xb5744e,0,H/2,0);
+  box(W,1.9,D+0.3,0x4c3b2c,0,H+0.75,0);
+  box(W*0.62,0.9,D+0.4,0x4c3b2c,0,H+2.0,0);                                   // arched centre of the parapet, stylised
+  box(W+1.2,0.5,D+1.2,0x8a5a3e,0,H+1.9,0);
+  // brick pilasters between bays
+  for(let i=0;i<=bays;i++){ const x=-((bays*bayW)/2)+i*bayW; box(1.1,5.6,0.8,0x935a3d,x,2.8,D/2+0.15); }
+  // bays: dark opening + vehicle inside, nose just proud of the door line
+  const order = st.ladder ? ['amb','ladder','engine'] : ['amb','engine'];
+  order.forEach((kind,i)=>{
+    const x=-((bays-1)*bayW)/2 + i*bayW;
+    box(bayW-1.4,5.8,0.5,0x241c15,x,2.9,D/2-0.1);                             // opening
+    const vz=D/2-2.2;
+    if(kind==='amb'){ box(3.5,2.9,6.4,0xf2f2ee,x,1.95,vz);                    // 🚑 box body
+      box(3.3,1.6,2.0,0xe8e8e4,x,1.3,vz+3.6);                                 // cab
+      box(3.52,0.65,6.42,0xd0342c,x,1.7,vz);                                  // red stripe
+      box(2.7,0.45,0.5,0xd0342c,x,3.1,vz-3.1); }
+    else if(kind==='ladder'){ box(3.8,3.3,8.0,0xc42a20,x,1.95,vz-0.4);        // 🚒 ladder tractor
+      box(3.7,1.3,2.2,0xf0eee8,x,3.95,vz+2.2);                                // white cab top
+      box(1.15,0.45,8.6,0xc9ced6,x,4.15,vz-0.8);                              // the ladder itself
+      box(0.9,0.32,8.6,0x9aa1ab,x,4.55,vz-0.8); }
+    else { box(3.7,3.2,7.2,0xc42a20,x,1.9,vz-0.2);                            // 🚒 engine
+      box(3.6,1.3,2.1,0xf0eee8,x,3.7,vz+2.0);
+      box(3.72,0.55,7.22,0xe8b23a,x,1.45,vz-0.2); }                           // gold band
+  });
+  // 🪧 lettering: ENGINE n (· LADDER m) painted onto a transparent plane on the facade
+  { const cv=document.createElement('canvas'); cv.width=1024; cv.height=128; const c=cv.getContext('2d');
+    c.textAlign='center'; c.textBaseline='middle'; c.font='900 86px "Arial Black",Arial,sans-serif';
+    c.fillStyle='#ead9bc'; c.shadowColor='rgba(0,0,0,.45)'; c.shadowBlur=6; c.shadowOffsetY=3;
+    c.fillText(('ENGINE '+st.num+(st.ladder?'   LADDER '+st.ladder:'')).toUpperCase(),512,64);
+    const t=new THREE.CanvasTexture(cv); t.anisotropy=4;
+    const pl=new THREE.Mesh(new THREE.PlaneGeometry(W*0.92,W*0.92*128/1024),
+      new THREE.MeshBasicMaterial({map:t,transparent:true}));
+    pl.position.set(0,6.7,D/2+0.45); g.add(pl); }
+  // concrete apron + yellow bollards + flag pole
+  { const ap=new THREE.Mesh(new THREE.PlaneGeometry(W+2,8),lam(0xd8d4c8)); ap.rotation.x=-Math.PI/2; ap.position.set(0,0.12,D/2+4); g.add(ap); }
+  for(let i=0;i<bays;i++){ const x=-((bays-1)*bayW)/2+i*bayW;
+    for(const sgn of [-1,1]){ const b=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,1.3,6),lam(0xf2c12e)); b.position.set(x+sgn*(bayW/2-1.3),0.65,D/2+1.4); g.add(b); } }
+  { const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.12,10,6),lam(0xcfd4da)); pole.position.set(W/2+2.2,5,0); g.add(pole);
+    box(2.2,1.3,0.08,0xb22a35,W/2+2.2+1.15,9.1,0); box(0.9,0.65,0.1,0x27356e,W/2+2.2+0.5,9.42,0); }
+  // place it behind the parked truck's curb, facing the street
+  const fx=truck.x+n.x*(6.5+D/2), fz=truck.z+n.z*(6.5+D/2);
+  g.position.set(fx,0,fz); g.rotation.y=yaw;
+  FLATCITY.group.add(g); STHOUSE.group=g;
+}
 function returnToStation(){ const st=stations.find(s=>s.id===DRIVE.stationId)||stations[0]; if(!st) return;   // teleport back to the firehouse curb and re-park (pull-out prompt returns)
   parkAtStation(st); camTheta=truck.theta; CAMLOOK.yaw=0; CAMLOOK.pitch=0; radio('🏠 Back in quarters — '+st.companies[0]+' available.'); }
 function saveBest(){ if(state.saves>best.saves||(state.saves===best.saves&&state.cash>best.cash)){ best={saves:state.saves,cash:state.cash}; try{ localStorage.setItem('pfd_ef_best',JSON.stringify(best)); }catch(e){} } }
@@ -3257,7 +3319,8 @@ function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); docume
   state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=groundHeight(SPAWN.x,SPAWN.z); truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; truck.pitch=0; camTheta=SPAWN.theta;
   parkAtStation(st); CAMLOOK.yaw=0; CAMLOOK.pitch=0; MAP.free=false; MAP.userRot=0; startIntro(st);           // park at the firehouse curb, nose to the street; bay doors roll up + roll out, then LEFT/RIGHT pulls out
-  setTruckEngine(engNum(st.id));                                                                              // stamp the selected engine's number on the 3D truck cab
+  setTruckEngine(engNum(st.id));
+  buildStationHouse(st);                                                       // 🏚️ the active engine's firehouse, standing behind the curb                                                                              // stamp the selected engine's number on the 3D truck cab
   state.running=true; state.timeLeft=CONFIG.timer.start;
   radio('Dispatch to '+st.companies[0]+', '+st.address+': shift started. Stand by…'); setTimeout(newDispatch,900); }
 document.getElementById('restartBtn').addEventListener('click',goHome);
