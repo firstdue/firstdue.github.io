@@ -487,7 +487,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15q";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15r";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1596,22 +1596,18 @@ function updateTiltMap(dt){                                                    /
   camera.up.set(0,1,0); camera.fov=CONFIG.render.fov+6; camera.near=2; camera.updateProjectionMatrix();   // near 2 (not 0.1): tilt map depth precision — kills route/marking z-fight shimmer at distance
   camera.position.set(truck.x-rfx*back, h+CAMLOOK.pitch*20, truck.z-rfz*back);
   camera.lookAt(truck.x+rfx*ahead, 0, truck.z+rfz*ahead);
-  /* 🏚️ QUARTERS SHOT. A rear chase cam + a truck facing the street puts the firehouse BEHIND the camera
-     (it was literally rendering from inside the building). While parked at your own station, swing to a
-     3/4 view from the street side so the house, its bays and your rig are all in frame; it eases back to
-     the normal chase the instant you start driving. Set MAP.quarters=false to disable entirely. */
-  if(MAP.quarters!==false && STHOUSE.group && (DRIVE.parked||INTRO.active)){
-    MAP.qBlend=Math.min(1,(MAP.qBlend||0)+dt*2.2);
-    const n=DRIVE.stPerp||{x:0,z:1}, sx=-n.z, sz=n.x;                        // station normal + its sideways axis
-    const hx=STHOUSE.group.position.x, hz=STHOUSE.group.position.z;
-    const cx2=truck.x-n.x*26+sx*17, cz2=truck.z-n.z*26+sz*17, cy2=15;        // out in the street, off to one side
-    const b=MAP.qBlend;
-    camera.position.set(camera.position.x+(cx2-camera.position.x)*b,
-                        camera.position.y+(cy2-camera.position.y)*b,
-                        camera.position.z+(cz2-camera.position.z)*b);
-    const ax=truck.x+(hx-truck.x)*0.55, az=truck.z+(hz-truck.z)*0.55;        // aim between the rig and the house
-    camera.lookAt(ax,3.2,az);
-  } else MAP.qBlend=Math.max(0,(MAP.qBlend||0)-dt*3);
+  /* The chase camera can sit INSIDE the station (it stands behind the truck, which faces the street), which
+     rendered the roof slab across the top of the frame. Rather than hijack the camera — that broke
+     drag-to-look — just hide the house while the camera is within its footprint; rotating the view or
+     driving off brings it straight back. */
+  if(STHOUSE.group){ const q=STHOUSE.group.position, a=STHOUSE.group.rotation.y;
+    const hw=(STHOUSE.halfW||20)+3, hd=(STHOUSE.depth||16)/2+3;
+    const dx2=camera.position.x-q.x, dz2=camera.position.z-q.z;
+    const lx=dx2*Math.cos(a)-dz2*Math.sin(a), lz=dx2*Math.sin(a)+dz2*Math.cos(a);   // world→local (inverse Y-rotation)
+    // The camera sits ABOVE the house looking down over it while parked, so the roof filled the lower frame.
+    // Hide it whenever the camera is over the footprint at all — height doesn't matter. Rotating the view or
+    // driving off brings it straight back.
+    STHOUSE.group.visible = !(Math.abs(lx)<hw && Math.abs(lz)<hd); }
   const tileZ=Math.max(15,Math.min(19,Math.round(18-Math.log2(tz))));         // sharper base (z18); zoom out → wider/lower detail
   LIVE3D.update(truck.x, truck.z, tileZ, 340*tz); }
 function toggleRoute(){ state.route=!state.route; document.getElementById('btnRoute').classList.toggle('on',state.route);
@@ -3223,7 +3219,6 @@ function buildStationHouse(st){
   /* 🚒 start the engine INSIDE its bay and roll it out. startIntro places the truck at `_front-6`
      measured from the road centreline, then eases it to the kerb — so put the bay mouth there. */
   st._front=(DRIVE.stOff||7)+C.setback+C.spawnIn+6;
-  MAP.qBlend=1;                                                             // snap straight to the quarters framing — blending in from the chase position starts INSIDE the building
 }
 
 function returnToStation(){ const st=stations.find(s=>s.id===DRIVE.stationId)||stations[0]; if(!st) return;   // teleport back to the firehouse curb and re-park (pull-out prompt returns)
