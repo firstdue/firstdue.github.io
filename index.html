@@ -362,6 +362,7 @@
   <button class="abtn on" id="btnRivals">🚑 RIVALS</button>
   <button class="abtn" id="btnView">🧭 HEADING</button>
   <button class="abtn on" id="btnSat">🌐 LIVE MAP</button>
+  <button class="abtn" id="btnDiff">🎯 FIREFIGHTER</button>
   <button class="abtn" id="btnRerun">🔁 RESTART RUN</button>
   <button class="abtn" id="btnRestart">↺ RESTART</button>
   <button class="abtn" id="btnMute">🔊 SOUND</button>
@@ -487,7 +488,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15t";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1836,11 +1837,12 @@ function rerunCurrentBox(){
   state.onScene=false; state.douse=0;
   DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false;
   DRIVE.wrongWay=false; DRIVE._wwLatch=false; DRIVE._twinFrom=null;
-  if(tgt){ state.target=tgt; routeDirty=true; clearRivals(); spawnRivals();          // same fire, everyone starts over
+  if(tgt){ state.target=tgt; routeDirty=true; RIVALS.on=true; clearRivals(); spawnRivals();   // same fire, everyone starts over
     radio('🔁 RUN RESTARTED — '+tgt.d); popup('🔁 BACK IN QUARTERS · SAME BOX'); }
   else newDispatch();
 }
 document.getElementById('btnRerun').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); rerunCurrentBox(); });
+document.getElementById('btnDiff').addEventListener('click',e=>{ e.preventDefault(); setDifficulty(DIFF.level+1); });
 let hurryShown=false;
 function updateHUD(dt){
   elCash.childNodes[1].textContent='$'+state.cash;
@@ -2928,7 +2930,17 @@ document.getElementById('btnDrawFinalize').addEventListener('click',finalizeDraw
 // When a fire is dispatched, FOUR engines respond: the FIRST-DUE engine (whose first-due polygon holds the
 // fire) + the 3 NEAREST firehouses. The player drives their engine; the AI drives the rest, each routing
 // from its own firehouse to the fire on real roads. First to arrive is "first in".  (e.g. 5555 Ridge Ave → 39, 35, 12, 66)
-const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false };
+const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, playerDue:0 };
+/* 🎯 DIFFICULTY — how fast the other companies run. The player's own truck does 15 u/s by default and can be
+   pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
+const DIFF={ level:1, names:['ROOKIE','FIREFIGHTER','VETERAN','CHIEF'],
+             spd:[[11,6],[15,11],[21,12],[27,14]],                    // [base, random spread] u/s
+             blurb:['relaxed','a real race','they push hard','they will beat you'] };
+try{ const d=+localStorage.getItem('pfd_diff'); if(d>=0&&d<=3) DIFF.level=d; }catch(e){}
+function setDifficulty(n){ DIFF.level=((n%4)+4)%4; try{ localStorage.setItem('pfd_diff',DIFF.level); }catch(e){}
+  const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level];
+  popup('🎯 '+DIFF.names[DIFF.level]+' · '+DIFF.blurb[DIFF.level]); }
+{ const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; }   // paint the saved level (declared above, so no temporal-dead-zone problem)
 const ordinal=n=>['1st','2nd','3rd','4th','5th'][n-1]||(n+'th');
 const engNum=id=>String(id).replace(/\D/g,'');
 function stDist(st,x,z){ return Math.hypot(st.x-x,st.z-z); }
@@ -3001,11 +3013,12 @@ function spawnRivals(){ clearRivals();
   const bx=state.target.bx!==undefined?state.target.bx:tx, bz=state.target.bz!==undefined?state.target.bz:tz;   // responder set from the building point (matches assignBox + the due filter); rivals still race to the road point
   const resp=computeResponders(bx,bz);
   RIVALS.responders=resp.map((s,i)=>({ id:s.id, num:engNum(s.id), isPlayer:s.id===DRIVE.stationId, firstDue:i===0 }));
+  { const pi=RIVALS.responders.findIndex(r=>r.isPlayer); RIVALS.playerDue = pi<0?0:pi+1; }   // the slot you are expected to fill on this box
   for(const st of resp){ if(st.id===DRIVE.stationId) continue;                                        // that responder is the human player
     const path=streamRoute({x:st.x,z:st.z}, routeNodes(st.x,st.z,tx,tz)); if(!path||path.length<2) continue;
     const last=path[path.length-1]; if(Math.hypot(tx-last.x,tz-last.z)>1) path.push({x:tx,z:tz});
     RIVALS.list.push({ id:st.id, num:engNum(st.id), path, seg:0, t:0, x:st.x, z:st.z, d0:Math.max(1,Math.hypot(st.x-tx,st.z-tz)),
-      total:routeLength(path)||1, traveled:0, speed:15+Math.random()*11, arrived:false, arriveT:0 }); } // 15–26 u/s per-engine variation → a genuine race
+      total:routeLength(path)||1, traveled:0, speed:DIFF.spd[DIFF.level][0]+Math.random()*DIFF.spd[DIFF.level][1], arrived:false, arriveT:0 }); }   // per-engine variation, scaled by difficulty
   renderRivalHUD();
 }
 function updateRivals(dt){ if(!RIVALS.on||!state.target||MAP.bounds||DRAW.on) return;
@@ -3015,9 +3028,19 @@ function updateRivals(dt){ if(!RIVALS.on||!state.target||MAP.bounds||DRAW.on) re
     const a=r.path[Math.min(r.seg,r.path.length-1)], b=r.path[Math.min(r.seg+1,r.path.length-1)];
     r.x=a.x+(b.x-a.x)*r.t; r.z=a.z+(b.z-a.z)*r.t;
     if(r.seg>=r.path.length-1 || Math.hypot(r.x-state.target.x,r.z-state.target.z)<CONFIG.arriveR){
-      r.arrived=true; r.arriveT=GT; RIVALS.order.push(r.id); if(!RIVALS.playerPlaced) popup('🚒 Engine '+r.num+' on scene',''); } }
+      r.arrived=true; r.arriveT=GT; RIVALS.order.push(r.id); if(!RIVALS.playerPlaced) popup('🚒 Engine '+r.num+' on scene','');
+      /* ⛔ HOLD YOUR DUE POSITION. You must arrive in the slot the box assigned you: 1st-due means nobody
+         beats you in; 2nd-due means at most one company does. The moment enough rivals are on scene to take
+         your slot, the box is lost. */
+      if(!RIVALS.playerPlaced && RIVALS.playerDue && RIVALS.order.length>=RIVALS.playerDue){ missedDue(); return; } } }
   renderRivalHUD();
 }
+function missedDue(){ if(state.over) return;
+  DRIVE.going=false; RIVALS.on=false;
+  const beat=RIVALS.order.map(id=>'Engine '+engNum(id)).join(', ');
+  radio('❌ BOX LOST — you were '+ordinal(RIVALS.playerDue)+' due and '+beat+' got there first.');
+  gameOver('❌ BEATEN IN', 'You were '+ordinal(RIVALS.playerDue)+' due on Box '+((state.target&&state.target.box)||'—')+
+    ' · '+beat+' arrived ahead of you'); }
 function onPlayerArrive(){ if(!RIVALS.on||RIVALS.playerPlaced||!RIVALS.responders.length) return; RIVALS.playerPlaced=true;
   const place=RIVALS.order.length+1;                                                                  // rivals already on scene + you
   if(place===1) popup('🥇 FIRST IN!','green'); else popup(ordinal(place)+' DUE · Engine '+engNum(RIVALS.order[0])+' beat you','red'); }
@@ -3239,8 +3262,9 @@ function buildStationHouse(st){
 function returnToStation(){ const st=stations.find(s=>s.id===DRIVE.stationId)||stations[0]; if(!st) return;   // teleport back to the firehouse curb and re-park (pull-out prompt returns)
   parkAtStation(st); camTheta=truck.theta; CAMLOOK.yaw=0; CAMLOOK.pitch=0; radio('🏠 Back in quarters — '+st.companies[0]+' available.'); }
 function saveBest(){ if(state.saves>best.saves||(state.saves===best.saves&&state.cash>best.cash)){ best={saves:state.saves,cash:state.cash}; try{ localStorage.setItem('pfd_ef_best',JSON.stringify(best)); }catch(e){} } }
-function gameOver(){ state.running=false; state.over=true; saveBest(); document.getElementById('finalCash').textContent='$'+state.cash;
-  document.getElementById('finalStats').textContent=state.saves+' dispatches completed on the riverfront'; document.getElementById('finalBest').textContent='BEST RUN: '+best.saves+' saves · $'+best.cash;
+function gameOver(title,why){ state.running=false; state.over=true; saveBest(); document.getElementById('finalCash').textContent='$'+state.cash;
+  { const h=document.querySelector('#over .card h1'); if(h) h.textContent=title||'⏰ SHIFT OVER'; }
+  document.getElementById('finalStats').textContent= why || (state.saves+' dispatches completed on the riverfront'); document.getElementById('finalBest').textContent='BEST RUN: '+best.saves+' saves · $'+best.cash;
   document.getElementById('finalFact').textContent='Local fact: '+LMK[(Math.random()*LMK.length)|0].f; document.getElementById('over').classList.add('show'); }
 function resetRun(){ state.cash=0; state.saves=0; state.timeLeft=CONFIG.timer.start; state.over=false; state.target=null; state.combo=1;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=0; truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; state.running=true; newDispatch(); }
@@ -3441,7 +3465,7 @@ function goHome(){ document.getElementById('over').classList.remove('show'); upd
 function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show');
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
-  state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0;
+  state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; RIVALS.on=true;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=groundHeight(SPAWN.x,SPAWN.z); truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; truck.pitch=0; camTheta=SPAWN.theta;
   parkAtStation(st); CAMLOOK.yaw=0; CAMLOOK.pitch=0; MAP.free=false; MAP.userRot=0;
   buildStationHouse(st);                                                     // BEFORE startIntro — it sets st._front, which is what tells the intro where the bay mouth is
