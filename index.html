@@ -201,6 +201,18 @@
   .drawReviewBtns { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
   .drawReviewBtns button { flex:1 1 auto; pointer-events:auto; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; }
   #btnDrawKeep { background:#343c49; color:#fff; }
+  /* 👨‍🚒 senior-man post-run review */
+  #coachCard { position:absolute; inset:0; z-index:62; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
+  #coachCard.show { display:flex; }
+  #coachCard .cc { width:min(560px,94vw); max-height:92vh; overflow:auto; background:#141a24; border:1px solid #2a3444; border-radius:14px; padding:14px 14px 12px; box-shadow:0 12px 40px rgba(0,0,0,.5); }
+  #coachCard .ccHead { font-family:"Arial Black",sans-serif; font-weight:900; font-size:15px; letter-spacing:1px; color:#ffd27a; }
+  #coachStats { font-size:11px; font-weight:700; color:#8fa2bd; margin-top:2px; }
+  #coachCanvas { width:100%; height:260px; border-radius:10px; background:#eceae4; margin-top:8px; display:block; }
+  #coachLegend { display:flex; gap:14px; font-size:11px; font-weight:700; margin-top:6px; }
+  #coachLegend .lgYou { color:#6fa8ff; } #coachLegend .lgOpt { color:#3fbf7a; }
+  #coachSay { margin-top:8px; font-size:13px; line-height:1.45; color:#e8edf5; border-left:3px solid #ffd27a; padding-left:10px; }
+  #coachSay div { margin:4px 0; }
+  #btnCoachNext { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:900; background:#d33; color:#fff; pointer-events:auto; }
   #btnDrawFinalize { background:#14824b; color:#fff; }
   #btnDrawCopy { background:#274b8f; color:#fff; }
   /* the fire truck — a DOM marker fixed at the map's focus point, always pointing up */
@@ -406,6 +418,16 @@
     <div class="drawReviewBtns"><button id="btnDrawKeep">↩ KEEP EDITING</button><button id="btnDrawCopy">📋 COPY COORDS</button><button id="btnDrawFinalize">✅ FINALIZE</button></div>
   </div>
 </div>
+<div id="coachCard" aria-hidden="true">
+  <div class="cc">
+    <div class="ccHead">👨‍🚒 SENIOR MAN</div>
+    <div id="coachStats"></div>
+    <canvas id="coachCanvas"></canvas>
+    <div id="coachLegend"><span class="lgYou">━ the way you went</span><span class="lgOpt">┅ the way I'd have gone</span></div>
+    <div id="coachSay"></div>
+    <button id="btnCoachNext">🚒 NEXT RUN</button>
+  </div>
+</div>
 <div id="zoomBtns"><button id="btnZoomIn">＋</button><button id="btnZoomOut">－</button></div>
 <div id="hood" class="hud"><div class="s" id="zoneN">EAST FALLS · 19129</div><div class="n" id="streetN"><span class="block">4200 BLOCK</span><span class="street">Ridge Avenue</span></div></div>
 <div id="wp" class="hud"><div class="arr"></div><div class="pin">🔥</div><div class="dist">0 ft</div></div>
@@ -501,7 +523,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3114,7 +3136,7 @@ function computeBox(firstDue,x,z){ const eng=engNum(firstDue.id).padStart(2,'0')
   return eng+String(sub).padStart(2,'0'); }
 function assignBox(){ if(!state.target) return; const t=state.target, cx=t.bx!==undefined?t.bx:t.x, cz=t.bz!==undefined?t.bz:t.z;   // classify by the BUILDING point (same point the dispatch filter uses) so you're reliably first-due for your own calls
   const fd=computeResponders(cx,cz)[0]; t.firstDue=fd.id; t.box=computeBox(fd,cx,cz); }
-function clearRivals(){ RIVALS.list=[]; RIVALS.responders=[]; RIVALS.order=[]; RIVALS.playerPlaced=false; renderRivalHUD(); }
+function clearRivals(){ RIVALS.list=[]; RIVALS.responders=[]; RIVALS.order=[]; RIVALS.playerPlaced=false; RIVALS.playerPlace=0; renderRivalHUD(); }
 function spawnRivals(){ clearRivals();
   if(!RIVALS.on||!state.target) return; const tx=state.target.x, tz=state.target.z;
   RIVALS.fire={x:tx,z:tz}; RIVALS.playerD0=Math.max(1,Math.hypot(truck.x-tx,truck.z-tz));   // your starting distance to the fire (for your live % progress)
@@ -3150,7 +3172,7 @@ function missedDue(){ if(state.over) return;
   gameOver('❌ BEATEN IN', 'You were '+ordinal(RIVALS.playerDue)+' due on Box '+((state.target&&state.target.box)||'—')+
     ' · '+beat+' arrived ahead of you'); }
 function onPlayerArrive(){ if(!RIVALS.on||RIVALS.playerPlaced||!RIVALS.responders.length) return; RIVALS.playerPlaced=true;
-  const place=RIVALS.order.length+1;                                                                  // rivals already on scene + you
+  const place=RIVALS.order.length+1; RIVALS.playerPlace=place;                                        // rivals already on scene + you
   if(place===1) popup('🥇 FIRST IN!','green'); else popup(ordinal(place)+' DUE · Engine '+engNum(RIVALS.order[0])+' beat you','red'); }
 function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) return;
   const show=RIVALS.on && state.target && RIVALS.responders.length && !MAP.bounds && !DRAW.on;
@@ -3168,7 +3190,82 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
   rows.forEach((row,i)=>{ const cls=row.cls+(i===lead?' lead':'');
     h+='<div class="'+cls+'" style="--p:'+row.p+'%"><span class="badge">'+row.num+'</span><span class="rvst">'+row.stat+'</span></div>'; });
   el.innerHTML=h; }
-const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw,updateDrill];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
+/* SENIOR MAN — post-run coaching (MULTIPLAYER-PLAN.md §9; single-player, no accounts/network).
+   Breadcrumb of the actual drive vs the graph-optimal route, reviewed after every FIRE OUT.
+   ⚠️ The coach only states MEASURED facts (lengths, wrong-way time, stopped time, due place). Never
+   invented tactics — no hydrants, construction, water supply; the game doesn't model them. */
+const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0};
+function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0;
+  COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; COACH.trail.push([truck.x,truck.z]); }
+function updateCoach(dt){ if(!state.target||!state.running||MAP.bounds||DRAW.on||DRILL.on) return;
+  if(DRIVE.wrongWay&&DRIVE.going) COACH.ww+=dt;
+  if(!DRIVE.going&&!DRIVE.parked&&!state.onScene) COACH.stop+=dt;               // sat still mid-run (turnout + douse don't count)
+  if(state.onScene&&!COACH.arriveT) COACH.arriveT=GT;
+  COACH.acc+=dt; const m=Math.hypot(truck.x-COACH.lx,truck.z-COACH.lz);        // breadcrumb: every ~15m, or ~1s while crawling
+  if(m>=15||(COACH.acc>=1&&m>=2)){ COACH.trail.push([truck.x,truck.z]); COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; } }
+function coachPolyDist(x,z,poly){ let bd=1e18; for(let i=1;i<poly.length;i++){ const d=segDistPt(x,z,poly[i-1].x,poly[i-1].z,poly[i].x,poly[i].z); if(d<bd)bd=d; } return bd; }
+function coachCapture(){ const t=state.target; if(!t||COACH.trail.length<2) return null;   // no trail → nothing honest to say
+  { const l=COACH.trail[COACH.trail.length-1]; if(Math.hypot(truck.x-l[0],truck.z-l[1])>1) COACH.trail.push([truck.x,truck.z]); }
+  const ax=state.arriveX||t.x, az=state.arriveZ||t.z;
+  let opt=null; const nodes=routeNodes(COACH.sx,COACH.sz,ax,az);
+  if(nodes&&nodes.length>1){ opt=streamRoute({x:COACH.sx,z:COACH.sz},nodes); const l=opt[opt.length-1]; if(Math.hypot(ax-l.x,az-l.z)>1) opt.push({x:ax,z:az}); }
+  let driven=0; for(let i=1;i<COACH.trail.length;i++) driven+=Math.hypot(COACH.trail[i][0]-COACH.trail[i-1][0],COACH.trail[i][1]-COACH.trail[i-1][1]);
+  const optLen=opt?routeLength(opt):0;
+  let divStreet='',optStreet='';
+  if(opt&&optLen>1&&driven>optLen*1.08){                                        // where the drive left the optimal corridor
+    for(let i=1;i<COACH.trail.length;i++){ const pt=COACH.trail[i];
+      if(coachPolyDist(pt[0],pt[1],opt)>45){ const g=COACH.trail[i-1]; divStreet=streetName(g[0],g[1]);
+        let bi=0,bd=1e18; for(let k=0;k<opt.length;k++){ const d=Math.hypot(opt[k].x-g[0],opt[k].z-g[1]); if(d<bd){bd=d;bi=k;} }
+        let a2=0; for(let k=bi+1;k<opt.length;k++){ a2+=Math.hypot(opt[k].x-opt[k-1].x,opt[k].z-opt[k-1].z); if(a2>=35){ optStreet=streetName(opt[k].x,opt[k].z); break; } }
+        break; } } }
+  if(divStreet==='—')divStreet=''; if(optStreet==='—'||optStreet===divStreet)optStreet='';
+  return { trail:COACH.trail.slice(), opt, driven, optLen, fx:ax, fz:az, ww:COACH.ww, stop:COACH.stop,
+           time:(COACH.arriveT||GT)-COACH.t0, place:RIVALS.playerPlace||0, due:RIVALS.playerDue||0,
+           box:t.box||'', addr:t.address||t.name||'', divStreet, optStreet }; }
+function coachLines(r){ const L=[];                                             // every line traces to a measured number
+  const mi=m=>{ const v=m*0.000621371; return v<0.095?Math.round(m*3.28084)+' ft':v.toFixed(1)+' mi'; };
+  const mmss=q=>{ q=Math.max(0,Math.round(q)); return Math.floor(q/60)+':'+String(q%60).padStart(2,'0'); };
+  const pct=(r.optLen>1)?(r.driven-r.optLen)/r.optLen:0; let flags=0;
+  if(r.optLen>1&&pct>0.08){ flags++;
+    let x='You drove '+mi(r.driven)+' on a '+mi(r.optLen)+' box.';
+    if(r.divStreet) x+=' You came off the line around '+r.divStreet+'.';
+    if(r.optStreet) x+=" I'd have stayed on for "+r.optStreet+'.';
+    L.push(x); }
+  if(r.ww>=3){ flags++; L.push(Math.round(r.ww)+' seconds head-on against a one-way. That ends careers before you ever reach the fire.'); }
+  if(r.stop>=6){ flags++; L.push('You sat still '+Math.round(r.stop)+" seconds mid-run. The fire didn't."); }
+  if(r.due&&r.place){ if(r.place===1&&r.due===1) L.push(flags?"You still took first in on your own box. Clean it up and you're a driver.":"First in on your own box. That's the job.");
+    else if(r.place<r.due) L.push('Due '+ordinal(r.due)+', in '+ordinal(r.place)+' — you beat a company to it.');
+    else if(r.place===r.due&&r.due>1) L.push('Held your slot — '+ordinal(r.due)+' due, '+ordinal(r.place)+' in.'); }
+  if(!flags){ if(r.optLen>1&&pct<=0.05) L.push("Textbook route. Nothing I'd have done different."); else L.push('Good run.'); }
+  L.push('Door to door: '+mmss(r.time)+'.');
+  return L; }
+function showCoach(r){ const el=document.getElementById('coachCard');
+  if(!el||!state.running){ if(state.running){ returnToStation(); newDispatch(); } return; }
+  document.getElementById('coachStats').textContent='BOX '+r.box+' · '+r.addr;
+  document.getElementById('coachSay').innerHTML=coachLines(r).map(q=>'<div>“'+q+'”</div>').join('');
+  const showOpt=!!(r.opt&&r.optLen>1&&(r.driven-r.optLen)/r.optLen>0.08);       // his line only when it was meaningfully better
+  document.getElementById('coachLegend').style.display=showOpt?'flex':'none';
+  el.classList.add('show'); el.setAttribute('aria-hidden','false');
+  renderCoachCanvas(r,showOpt); }
+function coachHide(){ const el=document.getElementById('coachCard'); if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); } }
+function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCanvas'); if(!cv) return; const c=cv.getContext('2d');
+  const W=Math.max(280,Math.round(cv.clientWidth||320)),H=260,dpr=Math.min(2,devicePixelRatio||1); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); c.setTransform(dpr,0,0,dpr,0,0);
+  c.fillStyle=MAP_LAND; c.fillRect(0,0,W,H);
+  const pts=r.trail.slice(); if(showOpt) for(const q of r.opt) pts.push([q.x,q.z]); pts.push([r.fx,r.fz]);
+  let minX=1e9,maxX=-1e9,minZ=1e9,maxZ=-1e9; for(const q of pts){minX=Math.min(minX,q[0]);maxX=Math.max(maxX,q[0]);minZ=Math.min(minZ,q[1]);maxZ=Math.max(maxZ,q[1]);}
+  const padX=Math.max(120,maxX-minX)*.16,padZ=Math.max(120,maxZ-minZ)*.16; minX-=padX;maxX+=padX;minZ-=padZ;maxZ+=padZ;
+  const scale=Math.min((W-20)/(maxX-minX),(H-20)/(maxZ-minZ)),ox=(W-(maxX-minX)*scale)/2,oy=(H-(maxZ-minZ)*scale)/2, sx=x=>ox+(x-minX)*scale, sy=z=>H-oy-(z-minZ)*scale;
+  c.fillStyle=MAP_WATER; for(const poly of RB.wa){ if(poly.length<3) continue; let a=1e9,b=-1e9,d=1e9,e=-1e9; for(const q of poly){a=Math.min(a,q[0]);b=Math.max(b,q[0]);d=Math.min(d,q[1]);e=Math.max(e,q[1]);} if(b<minX||a>maxX||e<minZ||d>maxZ) continue; c.beginPath();c.moveTo(sx(poly[0][0]),sy(poly[0][1]));for(let i=1;i<poly.length;i++)c.lineTo(sx(poly[i][0]),sy(poly[i][1]));c.closePath();c.fill(); }
+  c.lineCap='round';c.lineJoin='round';
+  for(const road of RB.st){ const rp=road[2]; let a=1e9,b=-1e9,d=1e9,e=-1e9; for(const q of rp){a=Math.min(a,q[0]);b=Math.max(b,q[0]);d=Math.min(d,q[1]);e=Math.max(e,q[1]);} if(b<minX||a>maxX||e<minZ||d>maxZ) continue;
+    c.beginPath();c.moveTo(sx(rp[0][0]),sy(rp[0][1]));for(let i=1;i<rp.length;i++)c.lineTo(sx(rp[i][0]),sy(rp[i][1])); c.strokeStyle='#d3d0c8';c.lineWidth=2.4;c.stroke(); c.strokeStyle='#fff';c.lineWidth=1.2;c.stroke(); }
+  if(showOpt){ c.beginPath(); c.moveTo(sx(r.opt[0].x),sy(r.opt[0].z)); for(let i=1;i<r.opt.length;i++)c.lineTo(sx(r.opt[i].x),sy(r.opt[i].z)); c.setLineDash([7,5]); c.strokeStyle='#14824b'; c.lineWidth=3; c.stroke(); c.setLineDash([]); }
+  if(r.trail.length>1){ c.beginPath(); c.moveTo(sx(r.trail[0][0]),sy(r.trail[0][1])); for(let i=1;i<r.trail.length;i++)c.lineTo(sx(r.trail[i][0]),sy(r.trail[i][1])); c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=5.5; c.stroke(); c.strokeStyle='#1e6fd9'; c.lineWidth=3; c.stroke(); }
+  const s0=r.trail[0];
+  c.fillStyle='#fff'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),5,0,6.283); c.fill(); c.fillStyle='#1e6fd9'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),3.2,0,6.283); c.fill();
+  c.font='16px sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('🔥',sx(r.fx),sy(r.fz)); }
+document.getElementById('btnCoachNext').addEventListener('click',()=>{ coachHide(); if(!state.running) return; returnToStation(); newDispatch(); });
+const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw,updateDrill,updateCoach];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
 const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() calls drawMapView (the only view now)
 MAP.on=false; document.body.classList.remove('mapmode');
 state.cam=3; LIVE3D.group.visible=true; { const b=document.getElementById('btnCam'); if(b) b.textContent='\uD83E\uDDED TILT'; }   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
@@ -3206,12 +3303,12 @@ function newDispatch(){ if(MAP.bounds||DRAW.on||DRILL.on) return;               
   const d=Math.hypot(state.target.x-truck.x,state.target.z-truck.z); const add=Math.max(CONFIG.timer.addMin,Math.min(CONFIG.timer.addMax,CONFIG.timer.addBase+d*CONFIG.timer.addK));
   const bx=state.target.bx!==undefined?state.target.bx:state.target.x, bz=state.target.bz!==undefined?state.target.bz:state.target.z;   // beacon over the building, not the roadway
   state.timeLeft=Math.min(CONFIG.timer.cap,state.timeLeft+add); beaconG.position.set(bx,groundHeight(bx,bz),bz); routeDirty=true;
-  assignBox(); radio(state.target.d); popup('🔔 BOX '+state.target.box); spawnRivals(); }
-function completeDispatch(){ const t=state.target; state.saves++; const reward=Math.round(CONFIG.reward.base*state.combo); state.cash+=reward; sfx.ding(); sfx.splash();   // no timer → flat reward
+  assignBox(); radio(state.target.d); popup('🔔 BOX '+state.target.box); spawnRivals(); coachReset(); }
+function completeDispatch(){ const t=state.target; const _rv=coachCapture(); state.saves++; const reward=Math.round(CONFIG.reward.base*state.combo); state.cash+=reward; sfx.ding(); sfx.splash();   // no timer → flat reward
   popup('🔥 FIRE OUT · '+state.saves+(state.saves===1?' SAVE':' SAVES'),'green'); radio('🔥 OUT at '+t.name+'! '+t.f); const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta);
   for(let i=0;i<Math.min(60,water.n);i++) emit(water,truck.x+fx*3,2.4,truck.z+fz*3,Math.cos(i/60*6.28)*6+Math.random()*3,6+Math.random()*7,Math.sin(i/60*6.28)*6+Math.random()*3,0.9+Math.random()*0.5);
   state.target=null; state.onScene=false; state.douse=0; clearRivals();
-  setTimeout(()=>{ if(!state.running) return; returnToStation(); newDispatch(); },2600); }   // back to quarters, then the next box comes in — every run starts from the firehouse
+  setTimeout(()=>{ if(!state.running) return; if(_rv) showCoach(_rv); else { returnToStation(); newDispatch(); } },1500); }   // senior-man review first; NEXT RUN returns to quarters + the next box
 /* 🏚️ STATION HOUSE — a low-poly firehouse for the ACTIVE engine, in the tilt world (modelled on the user's
    Engine 2 reference: brick facade, dark curved parapet band, name lettering, bay order left→right =
    AMBULANCE · LADDER · ENGINE; houses without a ladder company get two bays, ambulance + engine).
@@ -3570,7 +3667,7 @@ function closeHomeMap(){ if(HOMEMAP.raf){ cancelAnimationFrame(HOMEMAP.raf); HOM
   if(homeEl.classList.contains('show')) openHomeMap();
 })();
 function goHome(){ document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); openHomeMap(); }
-function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show');
+function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
   state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; RIVALS.on=true;
