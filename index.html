@@ -488,7 +488,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15t";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15u";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2240,7 +2240,8 @@ function slideToCarriageway(c){
   DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; DRIVE.wrongWay=false; DRIVE._wwLatch=false;
   driveOrient();
 }
-function uTurn(){ if(DRIVE.parked) return; const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return;
+function uTurn(){ if(DRIVE.parked) return; if(!DIFF.uturn[DIFF.level]){ popup('↩ NO U-TURNS ON '+DIFF.names[DIFF.level]); return; }
+  const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return;
   if(uTurnEdgeIsWrong(a,b)){
     const t=Math.max(0,Math.min(1,DRIVE.t||0)), px=a.x+(b.x-a.x)*t, pz=a.z+(b.z-a.z)*t;
     const opp=oppositeCarriageway(a,b,px,pz);
@@ -2935,12 +2936,27 @@ const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, pl
    pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
 const DIFF={ level:1, names:['ROOKIE','FIREFIGHTER','VETERAN','CHIEF'],
              spd:[[11,6],[15,11],[21,12],[27,14]],                    // [base, random spread] u/s
-             blurb:['relaxed','a real race','they push hard','they will beat you'] };
+             guide:[1,1,0,0],                                         // 🔵 the route line is a crutch — gone from VETERAN up
+             uturn:[1,1,1,0],                                         // ↩ the safety net goes last, on CHIEF only
+             blurb:['relaxed · guide + U-turn','a real race · guide + U-turn','no route line','no route line, no U-turn'] };
+/* Higher levels take the training wheels off: first the blue guide line (so you must know the streets),
+   then the U-turn (so a wrong turn actually costs you). Re-applied whenever the level or a shift changes. */
+function applyDifficultyGates(){
+  const gOK=!!DIFF.guide[DIFF.level], uOK=!!DIFF.uturn[DIFF.level];
+  const gb=document.getElementById('btnGuide');
+  if(gb){ gb.style.display=gOK?'':'none'; if(!gOK){ MAP.guide=false; gb.classList.remove('on'); }
+    else { try{ MAP.guide=localStorage.getItem('pfd_guide')!=='0'; }catch(e){ MAP.guide=true; }
+      gb.classList.toggle('on',MAP.guide); } }
+  const ub=document.getElementById('btnUturn'); if(ub) ub.style.display=uOK?'':'none';
+  if(typeof routeMeshFlat!=='undefined'&&routeMeshFlat) routeMeshFlat.visible=routeMeshFlat.visible&&MAP.guide;
+  if(typeof routeEdgeFlat!=='undefined'&&routeEdgeFlat) routeEdgeFlat.visible=routeEdgeFlat.visible&&MAP.guide;
+}
 try{ const d=+localStorage.getItem('pfd_diff'); if(d>=0&&d<=3) DIFF.level=d; }catch(e){}
 function setDifficulty(n){ DIFF.level=((n%4)+4)%4; try{ localStorage.setItem('pfd_diff',DIFF.level); }catch(e){}
   const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level];
+  applyDifficultyGates();
   popup('🎯 '+DIFF.names[DIFF.level]+' · '+DIFF.blurb[DIFF.level]); }
-{ const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; }   // paint the saved level (declared above, so no temporal-dead-zone problem)
+{ const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; applyDifficultyGates(); }   // paint the saved level (declared above, so no temporal-dead-zone problem)
 const ordinal=n=>['1st','2nd','3rd','4th','5th'][n-1]||(n+'th');
 const engNum=id=>String(id).replace(/\D/g,'');
 function stDist(st,x,z){ return Math.hypot(st.x-x,st.z-z); }
@@ -3468,6 +3484,7 @@ function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); docume
   state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; RIVALS.on=true;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=groundHeight(SPAWN.x,SPAWN.z); truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; truck.pitch=0; camTheta=SPAWN.theta;
   parkAtStation(st); CAMLOOK.yaw=0; CAMLOOK.pitch=0; MAP.free=false; MAP.userRot=0;
+  applyDifficultyGates();                                                    // training wheels match the chosen level
   buildStationHouse(st);                                                     // BEFORE startIntro — it sets st._front, which is what tells the intro where the bay mouth is
   startIntro(st);           // park at the firehouse curb, nose to the street; bay doors roll up + roll out, then LEFT/RIGHT pulls out
   setTruckEngine(engNum(st.id));
