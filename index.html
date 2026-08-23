@@ -501,7 +501,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15v";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1705,7 +1705,12 @@ function updateTraffic(dt){ if(!state.running) return;
 function updateDispatchZone(dt){ if(MAP.bounds||DRAW.on||!state.running||!state.target) return;   // training/boundary mode pauses the game
   const dTgt=Math.hypot(state.target.x-truck.x,state.target.z-truck.z), dArr=Math.hypot(state.arriveX-truck.x,state.arriveZ-truck.z), d=FLAGS.roadLock?Math.min(dTgt,dArr):dTgt;
   if(d>=CONFIG.arriveR) state.onScene=false;
-  if(d<CONFIG.arriveR && DRIVE.going && !state.onScene){ DRIVE.going=false; state.onScene=true; popup('🚒 ON SCENE'); onPlayerArrive(); }   // pull up automatically at the call; record your place in the race
+  /* ⚠️ Arrival used to require DRIVE.going, so a truck that was STOPPED inside the radius never registered —
+     you could sit on the fire dousing it while `playerPlaced` stayed false, and since v15t a rival arriving
+     later would then end the run even though you were on scene. Being inside the radius IS the arrival;
+     `going` only decides whether we also stop the truck. (Reported: cutting the wrong way down a one-way,
+     which stops the truck at a fork right by the address.) */
+  if(d<CONFIG.arriveR && !state.onScene && !DRIVE.parked){ DRIVE.going=false; state.onScene=true; popup('🚒 ON SCENE'); onPlayerArrive(); }   // pull up automatically at the call; record your place in the race
   const slow=Math.hypot(truck.vx,truck.vz)<2.5;
   if(d<CONFIG.arriveR&&slow){ state.douse+=dt; elDouse.style.display='block'; elDouseF.style.width=Math.min(100,state.douse/2*100)+'%';
     const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta);
@@ -2211,7 +2216,8 @@ function updateDrive(dt){ if(!state.running){ return; }
     // heading south on the northbound side is a PATHING artifact, not a decision the player made — the move
     // they chose (go south on Broad) is perfectly legal, just on the other carriageway. Slide across.
     // A genuine one-way has no legal twin, so the deliberate wrong-way drive from v15d is untouched.
-    if(DRIVE.wrongWay && DRIVE.fromN!==DRIVE._twinFrom){
+    const nearFire=state.target && Math.hypot(truck.x-state.target.x,truck.z-state.target.z)<70;
+    if(DRIVE.wrongWay && DRIVE.fromN!==DRIVE._twinFrom && !nearFire){        // never teleport across a median right at the job — it can throw you out of the arrival radius
       DRIVE._twinFrom=DRIVE.fromN;                                            // try once per edge, never in a loop
       const nm=edgeName(DRIVE.fromN,DRIVE.toN);
       const c=carriagewayToward(nm, DRIVE.toN.x-DRIVE.fromN.x, DRIVE.toN.z-DRIVE.fromN.z, truck.x, truck.z);
