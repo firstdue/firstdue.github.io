@@ -487,7 +487,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15r";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v15s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1600,6 +1600,21 @@ function updateTiltMap(dt){                                                    /
      rendered the roof slab across the top of the frame. Rather than hijack the camera — that broke
      drag-to-look — just hide the house while the camera is within its footprint; rotating the view or
      driving off brings it straight back. */
+  /* 🎥 ARRIVAL ORBIT — after the picker flight drops you at quarters, swing a full 360° around the
+     firehouse so you can see the whole station, then hand back to the normal chase. The orbit is derived
+     FROM the chase pose (angle/radius/height), so at the end it lands exactly on it — no snap — and it only
+     runs while INTRO.active, so drag-to-look is never blocked (the v15q mistake). */
+  if(INTRO.active && STHOUSE.group){
+    /* Orbit around the TRUCK, not the station: the chase pose sits inside the building, so anchoring the
+       orbit on the house gave a degenerate radius and swung the camera through its back wall. Circling the
+       rig keeps the firehouse in frame the whole way round AND ends exactly on the chase pose — no snap. */
+    const cxp=camera.position.x, cyp=camera.position.y, czp=camera.position.z;        // the chase pose we just built
+    const tAng=Math.atan2(czp-truck.z, cxp-truck.x), tR=Math.hypot(cxp-truck.x,czp-truck.z);
+    let e=introProgress(); e=e<.5?4*e*e*e:1-Math.pow(-2*e+2,3)/2;                     // ease both ends
+    const ang=tAng+Math.PI*2*(1-e), r=tR+(1-e)*24, h=12+e*(cyp-12);                   // low enough to read the facade, rising to the chase height at the end
+    camera.position.set(truck.x+Math.cos(ang)*r, h, truck.z+Math.sin(ang)*r);
+    camera.lookAt(truck.x, 3.0, truck.z);
+  }
   if(STHOUSE.group){ const q=STHOUSE.group.position, a=STHOUSE.group.rotation.y;
     const hw=(STHOUSE.halfW||20)+3, hd=(STHOUSE.depth||16)/2+3;
     const dx2=camera.position.x-q.x, dz2=camera.position.z-q.z;
@@ -1607,7 +1622,7 @@ function updateTiltMap(dt){                                                    /
     // The camera sits ABOVE the house looking down over it while parked, so the roof filled the lower frame.
     // Hide it whenever the camera is over the footprint at all — height doesn't matter. Rotating the view or
     // driving off brings it straight back.
-    STHOUSE.group.visible = !(Math.abs(lx)<hw && Math.abs(lz)<hd); }
+    STHOUSE.group.visible = INTRO.active || !(Math.abs(lx)<hw && Math.abs(lz)<hd); }
   const tileZ=Math.max(15,Math.min(19,Math.round(18-Math.log2(tz))));         // sharper base (z18); zoom out → wider/lower detail
   LIVE3D.update(truck.x, truck.z, tileZ, 340*tz); }
 function toggleRoute(){ state.route=!state.route; document.getElementById('btnRoute').classList.toggle('on',state.route);
@@ -1697,7 +1712,7 @@ function updateParticles(dt){ updPts(smoke,dt,-2.2); updPts(sparks,dt,22); updPt
 const CAMLOOK={yaw:0,pitch:0};   // persistent drag-to-look offset in both 3D cameras; only RE-CENTER resets it
 function recenterCamera(){ CAMLOOK.yaw=0; CAMLOOK.pitch=0; camTheta=truck.theta; MAP.free=false; MAP.userRot=0; }   // also snaps the panned map back onto the truck and clears twist
 // ---- Shift-start cinematic: bay doors roll up, then the truck rolls out of the bay to the curb ----
-const INTRO={active:false, t:0, dur:3.0, doors:null, bx:0, bz:0, cx:0, cz:0};
+const INTRO={active:false, t:0, dur:4.2, doors:null, bx:0, bz:0, cx:0, cz:0};   // 4.2s: long enough for the 360° look at the firehouse
 function startIntro(st){ INTRO.active=false; INTRO.doors=st._doors||null; INTRO.t=0;
   if(!DRIVE.stPerp || st._front===undefined) return;                                       // no road data → skip the cinematic, just start parked
   const n=DRIVE.stPerp, off=DRIVE.stOff||9;
