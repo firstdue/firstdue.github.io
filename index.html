@@ -289,13 +289,61 @@
   #authName { width:100%; margin-top:10px; padding:12px; border-radius:8px; border:1px solid #2a3444; background:#0d121b; color:#e8edf5; font-size:15px; display:none; }
   #authNameSave { background:#2b6df6; color:#fff; display:none; }
   #houseCard .hcLb { display:block; width:100%; margin-top:8px; background:#1a2230; color:#ffd27a; border:1px solid #33405a; border-radius:10px; padding:10px; font-weight:900; font-size:13px; cursor:pointer; pointer-events:auto; }
-  #lbCard { position:absolute; inset:0; z-index:65; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
+  #lbCard { position:absolute; inset:0; z-index:65; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.8); pointer-events:auto; }
   #lbCard.show { display:flex; }
-  #lbCard .cc { width:min(460px,92vw); max-height:86vh; overflow:auto; background:#141a24; border:1px solid #2a3444; border-radius:14px; padding:16px; }
-  #lbHead { font-family:"Arial Black",sans-serif; font-weight:900; font-size:15px; letter-spacing:1px; color:#ffd27a; }
-  #lbBody { margin-top:10px; }
-  .lbRow { display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:8px; margin:3px 0; background:#1a2230; font-size:13px; font-weight:700; color:#e8edf5; }
+  #lbCard .cc { width:min(560px,94vw); max-height:92vh; overflow:auto; overscroll-behavior:contain; background:linear-gradient(180deg,#131f31,#0f1a2b); border:1px solid #26364f; border-radius:20px; padding:14px 14px 12px; color:#e9eef7; }
+  .lbHero { display:flex; align-items:flex-start; gap:10px; margin:2px 2px 10px; }
+  .lbT { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; font-size:30px; line-height:.9; letter-spacing:.5px; color:#f4b950; }
+  .lbSub { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.14em; font-size:12px; color:#95a4bd; margin-top:4px; }
+  .lbMe { margin-left:auto; text-align:right; background:#182642; border:1px solid #26364f; border-radius:14px; padding:6px 12px; min-width:74px; }
+  .lbMeOvr { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:28px; line-height:1; color:#ffd27a; }
+  .lbMeLbl { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.18em; font-size:10px; color:#95a4bd; }
+  .lbMeRk { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.1em; font-size:11px; margin-top:2px; }
+  .lbTabs { display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:2px; margin-bottom:8px; }
+  .lbTabs::-webkit-scrollbar { display:none; }
+  .lbTab { flex:0 0 auto; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.08em; font-size:13px; color:#95a4bd; background:#0f1a2b; border:1px solid #26364f; border-radius:10px; padding:7px 11px; cursor:pointer; pointer-events:auto; }
+  .lbTab.on { color:#ffd27a; border-color:#f4b950; background:#182642; }
+  .lbSecT { display:flex; align-items:baseline; gap:8px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.14em; font-size:13px; color:#f4b950; margin:12px 2px 7px; }
+  .lbHint { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.08em; font-size:10px; color:#6f809b; }
+  .lbRow { display:flex; justify-content:space-between; gap:10px; padding:9px 11px; border-radius:10px; margin:4px 0; background:#182642; border:1px solid #26364f; font-size:13px; font-weight:700; color:#e9eef7; }
   .lbRow.me { outline:1px solid #ffd27a; color:#ffd27a; }
+  .lbRow2 { display:grid; grid-template-columns:32px 1fr auto; gap:9px; align-items:center; background:#182642; border:1px solid #26364f; border-radius:12px; padding:8px 10px; margin:5px 0; cursor:pointer; }
+  .lbRow2.me { outline:2px solid #f4b950; background:#1d2942; }
+  .lbRk { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:14px; background:#0f1a2b; border:1px solid #26364f; color:#95a4bd; }
+  .lbRk.r1 { background:linear-gradient(180deg,#ffe3ab,#f4b950); color:#3a2a09; border-color:#f4b950; }
+  .lbRk.r2 { background:linear-gradient(180deg,#e6ecf6,#9fb0c8); color:#1d2430; border-color:#9fb0c8; }
+  .lbRk.r3 { background:linear-gradient(180deg,#e8b98b,#b97c43); color:#2d1c07; border-color:#b97c43; }
+  .lbNm { min-width:0; }
+  .lbNm b { font-size:14px; letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:inline-block; max-width:100%; vertical-align:bottom; }
+  .lbCr { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.12em; font-size:10px; color:#95a4bd; margin-top:1px; }
+  .lbOv { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:23px; line-height:1; color:#ffd27a; text-align:right; }
+  .lbSt { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; font-size:10px; letter-spacing:.06em; color:#95a4bd; margin-top:2px; }
+  .lbTr { font-size:11px; margin-left:6px; color:#6f809b; }
+  .lbTr.up { color:#37c274; } .lbTr.dn { color:#e5484d; }
+  .lbXtra { display:none; grid-column:1/-1; font-size:11px; color:#95a4bd; border-top:1px solid #26364f; padding-top:6px; margin-top:2px; }
+  .lbRow2.xp .lbXtra { display:block; }
+  .lbPanel { background:#131f31; border:1px solid #26364f; border-radius:14px; padding:0 12px 11px; margin:12px 0 4px; overflow:hidden; }
+  .lbHaz { height:6px; margin:0 -12px 9px; background:repeating-linear-gradient(-52deg,#f4b950 0 10px,#20293b 10px 20px); }
+  .lbPanelT { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:.14em; font-size:14px; color:#e9eef7; margin-bottom:8px; }
+  .lbBigOvr { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:40px; line-height:1; color:#ffd27a; margin:2px 0 10px; display:flex; align-items:baseline; gap:8px; }
+  .lbBigOvr span { font-size:16px; color:#95a4bd; }
+  .lbBar { display:grid; grid-template-columns:minmax(96px,38%) 1fr 30px; gap:8px; align-items:center; margin:6px 0; }
+  .lbBarL { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.1em; font-size:11px; color:#95a4bd; }
+  .lbBarT { height:7px; border-radius:4px; background:#0f1a2b; border:1px solid #26364f; overflow:hidden; display:block; }
+  .lbBarT i { display:block; height:100%; border-radius:4px; }
+  .lbBar b { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:14px; color:#e9eef7; text-align:right; }
+  .lbChamp { display:flex; align-items:center; gap:12px; }
+  .lbChampBadge { font-size:34px; filter:drop-shadow(0 2px 6px rgba(244,185,80,.45)); }
+  .lbChampT { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:.14em; font-size:12px; color:#f4b950; }
+  .lbChamp b { font-size:16px; }
+  .lbBox { background:#182642; border:1px solid #26364f; border-radius:12px; padding:9px 11px; margin:5px 0; }
+  .lbBoxT { display:flex; justify-content:space-between; align-items:baseline; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:15px; color:#ffd27a; }
+  .lbBoxG { display:flex; flex-wrap:wrap; gap:5px 14px; margin-top:5px; font-size:11px; color:#95a4bd; }
+  .lbBoxG b { color:#e9eef7; }
+  .lbMedals { display:grid; grid-template-columns:repeat(auto-fill,minmax(126px,1fr)); gap:7px; }
+  .lbMedal { display:flex; align-items:center; gap:7px; background:#182642; border:1px solid #26364f; border-radius:10px; padding:8px 9px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.06em; font-size:11px; color:#6f809b; }
+  .lbMedal.got { color:#e9eef7; border-color:#f4b950; }
+  .lbMedal span { font-size:15px; }
   #lbClose { width:100%; margin-top:12px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnProfileClose { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnHyd { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:calc(clamp(90px,20vh,150px) + 122px); z-index:13; display:none; pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#e8a020; color:#fff; font-size:23px; box-shadow:0 3px 10px rgba(0,0,0,.3); font-family:inherit; }
@@ -514,7 +562,11 @@
 </div>
 <div id="lbCard" aria-hidden="true">
   <div class="cc">
-    <div id="lbHead">🏁 LEADERBOARD</div>
+    <div class="lbHero">
+      <div><div class="lbT" id="lbT">LEADERBOARDS</div><div class="lbSub" id="lbSub"></div></div>
+      <div class="lbMe" id="lbMeChip"></div>
+    </div>
+    <div class="lbTabs" id="lbTabs"></div>
     <div id="lbBody"></div>
     <button id="lbClose">CLOSE</button>
   </div>
@@ -670,7 +722,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16n";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16o";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2436,6 +2488,7 @@ function slideToCarriageway(c){
 }
 function uTurn(){ if(DRIVE.parked) return; if(!DIFF.uturn[DIFF.level]){ popup('↩ NO U-TURNS ON '+DIFF.names[DIFF.level]); return; }
   const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return;
+  if(state.target&&!state.onScene) COACH.uturns++;                            // 🧮 scored: a U-turn mid-run costs Clean Driving points
   if(uTurnEdgeIsWrong(a,b)){
     const t=Math.max(0,Math.min(1,DRIVE.t||0)), px=a.x+(b.x-a.x)*t, pz=a.z+(b.z-a.z)*t;
     const opp=oppositeCarriageway(a,b,px,pz);
@@ -3313,34 +3366,168 @@ async function checkBeaten(stationId){ if(!AUTH.user||!stationId) return;       
   PROFILE.lbRank=PROFILE.lbRank||{}; const prev=PROFILE.lbRank[stationId];
   if(prev && rank>prev.rank){ const by=idx>0?rows[idx-1].name:'someone'; popup('⬇️ '+by+' passed your Engine '+engNum(stationId)+' time — you\'re #'+rank+' now','red'); }
   PROFILE.lbRank[stationId]={ rank, ahead: idx>0?rows[idx-1].name:null }; saveProfile(); }
-function pushRun(rv){ if(!AUTH.user||!rv) return;                                                // one leaderboard row per completed run
-  const held=rv.due>0&&rv.place>0&&rv.place<=rv.due;
-  try{ sbFetch('/rest/v1/run',{ method:'POST', headers:{ 'Prefer':'return=minimal' }, body:JSON.stringify([{ profile_id:AUTH.user.id,
-    station_id:DRIVE.stationId, box:rv.box||'', time_ms:Math.round((rv.time||0)*1000), driven:Math.round(rv.driven||0), optimal:Math.round(rv.optLen||0),
-    place:rv.place||0, due:rv.due||0, held_due:held, wrong_way_ms:Math.round((rv.ww||0)*1000), difficulty:DIFF.level }]) }); }catch(e){} }
+function pushRun(rv,ok,sc,streak){ if(!AUTH.user||!rv) return;                                    // one ranked row per eligible run (losses included — they feed Due %)
+  if(ok===undefined) ok=true; if(!sc) sc=calcRunScore(rv,ok);
+  const held=ok&&rv.due>0&&rv.place>0&&rv.place<=rv.due;
+  const legacy={ profile_id:AUTH.user.id, station_id:DRIVE.stationId, box:rv.box||'',
+    time_ms:Math.round((rv.time||0)*1000), driven:Math.round(rv.driven||0), optimal:Math.round(rv.optLen||0),
+    place:rv.place||0, due:rv.due||0, held_due:held, wrong_way_ms:Math.round((rv.ww||0)*1000), difficulty:DIFF.level };
+  const full=Object.assign({}, legacy, { ok:!!ok, score:sc.score, s_due:sc.s.due, s_route:sc.s.route, s_time:sc.s.time,
+    s_clean:sc.s.clean, s_arrive:sc.s.arrive, s_diff:sc.s.diff, stop_ms:Math.round((rv.stop||0)*1000),
+    uturns:rv.uturns||0, streak:streak||0 });
+  try{ sbFetch('/rest/v1/run',{ method:'POST', headers:{ 'Prefer':'return=minimal' }, body:JSON.stringify([full]) })
+    .then(r=>{ if(r&&!r.ok&&ok) sbFetch('/rest/v1/run',{ method:'POST', headers:{ 'Prefer':'return=minimal' }, body:JSON.stringify([legacy]) }); });   // DB not migrated yet (step 7) → keep the old board fed; losses only exist post-migration
+  }catch(e){}}
 async function fetchLeaderboard(stationId){                                                      // public view → anon key, works signed out
   try{ const r=await fetch(SB.url+'/rest/v1/leaderboard?station_id=eq.'+stationId+'&order=best_ms.asc&limit=25',{ headers:{ apikey:SB.key } });
     if(!r.ok) return []; return await r.json(); }catch(e){ return []; } }
 async function fetchCityLeaderboard(){ try{ const r=await fetch(SB.url+'/rest/v1/leaderboard_city?order=held_runs.desc,best_ms.asc&limit=40',{ headers:{ apikey:SB.key } });
     if(!r.ok) return []; return await r.json(); }catch(e){ return []; } }
-async function openCityLeaderboard(){ const el=document.getElementById('lbCard'); if(!el) return;   // 🏆 citywide top firefighters
-  document.getElementById('lbHead').textContent='🏆 CITYWIDE — TOP FIREFIGHTERS';
-  document.getElementById('lbBody').innerHTML='<div class="lbRow">Loading…</div>';
-  el.classList.add('show'); el.setAttribute('aria-hidden','false');
-  const rows=await fetchCityLeaderboard(), mmss=ms=>{ if(!ms) return '—'; const q=Math.round(ms/1000); return Math.floor(q/60)+':'+String(q%60).padStart(2,'0'); };
-  if(!rows.length){ document.getElementById('lbBody').innerHTML='<div class="lbRow">No ranked runs yet. '+(AUTH.user?'Hold your due (guide off) to get on the board.':'Sign in (👤 ACCOUNT) and hold your due to get on the board.')+'</div>'; return; }
-  document.getElementById('lbBody').innerHTML=rows.map((r,i)=>{ const me=AUTH.user&&r.profile_id===AUTH.user.id;
-    return '<div class="lbRow'+(me?' me':'')+'"><span>'+(i+1)+'. '+((r.name||'Firefighter'))+'</span><span>'+r.held_runs+' held · '+mmss(r.best_ms)+'</span></div>'; }).join('');
-  if(!AUTH.user) document.getElementById('lbBody').innerHTML+='<div class="lbRow">🔒 Sign in to get on the board.</div>'; }
-async function openLeaderboard(id){ id=id||DRIVE.stationId; const el=document.getElementById('lbCard'); if(!el||!id) return;
-  document.getElementById('lbHead').textContent='🏁 ENGINE '+engNum(id)+' — FASTEST';
-  document.getElementById('lbBody').innerHTML='<div class="lbRow">Loading…</div>';
-  el.classList.add('show'); el.setAttribute('aria-hidden','false');
-  const rows=await fetchLeaderboard(id), mmss=ms=>{ const q=Math.round(ms/1000); return Math.floor(q/60)+':'+String(q%60).padStart(2,'0'); };
-  if(!rows.length){ document.getElementById('lbBody').innerHTML='<div class="lbRow">No times yet. '+(AUTH.user?'Ride out and hold your due to set the first one.':'Sign in (Settings) and hold your due to get on the board.')+'</div>'; return; }
-  document.getElementById('lbBody').innerHTML=rows.map((r,i)=>{ const me=AUTH.user&&r.profile_id===AUTH.user.id;
-    return '<div class="lbRow'+(me?' me':'')+'"><span>'+(i+1)+'. '+((r.name||'Firefighter'))+'</span><span>'+mmss(r.best_ms)+'</span></div>'; }).join('');
-  if(!AUTH.user) document.getElementById('lbBody').innerHTML+='<div class="lbRow">🔒 Sign in to get your own time on the board.</div>'; }
+/* 🏆 LEADERBOARDS v2 — OVR-ranked boards (SUPABASE-SETUP step 7 creates the views).
+   LB.station = engine context, null = citywide. Tabs: OVERALL (OVR = rolling rating over the last 20
+   ranked runs) · THIS WEEK (avg run score, resets Monday) · BOX RECORDS · ENGINES (your houses) ·
+   BADGES (progression, deliberately separate from competition). All boards read public views with just
+   the anon key so signed-out players can watch; the OVR BREAKDOWN panel is computed from the LOCAL
+   career log (calcOVR) so it works fully offline. If the step-7 views don't exist yet the OVERALL tab
+   falls back to the old fastest-time board — nothing breaks mid-migration. */
+const LB={ station:null, tab:'overall', minRuns:3, champRuns:5 };
+const LB_RANKC=['#4d9fff','#37c274','#f2913a','#e5484d'];                     // ROOKIE · FIREFIGHTER · VETERAN · CHIEF
+const LB_TABS=[['overall','🏆 OVERALL'],['week','📅 THIS WEEK'],['box','📍 BOX RECORDS'],['engine','🏛 ENGINES'],['badges','🎖 BADGES']];
+function lbMmss(ms){ if(ms==null) return '—'; const q=Math.round(ms/1000); return Math.floor(q/60)+':'+String(q%60).padStart(2,'0'); }
+function lbEsc(s){ return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+async function lbFetch(view,qs){ try{ const r=await fetch(SB.url+'/rest/v1/'+view+'?'+qs,{ headers:{ apikey:SB.key } });
+  if(!r.ok) return null; return await r.json(); }catch(e){ return null; } }
+function lbTrend(cur,prev){ if(cur==null||prev==null) return '';
+  const d=Math.round(cur-prev); if(!d) return '<span class="lbTr">–</span>';
+  return d>0?'<span class="lbTr up">▲'+d+'</span>':'<span class="lbTr dn">▼'+(-d)+'</span>'; }
+function localLogAll(){ const rows=[];                                        // last 20 eligible runs across ALL your engines (citywide local OVR)
+  for(const id in PROFILE.engines){ for(const r of logEligible(PROFILE.engines[id].log)) rows.push(r); }
+  rows.sort((a,b)=>(a.t||0)-(b.t||0)); return rows.slice(-20); }
+function lbCtxEngine(){ return LB.station||DRIVE.stationId||PROFILE.lastPlayed||null; }
+function lbStation(id){ return stations.find(s=>s.id===id)||null; }
+function lbHero(){ const st=LB.station?lbStation(LB.station):null;
+  document.getElementById('lbSub').textContent= st?((st.name||('ENGINE '+engNum(LB.station))).toUpperCase()+(st.neighborhood?' · '+st.neighborhood.split('·')[0].trim():'')):'CITYWIDE · ALL COMPANIES';
+  const log=LB.station?((PROFILE.engines[LB.station]||{}).log||[]):localLogAll();
+  const o=calcOVR(log);
+  const e=LB.station?PROFILE.engines[LB.station]:null;
+  const lv=e?(e.lv||0):Math.max(0,...Object.values(PROFILE.engines).map(x=>x.lv||0),0);
+  document.getElementById('lbMeChip').innerHTML= o
+    ? '<div class="lbMeOvr">'+o.ovr+'</div><div class="lbMeLbl">OVR</div><div class="lbMeRk" style="color:'+LB_RANKC[lv]+'">'+DIFF.names[lv]+'</div>'
+    : '<div class="lbMeLbl">NOT RATED</div><div class="lbMeRk">guide off +<br>hold your due</div>'; }
+function lbTabsPaint(){ document.getElementById('lbTabs').innerHTML=LB_TABS.map(t=>'<button class="lbTab'+(LB.tab===t[0]?' on':'')+'" data-tab="'+t[0]+'">'+t[1]+'</button>').join(''); }
+function lbOvrRows(ranked){                                                   // top 10 + your pinned row when you sit below them
+  if(!ranked.length) return '<div class="lbRow">No ranked firefighters yet. '+(AUTH.user?'':'Sign in (👤 ACCOUNT) and ')+'hold your due with GUIDE off — '+LB.minRuns+'+ runs to rank.</div>';
+  const meIdx=AUTH.user?ranked.findIndex(r=>r.profile_id===AUTH.user.id):-1;
+  const row=(r,i)=>{ const lv=Math.max(0,Math.min(3,r.lv||0)), isMe=i===meIdx;
+    return '<div class="lbRow2'+(isMe?' me':'')+'" data-x="1">'+
+      '<div class="lbRk r'+((i+1)<=3?(i+1):'x')+'">'+(i+1)+'</div>'+
+      '<div class="lbNm"><b>'+lbEsc(isMe&&!r.name?'YOU':(r.name||'Firefighter'))+'</b>'+lbTrend(r.ovr,r.ovr_prev)+
+        '<div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+DIFF.names[lv]+(r.houses?' · '+r.houses+' house'+(r.houses===1?'':'s'):'')+'</div></div>'+
+      '<div class="lbOv">'+(r.ovr==null?'—':r.ovr)+
+        '<div class="lbSt">'+(r.due_pct!=null?r.due_pct+'% due · ':'')+lbMmss(r.avg_ms)+(r.streak?' · 🔥'+r.streak:'')+'</div></div>'+
+      '<div class="lbXtra">'+(r.n||0)+' rated runs · due held '+(r.due_pct!=null?r.due_pct+'%':'—')+' · avg response '+lbMmss(r.avg_ms)+(r.streak?' · held-due streak 🔥'+r.streak:'')+(r.ovr_prev!=null?' · last window '+r.ovr_prev+' OVR':'')+'</div>'+
+    '</div>'; };
+  let h=ranked.slice(0,10).map(row).join('');
+  if(meIdx>=10) h+='<div class="lbSecT">YOUR RANK</div>'+row(ranked[meIdx],meIdx);
+  return h; }
+function lbBreakdownHTML(){                                                   // computed locally — works signed out & offline
+  const log=LB.station?((PROFILE.engines[LB.station]||{}).log||[]):localLogAll();
+  const o=calcOVR(log);
+  const defs=[['due','DUE POSITION','#7c5cff'],['route','LOCAL KNOWLEDGE','#4d9fff'],['time','RESPONSE TIME','#3fb6c9'],['clean','CLEAN DRIVING','#37c274'],['arrive','ARRIVAL ACCURACY','#f4b950'],['diff','DIFFICULTY BONUS','#f2913a']];
+  let h='<div class="lbPanel"><div class="lbHaz"></div><div class="lbPanelT">OVR BREAKDOWN — YOU</div>';
+  if(!o) return h+'<div class="lbRow">No rated runs yet on '+(LB.station?'this engine':'any engine')+'. A run rates when GUIDE is off and you have a due slot on the box — win or lose, it counts.</div></div>';
+  h+='<div class="lbBigOvr">'+o.ovr+'<span>OVR</span><span class="lbHint">last '+o.n+' run'+(o.n===1?'':'s')+'</span></div>';
+  for(const d of defs){ const v=o.cats[d[0]]||0;
+    h+='<div class="lbBar"><span class="lbBarL">'+d[1]+'</span><span class="lbBarT"><i style="width:'+Math.max(3,Math.min(100,v))+'%;background:'+d[2]+'"></i></span><b>'+v+'</b></div>'; }
+  return h+'<div class="lbHint" style="text-align:center;margin-top:7px">MAX 100 EACH · DUE POSITION WEIGHS MOST</div></div>'; }
+function lbChampionHTML(ranked){ const c=(ranked||[]).find(r=>(r.n||0)>=LB.champRuns); if(!c) return '';
+  return '<div class="lbPanel"><div class="lbHaz"></div><div class="lbPanelT">HOUSE CHAMPION</div>'+
+    '<div class="lbChamp"><div class="lbChampBadge">🏆</div><div><div class="lbChampT">ENGINE '+engNum(LB.station)+' CHAMPION</div>'+
+    '<b>'+lbEsc(c.name||'Firefighter')+'</b><div class="lbHint">'+c.ovr+' OVR · '+(c.due_pct||0)+'% DUE · '+c.n+' RATED RUNS</div></div></div></div>'; }
+async function lbRenderOverall(el){ el.innerHTML='<div class="lbRow">Loading…</div>';
+  const rows= LB.station? await lbFetch('leaderboard_ovr','station_id=eq.'+LB.station+'&order=ovr.desc.nullslast,due_pct.desc&limit=100')
+                        : await lbFetch('leaderboard_ovr_city','order=ovr.desc.nullslast&limit=100');
+  if(rows===null){                                                            // views missing (step 7 not run) → legacy fastest board
+    const old=LB.station? await fetchLeaderboard(LB.station): await fetchCityLeaderboard();
+    el.innerHTML='<div class="lbSecT">FASTEST<span class="lbHint">legacy board — OVR arrives with the next update</span></div>'+
+      ((old&&old.length)?old.map((r,i)=>'<div class="lbRow'+(AUTH.user&&r.profile_id===AUTH.user.id?' me':'')+'"><span>'+(i+1)+'. '+lbEsc(r.name||'Firefighter')+'</span><span>'+(r.best_ms!=null?lbMmss(r.best_ms):(r.held_runs||0)+' held')+'</span></div>').join(''):'<div class="lbRow">No times yet.</div>')+
+      lbBreakdownHTML();
+    return; }
+  const ranked=rows.filter(r=>(r.n||0)>=LB.minRuns);
+  let h='<div class="lbSecT">🏆 TOP FIREFIGHTERS<span class="lbHint">career rating · last 20 runs · '+LB.minRuns+'+ to rank</span></div>'+lbOvrRows(ranked);
+  if(AUTH.user){ const meAll=rows.find(r=>r.profile_id===AUTH.user.id);
+    if(meAll&&(meAll.n||0)<LB.minRuns) h+='<div class="lbRow me"><span>YOU</span><span>'+meAll.n+'/'+LB.minRuns+' rated runs to rank</span></div>'; }
+  else h+='<div class="lbRow">🔒 Sign in (👤 ACCOUNT) to get ON the board.</div>';
+  h+=lbBreakdownHTML();
+  if(LB.station) h+=lbChampionHTML(ranked);
+  el.innerHTML=h; }
+async function lbRenderWeek(el){ el.innerHTML='<div class="lbRow">Loading…</div>'; let rows;
+  if(LB.station) rows=await lbFetch('leaderboard_week','station_id=eq.'+LB.station+'&order=avg_score.desc&limit=100');
+  else{ const all=await lbFetch('leaderboard_week','order=avg_score.desc&limit=400');
+    if(all){ const m={};                                                       // citywide week = merge each player's per-house rows
+      for(const r of all){ const k=r.profile_id, g=m[k]||(m[k]={profile_id:k,name:r.name,n:0,sum:0,held:0,best_score:0,best_ms:null});
+        g.n+=r.n; g.sum+=(r.avg_score||0)*r.n; g.held+=Math.round((r.due_pct||0)*r.n/100);
+        if((r.best_score||0)>g.best_score) g.best_score=r.best_score;
+        if(r.best_ms!=null&&(g.best_ms==null||r.best_ms<g.best_ms)) g.best_ms=r.best_ms; }
+      rows=Object.values(m).map(g=>({profile_id:g.profile_id,name:g.name,n:g.n,avg_score:Math.round(g.sum/Math.max(1,g.n)),due_pct:Math.round(100*g.held/Math.max(1,g.n)),best_score:g.best_score,best_ms:g.best_ms})).sort((a,b)=>b.avg_score-a.avg_score); }
+    else rows=null; }
+  if(rows===null){ el.innerHTML='<div class="lbRow">The weekly board arrives with the next database update.</div>'; return; }
+  const ranked=rows.filter(r=>(r.n||0)>=2);
+  const meIdx=AUTH.user?ranked.findIndex(r=>r.profile_id===AUTH.user.id):-1;
+  const row=(r,i)=>'<div class="lbRow2'+(i===meIdx?' me':'')+'" data-x="1">'+
+    '<div class="lbRk r'+((i+1)<=3?(i+1):'x')+'">'+(i+1)+'</div>'+
+    '<div class="lbNm"><b>'+lbEsc(r.name||'Firefighter')+'</b><div class="lbCr">'+r.n+' runs this week · '+(r.due_pct||0)+'% due</div></div>'+
+    '<div class="lbOv">'+r.avg_score+'<div class="lbSt">avg score · best '+(r.best_score||0)+(r.best_ms!=null?' · '+lbMmss(r.best_ms):'')+'</div></div>'+
+    '<div class="lbXtra">avg run score '+r.avg_score+' over '+r.n+' runs · best single run '+(r.best_score||0)+(r.best_ms!=null?' · fastest '+lbMmss(r.best_ms):'')+'</div></div>';
+  let h='<div class="lbSecT">📅 THIS WEEK<span class="lbHint">avg run score · resets Monday · 2+ runs</span></div>';
+  h+= ranked.length? ranked.slice(0,10).map(row).join(''):'<div class="lbRow">No scored runs yet this week — a fresh board every Monday. Newest players compete on even footing here.</div>';
+  if(meIdx>=10) h+='<div class="lbSecT">YOUR RANK</div>'+row(ranked[meIdx],meIdx);
+  el.innerHTML=h; }
+async function lbRenderBox(el){ const eng=lbCtxEngine();
+  if(!eng){ el.innerHTML='<div class="lbRow">Pick a firehouse to see its box records.</div>'; return; }
+  el.innerHTML='<div class="lbRow">Loading…</div>';
+  const rows=await lbFetch('box_records','station_id=eq.'+eng+'&order=runs.desc&limit=40');
+  if(rows===null){ el.innerHTML='<div class="lbRow">Box records arrive with the next database update.</div>'; return; }
+  const e=PROFILE.engines[eng], mine={};                                       // your local best per box
+  if(e) for(const r of (e.log||[])) if(r.box&&r.ok&&r.held){ if(mine[r.box]==null||r.time<mine[r.box]) mine[r.box]=r.time; }
+  let h='<div class="lbSecT">📍 BOX RECORDS — ENGINE '+engNum(eng)+'<span class="lbHint">every ranked run writes one</span></div>';
+  if(!rows.length) h+='<div class="lbRow">No box records out of this house yet — be first on one.</div>';
+  for(const r of rows){ h+='<div class="lbBox"><div class="lbBoxT">BOX '+lbEsc(r.box)+'<span class="lbHint">'+r.runs+' run'+(r.runs===1?'':'s')+'</span></div><div class="lbBoxG">'+
+      (r.best_ms!=null?'<span>⚡ Fastest <b>'+lbMmss(r.best_ms)+'</b> '+lbEsc(r.fast_name)+'</span>':'')+
+      (r.best_score!=null?'<span>🏆 Score <b>'+r.best_score+'</b> '+lbEsc(r.score_name)+'</span>':'')+
+      (r.route_pct!=null?'<span>🧭 Route <b>'+r.route_pct+'%</b> '+lbEsc(r.route_name)+'</span>':'')+
+      (mine[r.box]!=null?'<span>🚒 Your best <b>'+lbMmss(mine[r.box]*1000)+'</b></span>':'')+
+      '</div></div>'; }
+  el.innerHTML=h; }
+function lbRenderEngine(el){ const ids=Object.keys(PROFILE.engines).filter(id=>PROFILE.engines[id].runs>0);
+  let h='<div class="lbSecT">🏛 YOUR ENGINES<span class="lbHint">tap one to open its board</span></div>';
+  if(!ids.length) h+='<div class="lbRow">No runs yet — ride out of any house and it shows up here.</div>';
+  for(const id of ids){ const e=PROFILE.engines[id], o=calcOVR(e.log), st=lbStation(id), lv=Math.max(0,Math.min(3,e.lv||0));
+    h+='<div class="lbRow2 lbEng" data-eng="'+id+'"><div class="lbRk rx">'+engNum(id)+'</div>'+
+      '<div class="lbNm"><b>'+lbEsc(st?st.name:('Engine '+engNum(id)))+'</b><div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+DIFF.names[lv]+' · '+e.saves+' save'+(e.saves===1?'':'s')+' · '+e.runs+' runs</div></div>'+
+      '<div class="lbOv">'+(o?o.ovr:'—')+'<div class="lbSt">'+(o?'OVR':'not rated')+'</div></div></div>'; }
+  el.innerHTML=h; }
+function lbRenderBadges(el){ const eng=lbCtxEngine(), e=eng?PROFILE.engines[eng]:null;
+  const has=new Set([].concat((e&&e.badges)||[],(PROFILE.city&&PROFILE.city.badges)||[]));
+  let h='<div class="lbSecT">🎖 BADGES'+(eng?' — ENGINE '+engNum(eng):'')+'<span class="lbHint">accomplishments · separate from ranking</span></div>';
+  h+='<div class="lbMedals">'+Object.keys(BADGE_NAMES).map(b=>'<div class="lbMedal'+(has.has(b)?' got':'')+'"><span>'+(has.has(b)?'🎖':'🔒')+'</span>'+BADGE_NAMES[b]+'</div>').join('')+'</div>';
+  h+='<div class="lbHint" style="margin-top:9px">CAREER RANK IS PROGRESSION · OVR IS CURRENT FORM · BADGES ARE ACCOMPLISHMENTS · THE BOARD IS COMPETITION</div>';
+  el.innerHTML=h; }
+function renderLB(){ lbHero(); lbTabsPaint(); const el=document.getElementById('lbBody');
+  if(LB.tab==='overall') lbRenderOverall(el);
+  else if(LB.tab==='week') lbRenderWeek(el);
+  else if(LB.tab==='box') lbRenderBox(el);
+  else if(LB.tab==='engine') lbRenderEngine(el);
+  else lbRenderBadges(el); }
+function openLB(stationId){ const el=document.getElementById('lbCard'); if(!el) return;
+  LB.station=stationId||null; LB.tab='overall';
+  el.classList.add('show'); el.setAttribute('aria-hidden','false'); renderLB(); }
+function openCityLeaderboard(){ openLB(null); }
+function openLeaderboard(id){ openLB(id||DRIVE.stationId||PROFILE.lastPlayed||null); }
+document.getElementById('lbTabs').addEventListener('click',e=>{ const b=e.target.closest('.lbTab'); if(b){ LB.tab=b.dataset.tab; renderLB(); } });
+document.getElementById('lbBody').addEventListener('click',e=>{ const g=e.target.closest('.lbEng');
+  if(g){ LB.station=g.dataset.eng; LB.tab='overall'; renderLB(); return; }
+  const r=e.target.closest('.lbRow2[data-x]'); if(r) r.classList.toggle('xp'); });
 function pushCareer(id){ if(!AUTH.user) return; const e=PROFILE.engines[id]; if(!e) return;      // fire-and-forget incremental push after a run
   try{ sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([careerRow(id,e)]) }); }catch(e){} }
 function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
@@ -3374,11 +3561,56 @@ const BADGE_NAMES={ first_in:'FIRST IN', textbook:'TEXTBOOK', held_5:'DUE DILIGE
   workhorse:'WORKHORSE', made_ff:'MADE FIREFIGHTER', made_vet:'MADE VETERAN', made_chief:'MADE CHIEF', local:'KNOW YOUR LOCAL',
   traveled:'WELL TRAVELED', century:'CENTURY CLUB', scout:'HYDRANT SCOUT' };
 function award(list,id,earned){ if(list.includes(id)) return; list.push(id); if(earned) earned.push(BADGE_NAMES[id]||id); }
+/* 🏆 RUN SCORE — every scored number lives HERE, nowhere else. Max 1000/run.
+   Due Position dominates by design: this is a learn-your-local trainer, not a street race — holding the
+   slot the box assigned you outranks raw speed. Response time is scored against a PAR derived from the
+   graph-optimal route length, so reckless speed past par earns nothing extra. A lost box (beaten in)
+   still gets scored (clean/difficulty only) and counts against your due rate — that is what makes the
+   Due % on the board mean something. Guide runs stay OFF the board entirely (the v16d rule). */
+const SCORE={
+  due:400, route:200, time:150, clean:100, arrive:100, diff:50,   // category maxima — sum 1000
+  routeFree:1.05,  // driven/optimal at or under this = full route points (the coach's own "Textbook" bar)
+  routeZero:1.6,   // ratio at which route points hit 0
+  parSpeed:12,     // u/s (≈27 mph average) — derives each box's par time from its optimal length
+  parPad:15,       // s added to par (turnout + junctions)
+  timeZero:2.0,    // at 2× par the time points hit 0; at or under par = full points (no bonus for reckless speed)
+  wwPen:10,        // clean pts lost per second driven head-on against a one-way
+  stopPen:3,       // clean pts lost per second sat still mid-run (beyond the free allowance)
+  stopFree:5,      // s of stopped time forgiven (lights, thinking at a junction)
+  uturnPen:12 };   // clean pts lost per U-turn used
+function calcRunScore(rv,ok){                                             // → {score, s:{due,route,time,clean,arrive,diff}}
+  const cl=(v,a,b)=>Math.max(a,Math.min(b,v)), s={due:0,route:0,time:0,clean:0,arrive:0,diff:0};
+  if(!rv) return {score:0,s};
+  if(ok&&rv.due>0&&rv.place>0&&rv.place<=rv.due) s.due=SCORE.due;         // held the assigned slot (arriving early = held, never "better")
+  if(ok&&rv.optLen>1&&rv.driven>0){ const ratio=rv.driven/rv.optLen;      // any sensible route scores — the optimal is a yardstick, not a mandate
+    s.route=Math.round(SCORE.route*cl((SCORE.routeZero-ratio)/(SCORE.routeZero-SCORE.routeFree),0,1)); }
+  if(ok&&rv.optLen>1&&rv.time>0){ const par=rv.optLen/SCORE.parSpeed+SCORE.parPad;
+    s.time=Math.round(SCORE.time*cl((SCORE.timeZero-rv.time/par)/(SCORE.timeZero-1),0,1)); }
+  s.clean=Math.round(cl(SCORE.clean-(rv.ww||0)*SCORE.wwPen-Math.max(0,(rv.stop||0)-SCORE.stopFree)*SCORE.stopPen-(rv.uturns||0)*SCORE.uturnPen,0,SCORE.clean));
+  if(ok) s.arrive=rv.arrStreet?SCORE.arrive:Math.round(SCORE.arrive*0.5); // on the box's own street = full; cross-street clip = half
+  s.diff=Math.round(SCORE.diff*DIFF.level/3);
+  return {score:s.due+s.route+s.time+s.clean+s.arrive+s.diff, s};
+}
+const OVR_KEYS=['due','route','time','clean','arrive','diff'];             // ss array order — keep pushRun + the SQL views in sync with this
+function logEligible(log){ return (log||[]).filter(r=>r.sc!==undefined&&r.due>0&&!r.guide); }
+function calcOVR(log){                                                     // rolling rating over the engine's last ≤20 eligible runs → 0-99
+  const el=logEligible(log); if(!el.length) return null;
+  const n=el.length, cats={}, mx={due:SCORE.due,route:SCORE.route,time:SCORE.time,clean:SCORE.clean,arrive:SCORE.arrive,diff:SCORE.diff};
+  OVR_KEYS.forEach((k,i)=>{ cats[k]=Math.round(el.reduce((a,r)=>a+((r.ss&&r.ss[i])||0),0)/n/mx[k]*100); });
+  const avg=el.reduce((a,r)=>a+r.sc,0)/n, fin=el.filter(r=>r.ok);
+  return { ovr:Math.round(avg*99/1000), cats, n, duePct:Math.round(el.filter(r=>r.held).length/n*100),
+           avgTime:Math.round(fin.reduce((a,r)=>a+(r.time||0),0)/Math.max(1,fin.length)) };
+}
+function calcStreak(log){ let k=0;                                          // consecutive eligible runs with the due slot held, newest backward
+  for(let i=(log||[]).length-1;i>=0;i--){ const r=log[i]; if(!(r.due>0)||r.guide) continue; if(r.held) k++; else break; }
+  return k; }
 function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                                        // one run record per box, success or fail
   const earned=[];
+  const sc=rv?calcRunScore(rv,ok):null;
   const row=rv?{ t:Math.round(GT), box:rv.box, lv:DIFF.level, place:rv.place, due:rv.due,
       held:(ok&&rv.due>0&&rv.place>0&&rv.place<=rv.due)?1:0, time:Math.round(rv.time),
-      driven:Math.round(rv.driven), optLen:Math.round(rv.optLen), ww:Math.round(rv.ww), stop:Math.round(rv.stop), ok:ok?1:0 }
+      driven:Math.round(rv.driven), optLen:Math.round(rv.optLen), ww:Math.round(rv.ww), stop:Math.round(rv.stop), ok:ok?1:0,
+      sc:sc.score, ss:OVR_KEYS.map(k=>sc.s[k]), ut:rv.uturns||0, ast:rv.arrStreet||0, guide:COACH.usedGuide?1:0 }
     :{ t:Math.round(GT), lv:DIFF.level, ok:0 };
   e.log.push(row); while(e.log.length>20) e.log.shift(); e.runs++;
   if(ok){ e.saves++;
@@ -3397,7 +3629,8 @@ function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                
     if(Object.values(PROFILE.engines).filter(x=>x.runs>0).length>=5) award(c.badges,'traveled',earned);
     let tot=0; for(const k in PROFILE.engines) tot+=PROFILE.engines[k].saves; if(tot>=100) award(c.badges,'century',earned); }
   PROFILE.lastPlayed=DRIVE.stationId; saveProfile(); if(AUTH.user){ pushCareer(DRIVE.stationId);
-    if(ok&&rv&&!COACH.usedGuide){ pushRun(rv); reportLeaderboard(DRIVE.stationId); }
+    const elig=rv&&!COACH.usedGuide&&rv.due>0;                                                          // ranked run: guide off + a due slot actually assigned (losses count too — that's what Due % measures)
+    if(elig){ pushRun(rv,ok,sc,calcStreak(e.log)); if(ok) reportLeaderboard(DRIVE.stationId); }
     else if(ok&&rv&&COACH.usedGuide&&(rv.due>0&&rv.place>0&&rv.place<=rv.due)) popup('📘 Guide was on — great run, but it won\'t post to the board','');
   } return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
@@ -3577,8 +3810,8 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
    Breadcrumb of the actual drive vs the graph-optimal route, reviewed after every FIRE OUT.
    ⚠️ The coach only states MEASURED facts (lengths, wrong-way time, stopped time, due place). Never
    invented tactics — no hydrants, construction, water supply; the game doesn't model them. */
-const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0,usedGuide:false};
-function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0;
+const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0,usedGuide:false,uturns:0};
+function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0; COACH.uturns=0;
   COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; COACH.usedGuide=false; COACH.trail.push([truck.x,truck.z]); }
 function updateCoach(dt){ if(!state.target||!state.running||MAP.bounds||DRAW.on||DRILL.on) return;
   if(MAP.guide) COACH.usedGuide=true;                                          // used the blue line at all → run doesn't count on the board
@@ -3603,8 +3836,10 @@ function coachCapture(){ const t=state.target; if(!t||COACH.trail.length<2) retu
         let a2=0; for(let k=bi+1;k<opt.length;k++){ a2+=Math.hypot(opt[k].x-opt[k-1].x,opt[k].z-opt[k-1].z); if(a2>=35){ optStreet=streetName(opt[k].x,opt[k].z); break; } }
         break; } } }
   if(divStreet==='—')divStreet=''; if(optStreet==='—'||optStreet===divStreet)optStreet='';
+  const arrStreet=(t.street&&canonStreet(streetName(truck.x,truck.z))===canonStreet(t.street))?1:0;   // finished ON the box's street, or clipped the radius from a cross street?
   return { trail:COACH.trail.slice(), opt, driven, optLen, fx:ax, fz:az, ww:COACH.ww, stop:COACH.stop,
            time:(COACH.arriveT||GT)-COACH.t0, place:RIVALS.playerPlace||0, due:RIVALS.playerDue||0,
+           uturns:COACH.uturns, arrStreet,
            box:t.box||'', addr:t.address||t.name||'', divStreet, optStreet }; }
 function coachLines(r){ const L=[];                                             // every line traces to a measured number
   const mi=m=>{ const v=m*0.000621371; return v<0.095?Math.round(m*3.28084)+' ft':v.toFixed(1)+' mi'; };
