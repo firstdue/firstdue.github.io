@@ -202,6 +202,29 @@
   .drawReviewBtns button { flex:1 1 auto; pointer-events:auto; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; }
   #btnDrawKeep { background:#343c49; color:#fff; }
   /* 👨‍🚒 senior-man post-run review */
+  #pathCard { position:absolute; inset:0; z-index:66; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.78); pointer-events:auto; }
+  #pathCard.show { display:flex; }
+  #pathCard .cc { width:min(520px,94vw); max-height:90vh; overflow:auto; background:linear-gradient(180deg,#131f31,#0f1a2b); border:1px solid #26364f; border-radius:14px; padding:16px 16px 14px; }
+  #pathCard .ccHead { font-family:"Arial Black",sans-serif; font-weight:900; letter-spacing:1px; font-size:17px; color:#ffd583; }
+  .ppTag { font-size:11px; font-weight:900; letter-spacing:.14em; color:#f4b950; text-transform:uppercase; margin-top:2px; }
+  .ppSec { display:flex; align-items:center; gap:9px; font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; color:#f4b950; margin:15px 2px 8px; }
+  .ppSec::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,#26364f,transparent); }
+  .ppSec.city { color:#c69bf0; } .ppSec.city::after { background:linear-gradient(90deg,rgba(198,155,240,.4),transparent); }
+  .ppNote { font-size:12.5px; color:#95a4bd; margin:0 2px 10px; line-height:1.4; }
+  .ppRank { position:relative; border:1px solid #26364f; border-radius:11px; padding:9px 12px 9px 15px; margin:0 0 8px; background:#182642; overflow:hidden; }
+  .ppRank::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--c); }
+  .ppRank::after { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:repeating-linear-gradient(-52deg,rgba(255,255,255,.34) 0 3px,transparent 3px 8px); mix-blend-mode:overlay; }
+  .ppR-h { display:flex; align-items:center; gap:8px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:900; text-transform:uppercase; letter-spacing:.5px; font-size:19px; color:var(--c); }
+  .ppR-h .rig { margin-left:auto; font-size:20px; }
+  .ppR-h .lk { margin-left:auto; font-size:14px; opacity:.7; }
+  .ppR-u { font-size:12px; color:#c7d2e4; margin:2px 0 5px; } .ppR-u b { color:#fff; }
+  .ppR-p { font-size:12px; color:#95a4bd; } .ppR-p .no { color:#e5484d; font-weight:700; }
+  .ppBadge { font-size:12.5px; color:#95a4bd; padding:6px 2px; border-bottom:1px solid #1a2740; line-height:1.35; }
+  .ppBadge:last-child { border-bottom:0; } .ppBadge b { color:#e9eef7; font-weight:700; }
+  .ppRule { display:flex; gap:8px; flex-wrap:wrap; margin:2px 2px 0; }
+  .ppRule span { font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; color:#37c274; background:rgba(55,194,116,.12); border:1px solid rgba(55,194,116,.3); border-radius:999px; padding:4px 11px; }
+  #btnPathClose { width:100%; margin-top:14px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
+  #btnPath { width:100%; margin-top:8px; border:none; border-radius:10px; padding:11px; font-weight:900; background:linear-gradient(180deg,#f4b950,#d0942a); color:#241605; pointer-events:auto; }
   #coachCard { position:absolute; inset:0; z-index:62; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
   #coachCard.show { display:flex; }
   #coachCard .cc { width:min(560px,94vw); max-height:92vh; overflow:auto; background:#141a24; border:1px solid #2a3444; border-radius:14px; padding:14px 14px 12px; box-shadow:0 12px 40px rgba(0,0,0,.5); }
@@ -482,7 +505,43 @@
     <div id="pcHyd"></div>
     <textarea id="pcExport" readonly></textarea>
     <button id="btnHydCopy">📋 COPY HYDRANTS</button>
+    <button id="btnPath">🎖️ CAREER PATH — HOW RANKS WORK</button>
     <button id="btnProfileClose">CLOSE</button>
+  </div>
+</div>
+<div id="pathCard" aria-hidden="true">
+  <div class="cc">
+    <div class="ccHead">🎖️ CAREER PATH</div>
+    <div class="ppTag">Your journey · your legacy</div>
+
+    <div class="ppSec">Rank Ladder · per engine</div>
+    <div class="ppNote">Every firehouse is its own career — pick a new engine, start over. <b style="color:#fff">Hold your due on 5 boxes</b> at your rank to unlock the next.</div>
+
+    <div class="ppRank" style="--c:#4d9fff"><div class="ppR-h">Rookie<span class="rig">🚒</span></div><div class="ppR-u">Where <b>every engine</b> starts.</div><div class="ppR-p">Guide line · U-turn · rivals run slower</div></div>
+    <div class="ppRank" style="--c:#37c274"><div class="ppR-h">Firefighter<span class="rig">🚗</span></div><div class="ppR-u">Hold your due <b>5×</b> as Rookie.</div><div class="ppR-p">Guide line · U-turn · rivals race for real</div></div>
+    <div class="ppRank" style="--c:#f2913a"><div class="ppR-h">Veteran<span class="lk">🔒 locked</span></div><div class="ppR-u">Hold your due <b>5×</b> as Firefighter.</div><div class="ppR-p"><span class="no">✕ No guide line</span> · U-turn · faster rivals</div></div>
+    <div class="ppRank" style="--c:#e5484d"><div class="ppR-h">Chief<span class="lk">🔒 locked</span></div><div class="ppR-u">Hold your due <b>5×</b> as Veteran.</div><div class="ppR-p"><span class="no">✕ No guide · ✕ No U-turn</span> · fastest rivals</div></div>
+    <div class="ppNote">Each rank strips a crutch, so the skill is real by Chief. You <b style="color:#ffd583">choose to ride up</b> once it's unlocked — it never forces you.</div>
+
+    <div class="ppSec">Badges · per firehouse</div>
+    <div class="ppBadge"><b>⭐ First In</b> — take a box first-in when you're 1st due.</div>
+    <div class="ppBadge"><b>📖 Textbook</b> — a run the senior man has zero complaints about.</div>
+    <div class="ppBadge"><b>🛡️ Due Diligence</b> — hold your due 5 runs in a row.</div>
+    <div class="ppBadge"><b>🛣️ Right Side of the Street</b> — 10 runs straight, no wrong-way driving.</div>
+    <div class="ppBadge"><b>🐴 Workhorse</b> — 25 runs on that engine.</div>
+    <div class="ppBadge"><b>⏫ Made Firefighter / Veteran / Chief</b> — reach each rank.</div>
+
+    <div class="ppSec city">Citywide · across all engines</div>
+    <div class="ppBadge"><b>🌐 Well Traveled</b> — run 5 different firehouses.</div>
+    <div class="ppBadge"><b>💯 Century Club</b> — 100 total saves.</div>
+    <div class="ppBadge"><b>🎓 Know Your Local</b> — find 10 landmarks in one drill.</div>
+    <div class="ppBadge"><b>🧯 Hydrant Scout</b> — mark 5 hydrants.</div>
+
+    <div class="ppSec">Leaderboard rule</div>
+    <div class="ppRule"><span>✓ Guide off</span><span>✓ Held due</span></div>
+    <div class="ppNote" style="margin-top:8px">Only runs that meet both post to the board — every ranked time is earned on the harder tracks.</div>
+
+    <button id="btnPathClose">CLOSE</button>
   </div>
 </div>
 <div id="coachCard" aria-hidden="true">
@@ -593,7 +652,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3368,6 +3427,8 @@ function playerAddHydrant(){ if(!state.running||DRIVE.going) return;
   popup('🧯 HYDRANT MARKED · '+streetName(hx,hz),'green');
   radio('🧯 Hydrant logged at '+streetName(hx,hz)+'. '+(AUTH.user?'Sent for review — thanks!':'Sign in (👤 ACCOUNT) so it uploads automatically, or copy it from CAREER to send back.')); }
 document.getElementById('btnHyd').addEventListener('click',e=>{ e.preventDefault(); playerAddHydrant(); });
+document.getElementById('btnPath').addEventListener('click',e=>{ e.preventDefault(); const el=document.getElementById('pathCard'); el.classList.add('show'); el.setAttribute('aria-hidden','false'); });
+document.getElementById('btnPathClose').addEventListener('click',()=>{ const el=document.getElementById('pathCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('btnHydCopy').addEventListener('click',()=>{ const t=document.getElementById('pcExport'); if(!t.value) return; t.select();
   try{ navigator.clipboard.writeText(t.value).then(()=>{}).catch(()=>{}); }catch(e){} try{ document.execCommand('copy'); }catch(e){} popup('📋 COPIED'); });
 const ordinal=n=>['1st','2nd','3rd','4th','5th'][n-1]||(n+'th');
