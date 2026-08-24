@@ -593,7 +593,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3334,7 +3334,7 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
     if(hd&&tx&&cp){ const n=PROFILE.hyd.length;
       hd.innerHTML=n?('<div class="pcRow"><b>🧯 HYDRANTS MARKED: '+n+'</b><div class="pcBadges">Player-submitted — NOT official PWD data. Copy + send back so they can be reviewed into the map.</div></div>'):'';
       tx.value=n?JSON.stringify({type:'pfd_hydrant_submissions',build:BUILD,count:n,list:PROFILE.hyd}):'';
-      tx.style.display=n?'block':'none'; cp.style.display=n?'block':'none'; } }
+      tx.style.display='none'; cp.style.display=n?'block':'none'; } }
   el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
