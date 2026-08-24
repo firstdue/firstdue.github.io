@@ -39,8 +39,9 @@
     text-shadow:0 0 10px rgba(255,140,40,.8), 0 2px 3px #000; opacity:.55; }
   #combo.hot { opacity:1; animation:cpulse .5s ease infinite; }
   @keyframes cpulse { 50%{ transform:scale(1.1) rotate(-2deg); } }
-  #saves { top:max(8px, env(safe-area-inset-top)); left:max(10px, env(safe-area-inset-left)); font-size:clamp(9px,2vw,12px);   /* top-left corner, above the responding strip (buttons are right-aligned) */
+  #saves { top:max(8px, env(safe-area-inset-top)); left:max(10px, env(safe-area-inset-left)); font-size:clamp(9px,2vw,12px); max-width:44vw; line-height:1.25;   /* top-left corner, above the responding strip (buttons are right-aligned) */
     font-weight:800; color:#9fd7ff; text-shadow:0 1px 3px #000; letter-spacing:1px; }
+  #saves .ver { display:block; color:#8aa0bd; font-weight:800; letter-spacing:1px; }
   /* 🚨 DUE-ORDER CHIP — how due YOUR engine is at the spot you're standing on right now */
   #dueChip { position:absolute; z-index:15; top:calc(max(8px,env(safe-area-inset-top)) + 15px); left:max(10px,env(safe-area-inset-left));
     display:none; align-items:center; gap:6px; padding:4px 10px 4px 7px; border-radius:999px;
@@ -676,7 +677,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16m";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2051,7 +2052,7 @@ let hurryShown=false;
 function updateHUD(dt){
   const rp=(MAP.on&&MAP.free)?mapCenter():[truck.x,truck.z];   // when the camera is panned in training mode, read the street/block at the VIEW CENTRE (crosshair), not the truck
   const curStreet=streetName(rp[0],rp[1]),curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
-  elSaves.textContent='SAVES '+state.saves+' · BEST '+best.saves+' · '+BUILD; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
+  elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
   { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = (MAP.bounds||DRAW.on) ? '🎓 TRAINING » ' : '📻 DISPATCH » '; }   // boundary/training mode is not a live call
   { const training=(MAP.bounds||DRAW.on)&&state.running; const tc=document.getElementById('trainChip'); if(tc) tc.classList.toggle('show',training);   // small TRAINING chip top-left; hide the big dispatch banner while training
     const rd=document.getElementById('radio'); if(rd) rd.style.display=training?'none':'';
