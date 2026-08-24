@@ -573,7 +573,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16a";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16b";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3173,7 +3173,38 @@ async function authSendLink(email){ const redirect=location.origin+location.path
   const r=await fetch(SB.url+'/auth/v1/otp?redirect_to='+encodeURIComponent(redirect),{ method:'POST', headers:authHdr(false),
     body:JSON.stringify({ email, create_user:true }) });
   return r.ok; }
-function authSignOut(){ if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
+async function sbFetch(path,opts){ opts=opts||{}; if(!AUTH.session) return null;               // authed PostgREST call, refreshes once on 401
+  if(Date.now()>AUTH.session.expires_at-60000){ if(!await authRefresh()) return null; }
+  const h=Object.assign({ 'apikey':SB.key, 'Authorization':'Bearer '+AUTH.session.access_token, 'Content-Type':'application/json' }, opts.headers||{});
+  try{ let r=await fetch(SB.url+path, Object.assign({},opts,{ headers:h }));
+    if(r.status===401 && await authRefresh()){ h.Authorization='Bearer '+AUTH.session.access_token; r=await fetch(SB.url+path, Object.assign({},opts,{ headers:h })); }
+    return r; }catch(e){ return null; } }
+function careerRow(id,e){ return { profile_id:AUTH.user.id, station_id:id, level:e.lv||0,
+  held:[0,1,2,3].map(i=>(e.held&&e.held[i])||0), saves:e.saves||0, runs:e.runs||0, fails:e.fails||0,
+  best_saves:e.bestT||0, badges:e.badges||[] }; }
+async function syncCareers(){ if(!AUTH.user) return;                                            // pull server careers, max-wins merge with local, push merged back
+  const r=await sbFetch('/rest/v1/career?select=station_id,level,held,saves,runs,fails,best_saves,badges');
+  if(!r||!r.ok) return; let server=[]; try{ server=await r.json(); }catch(e){ return; }
+  const smap={}; for(const row of server) smap[row.station_id]=row;
+  const ids=new Set(Object.keys(PROFILE.engines)); for(const k in smap) ids.add(k);
+  const upserts=[];
+  for(const id of ids){ const l=PROFILE.engines[id]||{}, sv=smap[id];
+    const e=profEng(id);                                                                        // creates local record if this device hasn't seen the engine
+    e.lv     =Math.max(l.lv||0,     sv?sv.level||0:0);
+    e.held   =[0,1,2,3].map(i=>Math.max((l.held&&l.held[i])||0, (sv&&sv.held&&sv.held[i])||0));
+    e.saves  =Math.max(l.saves||0,  sv?sv.saves||0:0);
+    e.runs   =Math.max(l.runs||0,   sv?sv.runs||0:0);
+    e.fails  =Math.max(l.fails||0,  sv?sv.fails||0:0);
+    e.bestT  =Math.max(l.bestT||0,  sv?sv.best_saves||0:0);
+    e.badges =Array.from(new Set([...(l.badges||[]), ...((sv&&sv.badges)||[])]));
+    if(e.lastLv===undefined||e.lastLv>e.lv) e.lastLv=e.lv;                                       // never let a device ride above what it now knows is unlocked
+    upserts.push(careerRow(id,e)); }
+  saveProfile();
+  if(upserts.length) await sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify(upserts) });
+  AUTH.synced=true; try{ refreshStationList(); }catch(e){} }
+function pushCareer(id){ if(!AUTH.user) return; const e=PROFILE.engines[id]; if(!e) return;      // fire-and-forget incremental push after a run
+  try{ sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([careerRow(id,e)]) }); }catch(e){} }
+function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
   authStore(null); AUTH.user=null; authUpdateUI(); }
 function authUpdateUI(){ const b=document.getElementById('btnAuth'); if(b) b.textContent=AUTH.user?('👤 '+(AUTH.user.email||'ACCOUNT')):'👤 SIGN IN';
   const out=document.getElementById('authOut'), em=document.getElementById('authEmail'), snd=document.getElementById('authSend');
@@ -3186,10 +3217,11 @@ async function authInit(){                                                    //
   if(!AUTH.session){ try{ const st=JSON.parse(localStorage.getItem('pfd_auth')); if(st&&st.access_token) AUTH.session=st; }catch(e){} }
   if(AUTH.session){ await authFetchUser(); }
   authUpdateUI();
-  if(fromHash&&AUTH.user) popup('👤 Signed in as '+AUTH.user.email,'green'); }
+  if(AUTH.user){ syncCareers(); }                                                               // careers follow you: pull from the account, merge, push back
+  if(fromHash&&AUTH.user) popup('👤 Signed in as '+AUTH.user.email+' · careers synced','green'); }
 function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) return;
   document.getElementById('authMsg').textContent=AUTH.user
-    ? ('Signed in as '+AUTH.user.email+'. Your careers will sync to this account (coming soon). Free play needs no account.')
+    ? ('Signed in as '+AUTH.user.email+'. Your careers sync to this account across devices. Free play needs no account.')
     : 'Sign in to save your careers across devices and join the leaderboard. Enter your email and we\'ll send a one-tap link — no password.';
   authUpdateUI(); el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 function profEng(id){ id=id||DRIVE.stationId; if(!id) return null; let e=PROFILE.engines[id];
@@ -3222,7 +3254,7 @@ function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                
   { const c=PROFILE.city;                                                                               // citywide
     if(Object.values(PROFILE.engines).filter(x=>x.runs>0).length>=5) award(c.badges,'traveled',earned);
     let tot=0; for(const k in PROFILE.engines) tot+=PROFILE.engines[k].saves; if(tot>=100) award(c.badges,'century',earned); }
-  saveProfile(); return earned; }
+  saveProfile(); if(AUTH.user) pushCareer(DRIVE.stationId); return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
   const cur=(DRIVE.stationId&&PROFILE.engines[DRIVE.stationId])?DRIVE.stationId:null, rows=[];
   const fmt=(id,e)=>{ const nxt=e.lv<3?(Math.min(e.held[e.lv]||0,HELD_TO_UNLOCK)+'/'+HELD_TO_UNLOCK+' to '+DIFF.names[e.lv+1]):'MAXED';
