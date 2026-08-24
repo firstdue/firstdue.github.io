@@ -29,11 +29,11 @@
   #timer .cap { font-size:clamp(8px,1.6vw,11px); font-weight:800; letter-spacing:4px; color:#ffd; text-shadow:0 1px 3px #000; }
   #timer.low .num { color:#ff3b30; animation:tpulse .4s steps(2) infinite; }
   @keyframes tpulse { 50% { transform:scale(1.15); color:#fff; } }
-  #cash { top:max(8px, env(safe-area-inset-top)); left:max(10px, env(safe-area-inset-left));
+  #cash { display:none; top:max(8px, env(safe-area-inset-top)); left:max(10px, env(safe-area-inset-left));
     font-size:clamp(17px,4vw,26px); font-weight:900; color:#7CFF6B; font-family:"Arial Black",sans-serif;
     text-shadow:0 0 10px rgba(60,255,60,.7), 0 2px 0 #044a04, 0 4px 6px rgba(0,0,0,.6); }
   #cash .sub { display:block; font-size:clamp(8px,1.6vw,11px); letter-spacing:3px; color:#cfc; font-weight:800; }
-  #combo { top:clamp(46px,11vw,76px); left:max(10px, env(safe-area-inset-left));
+  #combo { display:none; top:clamp(46px,11vw,76px); left:max(10px, env(safe-area-inset-left));
     font-size:clamp(13px,3vw,19px); font-weight:900; color:#ff9d3a; font-family:"Arial Black",sans-serif;
     text-shadow:0 0 10px rgba(255,140,40,.8), 0 2px 3px #000; opacity:.55; }
   #combo.hot { opacity:1; animation:cpulse .5s ease infinite; }
@@ -549,7 +549,7 @@
   </div>
 </div>
 <div id="over" class="overlay"><div class="card">
-  <h1>⏰ SHIFT OVER</h1><div class="big" id="finalCash">$0</div>
+  <h1>⏰ SHIFT OVER</h1><div class="big" id="finalCash">0 SAVES</div>
   <div class="sub" id="finalStats">0 dispatches completed</div><div class="best" id="finalBest"></div>
   <div class="sub" id="finalFact" style="color:#8fd;"></div>
   <button class="btn" id="restartBtn">🚒 CHOOSE STATION</button>
@@ -593,7 +593,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1966,7 +1966,6 @@ document.getElementById('btnDrill').addEventListener('click',e=>{ e.preventDefau
   document.getElementById('btnDrill').classList.toggle('on',DRILL.on); });
 let hurryShown=false;
 function updateHUD(dt){
-  elCash.childNodes[1].textContent='$'+state.cash;
   const rp=(MAP.on&&MAP.free)?mapCenter():[truck.x,truck.z];   // when the camera is panned in training mode, read the street/block at the VIEW CENTRE (crosshair), not the truck
   const curStreet=streetName(rp[0],rp[1]),curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
   elSaves.textContent='SAVES '+state.saves+' · BEST '+best.saves+' · '+BUILD; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
@@ -3769,9 +3768,9 @@ function buildStationHouse(st){
 function returnToStation(){ const st=stations.find(s=>s.id===DRIVE.stationId)||stations[0]; if(!st) return;   // teleport back to the firehouse curb and re-park (pull-out prompt returns)
   parkAtStation(st); camTheta=truck.theta; CAMLOOK.yaw=0; CAMLOOK.pitch=0; radio('🏠 Back in quarters — '+st.companies[0]+' available.'); }
 function saveBest(){ if(state.saves>best.saves||(state.saves===best.saves&&state.cash>best.cash)){ best={saves:state.saves,cash:state.cash}; try{ localStorage.setItem('pfd_ef_best',JSON.stringify(best)); }catch(e){} } }
-function gameOver(title,why){ state.running=false; state.over=true; saveBest(); { const e=DRIVE.stationId?profEng():null; if(e&&state.saves>e.bestT){ e.bestT=state.saves; saveProfile(); } } document.getElementById('finalCash').textContent='$'+state.cash;
+function gameOver(title,why){ state.running=false; state.over=true; saveBest(); { const e=DRIVE.stationId?profEng():null; if(e&&state.saves>e.bestT){ e.bestT=state.saves; saveProfile(); } } document.getElementById('finalCash').textContent=state.saves+(state.saves===1?' SAVE':' SAVES');
   { const h=document.querySelector('#over .card h1'); if(h) h.textContent=title||'⏰ SHIFT OVER'; }
-  document.getElementById('finalStats').textContent= why || (state.saves+' dispatches completed on the riverfront'); document.getElementById('finalBest').textContent='BEST RUN: '+best.saves+' saves · $'+best.cash;
+  document.getElementById('finalStats').textContent= why || (state.saves+' dispatches completed on the riverfront'); document.getElementById('finalBest').textContent=best.saves>0?('BEST: '+best.saves+(best.saves===1?' save':' saves')):'';
   document.getElementById('finalFact').textContent='Local fact: '+LMK[(Math.random()*LMK.length)|0].f; document.getElementById('over').classList.add('show'); }
 function resetRun(){ state.cash=0; state.saves=0; state.timeLeft=CONFIG.timer.start; state.over=false; state.target=null; state.combo=1;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=0; truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; state.running=true; newDispatch(); }
@@ -3795,7 +3794,7 @@ const homeEl=document.getElementById('home');
 function refreshStationList(){ document.querySelectorAll('#stationList .stbtn[data-station]').forEach(b=>{   // repaint careers on the battalion list
   const e=PROFILE.engines[b.dataset.station], el=b.querySelector('.stCareer'); if(!el) return;
   el.textContent=(e&&e.runs>0)?(DIFF.names[e.lv]+(e.badges.length?' · '+'🎖'.repeat(Math.min(4,e.badges.length)):'')):''; }); }
-function updateBest(){ document.getElementById('bestLine').textContent = best.saves>0 ? ('BEST RUN: '+best.saves+' saves · $'+best.cash) : 'BEST RUN: — first shift!'; refreshStationList(); }
+function updateBest(){ document.getElementById('bestLine').textContent = best.saves>0 ? ('BEST RUN: '+best.saves+(best.saves===1?' save':' saves')) : 'BEST RUN: — first shift!'; refreshStationList(); }
 /* ============ \U0001f5fa️ CITYWIDE FIREHOUSE PICKER =============================================
    A dark citywide map is the first thing you see: every PFD engine house plotted at its real
    location, coloured by Division. Tap one to read it, then RIDE OUT flies the camera down into
