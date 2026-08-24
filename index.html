@@ -483,17 +483,10 @@
 </div>
 <div id="boundaryOverlay" aria-hidden="true">
   <div class="boundaryCard">
-    <div class="boundaryHead"><h2>🗺️ FIRST-DUE PROGRESS</h2><button class="toolClose" id="btnBoundaryClose" aria-label="Close boundary map">×</button></div>
+    <div class="boundaryHead"><h2>🗺️ FIRST-DUE ZONE</h2><button class="toolClose" id="btnBoundaryClose" aria-label="Close boundary map">×</button></div>
     <div class="boundaryControls"><label for="boundaryEngine">ENGINE</label><select id="boundaryEngine"></select></div>
     <div id="boundaryStats">Loading boundary work…</div>
     <canvas id="boundaryCanvas"></canvas>
-    <div class="boundaryLegend">
-      <span><i class="legendSwatch legendDone"></i>Traced from your photos</span>
-      <span><i class="legendSwatch legendOpen"></i>Open endpoint—more coverage needed</span>
-    </div>
-    <div class="boundaryNote">Blank gaps are intentional. The map only shows lines proven by your source images and never guesses the missing connection.</div>
-    <button id="btnBoundExport">📋 COPY THIS ENGINE'S COORDS</button>
-    <textarea id="boundExport" readonly aria-label="Boundary coordinates"></textarea>
   </div>
 </div>
 <div id="drawReview" aria-hidden="true">
@@ -609,7 +602,7 @@
       <div class="tag">TAP A FIREHOUSE TO RIDE OUT</div>
     </div>
     <div id="homeLegend"></div>
-    <button id="btnFirstDueHome">🗺️ FIRST-DUE MAP</button>
+    <button id="btnFirstDueHome">🏆 LEADERBOARD</button>
     <button id="btnListView">☰ LIST VIEW</button>
     <div id="houseCard">
       <span class="hcX" id="hcClose">×</span>
@@ -619,6 +612,7 @@
       <div class="hcCareer" id="hcCareer"></div>
       <button class="hcGo" id="hcGo">🚒 RIDE OUT</button>
       <button class="hcLb" id="hcLb">🏁 LEADERBOARD</button>
+      <button class="hcLb" id="hcZone">🗺️ FIRST-DUE ZONE</button>
     </div>
     <div id="homeListPane">
       <button id="btnBackToMap">◀ BACK TO MAP</button>
@@ -626,8 +620,7 @@
       <h1>🚒 CHOOSE YOUR FIREHOUSE</h1>
       <div class="sub">Every Philadelphia Fire Department engine house, at its real address, grouped by battalion. Pick any to run out of.</div>
       <div id="stationList"></div>
-      <button class="btn" id="btnBoundaryHome" style="background:#245d9e;box-shadow:none">🗺️ VIEW FIRST-DUE PROGRESS</button>
-      <div class="best" id="bestLine">BEST RUN: —</div>
+        <div class="best" id="bestLine">BEST RUN: —</div>
       <button class="btn" id="btnCloseList" style="background:#333a55;box-shadow:none">✖ BACK TO MAP</button>
     </div></div>
   </div>
@@ -677,7 +670,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16m";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16n";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1095,8 +1088,8 @@ function drawBoundaryOverview(){ const id=BOUNDARY_UI.engine,pieces=boundaryPiec
   { const z=(typeof duePolygon==='function')?duePolygon(id):null;
     let a=0; if(z&&z.length>2){ for(let k=0;k<z.length;k++){ const q2=z[(k+1)%z.length]; a+=z[k][0]*q2[1]-q2[0]*z[k][1]; } a=Math.abs(a/2)/2589988.11; }
     boundaryStats.textContent = (z&&z.length>2)
-      ? ('✅ REAL PFD FIRST-DUE ZONE  •  '+a.toFixed(2)+' sq mi'+(pieces.length?('  •  '+pieces.length+' hand-traced section'+(pieces.length===1?'':'s')):''))
-      : ('NO PFD ZONE ON FILE  •  '+pieces.length+' hand-traced section'+(pieces.length===1?'':'s')+'  •  OPEN ENDS: '+ends.length); }
+      ? ('✅ First-due area  •  '+a.toFixed(2)+' sq mi')
+      : ('First-due area not mapped yet for this engine.'); }
   if(!pieces.length && !((typeof duePolygon==='function') && duePolygon(id) && duePolygon(id).length)){ c.fillStyle='#59616b'; c.textAlign='center'; c.textBaseline='middle'; c.font='800 16px -apple-system,"Helvetica Neue",Arial'; c.fillText('No sourced boundary lines for '+boundaryEngineName(id),W/2,H/2-8);
     c.font='600 12px -apple-system,"Helvetica Neue",Arial'; c.fillText('Add an overlapping run-area photo to begin.',W/2,H/2+18); return; }
   const zone=(typeof duePolygon==='function')?duePolygon(id):null;            // v14k brought in the REAL PFD first-due polygons — show those, not just the hand traces
@@ -1148,14 +1141,9 @@ function closeBoundaryMap(){ boundaryOverlay.classList.remove('show');boundaryOv
 document.getElementById('btnSettings').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggleSettings();});
 document.getElementById('btnSettingsClose').addEventListener('click',closeSettings);
 settingsShade.addEventListener('click',closeSettings);
-document.getElementById('btnBoundaryMap').addEventListener('click',openBoundaryMap);document.getElementById('btnBoundaryHome').addEventListener('click',openBoundaryMap);document.getElementById('btnFirstDueHome').addEventListener('click',openBoundaryMap);
+document.getElementById('btnBoundaryMap').addEventListener('click',openBoundaryMap);document.getElementById('btnFirstDueHome').addEventListener('click',openCityLeaderboard);
 document.getElementById('btnBoundaryClose').addEventListener('click',closeBoundaryMap);boundaryOverlay.addEventListener('click',e=>{if(e.target===boundaryOverlay)closeBoundaryMap();});
 boundaryEngine.addEventListener('change',()=>{BOUNDARY_UI.engine=boundaryEngine.value;drawBoundaryOverview();});
-document.getElementById('btnBoundExport').addEventListener('click',()=>{ const id=BOUNDARY_UI.engine,pieces=boundaryPieces(id).map(q=>({id:q.id,engines:q.engines,complete:q.complete,pts:q.pts,labels:q.labels||[]}));   // export the shown engine's saved boundary sections so they can be baked in permanently
-  if(!pieces.length){ boundaryStats.textContent='No sections to copy for this engine.'; return; }
-  const txt=JSON.stringify(pieces),ta=document.getElementById('boundExport'); ta.style.display='block'; ta.value=txt; ta.focus(); ta.select();
-  let ok=false; try{ navigator.clipboard.writeText(txt).then(()=>{}).catch(()=>{}); ok=true; }catch(e){} try{ document.execCommand('copy'); ok=true; }catch(e){}
-  boundaryStats.textContent=(ok?'Copied ':'Select-all + copy the box below — ')+pieces.length+' section'+(pieces.length===1?'':'s')+' for '+boundaryEngineName(id)+'. Paste it to Claude to bake in.'; });
 
 /* ---- routing graph for the GPS route line ONLY (A* on OSM streets; never constrains the car) ---- */
 const gnodes=new Map();
@@ -3333,6 +3321,17 @@ function pushRun(rv){ if(!AUTH.user||!rv) return;                               
 async function fetchLeaderboard(stationId){                                                      // public view → anon key, works signed out
   try{ const r=await fetch(SB.url+'/rest/v1/leaderboard?station_id=eq.'+stationId+'&order=best_ms.asc&limit=25',{ headers:{ apikey:SB.key } });
     if(!r.ok) return []; return await r.json(); }catch(e){ return []; } }
+async function fetchCityLeaderboard(){ try{ const r=await fetch(SB.url+'/rest/v1/leaderboard_city?order=held_runs.desc,best_ms.asc&limit=40',{ headers:{ apikey:SB.key } });
+    if(!r.ok) return []; return await r.json(); }catch(e){ return []; } }
+async function openCityLeaderboard(){ const el=document.getElementById('lbCard'); if(!el) return;   // 🏆 citywide top firefighters
+  document.getElementById('lbHead').textContent='🏆 CITYWIDE — TOP FIREFIGHTERS';
+  document.getElementById('lbBody').innerHTML='<div class="lbRow">Loading…</div>';
+  el.classList.add('show'); el.setAttribute('aria-hidden','false');
+  const rows=await fetchCityLeaderboard(), mmss=ms=>{ if(!ms) return '—'; const q=Math.round(ms/1000); return Math.floor(q/60)+':'+String(q%60).padStart(2,'0'); };
+  if(!rows.length){ document.getElementById('lbBody').innerHTML='<div class="lbRow">No ranked runs yet. '+(AUTH.user?'Hold your due (guide off) to get on the board.':'Sign in (👤 ACCOUNT) and hold your due to get on the board.')+'</div>'; return; }
+  document.getElementById('lbBody').innerHTML=rows.map((r,i)=>{ const me=AUTH.user&&r.profile_id===AUTH.user.id;
+    return '<div class="lbRow'+(me?' me':'')+'"><span>'+(i+1)+'. '+((r.name||'Firefighter'))+'</span><span>'+r.held_runs+' held · '+mmss(r.best_ms)+'</span></div>'; }).join('');
+  if(!AUTH.user) document.getElementById('lbBody').innerHTML+='<div class="lbRow">🔒 Sign in to get on the board.</div>'; }
 async function openLeaderboard(id){ id=id||DRIVE.stationId; const el=document.getElementById('lbCard'); if(!el||!id) return;
   document.getElementById('lbHead').textContent='🏁 ENGINE '+engNum(id)+' — FASTEST';
   document.getElementById('lbBody').innerHTML='<div class="lbRow">Loading…</div>';
@@ -3427,6 +3426,9 @@ document.getElementById('authNameSave').addEventListener('click',async ()=>{ con
   document.getElementById('authMsg').textContent='Saving…'; const ok=await setDisplayName(nm);
   document.getElementById('authMsg').textContent=ok?('✅ You\'ll show as '+nm+' on the leaderboard.'):'Could not save the name — try again.'; });
 document.getElementById('hcLb').addEventListener('click',e=>{ e.preventDefault(); if(hcStation) openLeaderboard(hcStation.id); });
+document.getElementById('hcZone').addEventListener('click',e=>{ e.preventDefault(); if(!hcStation) return;   // 🗺️ this engine's first-due zone
+  BOUNDARY_UI.engine=hcStation.id; const sel=document.getElementById('boundaryEngine'); if(sel&&[...sel.options].some(o=>o.value===hcStation.id)) sel.value=hcStation.id;
+  drawBoundaryOverview(); boundaryOverlay.classList.add('show'); boundaryOverlay.setAttribute('aria-hidden','false'); });
 document.getElementById('lbClose').addEventListener('click',()=>{ const el=document.getElementById('lbCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authSend').addEventListener('click',async ()=>{ const em=(document.getElementById('authEmail').value||'').trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ document.getElementById('authMsg').textContent='Enter a valid email address.'; return; }
