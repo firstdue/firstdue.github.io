@@ -593,7 +593,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3363,8 +3363,11 @@ function playerAddHydrant(){ if(!state.running||DRIVE.going) return;
   PROFILE.hyd.push({ lat:+ll.lat.toFixed(6), lon:+ll.lon.toFixed(6), x:hx, z:hz, src:2, ts:Date.now(), build:BUILD });
   PROFILE.city.hydCount=PROFILE.hyd.length;
   if(PROFILE.hyd.length>=5&&!PROFILE.city.badges.includes('scout')){ PROFILE.city.badges.push('scout'); popup('🎖 HYDRANT SCOUT','green'); }
-  saveProfile(); popup('🧯 HYDRANT MARKED · '+streetName(hx,hz),'green');
-  radio('🧯 Hydrant logged at '+streetName(hx,hz)+' — player-submitted, flagged for map review. Copy it from Settings → CAREER to send back.'); }
+  saveProfile();
+  if(AUTH.user){ try{ sbFetch('/rest/v1/hydrant_submission',{ method:'POST', headers:{ 'Prefer':'return=minimal' },   // 🧯 auto-upload to the dev's Supabase — no copy/paste needed
+    body:JSON.stringify([{ profile_id:AUTH.user.id, lat:+ll.lat.toFixed(6), lon:+ll.lon.toFixed(6), world_x:hx, world_z:hz, game_build:BUILD }]) }); }catch(e){} }
+  popup('🧯 HYDRANT MARKED · '+streetName(hx,hz),'green');
+  radio('🧯 Hydrant logged at '+streetName(hx,hz)+'. '+(AUTH.user?'Sent for review — thanks!':'Sign in (👤 ACCOUNT) so it uploads automatically, or copy it from CAREER to send back.')); }
 document.getElementById('btnHyd').addEventListener('click',e=>{ e.preventDefault(); playerAddHydrant(); });
 document.getElementById('btnHydCopy').addEventListener('click',()=>{ const t=document.getElementById('pcExport'); if(!t.value) return; t.select();
   try{ navigator.clipboard.writeText(t.value).then(()=>{}).catch(()=>{}); }catch(e){} try{ document.execCommand('copy'); }catch(e){} popup('📋 COPIED'); });
