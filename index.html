@@ -235,6 +235,17 @@
   #authOut { background:#7a2e2e; color:#fff; }
   #authClose { background:#343c49; color:#fff; }
   #authMsg { margin-top:10px; font-size:12px; font-weight:700; color:#8fa2bd; line-height:1.4; }
+  #authName { width:100%; margin-top:10px; padding:12px; border-radius:8px; border:1px solid #2a3444; background:#0d121b; color:#e8edf5; font-size:15px; display:none; }
+  #authNameSave { background:#2b6df6; color:#fff; display:none; }
+  #houseCard .hcLb { display:block; width:100%; margin-top:8px; background:#1a2230; color:#ffd27a; border:1px solid #33405a; border-radius:10px; padding:10px; font-weight:900; font-size:13px; cursor:pointer; pointer-events:auto; }
+  #lbCard { position:absolute; inset:0; z-index:65; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
+  #lbCard.show { display:flex; }
+  #lbCard .cc { width:min(460px,92vw); max-height:86vh; overflow:auto; background:#141a24; border:1px solid #2a3444; border-radius:14px; padding:16px; }
+  #lbHead { font-family:"Arial Black",sans-serif; font-weight:900; font-size:15px; letter-spacing:1px; color:#ffd27a; }
+  #lbBody { margin-top:10px; }
+  .lbRow { display:flex; justify-content:space-between; gap:10px; padding:8px 10px; border-radius:8px; margin:3px 0; background:#1a2230; font-size:13px; font-weight:700; color:#e8edf5; }
+  .lbRow.me { outline:1px solid #ffd27a; color:#ffd27a; }
+  #lbClose { width:100%; margin-top:12px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnProfileClose { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnHyd { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:calc(clamp(90px,20vh,150px) + 122px); z-index:13; display:none; pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#e8a020; color:#fff; font-size:23px; box-shadow:0 3px 10px rgba(0,0,0,.3); font-family:inherit; }
   #pcExport { width:100%; height:64px; margin-top:8px; display:none; background:#0d121b; color:#9fb; border:1px solid #2a3444; border-radius:8px; font-size:10px; padding:6px; }
@@ -452,8 +463,17 @@
     <div id="authMsg"></div>
     <input id="authEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
     <button class="aBtn" id="authSend">✉️ SEND MAGIC LINK</button>
+    <input id="authName" type="text" maxlength="24" placeholder="Leaderboard name" />
+    <button class="aBtn" id="authNameSave">SAVE NAME</button>
     <button class="aBtn" id="authOut">SIGN OUT</button>
     <button class="aBtn" id="authClose">CLOSE</button>
+  </div>
+</div>
+<div id="lbCard" aria-hidden="true">
+  <div class="cc">
+    <div id="lbHead">🏁 LEADERBOARD</div>
+    <div id="lbBody"></div>
+    <button id="lbClose">CLOSE</button>
   </div>
 </div>
 <div id="profileCard" aria-hidden="true">
@@ -515,6 +535,7 @@
       <div class="hcBn" id="hcBn"></div>
       <div class="hcCareer" id="hcCareer"></div>
       <button class="hcGo" id="hcGo">🚒 RIDE OUT</button>
+      <button class="hcLb" id="hcLb">🏁 LEADERBOARD</button>
     </div>
     <div id="homeListPane">
       <button id="btnBackToMap">◀ BACK TO MAP</button>
@@ -573,7 +594,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16b";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3151,7 +3172,7 @@ function saveProfile(){ try{ localStorage.setItem('pfd_profile',JSON.stringify(P
    local pfd_profile. The anon key is public by design; RLS on the server is what protects data. */
 const SB={ url:'https://evreumemwzhvdmpkcwqs.supabase.co',
   key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cmV1bWVtd3podmRtcGtjd3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1Mzc1MDksImV4cCI6MjEwMzExMzUwOX0.6AF4JkQAyZ2meB7bAY7oO5zMTMYrRF12a-AP2iUNOSY' };
-const AUTH={ session:null, user:null };
+const AUTH={ session:null, user:null, tier:'free', name:'' };
 function authHdr(withBearer){ const h={ 'apikey':SB.key, 'Content-Type':'application/json' };
   if(withBearer&&AUTH.session) h['Authorization']='Bearer '+AUTH.session.access_token; return h; }
 function authStore(o){ if(!o||!o.access_token){ AUTH.session=null; try{ localStorage.removeItem('pfd_auth'); }catch(e){} return; }
@@ -3202,6 +3223,29 @@ async function syncCareers(){ if(!AUTH.user) return;                            
   saveProfile();
   if(upserts.length) await sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify(upserts) });
   AUTH.synced=true; try{ refreshStationList(); }catch(e){} }
+async function authFetchProfile(){ if(!AUTH.user) return;                                        // pull tier + display name (own row, RLS)
+  const r=await sbFetch('/rest/v1/profile?select=display_name,tier&id=eq.'+AUTH.user.id);
+  if(r&&r.ok){ try{ const a=await r.json(); if(a&&a[0]){ AUTH.tier=a[0].tier||'free'; AUTH.name=a[0].display_name||''; } }catch(e){} } }
+async function setDisplayName(name){ if(!AUTH.user) return false;                                // via RPC (so the client can't touch tier)
+  const r=await sbFetch('/rest/v1/rpc/set_display_name',{ method:'POST', body:JSON.stringify({ new_name:name }) });
+  if(r&&r.ok){ AUTH.name=(name||'').trim(); return true; } return false; }
+function pushRun(rv){ if(!AUTH.user||!rv) return;                                                // one leaderboard row per completed run
+  const held=rv.due>0&&rv.place>0&&rv.place<=rv.due;
+  try{ sbFetch('/rest/v1/run',{ method:'POST', headers:{ 'Prefer':'return=minimal' }, body:JSON.stringify([{ profile_id:AUTH.user.id,
+    station_id:DRIVE.stationId, box:rv.box||'', time_ms:Math.round((rv.time||0)*1000), driven:Math.round(rv.driven||0), optimal:Math.round(rv.optLen||0),
+    place:rv.place||0, due:rv.due||0, held_due:held, wrong_way_ms:Math.round((rv.ww||0)*1000), difficulty:DIFF.level }]) }); }catch(e){} }
+async function fetchLeaderboard(stationId){                                                      // public view → anon key, works signed out
+  try{ const r=await fetch(SB.url+'/rest/v1/leaderboard?station_id=eq.'+stationId+'&order=best_ms.asc&limit=25',{ headers:{ apikey:SB.key } });
+    if(!r.ok) return []; return await r.json(); }catch(e){ return []; } }
+async function openLeaderboard(id){ id=id||DRIVE.stationId; const el=document.getElementById('lbCard'); if(!el||!id) return;
+  document.getElementById('lbHead').textContent='🏁 ENGINE '+engNum(id)+' — FASTEST';
+  document.getElementById('lbBody').innerHTML='<div class="lbRow">Loading…</div>';
+  el.classList.add('show'); el.setAttribute('aria-hidden','false');
+  const rows=await fetchLeaderboard(id), mmss=ms=>{ const q=Math.round(ms/1000); return Math.floor(q/60)+':'+String(q%60).padStart(2,'0'); };
+  if(!rows.length){ document.getElementById('lbBody').innerHTML='<div class="lbRow">No times yet. '+(AUTH.user?'Ride out and hold your due to set the first one.':'Sign in (Settings) and hold your due to get on the board.')+'</div>'; return; }
+  document.getElementById('lbBody').innerHTML=rows.map((r,i)=>{ const me=AUTH.user&&r.profile_id===AUTH.user.id;
+    return '<div class="lbRow'+(me?' me':'')+'"><span>'+(i+1)+'. '+((r.name||'Firefighter'))+'</span><span>'+mmss(r.best_ms)+'</span></div>'; }).join('');
+  if(!AUTH.user) document.getElementById('lbBody').innerHTML+='<div class="lbRow">🔒 Sign in to get your own time on the board.</div>'; }
 function pushCareer(id){ if(!AUTH.user) return; const e=PROFILE.engines[id]; if(!e) return;      // fire-and-forget incremental push after a run
   try{ sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([careerRow(id,e)]) }); }catch(e){} }
 function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
@@ -3217,12 +3261,14 @@ async function authInit(){                                                    //
   if(!AUTH.session){ try{ const st=JSON.parse(localStorage.getItem('pfd_auth')); if(st&&st.access_token) AUTH.session=st; }catch(e){} }
   if(AUTH.session){ await authFetchUser(); }
   authUpdateUI();
-  if(AUTH.user){ syncCareers(); }                                                               // careers follow you: pull from the account, merge, push back
+  if(AUTH.user){ await authFetchProfile(); syncCareers(); }                                      // careers follow you: pull from the account, merge, push back
   if(fromHash&&AUTH.user) popup('👤 Signed in as '+AUTH.user.email+' · careers synced','green'); }
 function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) return;
   document.getElementById('authMsg').textContent=AUTH.user
     ? ('Signed in as '+AUTH.user.email+'. Your careers sync to this account across devices. Free play needs no account.')
     : 'Sign in to save your careers across devices and join the leaderboard. Enter your email and we\'ll send a one-tap link — no password.';
+  { const ni=document.getElementById('authName'), nb=document.getElementById('authNameSave'), on=!!AUTH.user;
+    if(ni){ ni.style.display=on?'block':'none'; ni.value=AUTH.name||''; } if(nb) nb.style.display=on?'block':'none'; }
   authUpdateUI(); el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 function profEng(id){ id=id||DRIVE.stationId; if(!id) return null; let e=PROFILE.engines[id];
   if(!e) e=PROFILE.engines[id]={ lv:PROFILE.legacyLv, lastLv:PROFILE.legacyLv,                          // unlocked max / last-ridden
@@ -3254,7 +3300,7 @@ function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                
   { const c=PROFILE.city;                                                                               // citywide
     if(Object.values(PROFILE.engines).filter(x=>x.runs>0).length>=5) award(c.badges,'traveled',earned);
     let tot=0; for(const k in PROFILE.engines) tot+=PROFILE.engines[k].saves; if(tot>=100) award(c.badges,'century',earned); }
-  saveProfile(); if(AUTH.user) pushCareer(DRIVE.stationId); return earned; }
+  saveProfile(); if(AUTH.user){ pushCareer(DRIVE.stationId); if(ok&&rv) pushRun(rv); } return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
   const cur=(DRIVE.stationId&&PROFILE.engines[DRIVE.stationId])?DRIVE.stationId:null, rows=[];
   const fmt=(id,e)=>{ const nxt=e.lv<3?(Math.min(e.held[e.lv]||0,HELD_TO_UNLOCK)+'/'+HELD_TO_UNLOCK+' to '+DIFF.names[e.lv+1]):'MAXED';
@@ -3276,7 +3322,13 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('btnAuth').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openAuthCard(); });
 document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
-document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); document.getElementById('authMsg').textContent='Signed out.'; });
+document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
+document.getElementById('authNameSave').addEventListener('click',async ()=>{ const nm=(document.getElementById('authName').value||'').trim();
+  if(nm.length<2){ document.getElementById('authMsg').textContent='Name needs 2+ characters.'; return; }
+  document.getElementById('authMsg').textContent='Saving…'; const ok=await setDisplayName(nm);
+  document.getElementById('authMsg').textContent=ok?('✅ You\'ll show as '+nm+' on the leaderboard.'):'Could not save the name — try again.'; });
+document.getElementById('hcLb').addEventListener('click',e=>{ e.preventDefault(); if(hcStation) openLeaderboard(hcStation.id); });
+document.getElementById('lbClose').addEventListener('click',()=>{ const el=document.getElementById('lbCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authSend').addEventListener('click',async ()=>{ const em=(document.getElementById('authEmail').value||'').trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ document.getElementById('authMsg').textContent='Enter a valid email address.'; return; }
   document.getElementById('authMsg').textContent='Sending…'; const ok=await authSendLink(em);
@@ -3863,7 +3915,8 @@ function homeMapTap(clientX,clientY){
 }
 function hideHouseCard(){ document.getElementById('houseCard').classList.remove('up');
   document.getElementById('homeMapWrap').classList.remove('picking'); }
-function showHouseCard(st){
+let hcStation=null;
+function showHouseCard(st){ hcStation=st;
   document.getElementById('hcName').textContent=st.name;
   document.getElementById('hcAddr').textContent=st.address;
   document.getElementById('hcBn').textContent=ordinalBn(st.bn)+' BATTALION · DIVISION '+st.div;
