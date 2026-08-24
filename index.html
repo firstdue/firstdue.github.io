@@ -225,6 +225,16 @@
   .pcRow { padding:7px 8px; border-radius:8px; margin:4px 0; background:#1a2230; }
   .pcRow.cur { outline:1px solid #ffd27a; }
   .pcBadges { color:#ffd27a; font-size:11px; font-weight:800; margin-top:2px; }
+  #btnAuth { grid-column:1/-1; }
+  #authCard { position:absolute; inset:0; z-index:64; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
+  #authCard.show { display:flex; }
+  #authCard .cc { width:min(440px,92vw); background:#141a24; border:1px solid #2a3444; border-radius:14px; padding:16px; }
+  #authCard input { width:100%; margin-top:10px; padding:12px; border-radius:8px; border:1px solid #2a3444; background:#0d121b; color:#e8edf5; font-size:15px; }
+  #authCard .aBtn { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-weight:900; pointer-events:auto; }
+  #authSend { background:#2b6df6; color:#fff; }
+  #authOut { background:#7a2e2e; color:#fff; }
+  #authClose { background:#343c49; color:#fff; }
+  #authMsg { margin-top:10px; font-size:12px; font-weight:700; color:#8fa2bd; line-height:1.4; }
   #btnProfileClose { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnHyd { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:calc(clamp(90px,20vh,150px) + 122px); z-index:13; display:none; pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#e8a020; color:#fff; font-size:23px; box-shadow:0 3px 10px rgba(0,0,0,.3); font-family:inherit; }
   #pcExport { width:100%; height:64px; margin-top:8px; display:none; background:#0d121b; color:#9fb; border:1px solid #2a3444; border-radius:8px; font-size:10px; padding:6px; }
@@ -405,6 +415,7 @@
   <button class="abtn" id="btnDrill">🎓 KNOW YOUR LOCAL</button>
   <button class="abtn" id="btnDiff">🎯 FIREFIGHTER</button>
   <button class="abtn" id="btnProfile">🧑‍🚒 CAREER</button>
+  <button class="abtn" id="btnAuth">👤 SIGN IN</button>
   <button class="abtn" id="btnRerun">🔁 RESTART RUN</button>
   <button class="abtn" id="btnRestart">↺ RESTART</button>
   <button class="abtn" id="btnMute">🔊 SOUND</button>
@@ -433,6 +444,16 @@
     <div class="boundaryNote">This is what you traced. FINALIZE saves it as this engine's boundary (turns solid green) and keeps it on this device. Copy the coordinates to send back so it can be baked into the game permanently.</div>
     <textarea id="drawExport" readonly></textarea>
     <div class="drawReviewBtns"><button id="btnDrawKeep">↩ KEEP EDITING</button><button id="btnDrawCopy">📋 COPY COORDS</button><button id="btnDrawFinalize">✅ FINALIZE</button></div>
+  </div>
+</div>
+<div id="authCard" aria-hidden="true">
+  <div class="cc">
+    <div class="ccHead">👤 ACCOUNT</div>
+    <div id="authMsg"></div>
+    <input id="authEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
+    <button class="aBtn" id="authSend">✉️ SEND MAGIC LINK</button>
+    <button class="aBtn" id="authOut">SIGN OUT</button>
+    <button class="aBtn" id="authClose">CLOSE</button>
   </div>
 </div>
 <div id="profileCard" aria-hidden="true">
@@ -552,7 +573,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v15z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16a";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3125,6 +3146,52 @@ const PROFILE=(function(){ let p=null; try{ p=JSON.parse(localStorage.getItem('p
     p={ v:PROFILE_V, legacyLv:legacy, engines:{}, city:{badges:[],hydCount:0}, hyd:[] }; }               // fresh careers start at ROOKIE; existing players grandfathered at their pfd_diff level
   return p; })();
 function saveProfile(){ try{ localStorage.setItem('pfd_profile',JSON.stringify(PROFILE)); }catch(e){} }
+/* 👤 ACCOUNTS — Supabase magic-link auth (ACCOUNTS-PLAN.md phase 1). Raw REST via fetch, no library,
+   so the single-file/offline rule holds: no session or no network → the game runs exactly as before on
+   local pfd_profile. The anon key is public by design; RLS on the server is what protects data. */
+const SB={ url:'https://evreumemwzhvdmpkcwqs.supabase.co',
+  key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cmV1bWVtd3podmRtcGtjd3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1Mzc1MDksImV4cCI6MjEwMzExMzUwOX0.6AF4JkQAyZ2meB7bAY7oO5zMTMYrRF12a-AP2iUNOSY' };
+const AUTH={ session:null, user:null };
+function authHdr(withBearer){ const h={ 'apikey':SB.key, 'Content-Type':'application/json' };
+  if(withBearer&&AUTH.session) h['Authorization']='Bearer '+AUTH.session.access_token; return h; }
+function authStore(o){ if(!o||!o.access_token){ AUTH.session=null; try{ localStorage.removeItem('pfd_auth'); }catch(e){} return; }
+  AUTH.session={ access_token:o.access_token, refresh_token:o.refresh_token,
+    expires_at:Date.now()+(+o.expires_in||3600)*1000 };
+  try{ localStorage.setItem('pfd_auth',JSON.stringify(AUTH.session)); }catch(e){} }
+async function authRefresh(){ if(!AUTH.session||!AUTH.session.refresh_token) return false;
+  try{ const r=await fetch(SB.url+'/auth/v1/token?grant_type=refresh_token',{ method:'POST', headers:authHdr(false),
+      body:JSON.stringify({ refresh_token:AUTH.session.refresh_token }) });
+    if(!r.ok){ authStore(null); return false; } authStore(await r.json()); return true; }catch(e){ return false; } }
+async function authFetchUser(){ if(!AUTH.session) return null;
+  if(Date.now()>AUTH.session.expires_at-60000){ if(!await authRefresh()) return null; }
+  try{ let r=await fetch(SB.url+'/auth/v1/user',{ headers:authHdr(true) });
+    if(r.status===401||r.status===403){ if(await authRefresh()){ r=await fetch(SB.url+'/auth/v1/user',{ headers:authHdr(true) }); }
+      else { authStore(null); AUTH.user=null; return null; } }              // auth failed and refresh couldn't recover → sign out (self-heals a corrupt token)
+    if(!r.ok) return null;                                                   // transient 5xx/network → keep the session, retry later
+    AUTH.user=await r.json(); return AUTH.user; }catch(e){ return null; } }
+async function authSendLink(email){ const redirect=location.origin+location.pathname;   // Supabase must allowlist this in Auth → URL Configuration
+  const r=await fetch(SB.url+'/auth/v1/otp?redirect_to='+encodeURIComponent(redirect),{ method:'POST', headers:authHdr(false),
+    body:JSON.stringify({ email, create_user:true }) });
+  return r.ok; }
+function authSignOut(){ if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
+  authStore(null); AUTH.user=null; authUpdateUI(); }
+function authUpdateUI(){ const b=document.getElementById('btnAuth'); if(b) b.textContent=AUTH.user?('👤 '+(AUTH.user.email||'ACCOUNT')):'👤 SIGN IN';
+  const out=document.getElementById('authOut'), em=document.getElementById('authEmail'), snd=document.getElementById('authSend');
+  const on=!!AUTH.user; if(out) out.style.display=on?'block':'none'; if(em) em.style.display=on?'none':'block'; if(snd) snd.style.display=on?'none':'block'; }
+async function authInit(){                                                    // parse a magic-link redirect, else restore a stored session
+  let fromHash=false;
+  if(location.hash&&location.hash.indexOf('access_token=')>=0){ const q=new URLSearchParams(location.hash.slice(1));
+    if(q.get('access_token')){ authStore({ access_token:q.get('access_token'), refresh_token:q.get('refresh_token'), expires_in:q.get('expires_in') }); fromHash=true;
+      try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; } } }
+  if(!AUTH.session){ try{ const st=JSON.parse(localStorage.getItem('pfd_auth')); if(st&&st.access_token) AUTH.session=st; }catch(e){} }
+  if(AUTH.session){ await authFetchUser(); }
+  authUpdateUI();
+  if(fromHash&&AUTH.user) popup('👤 Signed in as '+AUTH.user.email,'green'); }
+function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) return;
+  document.getElementById('authMsg').textContent=AUTH.user
+    ? ('Signed in as '+AUTH.user.email+'. Your careers will sync to this account (coming soon). Free play needs no account.')
+    : 'Sign in to save your careers across devices and join the leaderboard. Enter your email and we\'ll send a one-tap link — no password.';
+  authUpdateUI(); el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 function profEng(id){ id=id||DRIVE.stationId; if(!id) return null; let e=PROFILE.engines[id];
   if(!e) e=PROFILE.engines[id]={ lv:PROFILE.legacyLv, lastLv:PROFILE.legacyLv,                          // unlocked max / last-ridden
        held:[0,0,0,0], saves:0, runs:0, fails:0, bestT:0, badges:[], log:[] };
@@ -3175,6 +3242,14 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       tx.style.display=n?'block':'none'; cp.style.display=n?'block':'none'; } }
   el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
+document.getElementById('btnAuth').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openAuthCard(); });
+document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
+document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); document.getElementById('authMsg').textContent='Signed out.'; });
+document.getElementById('authSend').addEventListener('click',async ()=>{ const em=(document.getElementById('authEmail').value||'').trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ document.getElementById('authMsg').textContent='Enter a valid email address.'; return; }
+  document.getElementById('authMsg').textContent='Sending…'; const ok=await authSendLink(em);
+  document.getElementById('authMsg').textContent=ok?('✉️ Link sent to '+em+'. Open it on this device to finish signing in.'):'Could not send — check your connection and try again.'; });
+authInit();
 (function replayPlayerHydrants(){ for(const h of PROFILE.hyd){ if(h&&typeof h.x==='number') addHydrant(h.x,h.z,2); } })();   // stored coords were curb-snapped at add time; runs after snapHydrants so official points untouched
 function playerAddHydrant(){ if(!state.running||DRIVE.going) return;
   let best=null,bd=1e18; for(const sg of segNear(truck.x,truck.z)){ const c=closestSeg(truck.x,truck.z,sg); if(c.d<bd){bd=c.d;best={c,sg};} }
