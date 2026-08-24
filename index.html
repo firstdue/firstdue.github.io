@@ -6,6 +6,7 @@
 <title>Philly Fire Dispatch · East Falls & Manayunk 🚒</title>
 <!-- PWA / Add to Home Screen ("Local"). Icon + manifest files live beside index.html on the host (Netlify); they 404 harmlessly on the single-file artifact. -->
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#1a1e24">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -206,23 +207,49 @@
   #pathCard.show { display:flex; }
   #pathCard .cc { width:min(520px,94vw); max-height:90vh; overflow:auto; background:linear-gradient(180deg,#131f31,#0f1a2b); border:1px solid #26364f; border-radius:14px; padding:16px 16px 14px; }
   #pathCard .ccHead { font-family:"Arial Black",sans-serif; font-weight:900; letter-spacing:1px; font-size:17px; color:#ffd583; }
-  .ppTag { font-size:11px; font-weight:900; letter-spacing:.14em; color:#f4b950; text-transform:uppercase; margin-top:2px; }
-  .ppSec { display:flex; align-items:center; gap:9px; font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; color:#f4b950; margin:15px 2px 8px; }
-  .ppSec::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,#26364f,transparent); }
-  .ppSec.city { color:#c69bf0; } .ppSec.city::after { background:linear-gradient(90deg,rgba(198,155,240,.4),transparent); }
-  .ppNote { font-size:12.5px; color:#95a4bd; margin:0 2px 10px; line-height:1.4; }
-  .ppRank { position:relative; border:1px solid #26364f; border-radius:11px; padding:9px 12px 9px 15px; margin:0 0 8px; background:#182642; overflow:hidden; }
-  .ppRank::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--c); }
-  .ppRank::after { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:repeating-linear-gradient(-52deg,rgba(255,255,255,.34) 0 3px,transparent 3px 8px); mix-blend-mode:overlay; }
-  .ppR-h { display:flex; align-items:center; gap:8px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:900; text-transform:uppercase; letter-spacing:.5px; font-size:19px; color:var(--c); }
-  .ppR-h .rig { margin-left:auto; font-size:20px; }
-  .ppR-h .lk { margin-left:auto; font-size:14px; opacity:.7; }
-  .ppR-u { font-size:12px; color:#c7d2e4; margin:2px 0 5px; } .ppR-u b { color:#fff; }
-  .ppR-p { font-size:12px; color:#95a4bd; } .ppR-p .no { color:#e5484d; font-weight:700; }
-  .ppBadge { font-size:12.5px; color:#95a4bd; padding:6px 2px; border-bottom:1px solid #1a2740; line-height:1.35; }
-  .ppBadge:last-child { border-bottom:0; } .ppBadge b { color:#e9eef7; font-weight:700; }
-  .ppRule { display:flex; gap:8px; flex-wrap:wrap; margin:2px 2px 0; }
-  .ppRule span { font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; color:#37c274; background:rgba(55,194,116,.12); border:1px solid rgba(55,194,116,.3); border-radius:999px; padding:4px 11px; }
+  #pathCard .cpHero{display:flex;align-items:center;gap:14px;margin-bottom:4px}
+  #pathCard .cpEmblem{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 30%,#24345a,#0e1929 74%);border:2px solid rgba(244,185,80,.55);box-shadow:0 0 0 5px rgba(244,185,80,.07)}
+  #pathCard .cpEmblem svg{width:60%;height:60%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+  #pathCard .cpTitle{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:800;text-transform:uppercase;font-size:32px;line-height:.9;letter-spacing:.5px;color:#fff}
+  #pathCard .cpTag{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:#f4b950;font-size:12px;margin-top:3px}
+  #pathCard .cpSec{display:flex;align-items:center;gap:9px;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.16em;font-size:13px;color:#f4b950;margin:16px 2px 9px}
+  #pathCard .cpSec .tag{color:#6f809b;letter-spacing:.14em;font-size:11px}
+  #pathCard .cpSec::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#26364f,transparent)}
+  #pathCard .cpSec.city{color:#c69bf0}
+  #pathCard .cpSec.city::after{background:linear-gradient(90deg,rgba(198,155,240,.4),transparent)}
+  #pathCard .cpNote{font-size:12.5px;color:#95a4bd;margin:0 2px 12px;line-height:1.42}
+  #pathCard .cpNote b{color:#fff}
+  #pathCard .cpStep{display:grid;grid-template-columns:38px 1fr;column-gap:12px}
+  #pathCard .cpMark{position:relative;display:flex;justify-content:center}
+  #pathCard .cpMark::before{content:"";position:absolute;left:50%;transform:translateX(-50%);top:38px;bottom:-14px;width:3px;border-radius:3px;background:var(--seg,#2b3b57)}
+  #pathCard .cpStep:last-of-type .cpMark::before{display:none}
+  #pathCard .cpDot{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;z-index:1;font-size:15px;background:#182642;border:2px solid #2b3b57;box-shadow:inset 0 2px 5px rgba(0,0,0,.4)}
+  #pathCard .cpDot.start{background:radial-gradient(circle at 40% 34%,#7bbaff,#4d9fff);border-color:#8ec4ff;box-shadow:0 0 0 4px rgba(77,159,255,.14)}
+  #pathCard .cpDot.done{background:radial-gradient(circle at 40% 34%,#63d99b,#37c274);border-color:#7ee4ab;box-shadow:0 0 0 4px rgba(55,194,116,.15)}
+  #pathCard .cpDot.done::after{content:"¹3";color:#06210f;font-size:18px;font-weight:900}
+  #pathCard .cpDot.lock{color:#6f809b}
+  #pathCard .cpRank{position:relative;margin-bottom:12px;border-radius:12px;background:#182642;border:1px solid #26364f;padding:11px 13px 11px 16px;overflow:hidden}
+  #pathCard .cpRank::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
+  #pathCard .cpRank::after{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:repeating-linear-gradient(-52deg,rgba(255,255,255,.34) 0 3px,transparent 3px 8px);mix-blend-mode:overlay}
+  #pathCard .cpRh{display:flex;align-items:center;gap:9px}
+  #pathCard .cpRh h3{font-family:"Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;margin:0;font-weight:800;font-size:23px;letter-spacing:.5px;color:var(--c);flex:1;line-height:1}
+  #pathCard .cpRig{font-size:25px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+  #pathCard .cpU{font-size:12px;color:#c7d2e4;margin:3px 0 8px}
+  #pathCard .cpU b{color:#fff}
+  #pathCard .cpPerks{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+  #pathCard .cpPerks li{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#e9eef7;background:rgba(255,255,255,.05);border:1px solid #1e2c43;padding:4px 9px 4px 7px;border-radius:999px}
+  #pathCard .cpPerks li.off{color:#93a2ba;background:rgba(229,72,77,.08);border-color:rgba(229,72,77,.28)}
+  #pathCard .cpPerks li.off .pi{color:#e5484d}
+  #pathCard .cpBadgeRow{display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:center;background:#182642;border:1px solid #26364f;border-radius:12px;padding:9px 12px;margin-bottom:8px}
+  #pathCard .cpMedal{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:19px;background:radial-gradient(circle at 38% 30%,rgba(255,255,255,.14),rgba(0,0,0,.25));border:2px solid var(--m,#f4b950);box-shadow:inset 0 1px 4px rgba(0,0,0,.4)}
+  #pathCard .cpBadgeRow h4{margin:0;font-family:"Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.4px;font-weight:700;font-size:15px;color:#e9eef7;line-height:1.05}
+  #pathCard .cpBadgeRow p{margin:2px 0 0;font-size:12px;color:#95a4bd;line-height:1.3}
+  #pathCard .cpFoot{background:linear-gradient(180deg,#1a2740,#111c2f);border:1px solid rgba(244,185,80,.3);border-radius:12px;padding:14px 15px;margin-top:8px}
+  #pathCard .cpFoot h4{font-family:"Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;letter-spacing:.4px;font-weight:800;font-size:17px;margin:0 0 10px;color:#ffd583;display:flex;align-items:center;gap:8px}
+  #pathCard .cpRule{display:flex;flex-direction:column;gap:8px}
+  #pathCard .cpRule .li{display:flex;align-items:center;gap:9px;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:16px}
+  #pathCard .cpRule .chk{flex:none;width:22px;height:22px;border-radius:50%;background:#37c274;color:#06210f;display:grid;place-items:center;font-size:13px;font-weight:800}
+  #pathCard .cpFine{margin:11px 0 0;font-size:12px;color:#6f809b;line-height:1.4}
   #btnPathClose { width:100%; margin-top:14px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnPath { width:100%; margin-top:8px; border:none; border-radius:10px; padding:11px; font-weight:900; background:linear-gradient(180deg,#f4b950,#d0942a); color:#241605; pointer-events:auto; }
   #coachCard { position:absolute; inset:0; z-index:62; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
@@ -511,35 +538,43 @@
 </div>
 <div id="pathCard" aria-hidden="true">
   <div class="cc">
-    <div class="ccHead">🎖️ CAREER PATH</div>
-    <div class="ppTag">Your journey · your legacy</div>
+    <div class="cpHero"><div class="cpEmblem"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="cpBrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe3ab"/><stop offset=".55" stop-color="#f4b950"/><stop offset="1" stop-color="#bd7d1e"/></linearGradient></defs><g fill="url(#cpBrass)" stroke="#7d5314" stroke-width="1.4" stroke-linejoin="round"><path d="M50 50 L34 6 L50 21 L66 6 Z"/><path d="M50 50 L34 94 L50 79 L66 94 Z"/><path d="M50 50 L6 34 L21 50 L6 66 Z"/><path d="M50 50 L94 34 L79 50 L94 66 Z"/></g><circle cx="50" cy="50" r="8.5" fill="#0e1929" stroke="url(#cpBrass)" stroke-width="2.6"/></svg></div>
+      <div><div class="cpTitle">Career Path</div><div class="cpTag">Your journey · your legacy</div></div></div>
 
-    <div class="ppSec">Rank Ladder · per engine</div>
-    <div class="ppNote">Every firehouse is its own career — pick a new engine, start over. <b style="color:#fff">Hold your due on 5 boxes</b> at your rank to unlock the next.</div>
+    <div class="cpSec">Rank Ladder <span class="tag">Per engine</span></div>
+    <div class="cpNote">Every firehouse is its own career — pick a new engine, start over. <b>Hold your due on 5 boxes</b> at your rank to unlock the next.</div>
 
-    <div class="ppRank" style="--c:#4d9fff"><div class="ppR-h">Rookie<span class="rig">🚒</span></div><div class="ppR-u">Where <b>every engine</b> starts.</div><div class="ppR-p">Guide line · U-turn · rivals run slower</div></div>
-    <div class="ppRank" style="--c:#37c274"><div class="ppR-h">Firefighter<span class="rig">🚗</span></div><div class="ppR-u">Hold your due <b>5×</b> as Rookie.</div><div class="ppR-p">Guide line · U-turn · rivals race for real</div></div>
-    <div class="ppRank" style="--c:#f2913a"><div class="ppR-h">Veteran<span class="lk">🔒 locked</span></div><div class="ppR-u">Hold your due <b>5×</b> as Firefighter.</div><div class="ppR-p"><span class="no">✕ No guide line</span> · U-turn · faster rivals</div></div>
-    <div class="ppRank" style="--c:#e5484d"><div class="ppR-h">Chief<span class="lk">🔒 locked</span></div><div class="ppR-u">Hold your due <b>5×</b> as Veteran.</div><div class="ppR-p"><span class="no">✕ No guide · ✕ No U-turn</span> · fastest rivals</div></div>
-    <div class="ppNote">Each rank strips a crutch, so the skill is real by Chief. You <b style="color:#ffd583">choose to ride up</b> once it's unlocked — it never forces you.</div>
+    <div class="cpStep" style="--seg:#4d9fff"><div class="cpMark"><div class="cpDot start"></div></div>
+      <div class="cpRank" style="--c:#4d9fff"><div class="cpRh"><h3>Rookie</h3><span class="cpRig">🚒</span></div><div class="cpU">Where <b>every engine</b> starts.</div><ul class="cpPerks"><li><span class="pi">🛞</span>Training wheels</li><li><span class="pi">🔵</span>Guide line</li><li><span class="pi">↩️</span>U-turn</li><li><span class="pi">🐢</span>Slower rivals</li></ul></div></div>
 
-    <div class="ppSec">Badges · per firehouse</div>
-    <div class="ppBadge"><b>⭐ First In</b> — take a box first-in when you're 1st due.</div>
-    <div class="ppBadge"><b>📖 Textbook</b> — a run the senior man has zero complaints about.</div>
-    <div class="ppBadge"><b>🛡️ Due Diligence</b> — hold your due 5 runs in a row.</div>
-    <div class="ppBadge"><b>🛣️ Right Side of the Street</b> — 10 runs straight, no wrong-way driving.</div>
-    <div class="ppBadge"><b>🐴 Workhorse</b> — 25 runs on that engine.</div>
-    <div class="ppBadge"><b>⏫ Made Firefighter / Veteran / Chief</b> — reach each rank.</div>
+    <div class="cpStep" style="--seg:#37c274"><div class="cpMark"><div class="cpDot done"></div></div>
+      <div class="cpRank" style="--c:#37c274"><div class="cpRh"><h3>Firefighter</h3><span class="cpRig">🚗</span></div><div class="cpU">Hold your due <b>5×</b> as Rookie.</div><ul class="cpPerks"><li><span class="pi">🛞</span>Training wheels</li><li><span class="pi">🔵</span>Guide line</li><li><span class="pi">↩️</span>U-turn</li><li><span class="pi">🏁</span>Real race</li></ul></div></div>
 
-    <div class="ppSec city">Citywide · across all engines</div>
-    <div class="ppBadge"><b>🌐 Well Traveled</b> — run 5 different firehouses.</div>
-    <div class="ppBadge"><b>💯 Century Club</b> — 100 total saves.</div>
-    <div class="ppBadge"><b>🎓 Know Your Local</b> — find 10 landmarks in one drill.</div>
-    <div class="ppBadge"><b>🧯 Hydrant Scout</b> — mark 5 hydrants.</div>
+    <div class="cpStep"><div class="cpMark"><div class="cpDot lock">🔒</div></div>
+      <div class="cpRank" style="--c:#f2913a"><div class="cpRh"><h3>Veteran</h3><span class="cpRig">🚑</span></div><div class="cpU">Hold your due <b>5×</b> as Firefighter.</div><ul class="cpPerks"><li class="off"><span class="pi">✕</span>No guide</li><li><span class="pi">↩️</span>U-turn</li><li><span class="pi">⚡</span>Faster rivals</li></ul></div></div>
 
-    <div class="ppSec">Leaderboard rule</div>
-    <div class="ppRule"><span>✓ Guide off</span><span>✓ Held due</span></div>
-    <div class="ppNote" style="margin-top:8px">Only runs that meet both post to the board — every ranked time is earned on the harder tracks.</div>
+    <div class="cpStep"><div class="cpMark"><div class="cpDot lock">🔒</div></div>
+      <div class="cpRank" style="--c:#e5484d"><div class="cpRh"><h3>Chief</h3><span class="cpRig">🚙</span></div><div class="cpU">Hold your due <b>5×</b> as Veteran.</div><ul class="cpPerks"><li class="off"><span class="pi">✕</span>No guide</li><li class="off"><span class="pi">✕</span>No U-turn</li><li><span class="pi">🔥</span>Fastest rivals</li></ul></div></div>
+
+    <div class="cpNote">Each rank strips a crutch, so the skill is real by <b>Chief</b> — no route line, no bailout, fastest company on your heels. You choose to ride up once it's unlocked; it never forces you.</div>
+
+    <div class="cpSec">Badges <span class="tag">Per firehouse</span></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#f4b950">⭐</div><div><h4>First In</h4><p>Take a box first-in when you're 1st due.</p></div></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#8fb4ff">📖</div><div><h4>Textbook</h4><p>A run the senior man has zero complaints about.</p></div></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#37c274">🛡️</div><div><h4>Due Diligence</h4><p>Hold your due 5 runs in a row.</p></div></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#dfe6f2">🛣️</div><div><h4>Right Side of the Street</h4><p>10 runs straight with no wrong-way driving.</p></div></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#f2913a">🐴</div><div><h4>Workhorse</h4><p>25 runs on that engine.</p></div></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#ffd583">⏫</div><div><h4>Made Firefighter / Veteran / Chief</h4><p>Reach each rank.</p></div></div>
+
+    <div class="cpSec city">Citywide <span class="tag">All engines</span></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#4d9fff">🌐</div><div><h4>Well Traveled</h4><p>Run 5 different firehouses.</p></div></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#f4b950">💯</div><div><h4>Century Club</h4><p>100 total saves.</p></div></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#c69bf0">🎓</div><div><h4>Know Your Local</h4><p>Find 10 landmarks in one drill.</p></div></div>
+    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#e5484d">🧯</div><div><h4>Hydrant Scout</h4><p>Mark 5 hydrants.</p></div></div>
+
+    <div class="cpFoot"><h4><span aria-hidden="true">🏆</span> Leaderboard rule</h4>
+      <div class="cpRule"><div class="li"><span class="chk">✓</span>Guide off</div><div class="li"><span class="chk">✓</span>Held due</div></div>
+      <p class="cpFine">Only runs that meet both post to the board — every ranked time is earned on the harder tracks. Your rank + badges sync to your account across devices.</p></div>
 
     <button id="btnPathClose">CLOSE</button>
   </div>
@@ -652,7 +687,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16i";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
