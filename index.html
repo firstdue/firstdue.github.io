@@ -403,6 +403,7 @@
 <div id="cornerBtns">
   <button class="abtn" id="btnBoundaryMap">🗺️ RUN MAP</button>
   <button class="abtn" id="btnSettings">⚙ SETTINGS</button>
+  <button class="abtn" id="btnAccount">👤 ACCOUNT</button>
 </div>
 <div id="trainChip">🎓 TRAINING</div>
 <div id="rivals"></div>
@@ -418,15 +419,12 @@
   <button class="abtn on" id="btnRoute">🧭 ROUTE</button>
   <button class="abtn" id="btnSiren">🚨 SIREN</button>
   <button class="abtn on" id="btnGuide">🔵 GUIDE</button>
-  <button class="abtn" id="btnBounds">🟩 BOUNDARIES</button>
   <button class="abtn on" id="btnDue">🚒 DUE: 1ST</button>
   <button class="abtn on" id="btnRivals">🚑 RIVALS</button>
   <button class="abtn" id="btnView">🧭 HEADING</button>
   <button class="abtn on" id="btnSat">🌐 LIVE MAP</button>
   <button class="abtn" id="btnDrill">🎓 KNOW YOUR LOCAL</button>
   <button class="abtn" id="btnDiff">🎯 FIREFIGHTER</button>
-  <button class="abtn" id="btnProfile">🧑‍🚒 CAREER</button>
-  <button class="abtn" id="btnAuth">👤 SIGN IN</button>
   <button class="abtn" id="btnRerun">🔁 RESTART RUN</button>
   <button class="abtn" id="btnRestart">↺ RESTART</button>
   <button class="abtn" id="btnMute">🔊 SOUND</button>
@@ -465,6 +463,7 @@
     <button class="aBtn" id="authSend">✉️ SEND MAGIC LINK</button>
     <input id="authName" type="text" maxlength="24" placeholder="Leaderboard name" />
     <button class="aBtn" id="authNameSave">SAVE NAME</button>
+    <button class="aBtn" id="authCareer" style="background:#343c49;color:#fff;">🧑‍🚒 CAREER & BADGES</button>
     <button class="aBtn" id="authOut">SIGN OUT</button>
     <button class="aBtn" id="authClose">CLOSE</button>
   </div>
@@ -594,7 +593,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1933,9 +1932,7 @@ document.getElementById('btnSat').addEventListener('click',e=>{ e.preventDefault
   MAP.live = (next==='live'); MAP.sat = (next==='sat');
   e.currentTarget.textContent = MAP.live?'🌐 LIVE MAP':(MAP.sat?'🛰️ SATELLITE':'🗺️ CLASSIC');
   e.currentTarget.classList.toggle('on', MAP.live||MAP.sat); });
-document.getElementById('btnBounds').addEventListener('click',e=>{ e.preventDefault(); MAP.bounds=!MAP.bounds; e.currentTarget.classList.toggle('on',MAP.bounds);   // BOUNDARIES = training mode: shows first-due lines AND pauses live runs
-  if(MAP.bounds){ state.target=null; state.onScene=false; state.douse=0; clearRivals(); const d=document.getElementById('douse'); if(d) d.style.display='none'; radio('🎓 TRAINING — live runs paused. Tap ✏️ DRAW to trace this engine, or turn BOUNDARIES off to take calls.'); }
-  else { MAP.free=false; MAP.userRot=0; if(DRAW.on){ closeDrawReview(); exitDraw(); } if(state.running) newDispatch(); } });
+/* BOUNDARIES retired (v16d) — real PFD first-due zones cover the whole city; the hand-tracing trainer is gone. */
 document.getElementById('btnRivals').addEventListener('click',e=>{ e.preventDefault(); RIVALS.on=!RIVALS.on; e.currentTarget.classList.toggle('on',RIVALS.on);   // 🚑 rival engines on/off
   if(RIVALS.on){ if(state.target&&state.running&&!MAP.bounds&&!DRAW.on) spawnRivals(); popup('🚑 RIVAL ENGINES ON'); } else { clearRivals(); popup('RIVAL ENGINES OFF'); } });
 const DUE_LABELS=['🚒 DUE: ALL','🚒 DUE: 1ST','🚒 DUE: 2ND','🚒 DUE: 3RD','🚒 DUE: 4TH'];
@@ -1962,7 +1959,8 @@ function rerunCurrentBox(){
 }
 document.getElementById('btnRerun').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); rerunCurrentBox(); });
 document.getElementById('btnDiff').addEventListener('click',e=>{ e.preventDefault(); setDifficulty(DIFF.level+1); });
-document.getElementById('btnProfile').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openProfileCard(); });
+document.getElementById('btnAccount').addEventListener('click',e=>{ e.preventDefault(); openAuthCard(); });
+document.getElementById('authCareer').addEventListener('click',e=>{ e.preventDefault(); const a=document.getElementById('authCard'); a.classList.remove('show'); a.setAttribute('aria-hidden','true'); openProfileCard(); });
 document.getElementById('btnDrill').addEventListener('click',e=>{ e.preventDefault(); closeSettings();
   if(DRILL.on) stopDrill(); else startDrill();
   document.getElementById('btnDrill').classList.toggle('on',DRILL.on); });
@@ -3229,6 +3227,21 @@ async function authFetchProfile(){ if(!AUTH.user) return;                       
 async function setDisplayName(name){ if(!AUTH.user) return false;                                // via RPC (so the client can't touch tier)
   const r=await sbFetch('/rest/v1/rpc/set_display_name',{ method:'POST', body:JSON.stringify({ new_name:name }) });
   if(r&&r.ok){ AUTH.name=(name||'').trim(); return true; } return false; }
+async function reportLeaderboard(stationId){ if(!AUTH.user) return;                             // after a qualifying run: did you make/climb the board, or get passed?
+  await new Promise(r=>setTimeout(r,700));                                                       // let the insert land
+  const rows=await fetchLeaderboard(stationId); if(!rows.length) return;
+  const idx=rows.findIndex(r=>r.profile_id===AUTH.user.id); if(idx<0) return; const rank=idx+1;
+  PROFILE.lbRank=PROFILE.lbRank||{}; const prev=PROFILE.lbRank[stationId];
+  PROFILE.lbRank[stationId]={ rank, ahead: idx>0?rows[idx-1].name:null }; saveProfile();
+  if(!prev){ popup('🏁 On the Engine '+engNum(stationId)+' board — #'+rank+(rank===1?' FASTEST!':''),'green'); }
+  else if(rank<prev.rank){ popup('🏁 Up to #'+rank+' out of Engine '+engNum(stationId)+(rank===1?' — FASTEST!':''),'green'); }
+  if(!AUTH.name) popup('Set a name in 👤 ACCOUNT to claim your spot','' ); }
+async function checkBeaten(stationId){ if(!AUTH.user||!stationId) return;                        // launch check on your last-played house: did someone pass you?
+  const rows=await fetchLeaderboard(stationId); if(!rows.length) return;
+  const idx=rows.findIndex(r=>r.profile_id===AUTH.user.id); if(idx<0) return; const rank=idx+1;
+  PROFILE.lbRank=PROFILE.lbRank||{}; const prev=PROFILE.lbRank[stationId];
+  if(prev && rank>prev.rank){ const by=idx>0?rows[idx-1].name:'someone'; popup('⬇️ '+by+' passed your Engine '+engNum(stationId)+' time — you\'re #'+rank+' now','red'); }
+  PROFILE.lbRank[stationId]={ rank, ahead: idx>0?rows[idx-1].name:null }; saveProfile(); }
 function pushRun(rv){ if(!AUTH.user||!rv) return;                                                // one leaderboard row per completed run
   const held=rv.due>0&&rv.place>0&&rv.place<=rv.due;
   try{ sbFetch('/rest/v1/run',{ method:'POST', headers:{ 'Prefer':'return=minimal' }, body:JSON.stringify([{ profile_id:AUTH.user.id,
@@ -3250,7 +3263,7 @@ function pushCareer(id){ if(!AUTH.user) return; const e=PROFILE.engines[id]; if(
   try{ sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([careerRow(id,e)]) }); }catch(e){} }
 function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
   authStore(null); AUTH.user=null; authUpdateUI(); }
-function authUpdateUI(){ const b=document.getElementById('btnAuth'); if(b) b.textContent=AUTH.user?('👤 '+(AUTH.user.email||'ACCOUNT')):'👤 SIGN IN';
+function authUpdateUI(){ const ab=document.getElementById('btnAccount'); if(ab) ab.classList.toggle('on',!!AUTH.user); const b=document.getElementById('btnAuth'); if(b) b.textContent=AUTH.user?('👤 '+(AUTH.user.email||'ACCOUNT')):'👤 SIGN IN';
   const out=document.getElementById('authOut'), em=document.getElementById('authEmail'), snd=document.getElementById('authSend');
   const on=!!AUTH.user; if(out) out.style.display=on?'block':'none'; if(em) em.style.display=on?'none':'block'; if(snd) snd.style.display=on?'none':'block'; }
 async function authInit(){                                                    // parse a magic-link redirect, else restore a stored session
@@ -3261,14 +3274,15 @@ async function authInit(){                                                    //
   if(!AUTH.session){ try{ const st=JSON.parse(localStorage.getItem('pfd_auth')); if(st&&st.access_token) AUTH.session=st; }catch(e){} }
   if(AUTH.session){ await authFetchUser(); }
   authUpdateUI();
-  if(AUTH.user){ await authFetchProfile(); syncCareers(); }                                      // careers follow you: pull from the account, merge, push back
+  if(AUTH.user){ await authFetchProfile(); syncCareers(); const last=PROFILE.lastPlayed; if(last) checkBeaten(last); }                                      // careers follow you: pull from the account, merge, push back
   if(fromHash&&AUTH.user) popup('👤 Signed in as '+AUTH.user.email+' · careers synced','green'); }
 function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) return;
   document.getElementById('authMsg').textContent=AUTH.user
     ? ('Signed in as '+AUTH.user.email+'. Your careers sync to this account across devices. Free play needs no account.')
     : 'Sign in to save your careers across devices and join the leaderboard. Enter your email and we\'ll send a one-tap link — no password.';
   { const ni=document.getElementById('authName'), nb=document.getElementById('authNameSave'), on=!!AUTH.user;
-    if(ni){ ni.style.display=on?'block':'none'; ni.value=AUTH.name||''; } if(nb) nb.style.display=on?'block':'none'; }
+    if(ni){ ni.style.display=on?'block':'none'; ni.value=AUTH.name||''; } if(nb) nb.style.display=on?'block':'none';
+    if(on&&!AUTH.name){ document.getElementById('authMsg').textContent='⚠️ Set a leaderboard name so your times show as YOU, not "Firefighter".'; } }
   authUpdateUI(); el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 function profEng(id){ id=id||DRIVE.stationId; if(!id) return null; let e=PROFILE.engines[id];
   if(!e) e=PROFILE.engines[id]={ lv:PROFILE.legacyLv, lastLv:PROFILE.legacyLv,                          // unlocked max / last-ridden
@@ -3300,7 +3314,10 @@ function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                
   { const c=PROFILE.city;                                                                               // citywide
     if(Object.values(PROFILE.engines).filter(x=>x.runs>0).length>=5) award(c.badges,'traveled',earned);
     let tot=0; for(const k in PROFILE.engines) tot+=PROFILE.engines[k].saves; if(tot>=100) award(c.badges,'century',earned); }
-  saveProfile(); if(AUTH.user){ pushCareer(DRIVE.stationId); if(ok&&rv) pushRun(rv); } return earned; }
+  PROFILE.lastPlayed=DRIVE.stationId; saveProfile(); if(AUTH.user){ pushCareer(DRIVE.stationId);
+    if(ok&&rv&&!COACH.usedGuide){ pushRun(rv); reportLeaderboard(DRIVE.stationId); }
+    else if(ok&&rv&&COACH.usedGuide&&(rv.due>0&&rv.place>0&&rv.place<=rv.due)) popup('📘 Guide was on — great run, but it won\'t post to the board','');
+  } return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
   const cur=(DRIVE.stationId&&PROFILE.engines[DRIVE.stationId])?DRIVE.stationId:null, rows=[];
   const fmt=(id,e)=>{ const nxt=e.lv<3?(Math.min(e.held[e.lv]||0,HELD_TO_UNLOCK)+'/'+HELD_TO_UNLOCK+' to '+DIFF.names[e.lv+1]):'MAXED';
@@ -3320,7 +3337,6 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       tx.style.display=n?'block':'none'; cp.style.display=n?'block':'none'; } }
   el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
-document.getElementById('btnAuth').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openAuthCard(); });
 document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
 document.getElementById('authNameSave').addEventListener('click',async ()=>{ const nm=(document.getElementById('authName').value||'').trim();
@@ -3475,10 +3491,11 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
    Breadcrumb of the actual drive vs the graph-optimal route, reviewed after every FIRE OUT.
    ⚠️ The coach only states MEASURED facts (lengths, wrong-way time, stopped time, due place). Never
    invented tactics — no hydrants, construction, water supply; the game doesn't model them. */
-const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0};
+const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0,usedGuide:false};
 function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0;
-  COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; COACH.trail.push([truck.x,truck.z]); }
+  COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; COACH.usedGuide=false; COACH.trail.push([truck.x,truck.z]); }
 function updateCoach(dt){ if(!state.target||!state.running||MAP.bounds||DRAW.on||DRILL.on) return;
+  if(MAP.guide) COACH.usedGuide=true;                                          // used the blue line at all → run doesn't count on the board
   if(DRIVE.wrongWay&&DRIVE.going) COACH.ww+=dt;
   if(!DRIVE.going&&!DRIVE.parked&&!state.onScene) COACH.stop+=dt;               // sat still mid-run (turnout + douse don't count)
   if(state.onScene&&!COACH.arriveT) COACH.arriveT=GT;
