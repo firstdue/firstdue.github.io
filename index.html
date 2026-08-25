@@ -43,7 +43,7 @@
     font-weight:800; color:#9fd7ff; text-shadow:0 1px 3px #000; letter-spacing:1px; }
   #saves .ver { display:block; color:#8aa0bd; font-weight:800; letter-spacing:1px; }
   /* 🚨 DUE-ORDER CHIP — how due YOUR engine is at the spot you're standing on right now */
-  #dueChip { position:absolute; z-index:15; top:calc(max(8px,env(safe-area-inset-top)) + 15px); left:max(10px,env(safe-area-inset-left));
+  #dueChip { position:absolute; z-index:15; top:calc(max(8px,env(safe-area-inset-top)) + 32px); left:max(10px,env(safe-area-inset-left));   /* clears the 2-line SAVES/BEST + version block (v16m stacked the version onto its own line) */
     display:none; align-items:center; gap:6px; padding:4px 10px 4px 7px; border-radius:999px;
     background:rgba(12,17,26,.92); border:1.5px solid currentColor; box-shadow:0 3px 12px rgba(0,0,0,.55);
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-weight:900; font-size:clamp(10px,2.4vw,12.5px);
@@ -722,7 +722,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16o";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16p";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
