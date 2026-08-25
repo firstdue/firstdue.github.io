@@ -344,6 +344,28 @@
   .lbMedal { display:flex; align-items:center; gap:7px; background:#182642; border:1px solid #26364f; border-radius:10px; padding:8px 9px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.06em; font-size:11px; color:#6f809b; }
   .lbMedal.got { color:#e9eef7; border-color:#f4b950; }
   .lbMedal span { font-size:15px; }
+  /* 🧑‍🚒 P6 career screen — per-due-position cards */
+  .pdEng { background:#131f31; border:1px solid #26364f; border-radius:14px; padding:10px 11px; margin:8px 0; }
+  .pdEng.cur { border-color:#f4b950; }
+  .pdHead { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:7px; }
+  .pdHead b { font-size:15px; }
+  .pdMy { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.12em; font-size:11px; color:#f4b950; white-space:nowrap; }
+  .pdPos { position:relative; display:grid; grid-template-columns:52px 92px 1fr 36px; gap:7px; align-items:center; background:#182642; border:1px solid #26364f; border-left:4px solid var(--c); border-radius:10px; padding:7px 9px; margin:5px 0; cursor:pointer; }
+  .pdPos.ns { opacity:.78; }
+  .pdPos.done { background:linear-gradient(90deg,#1d2942,#182642); }
+  .pdLbl { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:12px; color:#95a4bd; }
+  .pdRank { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.06em; font-size:14px; color:var(--c); white-space:nowrap; }
+  .pdPos.ns .pdRank { color:#6f809b; font-size:11.5px; }
+  .pdBar { height:7px; border-radius:4px; background:#0f1a2b; border:1px solid #26364f; overflow:hidden; display:block; }
+  .pdBar i { display:block; height:100%; border-radius:4px; background:var(--c); }
+  .pdPct { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:13px; color:#e9eef7; text-align:right; }
+  .pdSub { grid-column:1/-1; font-size:11px; color:#95a4bd; }
+  .pdReqs { display:none; grid-column:1/-1; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.05em; font-size:11.5px; color:#e9eef7; border-top:1px solid #26364f; padding-top:6px; }
+  .pdPos.open .pdReqs { display:block; }
+  .pdNext { background:#0f1a2b; border:1px dashed #f4b950; border-radius:10px; padding:8px 10px; margin:7px 0 3px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.05em; font-size:12px; color:#ffd27a; }
+  .pdNext .pdHint { display:block; color:#95a4bd; margin-top:2px; }
+  .pdStats { font-size:11px; color:#6f809b; margin-top:6px; }
+  .ccCareer { margin-top:8px; padding:8px 10px; background:#182642; border:1px solid #26364f; border-left:4px solid #f4b950; border-radius:8px; font-size:12px; font-weight:700; color:#e9eef7; line-height:1.5; }
   #lbClose { width:100%; margin-top:12px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnProfileClose { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnHyd { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:calc(clamp(90px,20vh,150px) + 122px); z-index:13; display:none; pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#e8a020; color:#fff; font-size:23px; box-shadow:0 3px 10px rgba(0,0,0,.3); font-family:inherit; }
@@ -578,21 +600,21 @@
     <div class="cpSec">Your progress <span class="tag">This device</span></div>
     <div id="pcBody"></div>
     <div class="cpSec">Rank Ladder <span class="tag">Per engine</span></div>
-    <div class="cpNote">Every firehouse is its own career — pick a new engine, start over. <b>Hold your due on 5 boxes</b> at your rank to unlock the next.</div>
+    <div class="cpNote">Every firehouse is its own career — and <b>each due position</b> (1st, 2nd, 3rd, 4th) is its own track. Master your 1st due, expand into your 2nd, learn your 3rd and 4th. Difficulty (TRAINING → EXPERT) is your own choice in Settings — it never changes your rank, and your rank never locks it.</div>
 
     <div class="cpStep" style="--seg:#4d9fff"><div class="cpMark"><div class="cpDot start"></div></div>
-      <div class="cpRank" style="--c:#4d9fff"><div class="cpRh"><h3>Rookie</h3><span class="cpRig">🚒</span></div><div class="cpU">Where <b>every engine</b> starts.</div><ul class="cpPerks"><li><span class="pi">🛞</span>Training wheels</li><li><span class="pi">🔵</span>Guide line</li><li><span class="pi">↩️</span>U-turn</li><li><span class="pi">🐢</span>Slower rivals</li></ul></div></div>
+      <div class="cpRank" style="--c:#4d9fff"><div class="cpRh"><h3>Rookie</h3><span class="cpRig">🚒</span></div><div class="cpU">Where <b>every due position</b> starts.</div><ul class="cpPerks"><li><span class="pi">📍</span>Learn your streets</li><li><span class="pi">🔔</span>Answer your boxes</li><li><span class="pi">🛡️</span>Hold your due</li></ul></div></div>
 
     <div class="cpStep" style="--seg:#37c274"><div class="cpMark"><div class="cpDot done"></div></div>
-      <div class="cpRank" style="--c:#37c274"><div class="cpRh"><h3>Firefighter</h3><span class="cpRig">🚗</span></div><div class="cpU">Hold your due <b>5×</b> as Rookie.</div><ul class="cpPerks"><li><span class="pi">🛞</span>Training wheels</li><li><span class="pi">🔵</span>Guide line</li><li><span class="pi">↩️</span>U-turn</li><li><span class="pi">🏁</span>Real race</li></ul></div></div>
+      <div class="cpRank" style="--c:#37c274"><div class="cpRh"><h3>Firefighter</h3><span class="cpRig">🚗</span></div><div class="cpU">Hold your due <b>5×</b> · learn <b>3 boxes</b>.</div><ul class="cpPerks"><li><span class="pi">🛡️</span>5 held dues</li><li><span class="pi">📦</span>3 unique boxes</li><li><span class="pi">🎓</span>TRAINING difficulty counts</li></ul></div></div>
 
     <div class="cpStep"><div class="cpMark"><div class="cpDot lock">🔒</div></div>
-      <div class="cpRank" style="--c:#f2913a"><div class="cpRh"><h3>Veteran</h3><span class="cpRig">🚑</span></div><div class="cpU">Hold your due <b>5×</b> as Firefighter.</div><ul class="cpPerks"><li class="off"><span class="pi">✕</span>No guide</li><li><span class="pi">↩️</span>U-turn</li><li><span class="pi">⚡</span>Faster rivals</li></ul></div></div>
+      <div class="cpRank" style="--c:#f2913a"><div class="cpRh"><h3>Veteran</h3><span class="cpRig">🚑</span></div><div class="cpU">Prove it at <b>real pace</b>.</div><ul class="cpPerks"><li><span class="pi">🛡️</span>10 more held</li><li><span class="pi">📦</span>7 unique boxes</li><li><span class="pi">✨</span>3 clean runs</li><li><span class="pi">⚡</span>3 on STANDARD+</li></ul></div></div>
 
     <div class="cpStep"><div class="cpMark"><div class="cpDot lock">🔒</div></div>
-      <div class="cpRank" style="--c:#e5484d"><div class="cpRh"><h3>Chief</h3><span class="cpRig">🚙</span></div><div class="cpU">Hold your due <b>5×</b> as Veteran.</div><ul class="cpPerks"><li class="off"><span class="pi">✕</span>No guide</li><li class="off"><span class="pi">✕</span>No U-turn</li><li><span class="pi">🔥</span>Fastest rivals</li></ul></div></div>
+      <div class="cpRank" style="--c:#e5484d"><div class="cpRh"><h3>Chief</h3><span class="cpRig">🚙</span></div><div class="cpU">The local is <b>yours</b>.</div><ul class="cpPerks"><li><span class="pi">🛡️</span>15 more held</li><li><span class="pi">📦</span>12 unique boxes</li><li><span class="pi">✨</span>5 clean</li><li><span class="pi">🔥</span>5 on PRO+</li><li><span class="pi">🧭</span>5 no-guide</li><li><span class="pi">🎖</span>Qualification (coming)</li></ul></div></div>
 
-    <div class="cpNote">Each rank strips a crutch, so the skill is real by <b>Chief</b> — no route line, no bailout, fastest company on your heels. You choose to ride up once it's unlocked; it never forces you.</div>
+    <div class="cpNote">By <b>Chief</b> the knowledge is real — dozens of boxes held clean, at pace, with no route line. Rank is earned per due position and never expires; difficulty stays your own choice, run to run.</div>
 
     <div class="cpSec">Badges <span class="tag">Per firehouse</span></div>
     <div class="cpBadgeRow"><div class="cpMedal" style="--m:#f4b950">⭐</div><div><h4>First In</h4><p>Take a box first-in when you're 1st due.</p></div></div>
@@ -722,7 +744,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16p";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3228,6 +3250,8 @@ function updateDrill(dt){
   if(d<CONFIG.arriveR && !DRIVE.parked){
     const secs=Math.max(0.1,GT-DRILL.t0);
     DRILL.done++; DRILL.streak++;
+    { const kn=profKnow(DRIVE.stationId);                                       // 📖 knowledge: this landmark is now KNOWN at this company (by its real name — nothing invented)
+      if(kn&&DRILL.target&&kn.landmarks.indexOf(DRILL.target[0])<0){ kn.landmarks.push(DRILL.target[0]); saveProfile(); } }
     if(DRILL.done>=10){ const pe=profEng(); if(pe&&!pe.badges.includes('local')){ pe.badges.push('local'); saveProfile(); popup('🎖 KNOW YOUR LOCAL — 10 found in one drill','green'); } }
     if(DRILL.best===null||secs<DRILL.best) DRILL.best=secs;
     DRIVE.going=false;
@@ -3252,11 +3276,11 @@ function renderDrillHUD(){
 const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, playerDue:0 };
 /* 🎯 DIFFICULTY — how fast the other companies run. The player's own truck does 15 u/s by default and can be
    pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
-const DIFF={ level:1, names:['ROOKIE','FIREFIGHTER','VETERAN','CHIEF'],
-             spd:[[11,6],[15,11],[21,12],[27,14]],                    // [base, random spread] u/s
-             guide:[1,1,0,0],                                         // 🔵 the route line is a crutch — gone from VETERAN up
-             uturn:[1,1,1,0],                                         // ↩ the safety net goes last, on CHIEF only
-             blurb:['relaxed · guide + U-turn','a real race · guide + U-turn','no route line','no route line, no U-turn'] };
+const DIFF={ level:1, names:['TRAINING','STANDARD','PRO','EXPERT'],  // gameplay DIFFICULTY — a FREE player choice, fully independent of career rank (RANKS) since P3
+             spd:[[11,6],[15,11],[21,12],[27,14]],                    // [base, random spread] u/s — internal 0-3 mechanics unchanged
+             guide:[1,1,0,0],                                         // 🔵 the route line is a crutch — gone from PRO up
+             uturn:[1,1,1,0],                                         // ↩ the safety net goes last, off on EXPERT only
+             blurb:['relaxed rivals · guide + U-turn','a real race · guide + U-turn','no route line · fast rivals','no route line, no U-turn · fastest rivals'] };
 /* Higher levels take the training wheels off: first the blue guide line (so you must know the streets),
    then the U-turn (so a wrong turn actually costs you). Re-applied whenever the level or a shift changes. */
 function applyDifficultyGates(){
@@ -3270,25 +3294,248 @@ function applyDifficultyGates(){
   if(typeof routeEdgeFlat!=='undefined'&&routeEdgeFlat) routeEdgeFlat.visible=routeEdgeFlat.visible&&MAP.guide;
 }
 try{ const d=+localStorage.getItem('pfd_diff'); if(d>=0&&d<=3) DIFF.level=d; }catch(e){}
-function setDifficulty(n){ n=((n%4)+4)%4;
-  const pe=profEng(), mx=pe?pe.lv:3;                                          // 🔒 levels are earned per engine (hold your due 5×)
-  if(n>mx){ popup('🔒 '+DIFF.names[n]+' locks until you hold your due on '+HELD_TO_UNLOCK+' boxes at '+DIFF.names[mx]); n=0; }
-  DIFF.level=n; try{ localStorage.setItem('pfd_diff',DIFF.level); }catch(e){}
-  if(pe){ pe.lastLv=DIFF.level; saveProfile(); }
+function setDifficulty(n){ n=((n%4)+4)%4;                                    // difficulty is a FREE choice — career rank never locks it, it never changes career rank (P3)
+  DIFF.level=n; try{ localStorage.setItem('pfd_diff',DIFF.level); }catch(e){}  // pfd_diff kept as legacy mirror / boot seed
+  if(typeof PROFILE!=='undefined'&&PROFILE.settings){ PROFILE.settings.diff=n; saveProfile(); }
   const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level];
   applyDifficultyGates();
   popup('🎯 '+DIFF.names[DIFF.level]+' · '+DIFF.blurb[DIFF.level]); }
 { const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; applyDifficultyGates(); }   // paint the saved level at load (declared above, so no TDZ)
-/* 🧑‍🚒 CAREER — per-engine progression, local-first (localStorage 'pfd_profile'), shaped to upload into the
-   Supabase profile/run tables later (MULTIPLAYER-PLAN.md §10). Switching engines starts that engine's
-   career from the beginning; difficulty is UNLOCKED per engine by holding your due slot, not chosen.
+/* 🧑‍🚒 CAREER v2 (P3) — per-company, PER-DUE-POSITION careers, local-first (localStorage 'pfd_profile').
+   Three separated systems: CAREER RANK (RANKS, earned per position) · KNOWLEDGE (PROFILE.knowledge) ·
+   DIFFICULTY (DIFF, a free setting in PROFILE.settings.diff). Counters are INTEGER accomplishments and
+   are never discounted — variety/challenge gates live in CAREER_REQ, not in the stats. e.lv / e.held[]
+   remain as FROZEN legacy mirrors (old UI + legacy cloud column) until P6.
    ⚠️ Badges only ever key off numbers the game measured (coachCapture / DRILL) — no invented criteria. */
-const PROFILE_V=1, HELD_TO_UNLOCK=5;
-const PROFILE=(function(){ let p=null; try{ p=JSON.parse(localStorage.getItem('pfd_profile')); }catch(e){}
-  if(!p||p.v!==PROFILE_V){ let legacy=0; try{ const d=+localStorage.getItem('pfd_diff'); if(d>=0&&d<=3) legacy=d; }catch(e){}
-    p={ v:PROFILE_V, legacyLv:legacy, engines:{}, city:{badges:[],hydCount:0}, hyd:[] }; }               // fresh careers start at ROOKIE; existing players grandfathered at their pfd_diff level
-  return p; })();
-function saveProfile(){ try{ localStorage.setItem('pfd_profile',JSON.stringify(PROFILE)); }catch(e){} }
+const PROFILE_V=2, HELD_TO_UNLOCK=5;                                           // HELD_TO_UNLOCK: legacy display strings only — CAREER_REQ rules promotions now
+/* ===CAREER-CORE-START=== (pure logic — extracted verbatim by the node test harness) */
+const RANKS=['ROOKIE','FIREFIGHTER','VETERAN','CHIEF'];                        // career ranks — NOT difficulty names (those are DIFF.names)
+const POSITIONS=['d1','d2','d3','d4'];                                         // central position config (§17) — add future roles HERE, never scatter literals
+const POS_LABELS=['1ST DUE','2ND DUE','3RD DUE','4TH DUE'];                    // display names, indexed like POSITIONS
+const RANK_C=['#4d9fff','#37c274','#f2913a','#e5484d'];                        // career-rank colors: ROOKIE · FIREFIGHTER · VETERAN · CHIEF (never difficulty)
+const RANKS_SHORT=['ROOKIE','FF','VET','CHIEF'];                               // compact rank labels for tight rows
+function posKey(due){ due=+due; return (Number.isInteger(due)&&due>=1&&due<=POSITIONS.length)?POSITIONS[due-1]:null; }
+const CAREER_REQ=[ null,                                                       // [rank being promoted INTO] — all promotion gates live HERE
+  { held:5,  boxes:3,  clean:0, diffRuns:0, minDiff:0, noGuide:0, qual:false },   // → FIREFIGHTER (TRAINING difficulty allowed)
+  { held:10, boxes:7,  clean:3, diffRuns:3, minDiff:1, noGuide:0, qual:false },   // → VETERAN: +3 runs at STANDARD or higher
+  { held:15, boxes:12, clean:5, diffRuns:5, minDiff:2, noGuide:5, qual:true } ];  // → CHIEF: +5 runs at PRO or higher, 5 no-guide, qualification once Phase 7 lands
+const CAREER_TUNING={ qualEnforced:false,                                      // Phase 7 flips true — until then CHIEF promotes on counters and qual shows PENDING
+  masteryW:{ rank:0.6, boxes:0.4, posW:[0.4,0.3,0.2,0.1], boxTarget:12 } };    // company-mastery v1 weights — centralized, will grow (routes/streets/quals)
+function newTrack(){ return { rank:0, heldAtRank:0, heldTotal:0, saves:0, fails:0, boxes:{},
+  cleanAtRank:0, diffQualAtRank:0, noGuideAtRank:0,                            // *AtRank counters reset on promotion; heldTotal/saves/fails/boxes are LIFETIME and never reset
+  qual:{ avail:false, attempts:0, passed:false, best:0 } }; }
+function migrateProfileV2(old){                                                // pure: v1 in → v2 out (throws on impossibility; caller validates + persists)
+  let seedDiff=Math.max(0,Math.min(3,(old.legacyLv|0)));
+  try{ if(typeof localStorage!=='undefined'){ const d=+localStorage.getItem('pfd_diff'); if(d>=0&&d<=3) seedDiff=d|0; } }catch(e){}
+  const m={ v:2, legacyLv:old.legacyLv|0, engines:{}, knowledge:{}, settings:{ diff:seedDiff },
+    city:{ badges:((old.city&&old.city.badges)||[]).slice(), hydCount:(old.city&&old.city.hydCount)|0 },
+    hyd:Array.isArray(old.hyd)?old.hyd.slice():[] };
+  if(old.lbRank) m.lbRank=old.lbRank; if(old.lastPlayed) m.lastPlayed=old.lastPlayed;
+  for(const id in old.engines){ const oe=old.engines[id]||{};
+    const rank=Math.max(0,Math.min(3,oe.lv|0));
+    const held=Array.isArray(oe.held)?oe.held:[0,0,0,0];
+    const t=newTrack(); t.rank=rank;                                           // ★ existing per-engine career = the 1st-DUE track (play was ~all 1st due). Rank GRANDFATHERED as stored — CAREER_REQ only gates FUTURE promotions.
+    t.heldAtRank=held[rank]|0;                                                 // frontier progress carries over ("3/5 to next" stays 3)
+    t.heldTotal=held.reduce((a,b)=>a+(b|0),0);
+    t.saves=oe.saves|0; t.fails=oe.fails|0;
+    const know={ boxes:{}, landmarks:[], hydrants:0, streets:null, routes:null };   // streets/routes = future-capable, deliberately null — NOT faked
+    const nextReq=CAREER_REQ[rank+1];
+    for(const r of (Array.isArray(oe.log)?oe.log:[])){ if(!r) continue;        // best-effort seed from the 20-run ring (rank is grandfathered, so undercounts are harmless)
+      if(r.box){ const kb=know.boxes[r.box]||(know.boxes[r.box]={n:0,held:0,bestT:0});
+        kb.n++; if(r.ok&&r.held){ kb.held++; if(!kb.bestT||((r.time|0)&&r.time<kb.bestT)) kb.bestT=r.time|0; } }
+      if(r.ok&&r.held){
+        if(r.box) t.boxes[r.box]=(t.boxes[r.box]|0)+1;
+        if(r.optLen>1&&(r.driven-r.optLen)/r.optLen<=0.05&&(r.ww||0)<3&&(r.stop||0)<6) t.cleanAtRank++;   // the coach's own "textbook" test
+        if(r.guide===0) t.noGuideAtRank++;                                     // only v16o+ rows carry guide — older rows are unknown, not counted
+        if(nextReq&&(r.lv|0)>=nextReq.minDiff) t.diffQualAtRank++; } }
+    m.engines[id]={ lv:rank, lastLv:Math.min(oe.lastLv==null?rank:oe.lastLv|0,rank), held:held.map(x=>x|0),   // frozen legacy mirrors — old UI + cloud compat until P6
+      saves:oe.saves|0, runs:oe.runs|0, fails:oe.fails|0, bestT:oe.bestT|0,
+      badges:Array.isArray(oe.badges)?oe.badges.slice():[], log:Array.isArray(oe.log)?oe.log.slice(-20):[],
+      pos:{ d1:t } };                                                          // d2-d4 lazy-create on first real run at that position ("Not Started")
+    m.knowledge[id]=know; }
+  return m; }
+function validateProfileV2(m){                                                 // throws unless m is a structurally sound v2 profile (also enforces INTEGER counters)
+  const fail=w=>{ throw new Error('profile v2 invalid: '+w); };
+  if(!m||m.v!==2) fail('v'); if(!m.engines||typeof m.engines!=='object') fail('engines');
+  if(!m.settings||!Number.isInteger(m.settings.diff)||m.settings.diff<0||m.settings.diff>3) fail('settings.diff');
+  if(!m.knowledge||typeof m.knowledge!=='object') fail('knowledge');
+  for(const id in m.engines){ const e=m.engines[id];
+    if(!e||typeof e!=='object') fail(id); if(!e.pos||typeof e.pos!=='object') fail(id+'.pos');
+    for(const k in e.pos){ const t=e.pos[k];
+      if(POSITIONS.indexOf(k)<0) fail(id+'.pos.'+k);
+      if(!t||!Number.isInteger(t.rank)||t.rank<0||t.rank>=RANKS.length) fail(id+'.'+k+'.rank');
+      for(const f of ['heldAtRank','heldTotal','saves','fails','cleanAtRank','diffQualAtRank','noGuideAtRank'])
+        if(!Number.isInteger(t[f])||t[f]<0) fail(id+'.'+k+'.'+f);
+      if(!t.boxes||typeof t.boxes!=='object') fail(id+'.'+k+'.boxes');
+      if(!t.qual||typeof t.qual!=='object') fail(id+'.'+k+'.qual'); } }
+  return true; }
+function mergeTrack(a,b){                                                      // cloud merge: higher rank wins wholesale; equal rank → field-wise max; lifetime stats + boxes never shrink; qual OR
+  const cl=t=>JSON.parse(JSON.stringify(t));
+  if(!a&&!b) return newTrack(); if(!a) a=newTrack(); if(!b) return cl(a);
+  b=Object.assign(newTrack(),cl(b)); b.qual=Object.assign({avail:false,attempts:0,passed:false,best:0},b.qual||{});
+  const out=cl((b.rank|0)>(a.rank|0)?b:a);
+  if((a.rank|0)===(b.rank|0)) for(const f of ['heldAtRank','cleanAtRank','diffQualAtRank','noGuideAtRank']) out[f]=Math.max(a[f]|0,b[f]|0);
+  for(const f of ['heldTotal','saves','fails']) out[f]=Math.max(a[f]|0,b[f]|0);
+  out.boxes=out.boxes||{}; for(const s of [a.boxes||{},b.boxes||{}]) for(const bx in s) out.boxes[bx]=Math.max(out.boxes[bx]|0,s[bx]|0);
+  out.qual={ avail:!!((a.qual&&a.qual.avail)||(b.qual&&b.qual.avail)), attempts:Math.max((a.qual&&a.qual.attempts)|0,(b.qual&&b.qual.attempts)|0),
+             passed:!!((a.qual&&a.qual.passed)||(b.qual&&b.qual.passed)), best:Math.max((a.qual&&a.qual.best)||0,(b.qual&&b.qual.best)||0) };
+  return out; }
+function checkPromotion(track){                                                // {ok, missing:[{k,need,have,...}], next} vs CAREER_REQ — pure, no side effects (promote() lands in P5)
+  if(!track) return {ok:false,missing:[{k:'track'}]};
+  const nx=(track.rank|0)+1, req=CAREER_REQ[nx];
+  if(!req) return {ok:false,maxed:true,missing:[]};
+  const m=[];
+  if((track.heldAtRank|0)<req.held) m.push({k:'held',need:req.held,have:track.heldAtRank|0});
+  const ub=Object.keys(track.boxes||{}).length; if(ub<req.boxes) m.push({k:'boxes',need:req.boxes,have:ub});
+  if((track.cleanAtRank|0)<req.clean) m.push({k:'clean',need:req.clean,have:track.cleanAtRank|0});
+  if((track.diffQualAtRank|0)<req.diffRuns) m.push({k:'diffRuns',need:req.diffRuns,have:track.diffQualAtRank|0,minDiff:req.minDiff});
+  if((track.noGuideAtRank|0)<req.noGuide) m.push({k:'noGuide',need:req.noGuide,have:track.noGuideAtRank|0});
+  if(req.qual&&CAREER_TUNING.qualEnforced&&!(track.qual&&track.qual.passed)) m.push({k:'qual'});
+  return {ok:!m.length, missing:m, next:nx}; }
+function careerProgress(track){                                                // 0..1 toward next rank = mean of the ACTIVE requirement ratios (no XP — accomplishments only)
+  if(!track) return 0; const req=CAREER_REQ[(track.rank|0)+1]; if(!req) return 1;
+  const parts=[];
+  if(req.held>0)     parts.push(Math.min(1,(track.heldAtRank|0)/req.held));
+  if(req.boxes>0)    parts.push(Math.min(1,Object.keys(track.boxes||{}).length/req.boxes));
+  if(req.clean>0)    parts.push(Math.min(1,(track.cleanAtRank|0)/req.clean));
+  if(req.diffRuns>0) parts.push(Math.min(1,(track.diffQualAtRank|0)/req.diffRuns));
+  if(req.noGuide>0)  parts.push(Math.min(1,(track.noGuideAtRank|0)/req.noGuide));
+  if(req.qual&&CAREER_TUNING.qualEnforced) parts.push(track.qual&&track.qual.passed?1:0);
+  return parts.length?parts.reduce((a,b)=>a+b,0)/parts.length:0; }
+function careerMaxRank(e){ let m=0; if(e&&e.pos) for(const k in e.pos){ const r=(e.pos[k]&&e.pos[k].rank)|0; if(r>m)m=r; }
+  return Math.max(m,(e&&e.lv)|0); }                                            // ⚠ TEMPORARY COMPAT BRIDGE: feeds the legacy cloud `level` column + old UI labels ONLY. The long-term aggregate is companyMastery — a d1-only CHIEF and a 4-position CHIEF must stay distinguishable.
+function companyMasteryOf(e){                                                  // mastery v1 — CENTRALIZED formula, intentionally simple; later versions weigh routes/streets/quals. NEVER equate mastery with maxRank.
+  if(!e||!e.pos) return 0; const W=CAREER_TUNING.masteryW; let s=0;
+  POSITIONS.forEach((k,i)=>{ const t=e.pos[k]; if(!t) return;
+    const rankPart=(t.rank|0)/(RANKS.length-1), boxPart=Math.min(1,Object.keys(t.boxes||{}).length/W.boxTarget);
+    s+=(W.posW[i]||0)*(W.rank*rankPart+W.boxes*boxPart); });
+  return Math.round(s*100); }
+function careerPosInfo(t){                                                     // → everything the Career UI needs for one position — the UI NEVER re-derives promotion rules.
+  /* pct formula (documented): mean of each ACTIVE requirement's capped completion (min(have/need,1)) —
+     a huge held count can never hide a missing unique-box requirement. CHIEF=100. NOT STARTED (no track)=0. */
+  if(!t) return { started:false, mastered:false, rank:0, rankName:null, next:RANKS[0], pct:0, reqs:[], blocker:null, qualPassed:false };
+  const rank=t.rank|0;
+  if(rank>=RANKS.length-1) return { started:true, mastered:true, rank, rankName:RANKS[rank], next:null, pct:100, reqs:[], blocker:null, qualPassed:!!(t.qual&&t.qual.passed) };
+  const req=CAREER_REQ[rank+1], reqs=[];
+  const add=(k,label,have,need)=>{ if(need>0) reqs.push({k,label,have:Math.min(have|0,need),need,done:(have|0)>=need}); };
+  add('held','Held',t.heldAtRank,req.held);
+  add('boxes','Boxes',Object.keys(t.boxes||{}).length,req.boxes);
+  add('clean','Clean',t.cleanAtRank,req.clean);
+  add('diffRuns',DIFF.names[req.minDiff]+'+',t.diffQualAtRank,req.diffRuns);
+  add('noGuide','No-guide',t.noGuideAtRank,req.noGuide);
+  if(req.qual&&CAREER_TUNING.qualEnforced) reqs.push({k:'qual',label:'Qualification',have:(t.qual&&t.qual.passed)?1:0,need:1,done:!!(t.qual&&t.qual.passed)});
+  let blocker=null;                                                            // ONE actionable blocker, chosen by priority — every UI reads THIS, never its own order
+  for(const k of ['boxes','held','diffRuns','clean','noGuide','qual']){ const q=reqs.find(x=>x.k===k&&!x.done); if(q){ const n=q.need-q.have;
+    blocker={ k, need:n, text: k==='boxes'?(n+' more unique box'+(n===1?'':'es'))
+      : k==='held'?(n+' more held-due run'+(n===1?'':'s'))
+      : k==='diffRuns'?(n+' run'+(n===1?'':'s')+' on '+DIFF.names[req.minDiff]+'+')
+      : k==='clean'?(n+' more clean run'+(n===1?'':'s'))
+      : k==='noGuide'?(n+' more no-guide run'+(n===1?'':'s'))
+      : 'Chief Qualification' }; break; } }
+  return { started:true, mastered:false, rank, rankName:RANKS[rank], next:RANKS[rank+1], pct:Math.round(careerProgress(t)*100), reqs, blocker, qualPassed:!!(t.qual&&t.qual.passed) };
+}
+function careerRecommendOf(e){                                                 // NEXT TRAINING: master 1st → expand 2nd → learn 3rd/4th; near-promotion (≥80%) tracks jump the queue; CHIEF never recommended
+  const infos=POSITIONS.map((k,i)=>({k,due:i+1,t:(e&&e.pos&&e.pos[k])||null}));
+  const open=infos.filter(x=>!(x.t&&(x.t.rank|0)>=RANKS.length-1));
+  if(!open.length) return null;                                                // whole company mastered
+  let best=null,bp=0.8;
+  for(const x of open){ if(x.t){ const pr=careerProgress(x.t); if(pr>=bp){ bp=pr; best=x; } } }
+  const pick= best
+    || ((!(infos[0].t&&(infos[0].t.rank|0)>=1)) ? (open.indexOf(infos[0])>=0?infos[0]:open[0])   // 1st due until it reaches FIREFIGHTER
+        : (open.find(x=>!x.t)                                                                    // then start the next untouched position outward
+        || open.slice().sort((a,b)=>(((a.t?a.t.rank:0)-(b.t?b.t.rank:0))||(a.due-b.due)))[0]));  // else deepen the lowest rank
+  const info=careerPosInfo(pick.t);
+  return { due:pick.due, k:pick.k, label:POS_LABELS[pick.due-1],
+    text: pick.t ? (info.blocker?info.blocker.text:'one more good run') : 'start this position',
+    hint: pick.due>1 ? ('Set 🚒 DUE: '+['','1ST','2ND','3RD','4TH'][pick.due]+' in Settings') : null };
+}
+function freshProfileV2(){ let seed=0; try{ if(typeof localStorage!=='undefined'){ const d=+localStorage.getItem('pfd_diff'); if(d>=0&&d<=3) seed=d|0; } }catch(e){}
+  return { v:2, legacyLv:seed, engines:{}, knowledge:{}, settings:{ diff:seed }, city:{badges:[],hydCount:0}, hyd:[] }; }
+function loadProfileV2(_migrate){                                              // _migrate = test hook only. Failure mode: v1 stays UNTOUCHED in localStorage, session runs no-save.
+  let p=null; try{ p=JSON.parse(localStorage.getItem('pfd_profile')); }catch(e){}
+  if(p&&p.v===PROFILE_V) return p;
+  const legacyish=p&&p.engines&&typeof p.engines==='object';                   // recognizable legacy career → NEVER silently discarded into a fresh profile
+  if(legacyish){
+    try{
+      const m=(_migrate||migrateProfileV2)(p);                                 // build the whole v2 object in memory first —
+      validateProfileV2(m);                                                    // — validate it —
+      if(Object.keys(m.engines).length!==Object.keys(p.engines).length) throw new Error('engine count changed in migration');
+      try{ if(!localStorage.getItem('pfd_profile_v1_backup')) localStorage.setItem('pfd_profile_v1_backup', JSON.stringify(p)); }catch(e){}   // one-time v1 backup, never overwritten
+      try{ localStorage.setItem('pfd_profile', JSON.stringify(m)); }catch(e){} // — only then persist
+      try{ console.log('[career] profile migrated v'+(p.v||'?')+'→v2 · '+Object.keys(m.engines).length+' engine(s) · v1 kept in pfd_profile_v1_backup'); }catch(e){}
+      return m;
+    }catch(err){
+      try{ console.error('[career] v1→v2 migration FAILED — original save left intact; this session will NOT persist', err); }catch(e){}
+      if(typeof window!=='undefined') window.__migrateErr=String((err&&err.message)||err);
+      const f=freshProfileV2(); f.__noSave=true; return f; } }
+  return freshProfileV2(); }
+/* ===CAREER-CORE-END=== */
+const PROFILE=loadProfileV2();
+function saveProfile(){ if(PROFILE.__noSave) return; try{ localStorage.setItem('pfd_profile',JSON.stringify(PROFILE)); }catch(e){} }
+/* ===CAREER-RUN-START=== (extracted by the node test harness with stubbed PROFILE/profEng/DRIVE) */
+function careerTrack(companyId,due){                                           // THE resolver: company + the ACTUAL assigned due (rv.due, from computeResponders — NEVER MAP.dueLevel) → track.
+  const id=companyId||DRIVE.stationId; if(!id) return null;
+  const k=posKey(due);
+  if(!k){ try{ console.warn('[career] invalid due position ('+due+') — run gets NO career credit'); }catch(e){} return null; }   // never silently defaults to d1
+  const e=profEng(id); if(!e) return null;
+  if(!e.pos) e.pos={};
+  if(!e.pos[k]) e.pos[k]=newTrack();
+  return e.pos[k]; }
+function companyMastery(id){ return companyMasteryOf(PROFILE.engines[id]); }
+function profKnow(id){ id=id||DRIVE.stationId; if(!id) return null; PROFILE.knowledge=PROFILE.knowledge||{};   // per-company knowledge layer
+  let k=PROFILE.knowledge[id]; if(!k) k=PROFILE.knowledge[id]={boxes:{},landmarks:[],hydrants:0,streets:null,routes:null};
+  return k; }
+function heldDue(rv,ok){ return !!(ok&&rv&&rv.due>0&&rv.place>0&&rv.place<=rv.due); }        // THE held-due rule — score, board and career all call this one
+function cleanRun(rv,ok){ return !!(ok&&rv&&rv.optLen>1&&(rv.driven-rv.optLen)/rv.optLen<=0.05&&(rv.ww||0)<3&&(rv.stop||0)<6); }   // the coach's "textbook" test — badge + career share it
+function careerKnowledgeRun(companyId,rv,ok,held){                             // company-level box knowledge — updates on ANY real box response, even when position credit is refused
+  if(!rv||!rv.box) return; const know=profKnow(companyId); if(!know) return;
+  const kb=know.boxes[rv.box]||(know.boxes[rv.box]={n:0,held:0,bestT:0});
+  kb.n++; if(held){ kb.held++; const tt=Math.round(rv.time||0); if(tt>0&&(!kb.bestT||tt<kb.bestT)) kb.bestT=tt; } }
+function careerPromote(companyId,track){                                       // exactly ONE rank per call — a run can never chain-promote
+  if(!track||(track.rank|0)>=RANKS.length-1) return false;
+  track.rank=(track.rank|0)+1;
+  track.heldAtRank=0; track.cleanAtRank=0; track.diffQualAtRank=0; track.noGuideAtRank=0;    // rank-specific progress resets…
+  /* …heldTotal / saves / fails / boxes / qual are LIFETIME + qualification history — untouched */
+  const e=PROFILE.engines[companyId]; if(e) e.lv=careerMaxRank(e);              // keep the frozen compat mirror in step
+  return true; }
+function careerRecordRun(rv,ok){                                               // CAREER.recordRun — the ONE place run results turn into career credit
+  const res={ credited:false, reason:'', companyId:DRIVE.stationId||null, due:(rv&&rv.due)|0, posKey:null,
+    heldDue:false, newBox:false, cleanRun:false, noGuideRun:false, diffQualified:false,
+    promoted:false, badgeEarned:null, oldRank:null, newRank:null };
+  if(!rv){ res.reason='no-rv'; return res; }
+  if(!res.companyId){ res.reason='no-company'; return res; }                    // company unresolvable → nothing is touched
+  const held=heldDue(rv,ok);
+  careerKnowledgeRun(res.companyId,rv,ok,held);                                 // knowledge learns the box either way (company-level)
+  const k=posKey(rv.due);
+  if(!k){ res.reason='invalid-due'; return res; }                               // ⛔ never defaults to d1 — position credit refused, logged by careerTrack's twin guard
+  const track=careerTrack(res.companyId,rv.due);
+  if(!track){ res.reason='no-track'; return res; }
+  res.posKey=k; res.credited=true; res.oldRank=track.rank; res.heldDue=held;
+  if(ok) track.saves++; else track.fails++;                                     // track.saves = completed responses (fires out) AT THIS POSITION; track.fails = boxes lost. Same meaning as the engine-level stat, scoped to the position.
+  if(held){
+    track.heldAtRank++; track.heldTotal++;                                      // INTEGER accomplishments — never fractional, never discounted
+    if(rv.box){ res.newBox=!(rv.box in track.boxes); track.boxes[rv.box]=(track.boxes[rv.box]|0)+1; }   // unique-box promotion value = Object.keys(boxes).length; repeats only deepen the count
+    if(cleanRun(rv,ok)){ track.cleanAtRank++; res.cleanRun=true; }
+    if(rv.guide===0){ track.noGuideAtRank++; res.noGuideRun=true; }             // ONLY the captured run state decides — difficulty is never a proxy for guide-off
+    const req=CAREER_REQ[(track.rank|0)+1];
+    if(req&&(rv.diff|0)>=req.minDiff){ track.diffQualAtRank++; res.diffQualified=true; }     // qualifying bar = the NEXT promotion's minDiff, judged on the RUN's captured difficulty
+  }
+  const chk=checkPromotion(track);
+  if(chk.ok&&careerPromote(res.companyId,track)){                               // at most ONE promotion per run
+    res.promoted=true;
+    const e=PROFILE.engines[res.companyId];
+    if(e){ const bid=track.rank===1?'made_ff':track.rank===2?'made_vet':'made_chief';        // once per ENGINE (P3 design) — award() guard below
+      if(e.badges.indexOf(bid)<0){ e.badges.push(bid); res.badgeEarned=BADGE_NAMES[bid]||bid; } }
+    try{ popup('🎖 '+RANKS[track.rank]+' · '+POS_LABELS[POSITIONS.indexOf(k)]+' · Engine '+engNum(res.companyId),'green'); }catch(e){}
+  }
+  res.newRank=track.rank;
+  return res; }
+/* ===CAREER-RUN-END=== */
+{ // 🎯 boot: difficulty comes from the player's own setting (PROFILE.settings.diff), not from any career
+  if(PROFILE.settings&&Number.isInteger(PROFILE.settings.diff)&&PROFILE.settings.diff>=0&&PROFILE.settings.diff<=3){
+    DIFF.level=PROFILE.settings.diff; try{ localStorage.setItem('pfd_diff',DIFF.level); }catch(e){} }
+  const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; applyDifficultyGates();
+  if(PROFILE.__noSave) setTimeout(()=>{ try{ popup('⚠️ Career save could not be upgraded — this session won\'t be saved','red'); }catch(e){} },3000); }
 /* 👤 ACCOUNTS — Supabase magic-link auth (ACCOUNTS-PLAN.md phase 1). Raw REST via fetch, no library,
    so the single-file/offline rule holds: no session or no network → the game runs exactly as before on
    local pfd_profile. The anon key is public by design; RLS on the server is what protects data. */
@@ -3322,11 +3569,13 @@ async function sbFetch(path,opts){ opts=opts||{}; if(!AUTH.session) return null;
   try{ let r=await fetch(SB.url+path, Object.assign({},opts,{ headers:h }));
     if(r.status===401 && await authRefresh()){ h.Authorization='Bearer '+AUTH.session.access_token; r=await fetch(SB.url+path, Object.assign({},opts,{ headers:h })); }
     return r; }catch(e){ return null; } }
-function careerRow(id,e){ return { profile_id:AUTH.user.id, station_id:id, level:e.lv||0,
+function careerRow(id,e){ return { profile_id:AUTH.user.id, station_id:id,
+  level:careerMaxRank(e),                                                                       // ⚠ TEMPORARY compat: legacy column feeds leaderboard_ovr's rank label only — NOT the long-term mastery measure
   held:[0,1,2,3].map(i=>(e.held&&e.held[i])||0), saves:e.saves||0, runs:e.runs||0, fails:e.fails||0,
-  best_saves:e.bestT||0, badges:e.badges||[] }; }
+  best_saves:e.bestT||0, badges:e.badges||[], pos:e.pos||{} }; }
 async function syncCareers(){ if(!AUTH.user) return;                                            // pull server careers, max-wins merge with local, push merged back
-  const r=await sbFetch('/rest/v1/career?select=station_id,level,held,saves,runs,fails,best_saves,badges');
+  let r=await sbFetch('/rest/v1/career?select=station_id,level,held,saves,runs,fails,best_saves,badges,pos');
+  if(!r||!r.ok) r=await sbFetch('/rest/v1/career?select=station_id,level,held,saves,runs,fails,best_saves,badges');   // pos column absent (step 8 not run yet) → legacy shape
   if(!r||!r.ok) return; let server=[]; try{ server=await r.json(); }catch(e){ return; }
   const smap={}; for(const row of server) smap[row.station_id]=row;
   const ids=new Set(Object.keys(PROFILE.engines)); for(const k in smap) ids.add(k);
@@ -3340,10 +3589,22 @@ async function syncCareers(){ if(!AUTH.user) return;                            
     e.fails  =Math.max(l.fails||0,  sv?sv.fails||0:0);
     e.bestT  =Math.max(l.bestT||0,  sv?sv.best_saves||0:0);
     e.badges =Array.from(new Set([...(l.badges||[]), ...((sv&&sv.badges)||[])]));
-    if(e.lastLv===undefined||e.lastLv>e.lv) e.lastLv=e.lv;                                       // never let a device ride above what it now knows is unlocked
+    /* v2 positions: server pos merges per-position (mergeTrack). A LEGACY-ONLY server row (no pos —
+       written by a pre-P3 client) is inferred into d1 ONLY when the local track has no v2 d1 yet:
+       existing v2 data always outranks inferred legacy. */
+    e.pos=e.pos||{};
+    if(sv&&sv.pos&&typeof sv.pos==='object'){ for(const k in sv.pos){ if(POSITIONS.indexOf(k)>=0) e.pos[k]=mergeTrack(e.pos[k],sv.pos[k]); } }
+    else if(sv&&!e.pos.d1){ const t=newTrack(); t.rank=Math.max(0,Math.min(3,sv.level|0));
+      const sh=Array.isArray(sv.held)?sv.held:[0,0,0,0]; t.heldAtRank=sh[t.rank]|0; t.heldTotal=sh.reduce((a,b)=>a+(b|0),0);
+      t.saves=sv.saves|0; t.fails=sv.fails|0; e.pos.d1=t; }
+    { let pm=-1; for(const k in e.pos) pm=Math.max(pm,(e.pos[k]&&e.pos[k].rank)|0);              // v2 PRECEDENCE (owner rule): once any v2 pos exists, the compat mirror derives from pos ranks ONLY —
+      e.lv=pm>=0?pm:careerMaxRank(e); }                                                          // a legacy-only server 'level' can't inflate it. That device's higher progress arrives properly when IT migrates and uploads pos.
+    if(e.lastLv===undefined||e.lastLv>e.lv) e.lastLv=e.lv;
     upserts.push(careerRow(id,e)); }
   saveProfile();
-  if(upserts.length) await sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify(upserts) });
+  if(upserts.length){ const r2=await sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify(upserts) });
+    if(r2&&!r2.ok) await sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' },
+      body:JSON.stringify(upserts.map(u=>{ const c=Object.assign({},u); delete c.pos; return c; })) }); }   // pos column absent → keep legacy sync alive
   AUTH.synced=true; try{ refreshStationList(); }catch(e){} }
 async function authFetchProfile(){ if(!AUTH.user) return;                                        // pull tier + display name (own row, RLS)
   const r=await sbFetch('/rest/v1/profile?select=display_name,tier&id=eq.'+AUTH.user.id);
@@ -3368,7 +3629,7 @@ async function checkBeaten(stationId){ if(!AUTH.user||!stationId) return;       
   PROFILE.lbRank[stationId]={ rank, ahead: idx>0?rows[idx-1].name:null }; saveProfile(); }
 function pushRun(rv,ok,sc,streak){ if(!AUTH.user||!rv) return;                                    // one ranked row per eligible run (losses included — they feed Due %)
   if(ok===undefined) ok=true; if(!sc) sc=calcRunScore(rv,ok);
-  const held=ok&&rv.due>0&&rv.place>0&&rv.place<=rv.due;
+  const held=heldDue(rv,ok);
   const legacy={ profile_id:AUTH.user.id, station_id:DRIVE.stationId, box:rv.box||'',
     time_ms:Math.round((rv.time||0)*1000), driven:Math.round(rv.driven||0), optimal:Math.round(rv.optLen||0),
     place:rv.place||0, due:rv.due||0, held_due:held, wrong_way_ms:Math.round((rv.ww||0)*1000), difficulty:DIFF.level };
@@ -3391,7 +3652,7 @@ async function fetchCityLeaderboard(){ try{ const r=await fetch(SB.url+'/rest/v1
    career log (calcOVR) so it works fully offline. If the step-7 views don't exist yet the OVERALL tab
    falls back to the old fastest-time board — nothing breaks mid-migration. */
 const LB={ station:null, tab:'overall', minRuns:3, champRuns:5 };
-const LB_RANKC=['#4d9fff','#37c274','#f2913a','#e5484d'];                     // ROOKIE · FIREFIGHTER · VETERAN · CHIEF
+const LB_RANKC=RANK_C;                                                        // career-rank colors — single source in the CAREER core
 const LB_TABS=[['overall','🏆 OVERALL'],['week','📅 THIS WEEK'],['box','📍 BOX RECORDS'],['engine','🏛 ENGINES'],['badges','🎖 BADGES']];
 function lbMmss(ms){ if(ms==null) return '—'; const q=Math.round(ms/1000); return Math.floor(q/60)+':'+String(q%60).padStart(2,'0'); }
 function lbEsc(s){ return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
@@ -3410,9 +3671,9 @@ function lbHero(){ const st=LB.station?lbStation(LB.station):null;
   const log=LB.station?((PROFILE.engines[LB.station]||{}).log||[]):localLogAll();
   const o=calcOVR(log);
   const e=LB.station?PROFILE.engines[LB.station]:null;
-  const lv=e?(e.lv||0):Math.max(0,...Object.values(PROFILE.engines).map(x=>x.lv||0),0);
+  const lv=e?careerMaxRank(e):Math.max(0,...Object.values(PROFILE.engines).map(x=>careerMaxRank(x)),0);
   document.getElementById('lbMeChip').innerHTML= o
-    ? '<div class="lbMeOvr">'+o.ovr+'</div><div class="lbMeLbl">OVR</div><div class="lbMeRk" style="color:'+LB_RANKC[lv]+'">'+DIFF.names[lv]+'</div>'
+    ? '<div class="lbMeOvr">'+o.ovr+'</div><div class="lbMeLbl">OVR</div><div class="lbMeRk" style="color:'+LB_RANKC[lv]+'">'+RANKS[lv]+'</div>'
     : '<div class="lbMeLbl">NOT RATED</div><div class="lbMeRk">guide off +<br>hold your due</div>'; }
 function lbTabsPaint(){ document.getElementById('lbTabs').innerHTML=LB_TABS.map(t=>'<button class="lbTab'+(LB.tab===t[0]?' on':'')+'" data-tab="'+t[0]+'">'+t[1]+'</button>').join(''); }
 function lbOvrRows(ranked){                                                   // top 10 + your pinned row when you sit below them
@@ -3422,7 +3683,7 @@ function lbOvrRows(ranked){                                                   //
     return '<div class="lbRow2'+(isMe?' me':'')+'" data-x="1">'+
       '<div class="lbRk r'+((i+1)<=3?(i+1):'x')+'">'+(i+1)+'</div>'+
       '<div class="lbNm"><b>'+lbEsc(isMe&&!r.name?'YOU':(r.name||'Firefighter'))+'</b>'+lbTrend(r.ovr,r.ovr_prev)+
-        '<div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+DIFF.names[lv]+(r.houses?' · '+r.houses+' house'+(r.houses===1?'':'s'):'')+'</div></div>'+
+        '<div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+RANKS[lv]+(r.houses?' · '+r.houses+' house'+(r.houses===1?'':'s'):'')+'</div></div>'+
       '<div class="lbOv">'+(r.ovr==null?'—':r.ovr)+
         '<div class="lbSt">'+(r.due_pct!=null?r.due_pct+'% due · ':'')+lbMmss(r.avg_ms)+(r.streak?' · 🔥'+r.streak:'')+'</div></div>'+
       '<div class="lbXtra">'+(r.n||0)+' rated runs · due held '+(r.due_pct!=null?r.due_pct+'%':'—')+' · avg response '+lbMmss(r.avg_ms)+(r.streak?' · held-due streak 🔥'+r.streak:'')+(r.ovr_prev!=null?' · last window '+r.ovr_prev+' OVR':'')+'</div>'+
@@ -3502,9 +3763,9 @@ async function lbRenderBox(el){ const eng=lbCtxEngine();
 function lbRenderEngine(el){ const ids=Object.keys(PROFILE.engines).filter(id=>PROFILE.engines[id].runs>0);
   let h='<div class="lbSecT">🏛 YOUR ENGINES<span class="lbHint">tap one to open its board</span></div>';
   if(!ids.length) h+='<div class="lbRow">No runs yet — ride out of any house and it shows up here.</div>';
-  for(const id of ids){ const e=PROFILE.engines[id], o=calcOVR(e.log), st=lbStation(id), lv=Math.max(0,Math.min(3,e.lv||0));
+  for(const id of ids){ const e=PROFILE.engines[id], o=calcOVR(e.log), st=lbStation(id), lv=careerMaxRank(e);
     h+='<div class="lbRow2 lbEng" data-eng="'+id+'"><div class="lbRk rx">'+engNum(id)+'</div>'+
-      '<div class="lbNm"><b>'+lbEsc(st?st.name:('Engine '+engNum(id)))+'</b><div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+DIFF.names[lv]+' · '+e.saves+' save'+(e.saves===1?'':'s')+' · '+e.runs+' runs</div></div>'+
+      '<div class="lbNm"><b>'+lbEsc(st?st.name:('Engine '+engNum(id)))+'</b><div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+RANKS[lv]+' · '+e.saves+' save'+(e.saves===1?'':'s')+' · '+e.runs+' runs</div></div>'+
       '<div class="lbOv">'+(o?o.ovr:'—')+'<div class="lbSt">'+(o?'OVR':'not rated')+'</div></div></div>'; }
   el.innerHTML=h; }
 function lbRenderBadges(el){ const eng=lbCtxEngine(), e=eng?PROFILE.engines[eng]:null;
@@ -3529,7 +3790,10 @@ document.getElementById('lbBody').addEventListener('click',e=>{ const g=e.target
   if(g){ LB.station=g.dataset.eng; LB.tab='overall'; renderLB(); return; }
   const r=e.target.closest('.lbRow2[data-x]'); if(r) r.classList.toggle('xp'); });
 function pushCareer(id){ if(!AUTH.user) return; const e=PROFILE.engines[id]; if(!e) return;      // fire-and-forget incremental push after a run
-  try{ sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([careerRow(id,e)]) }); }catch(e){} }
+  try{ const row=careerRow(id,e);
+    sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([row]) })
+      .then(r=>{ if(r&&!r.ok){ const c=Object.assign({},row); delete c.pos;
+        sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([c]) }); } }); }catch(e){} }
 function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
   authStore(null); AUTH.user=null; authUpdateUI(); }
 function authUpdateUI(){ const ab=document.getElementById('btnAccount'); if(ab) ab.classList.toggle('on',!!AUTH.user); const b=document.getElementById('btnAuth'); if(b) b.textContent=AUTH.user?('👤 '+(AUTH.user.email||'ACCOUNT')):'👤 SIGN IN';
@@ -3554,8 +3818,9 @@ function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) r
     if(on&&!AUTH.name){ document.getElementById('authMsg').textContent='⚠️ Set a leaderboard name so your times show as YOU, not "Firefighter".'; } }
   authUpdateUI(); el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 function profEng(id){ id=id||DRIVE.stationId; if(!id) return null; let e=PROFILE.engines[id];
-  if(!e) e=PROFILE.engines[id]={ lv:PROFILE.legacyLv, lastLv:PROFILE.legacyLv,                          // unlocked max / last-ridden
-       held:[0,0,0,0], saves:0, runs:0, fails:0, bestT:0, badges:[], log:[] };
+  if(!e) e=PROFILE.engines[id]={ lv:0, lastLv:0, held:[0,0,0,0],                                        // lv/lastLv/held[] = FROZEN legacy mirrors (old UI + cloud compat until P6); new engines start ROOKIE on every position
+       saves:0, runs:0, fails:0, bestT:0, badges:[], log:[], pos:{} };                                  // pos.d1-d4 lazy-create via careerTrack
+  if(!e.pos) e.pos={};
   return e; }
 const BADGE_NAMES={ first_in:'FIRST IN', textbook:'TEXTBOOK', held_5:'DUE DILIGENCE', clean_10:'RIGHT SIDE OF THE STREET',
   workhorse:'WORKHORSE', made_ff:'MADE FIREFIGHTER', made_vet:'MADE VETERAN', made_chief:'MADE CHIEF', local:'KNOW YOUR LOCAL',
@@ -3581,7 +3846,7 @@ const SCORE={
 function calcRunScore(rv,ok){                                             // → {score, s:{due,route,time,clean,arrive,diff}}
   const cl=(v,a,b)=>Math.max(a,Math.min(b,v)), s={due:0,route:0,time:0,clean:0,arrive:0,diff:0};
   if(!rv) return {score:0,s};
-  if(ok&&rv.due>0&&rv.place>0&&rv.place<=rv.due) s.due=SCORE.due;         // held the assigned slot (arriving early = held, never "better")
+  if(heldDue(rv,ok)) s.due=SCORE.due;                                     // held the assigned slot (arriving early = held, never "better") — ONE rule, shared with career
   if(ok&&rv.optLen>1&&rv.driven>0){ const ratio=rv.driven/rv.optLen;      // any sensible route scores — the optimal is a yardstick, not a mandate
     s.route=Math.round(SCORE.route*cl((SCORE.routeZero-ratio)/(SCORE.routeZero-SCORE.routeFree),0,1)); }
   if(ok&&rv.optLen>1&&rv.time>0){ const par=rv.optLen/SCORE.parSpeed+SCORE.parPad;
@@ -3608,40 +3873,62 @@ function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                
   const earned=[];
   const sc=rv?calcRunScore(rv,ok):null;
   const row=rv?{ t:Math.round(GT), box:rv.box, lv:DIFF.level, place:rv.place, due:rv.due,
-      held:(ok&&rv.due>0&&rv.place>0&&rv.place<=rv.due)?1:0, time:Math.round(rv.time),
+      held:heldDue(rv,ok)?1:0, time:Math.round(rv.time),
       driven:Math.round(rv.driven), optLen:Math.round(rv.optLen), ww:Math.round(rv.ww), stop:Math.round(rv.stop), ok:ok?1:0,
-      sc:sc.score, ss:OVR_KEYS.map(k=>sc.s[k]), ut:rv.uturns||0, ast:rv.arrStreet||0, guide:COACH.usedGuide?1:0 }
+      sc:sc.score, ss:OVR_KEYS.map(k=>sc.s[k]), ut:rv.uturns||0, ast:rv.arrStreet||0, guide:rv.guide?1:0 }
     :{ t:Math.round(GT), lv:DIFF.level, ok:0 };
   e.log.push(row); while(e.log.length>20) e.log.shift(); e.runs++;
   if(ok){ e.saves++;
-    if(row.held){ e.held[DIFF.level]=(e.held[DIFF.level]||0)+1;
-      if(DIFF.level===e.lv&&e.lv<3&&e.held[e.lv]>=HELD_TO_UNLOCK){ e.lv++;                              // 🔓 held your due 5× at the frontier → next level opens (opt-in via Settings, never auto-raised)
-        popup('🎖 '+DIFF.names[e.lv]+' UNLOCKED · Engine '+engNum(DRIVE.stationId),'green');
-        earned.push("That's "+HELD_TO_UNLOCK+' boxes held at '+DIFF.names[e.lv-1]+". You're cleared to ride "+DIFF.names[e.lv]+' — it waits in Settings.');
-        award(e.badges, e.lv===1?'made_ff':e.lv===2?'made_vet':'made_chief', earned); } }
     if(rv){ if(rv.place===1&&rv.due===1) award(e.badges,'first_in',earned);
-      if(rv.optLen>1&&(rv.driven-rv.optLen)/rv.optLen<=0.05&&rv.ww<3&&rv.stop<6) award(e.badges,'textbook',earned); }   // the coach's own zero-flag test
+      if(cleanRun(rv,ok)) award(e.badges,'textbook',earned); }                                          // same centralized clean rule as the career   // the coach's own zero-flag test
     { const t5=e.log.slice(-5);  if(t5.length===5 &&t5.every(r=>r.ok&&r.held)) award(e.badges,'held_5',earned); }
     { const t10=e.log.slice(-10); if(t10.length===10&&t10.every(r=>r.ok&&(r.ww||0)<1)) award(e.badges,'clean_10',earned); }
     if(e.runs>=25) award(e.badges,'workhorse',earned);
   } else e.fails++;
+  const cr=careerRecordRun(rv,ok);                                                                      // 🧑‍🚒 per-position career credit — attribution by rv.due (the box's ACTUAL assignment), never MAP.dueLevel
+  if(cr&&cr.promoted&&cr.badgeEarned) earned.push(cr.badgeEarned);
+  if(rv&&cr&&cr.credited&&ok){                                                                          // 🎯 compact career feedback for the coach card (P6) — consumes the recordRun event, no recalculation
+    const ce=PROFILE.engines[cr.companyId], ct=ce&&ce.pos&&ce.pos[cr.posKey], info=careerPosInfo(ct||null), fb=[];
+    fb.push('ENGINE '+engNum(cr.companyId)+' · '+POS_LABELS[POSITIONS.indexOf(cr.posKey)]+(cr.heldDue?' — HELD YOUR DUE':''));
+    if(cr.newBox&&ct) fb.push('📦 New box learned · '+Object.keys(ct.boxes).length+' known at this position');
+    if(cr.promoted) fb.push('🎖 '+RANKS[cr.newRank]+' ACHIEVED');
+    else if(info&&info.started&&!info.mastered) fb.push('Progress to '+info.next+': '+info.pct+'%'+(info.blocker?' · Next: '+info.blocker.text:''));
+    else if(info&&info.mastered) fb.push('CHIEF — MASTERED');
+    rv.careerFb=fb; }
   { const c=PROFILE.city;                                                                               // citywide
     if(Object.values(PROFILE.engines).filter(x=>x.runs>0).length>=5) award(c.badges,'traveled',earned);
     let tot=0; for(const k in PROFILE.engines) tot+=PROFILE.engines[k].saves; if(tot>=100) award(c.badges,'century',earned); }
   PROFILE.lastPlayed=DRIVE.stationId; saveProfile(); if(AUTH.user){ pushCareer(DRIVE.stationId);
-    const elig=rv&&!COACH.usedGuide&&rv.due>0;                                                          // ranked run: guide off + a due slot actually assigned (losses count too — that's what Due % measures)
+    const elig=rv&&rv.guide===0&&rv.due>0;                                                              // ranked run: guide off (captured in the run result) + a due slot actually assigned (losses count too)
     if(elig){ pushRun(rv,ok,sc,calcStreak(e.log)); if(ok) reportLeaderboard(DRIVE.stationId); }
     else if(ok&&rv&&COACH.usedGuide&&(rv.due>0&&rv.place>0&&rv.place<=rv.due)) popup('📘 Guide was on — great run, but it won\'t post to the board','');
   } return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
   const cur=(DRIVE.stationId&&PROFILE.engines[DRIVE.stationId])?DRIVE.stationId:null, rows=[];
-  const fmt=(id,e)=>{ const nxt=e.lv<3?(Math.min(e.held[e.lv]||0,HELD_TO_UNLOCK)+'/'+HELD_TO_UNLOCK+' to '+DIFF.names[e.lv+1]):'MAXED';
-    const bd=e.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
-    return '<div class="pcRow'+(id===cur?' cur':'')+'"><b>Engine '+engNum(id)+'</b> · '+DIFF.names[e.lv]+' · '+nxt+
-      ' · '+e.saves+' saves · '+e.runs+' runs'+(bd?'<div class="pcBadges">🎖 '+bd+'</div>':'')+'</div>'; };
+  const posRow=(t,i)=>{ const info=careerPosInfo(t||null), col=t?RANK_C[t.rank|0]:'#3a4a63';   // NOT STARTED ≠ ROOKIE: an absent track renders muted, no earned progress pretended
+    const sub= info.mastered?('MASTERED'+(info.qualPassed?' · QUALIFICATION PASSED':''))
+      : !t?(i===0?'Ride out — your first box starts this career':('Set 🚒 DUE: '+['1ST','2ND','3RD','4TH'][i]+' in Settings to ride this slot'))
+      : (info.blocker?('Next: '+info.blocker.text):('Progress to '+info.next));
+    const reqs=(t&&!info.mastered)?info.reqs.map(q=>q.have+'/'+q.need+' '+q.label).join(' · '):'';
+    return '<div class="pdPos'+(t?'':' ns')+(info.mastered?' done':'')+'" style="--c:'+col+'">'+
+      '<span class="pdLbl">'+POS_LABELS[i]+'</span>'+
+      '<span class="pdRank">'+(t?RANKS[t.rank|0]:'NOT STARTED')+'</span>'+
+      '<span class="pdBar"><i style="width:'+Math.max(3,info.pct)+'%"></i></span>'+
+      '<span class="pdPct">'+(t?info.pct+'%':'—')+'</span>'+
+      '<div class="pdSub">'+sub+'</div>'+
+      (reqs?'<div class="pdReqs">'+reqs+'</div>':'')+
+    '</div>'; };
+  const fmt=(id,e)=>{ const bd=e.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
+    let h='<div class="pdEng'+(id===cur?' cur':'')+'"><div class="pdHead"><b>Engine '+engNum(id)+'</b>'+
+      '<span class="pdMy">LOCAL KNOWLEDGE '+companyMasteryOf(e)+'%</span></div>';
+    h+=POSITIONS.map((k,i)=>posRow(e.pos&&e.pos[k],i)).join('');
+    if(id===cur){ const rec=careerRecommendOf(e);
+      if(rec) h+='<div class="pdNext">🎯 NEXT TRAINING — '+rec.label+(rec.text?' · '+rec.text:'')+(rec.hint?'<span class="pdHint">'+rec.hint+'</span>':'')+'</div>'; }
+    h+='<div class="pdStats">'+e.saves+' saves · '+e.runs+' runs · tap a due row for its full requirements'+(bd?'<div class="pcBadges">🎖 '+bd+'</div>':'')+'</div></div>';
+    return h; };
   if(cur) rows.push(fmt(cur,PROFILE.engines[cur]));
   for(const id of Object.keys(PROFILE.engines)) if(id!==cur&&PROFILE.engines[id].runs>0) rows.push(fmt(id,PROFILE.engines[id]));
-  if(!rows.length) rows.push('<div class="pcRow">No runs yet — ride out and hold your due slot. '+HELD_TO_UNLOCK+' held boxes at a level unlocks the next on that engine.</div>');
+  if(!rows.length) rows.push('<div class="pcRow">No runs yet — ride out and hold your due slot. Every firehouse tracks a separate career for 1st, 2nd, 3rd and 4th due.</div>');
   const cb=PROFILE.city.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
   if(cb) rows.push('<div class="pcRow"><b>CITYWIDE</b><div class="pcBadges">🎖 '+cb+'</div></div>');
   document.getElementById('pcBody').innerHTML=rows.join('');
@@ -3651,6 +3938,7 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       tx.value=n?JSON.stringify({type:'pfd_hydrant_submissions',build:BUILD,count:n,list:PROFILE.hyd}):'';
       tx.style.display='none'; cp.style.display=n?'block':'none'; } }
   el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+document.getElementById('pcBody').addEventListener('click',e=>{ const g=e.target.closest('.pdPos'); if(g) g.classList.toggle('open'); });
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
@@ -3680,6 +3968,7 @@ function playerAddHydrant(){ if(!state.running||DRIVE.going) return;
   const ll=world2ll(hx,hz);
   PROFILE.hyd.push({ lat:+ll.lat.toFixed(6), lon:+ll.lon.toFixed(6), x:hx, z:hz, src:2, ts:Date.now(), build:BUILD });
   PROFILE.city.hydCount=PROFILE.hyd.length;
+  { const kn=profKnow(DRIVE.stationId); if(kn) kn.hydrants=(kn.hydrants|0)+1; }                          // 📖 knowledge: hydrant scouted while riding THIS company
   if(PROFILE.hyd.length>=5&&!PROFILE.city.badges.includes('scout')){ PROFILE.city.badges.push('scout'); popup('🎖 HYDRANT SCOUT','green'); }
   saveProfile();
   if(AUTH.user){ try{ sbFetch('/rest/v1/hydrant_submission',{ method:'POST', headers:{ 'Prefer':'return=minimal' },   // 🧯 auto-upload to the dev's Supabase — no copy/paste needed
@@ -3840,6 +4129,7 @@ function coachCapture(){ const t=state.target; if(!t||COACH.trail.length<2) retu
   return { trail:COACH.trail.slice(), opt, driven, optLen, fx:ax, fz:az, ww:COACH.ww, stop:COACH.stop,
            time:(COACH.arriveT||GT)-COACH.t0, place:RIVALS.playerPlace||0, due:RIVALS.playerDue||0,
            uturns:COACH.uturns, arrStreet,
+           guide:COACH.usedGuide?1:0, diff:DIFF.level,                          // captured run state — career + board read THESE, never re-infer
            box:t.box||'', addr:t.address||t.name||'', divStreet, optStreet }; }
 function coachLines(r){ const L=[];                                             // every line traces to a measured number
   const mi=m=>{ const v=m*0.000621371; return v<0.095?Math.round(m*3.28084)+' ft':v.toFixed(1)+' mi'; };
@@ -3863,6 +4153,7 @@ function showCoach(r){ const el=document.getElementById('coachCard');
   document.getElementById('coachStats').textContent='BOX '+r.box+' · '+r.addr;
   document.getElementById('coachSay').innerHTML=coachLines(r).map(q=>'<div>“'+q+'”</div>').join('');
   if(r.earned&&r.earned.length) document.getElementById('coachSay').innerHTML+=r.earned.map(q=>'<div class="ccBadge">🎖 '+q+'</div>').join('');
+  if(r.careerFb&&r.careerFb.length) document.getElementById('coachSay').innerHTML+='<div class="ccCareer">'+r.careerFb.join('<br>')+'</div>';
   const showOpt=!!(r.opt&&r.optLen>1&&(r.driven-r.optLen)/r.optLen>0.08);       // his line only when it was meaningfully better
   document.getElementById('coachLegend').style.display=showOpt?'flex':'none';
   el.classList.add('show'); el.setAttribute('aria-hidden','false');
@@ -4110,9 +4401,12 @@ const homeEl=document.getElementById('home');
     }
   }
 })();
-function refreshStationList(){ document.querySelectorAll('#stationList .stbtn[data-station]').forEach(b=>{   // repaint careers on the battalion list
+function refreshStationList(){ document.querySelectorAll('#stationList .stbtn[data-station]').forEach(b=>{   // repaint careers on the battalion list — 1→4 position letters, colored by rank
   const e=PROFILE.engines[b.dataset.station], el=b.querySelector('.stCareer'); if(!el) return;
-  el.textContent=(e&&e.runs>0)?(DIFF.names[e.lv]+(e.badges.length?' · '+'🎖'.repeat(Math.min(4,e.badges.length)):'')):''; }); }
+  if(!(e&&e.runs>0)){ el.textContent=''; return; }
+  el.innerHTML=POSITIONS.map((k,i)=>{ const t=e.pos&&e.pos[k];
+    return t?('<b style="color:'+RANK_C[t.rank|0]+'">'+(i+1)+RANKS[t.rank|0].slice(0,1)+'</b>'):('<b style="color:#4a5a75">'+(i+1)+'—</b>'); }).join(' ')+
+    ' · '+companyMasteryOf(e)+'%'+(e.badges.length?' · '+'🎖'.repeat(Math.min(3,e.badges.length)):''); }); }
 function updateBest(){ document.getElementById('bestLine').textContent = best.saves>0 ? ('BEST RUN: '+best.saves+(best.saves===1?' save':' saves')) : 'BEST RUN: — first shift!'; refreshStationList(); }
 /* ============ \U0001f5fa️ CITYWIDE FIREHOUSE PICKER =============================================
    A dark citywide map is the first thing you see: every PFD engine house plotted at its real
@@ -4219,9 +4513,11 @@ function drawHomeMap(now){
     c.shadowColor=col; c.shadowBlur=on?16:8; c.fillStyle=col;
     c.beginPath(); c.arc(0,0,r,0,6.283); c.fill(); c.shadowBlur=0;
     c.strokeStyle='rgba(255,255,255,.85)'; c.lineWidth=on?1.8:1; c.stroke();
-    { const pe=PROFILE.engines[d.st.id]; if(pe&&pe.runs>0&&(pe.lv>0||pe.badges.length)){                 // 🎖 career pip
-        c.fillStyle='#ffd27a'; c.beginPath(); c.arc(r*0.9,-r*0.9,2.6,0,6.283); c.fill();
-        c.strokeStyle='rgba(0,0,0,.4)'; c.lineWidth=.8; c.stroke(); } }
+    { const pe=PROFILE.engines[d.st.id]; if(pe&&pe.runs>0){                                            // 🧑‍🚒 career pips: due 1→4 left-to-right, colored by that position's rank; faint = not started
+        c.strokeStyle='rgba(0,0,0,.35)'; c.lineWidth=.6;
+        for(let i=0;i<POSITIONS.length;i++){ const t=pe.pos&&pe.pos[POSITIONS[i]];
+          c.fillStyle=t?RANK_C[t.rank|0]:'rgba(255,255,255,.16)';
+          c.beginPath(); c.arc((i-1.5)*4.6,-r-4.2,1.8,0,6.283); c.fill(); c.stroke(); } } }
     if(k<2.2){ const num=String(d.st.num);
       c.textAlign='center'; c.textBaseline='middle';
       if(d.off){ const fs=r*1.05, w=c.measureText(num).width;                  // crowded: number rides beside its dot in a small pill
@@ -4260,8 +4556,8 @@ function showHouseCard(st){ hcStation=st;
   document.getElementById('hcBn').textContent=ordinalBn(st.bn)+' BATTALION · DIVISION '+st.div;
   { const e=PROFILE.engines[st.id], el=document.getElementById('hcCareer');   // read-only — browsing a house must not create its career record
     if(el){ if(!e||!e.runs){ el.textContent='NEW CAREER · starts at ROOKIE'; }
-      else { const nxt=e.lv<3?(' · '+Math.min(e.held[e.lv]||0,HELD_TO_UNLOCK)+'/'+HELD_TO_UNLOCK+' to '+DIFF.names[e.lv+1]):' · MAXED';
-        el.textContent=DIFF.names[e.lv]+nxt+(e.badges.length?' · '+'🎖'.repeat(Math.min(6,e.badges.length)):''); } } }
+      else { const parts=POSITIONS.map((k,i)=>(i+1)+['ST','ND','RD','TH'][i]+' '+((e.pos&&e.pos[k])?RANKS_SHORT[e.pos[k].rank|0]:'—'));
+        el.textContent='LOCAL '+companyMasteryOf(e)+'% · '+parts.join(' · '); } } }
   document.getElementById('houseCard').classList.add('up');
   document.getElementById('homeMapWrap').classList.add('picking');
 }
@@ -4318,8 +4614,7 @@ function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); docume
   state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; RIVALS.on=true;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=groundHeight(SPAWN.x,SPAWN.z); truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; truck.pitch=0; camTheta=SPAWN.theta;
   parkAtStation(st); CAMLOOK.yaw=0; CAMLOOK.pitch=0; MAP.free=false; MAP.userRot=0;
-  { const e=profEng(st.id); DIFF.level=Math.min(e.lastLv,e.lv);              // 🧑‍🚒 this engine's career: last-ridden level, capped at what IT has unlocked
-    const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; }
+  { const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; }   // 🎯 difficulty is the player's own setting now — career rank no longer forces it (P3)
   applyDifficultyGates();                                                    // training wheels match the chosen level
   buildStationHouse(st);                                                     // BEFORE startIntro — it sets st._front, which is what tells the intro where the bay mouth is
   startIntro(st);           // park at the firehouse curb, nose to the street; bay doors roll up + roll out, then LEFT/RIGHT pulls out
