@@ -381,6 +381,36 @@
   .pdNext .pdHint { display:block; color:#95a4bd; margin-top:2px; }
   .pdStats { font-size:11px; color:#6f809b; margin-top:6px; }
   .ccCareer { margin-top:8px; padding:8px 10px; background:#182642; border:1px solid #26364f; border-left:4px solid #f4b950; border-radius:8px; font-size:12px; font-weight:700; color:#e9eef7; line-height:1.5; }
+  /* 🎖 P7c Chief Qualification UI */
+  .pdPos.ready { border-color:#f4b950; border-left-color:#f4b950; box-shadow:0 0 10px rgba(244,185,80,.18); }
+  .pdPos.ready .pdSub { color:#ffd27a; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:12px; }
+  .pdQualStart { display:block; width:100%; margin-top:7px; background:linear-gradient(180deg,#f4b950,#c98d2a); color:#241a05; border:none; border-radius:10px; padding:10px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:14px; cursor:pointer; pointer-events:auto; }
+  .pdQualNote { margin-top:5px; font-size:11px; color:#95a4bd; }
+  #qualCard { position:absolute; inset:0; z-index:67; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.8); pointer-events:auto; }
+  #qualCard.show { display:flex; }
+  #qualCard .cc { width:min(420px,92vw); background:linear-gradient(180deg,#131f31,#0f1a2b); border:1px solid #26364f; border-radius:20px; padding:0 16px 14px; overflow:hidden; color:#e9eef7; }
+  .qcHaz { height:7px; margin:0 -16px 12px; background:repeating-linear-gradient(-52deg,#f4b950 0 10px,#20293b 10px 20px); }
+  .qcTitle { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; font-size:24px; letter-spacing:.06em; color:#f4b950; }
+  .qcSub { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.14em; font-size:14px; color:#e9eef7; margin:3px 0 10px; }
+  .qcBody { font-size:13px; line-height:1.55; color:#c9d4e5; margin-bottom:12px; }
+  .qcBody b { color:#e9eef7; }
+  .qcBody .qcRules { margin:8px 0 0; padding:0 0 0 2px; list-style:none; }
+  .qcBody .qcRules li { padding:2px 0; }
+  .qcBody .qcRules li::before { content:"• "; color:#f4b950; }
+  .qcBody .qcHead { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:#ffd27a; font-size:14px; }
+  #qcStart { display:block; width:100%; border:none; border-radius:10px; padding:12px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:15px; background:linear-gradient(180deg,#f4b950,#c98d2a); color:#241a05; cursor:pointer; pointer-events:auto; }
+  #qcStart:disabled { opacity:.6; }
+  #qcCancel { display:block; width:100%; margin-top:8px; border:none; border-radius:10px; padding:11px; font-weight:900; background:#343c49; color:#fff; cursor:pointer; pointer-events:auto; }
+  #qualChip { position:absolute; z-index:15; top:calc(max(8px,env(safe-area-inset-top)) + 64px); left:max(10px,env(safe-area-inset-left)); display:none; pointer-events:none;
+    background:rgba(12,17,26,.94); border:1.5px solid #f4b950; border-radius:10px; padding:5px 10px; box-shadow:0 3px 12px rgba(0,0,0,.5);
+    font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:12px; color:#ffd27a; }
+  #qualChip b { color:#e9eef7; font-weight:800; }
+  #qualChip.show { display:block; }
+  .ccQual { margin-top:8px; padding:9px 11px; border-radius:8px; font-size:12px; font-weight:700; line-height:1.55; background:#182642; border:1px solid #26364f; }
+  .ccQual.pass { border-color:#f4b950; box-shadow:0 0 10px rgba(244,185,80,.2); }
+  .ccQual .qTitle { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:14px; }
+  .ccQual.pass .qTitle { color:#ffd27a; }
+  .ccQual.fail .qTitle { color:#e9eef7; }
   #lbClose { width:100%; margin-top:12px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnProfileClose { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnHyd { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:calc(clamp(90px,20vh,150px) + 122px); z-index:13; display:none; pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#e8a020; color:#fff; font-size:23px; box-shadow:0 3px 10px rgba(0,0,0,.3); font-family:inherit; }
@@ -542,6 +572,17 @@
   <button class="abtn" id="btnAccount">👤 ACCOUNT</button>
 </div>
 <div id="trainChip">🎓 TRAINING</div>
+<div id="qualChip">🎖 CHIEF QUAL · <b id="qualChipTxt"></b></div>
+<div id="qualCard" aria-hidden="true">
+  <div class="cc">
+    <div class="qcHaz"></div>
+    <div class="qcTitle">🎖 Chief Qualification</div>
+    <div class="qcSub" id="qcSub"></div>
+    <div class="qcBody" id="qcBody"></div>
+    <button id="qcStart">START QUALIFICATION</button>
+    <button id="qcCancel">CANCEL</button>
+  </div>
+</div>
 <div id="rivals"></div>
 <div id="dueChip"><span class="dueDot"></span><span class="dueTxt">1ST IN</span><span class="dueWho"></span></div>
 <div id="drillHUD"></div>
@@ -759,7 +800,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2102,13 +2143,14 @@ document.getElementById('btnDue').addEventListener('click',e=>{ e.preventDefault
   if(MAP.dueLevel===0){ popup('DISPATCH: ALL CALLS'); }
   else if(!dueActive()){ popup('THIS ENGINE HAS NO BOUNDARY YET'); radio('This engine has no traced first-due boundary yet — taking all calls. Draw & bake its boundary to use DUE filtering.'); }
   else { const n=dueEngineSet(DRIVE.stationId,MAP.dueLevel).size; popup(DUE_LABELS[MAP.dueLevel].replace('🚒 ','')+' ONLY','green'); radio('📻 Only taking '+['','1st','2nd','3rd','4th'][MAP.dueLevel]+'-due calls'+(n>1?' ('+n+' engine areas)':'')+'.'); }
-  if(state.running&&!MAP.bounds&&!DRAW.on){ state.target=null; state.onScene=false; newDispatch(); } });   // re-pick a call that fits the new area
+  if(state.running&&!MAP.bounds&&!DRAW.on&&!QUAL.active){ state.target=null; state.onScene=false; newDispatch(); } });   // re-pick a call that fits the new area (never while the exam owns the dispatch)
 document.getElementById('btnRestart').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); state.running=false; DRIVE.going=false; DRIVE.parked=false; goHome(); });
 /* 🔁 RESTART RUN — redo the CURRENT box from quarters. Keeps the same fire, the same house and your saves;
    just puts the truck back on the curb and restarts everyone's race. Distinct from ↺ RESTART, which drops
    the whole shift and goes back to the firehouse picker. */
 function rerunCurrentBox(){
   if(!state.running) return;
+  if(QUAL.active) qualClear('rerun');                                          // 🎖 rerunning mid-exam abandons it (no free retry, no attempt counted) — the box replays as a NORMAL run
   const tgt=state.target;
   returnToStation();
   state.onScene=false; state.douse=0;
@@ -2131,6 +2173,8 @@ function updateHUD(dt){
   const curStreet=streetName(rp[0],rp[1]),curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
   elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
   { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = (MAP.bounds||DRAW.on) ? '🎓 TRAINING » ' : '📻 DISPATCH » '; }   // boundary/training mode is not a live call
+  { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
+      if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
   { const training=(MAP.bounds||DRAW.on)&&state.running; const tc=document.getElementById('trainChip'); if(tc) tc.classList.toggle('show',training);   // small TRAINING chip top-left; hide the big dispatch banner while training
     const rd=document.getElementById('radio'); if(rd) rd.style.display=training?'none':'';
     if(training){ const u=document.getElementById('btnUndo'); if(u) u.disabled=(DRAW.undo.length===0); }
@@ -3252,6 +3296,7 @@ function drillNext(){
 }
 function startDrill(){
   if(!state.running){ radio('🎓 Start a shift first.'); return; }
+  qualClear('drill');                                                          // 🎖 exam and drill are mutually exclusive
   DRILL.on=true; DRILL.done=0; DRILL.streak=0; DRILL.pool=drillPool();
   state.target=null; clearRivals();                                            // no fire while drilling
   DRILL.target=null; drillNext();
@@ -3334,7 +3379,7 @@ const CAREER_REQ=[ null,                                                       /
   { held:5,  boxes:3,  clean:0, diffRuns:0, minDiff:0, noGuide:0, qual:false },   // → FIREFIGHTER (TRAINING difficulty allowed)
   { held:10, boxes:7,  clean:3, diffRuns:3, minDiff:1, noGuide:0, qual:false },   // → VETERAN: +3 runs at STANDARD or higher
   { held:15, boxes:12, clean:5, diffRuns:5, minDiff:2, noGuide:5, qual:true } ];  // → CHIEF: +5 runs at PRO or higher, 5 no-guide, qualification once Phase 7 lands
-const CAREER_TUNING={ qualEnforced:false,                                      // Phase 7 flips true — until then CHIEF promotes on counters and qual shows PENDING
+const CAREER_TUNING={ qualEnforced:true,                                       // 🎖 PRODUCTION (P7d): VETERAN with every counter met = QUALIFICATION READY — only a passed Chief Qualification completes VETERAN→CHIEF. Pre-flip CHIEFs (rank 3, passed:false) are grandfathered, incl. any late v16s client's auto-promote.
   masteryW:{ rank:0.6, boxes:0.4, posW:[0.4,0.3,0.2,0.1], boxTarget:12 } };    // company-mastery v1 weights — centralized, will grow (routes/streets/quals)
 function newTrack(){ return { rank:0, heldAtRank:0, heldTotal:0, saves:0, fails:0, boxes:{},
   cleanAtRank:0, diffQualAtRank:0, noGuideAtRank:0,                            // *AtRank counters reset on promotion; heldTotal/saves/fails/boxes are LIFETIME and never reset
@@ -3428,9 +3473,12 @@ function companyMasteryOf(e){                                                  /
 function careerPosInfo(t){                                                     // → everything the Career UI needs for one position — the UI NEVER re-derives promotion rules.
   /* pct formula (documented): mean of each ACTIVE requirement's capped completion (min(have/need,1)) —
      a huge held count can never hide a missing unique-box requirement. CHIEF=100. NOT STARTED (no track)=0. */
-  if(!t) return { started:false, mastered:false, rank:0, rankName:null, next:RANKS[0], pct:0, reqs:[], blocker:null, qualPassed:false };
+  if(!t) return { started:false, mastered:false, rank:0, rankName:null, next:RANKS[0], pct:0, reqs:[], blocker:null, qualPassed:false, qualReady:false };
   const rank=t.rank|0;
-  if(rank>=RANKS.length-1) return { started:true, mastered:true, rank, rankName:RANKS[rank], next:null, pct:100, reqs:[], blocker:null, qualPassed:!!(t.qual&&t.qual.passed) };
+  if(rank>=RANKS.length-1) return { started:true, mastered:true, rank, rankName:RANKS[rank], next:null, pct:100, reqs:[], blocker:null, qualPassed:!!(t.qual&&t.qual.passed), qualReady:false };
+  /* grandfathered CHIEFs (rank 3, qual.passed:false — promoted while qualEnforced was false, incl. any
+     late v16s client): rendered as plain MASTERED above, never demoted, never re-derived. qual.passed
+     true additionally shows "QUALIFICATION PASSED" — the only visible distinction, by design. */
   const req=CAREER_REQ[rank+1], reqs=[];
   const add=(k,label,have,need)=>{ if(need>0) reqs.push({k,label,have:Math.min(have|0,need),need,done:(have|0)>=need}); };
   add('held','Held',t.heldAtRank,req.held);
@@ -3447,10 +3495,12 @@ function careerPosInfo(t){                                                     /
       : k==='clean'?(n+' more clean run'+(n===1?'':'s'))
       : k==='noGuide'?(n+' more no-guide run'+(n===1?'':'s'))
       : 'Chief Qualification' }; break; } }
-  return { started:true, mastered:false, rank, rankName:RANKS[rank], next:RANKS[rank+1], pct:Math.round(careerProgress(t)*100), reqs, blocker, qualPassed:!!(t.qual&&t.qual.passed) };
+  return { started:true, mastered:false, rank, rankName:RANKS[rank], next:RANKS[rank+1], pct:Math.round(careerProgress(t)*100), reqs, blocker, qualPassed:!!(t.qual&&t.qual.passed), qualReady:qualReadyOf(t) };
 }
 function careerRecommendOf(e){                                                 // NEXT TRAINING: master 1st → expand 2nd → learn 3rd/4th; near-promotion (≥80%) tracks jump the queue; CHIEF never recommended
   const infos=POSITIONS.map((k,i)=>({k,due:i+1,t:(e&&e.pos&&e.pos[k])||null}));
+  for(const x of infos){ if(x.t&&qualReadyOf(x.t))                             // 🎖 a READY qualification outranks every ordinary advancement recommendation
+    return { due:x.due, k:x.k, label:POS_LABELS[x.due-1], text:'Chief Qualification Ready', hint:null, qual:true }; }
   const open=infos.filter(x=>!(x.t&&(x.t.rank|0)>=RANKS.length-1));
   if(!open.length) return null;                                                // whole company mastered
   let best=null,bp=0.8;
@@ -3464,6 +3514,22 @@ function careerRecommendOf(e){                                                 /
     text: pick.t ? (info.blocker?info.blocker.text:'one more good run') : 'start this position',
     hint: pick.due>1 ? ('Set 🚒 DUE: '+['','1ST','2ND','3RD','4TH'][pick.due]+' in Settings') : null };
 }
+/* 🎖 CHIEF QUALIFICATION (P7) — balance thresholds live HERE only, never scattered through
+   evaluation/UI code. Deliberately more forgiving than cleanRun()'s 5% "textbook" bar: one recovered
+   wrong turn on a typical 1.5km box costs ~7-13% excess and should NOT fail a career exam; wandering
+   should. cleanRun() itself is untouched — two centralized interpretations of the same RunResult. */
+const QUAL_RULES={ excess:0.12,   // max route excess (driven vs optimal): <=12% passes
+                   ww:3,          // wrong-way seconds: <3 passes (3+ fails)
+                   stop:8 };      // sat-still seconds: <8 passes (8+ fails)
+function qualReadyOf(track){                                                   // AUTHORITATIVE readiness — DERIVED every time, never trusted from qual.avail.
+  /* READY iff: enforcement active + rank VETERAN + not already passed + checkPromotion is missing
+     ONLY the qualification. A stale avail:false can never hide readiness; a stale avail:true can
+     never bypass missing requirements (cloud merges / older clients / migrations all safe). */
+  if(!CAREER_TUNING.qualEnforced) return false;
+  if(!track||(track.rank|0)!==RANKS.length-2) return false;                    // VETERAN only — ROOKIE/FF/CHIEF can never be ready
+  if(track.qual&&track.qual.passed) return false;
+  const chk=checkPromotion(track);
+  return !chk.ok&&chk.missing.length===1&&chk.missing[0].k==='qual'; }
 function freshProfileV2(){ let seed=0; try{ if(typeof localStorage!=='undefined'){ const d=+localStorage.getItem('pfd_diff'); if(d>=0&&d<=3) seed=d|0; } }catch(e){}
   return { v:2, legacyLv:seed, engines:{}, knowledge:{}, settings:{ diff:seed }, city:{badges:[],hydCount:0}, hyd:[] }; }
 function loadProfileV2(_migrate){                                              // _migrate = test hook only. Failure mode: v1 stays UNTOUCHED in localStorage, session runs no-save.
@@ -3502,6 +3568,21 @@ function profKnow(id){ id=id||DRIVE.stationId; if(!id) return null; PROFILE.know
   return k; }
 function heldDue(rv,ok){ return !!(ok&&rv&&rv.due>0&&rv.place>0&&rv.place<=rv.due); }        // THE held-due rule — score, board and career all call this one
 function cleanRun(rv,ok){ return !!(ok&&rv&&rv.optLen>1&&(rv.driven-rv.optLen)/rv.optLen<=0.05&&(rv.ww||0)<3&&(rv.stop||0)<6); }   // the coach's "textbook" test — badge + career share it
+function qualEvaluate(rv,ok,rules){                                            // 🎖 the exam verdict — pure; every threshold from QUAL_RULES, held rule = THE heldDue()
+  rules=rules||QUAL_RULES;
+  const r={ pass:false, finished:!!ok, held:heldDue(rv,ok), guideOK:!!(rv&&rv.guide===0), navOK:false, reasons:[] };
+  if(!rv){ r.reasons.push('no-rv'); return r; }
+  const okLen=rv.optLen>1, excess=okLen?(rv.driven-rv.optLen)/rv.optLen:Infinity;
+  r.navOK= okLen && excess<=rules.excess && (rv.ww||0)<rules.ww && (rv.stop||0)<rules.stop;
+  if(!r.finished) r.reasons.push('not-completed');
+  if(!r.held)     r.reasons.push('due-not-held');
+  if(!r.guideOK)  r.reasons.push('guide-used');
+  if(!okLen)      r.reasons.push('no-optimal-route');
+  else { if(excess>rules.excess)   r.reasons.push('route-excess');
+         if((rv.ww||0)>=rules.ww)  r.reasons.push('wrong-way');
+         if((rv.stop||0)>=rules.stop) r.reasons.push('stopped'); }
+  r.pass=r.finished&&r.held&&r.guideOK&&r.navOK;
+  return r; }
 function careerKnowledgeRun(companyId,rv,ok,held){                             // company-level box knowledge — updates on ANY real box response, even when position credit is refused
   if(!rv||!rv.box) return; const know=profKnow(companyId); if(!know) return;
   const kb=know.boxes[rv.box]||(know.boxes[rv.box]={n:0,held:0,bestT:0});
@@ -3535,6 +3616,21 @@ function careerRecordRun(rv,ok){                                               /
     const req=CAREER_REQ[(track.rank|0)+1];
     if(req&&(rv.diff|0)>=req.minDiff){ track.diffQualAtRank++; res.diffQualified=true; }     // qualifying bar = the NEXT promotion's minDiff, judged on the RUN's captured difficulty
   }
+  /* 🎖 CHIEF QUALIFICATION (P7a). A run flagged rv.qual={companyId,due} is an exam attempt (the QUAL
+     runtime stamps it in 7b). STRICTER than ordinary recording: company + ACTUAL due must match exactly,
+     else the attempt is VOID — no attempt counted, no pass/fail, no best update; the run itself was
+     already recorded normally above. Evaluation only updates qual state; the rank change flows through
+     the ONE existing checkPromotion→careerPromote path below — no separate promotion pathway exists. */
+  if(rv.qual){
+    if(rv.qual.companyId===res.companyId && (rv.qual.due|0)===(rv.due|0)){
+      const ev=qualEvaluate(rv,ok,QUAL_RULES);
+      track.qual.attempts=(track.qual.attempts|0)+1;                            // exactly once per EVALUATED attempt — pass or fail
+      const qs=calcRunScore(rv,ok).score;
+      if(Number.isFinite(qs)&&qs>(track.qual.best|0)) track.qual.best=qs;       // best = highest evaluated qual run score (legit attempts only)
+      if(ev.pass) track.qual.passed=true;                                       // the ONLY thing a pass sets — promotion happens below, through the normal gate
+      res.qual=ev;
+    } else { res.qualMismatch=true;
+      try{ console.warn('[qual] attempt VOID — expected '+rv.qual.companyId+' due '+rv.qual.due+', run was '+res.companyId+' due '+rv.due); }catch(e){} } }
   const chk=checkPromotion(track);
   if(chk.ok&&careerPromote(res.companyId,track)){                               // at most ONE promotion per run
     res.promoted=true;
@@ -3543,8 +3639,46 @@ function careerRecordRun(rv,ok){                                               /
       if(e.badges.indexOf(bid)<0){ e.badges.push(bid); res.badgeEarned=BADGE_NAMES[bid]||bid; } }
     try{ popup('🎖 '+RANKS[track.rank]+' · '+POS_LABELS[POSITIONS.indexOf(k)]+' · Engine '+engNum(res.companyId),'green'); }catch(e){}
   }
+  /* derived READY (qualReadyOf) is authoritative; qual.avail is only a synced convenience mirror,
+     REPAIRED here every run — a stale avail:false can never hide readiness, a stale avail:true can
+     never bypass missing requirements.
+     ⚠️ v16s-client window (ACCEPTED, do not over-engineer): an old client still running
+     qualEnforced:false may auto-promote a fully-qualified VETERAN straight to CHIEF and sync
+     rank 3 / passed:false. That result is treated exactly like an existing grandfathered CHIEF —
+     every pre-qualification requirement was met, rank stays monotonic, nothing demotes it, and the
+     network-first PWA closes the window as clients reload. */
+  track.qual.avail=qualReadyOf(track);
   res.newRank=track.rank;
   return res; }
+function qualPool(companyId,due,cap,rnd){                                      // 🎖 verified exam candidates. Reservoir-sampled so ADDR's dataset order can NEVER bias selection.
+  cap=cap||40; rnd=rnd||Math.random;
+  const st=stations.find(s=>s.id===companyId); if(!st) return {pool:[],stats:null,reason:'no-company'};
+  const k=posKey(due); if(!k) return {pool:[],stats:null,reason:'invalid-due'};
+  const e=PROFILE.engines[companyId], track=e&&e.pos&&e.pos[k];
+  if(!track) return {pool:[],stats:null,reason:'no-track'};
+  const known=track.boxes||{};
+  if(!Object.keys(known).length) return {pool:[],stats:null,reason:'no-known-boxes'};                    // the exam tests material learned AT THIS POSITION — company-wide or other-position knowledge never substitutes
+  const t0=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
+  const stats={ total:ADDR.a.length, dist:0, resp:0, dueHits:0, knownHits:0, valid:0, ms:0 };
+  const pool=[]; let seen=0;
+  for(let i=0;i<ADDR.a.length;i++){ const a=ADDR.a[i]; if(!a) continue;
+    const dd=Math.hypot(a[2]-st.x,a[3]-st.z); if(dd<300||dd>3000) continue; stats.dist++;                // the normal dispatch band, measured from QUARTERS
+    const resp=computeResponders(a[2],a[3]); stats.resp++;                                               // REAL responder order proves the due — MAP.dueLevel is never consulted
+    if(!resp[due-1]||resp[due-1].id!==companyId) continue; stats.dueHits++;
+    const box=computeBox(resp[0],a[2],a[3]);                                                             // same derivation assignBox uses
+    if(!(box in known)) continue; stats.knownHits++;
+    const v=addressDispatchable(a); if(!v) continue; stats.valid++;                                      // same validity source as normal dispatch
+    const cand={a,idx:i,box,edge:v.edge,cross:v.cross};
+    seen++;
+    if(pool.length<cap) pool.push(cand);
+    else { const j=(rnd()*seen)|0; if(j<cap) pool[j]=cand; } }                                           // classic reservoir: every valid candidate has equal selection probability
+  stats.ms=Math.round((((typeof performance!=='undefined'&&performance.now)?performance.now():0))-t0);
+  return {pool,stats,reason:pool.length?null:'no-eligible-box'}; }
+function qualSelectFrom(pool,lastBox,rnd){ rnd=rnd||Math.random;               // flat random; avoids the most recent box at this position when an alternative exists — no weighting, no player choice
+  if(!pool||!pool.length) return null;
+  let c=pool;
+  if(lastBox&&c.length>1){ const f=c.filter(x=>x.box!==lastBox); if(f.length) c=f; }
+  return c[(rnd()*c.length)|0]; }
 /* ===CAREER-RUN-END=== */
 { // 🎯 boot: difficulty comes from the player's own setting (PROFILE.settings.diff), not from any career
   if(PROFILE.settings&&Number.isInteger(PROFILE.settings.diff)&&PROFILE.settings.diff>=0&&PROFILE.settings.diff<=3){
@@ -3910,6 +4044,11 @@ function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                
     else if(info&&info.started&&!info.mastered) fb.push('Progress to '+info.next+': '+info.pct+'%'+(info.blocker?' · Next: '+info.blocker.text:''));
     else if(info&&info.mastered) fb.push('CHIEF — MASTERED');
     rv.careerFb=fb; }
+  if(cr&&cr.qual){ const qe=PROFILE.engines[cr.companyId], qt=qe&&qe.pos&&qe.pos[cr.posKey];             // 🎖 player-facing exam verdict (raw thresholds stay in dev logs, never on the card)
+    rv.qualFb={ pass:!!cr.qual.pass, held:!!cr.qual.held, nav:!!cr.qual.navOK, guideOK:!!cr.qual.guideOK,
+      companyId:cr.companyId, due:rv.due|0, attempts:(qt&&qt.qual&&qt.qual.attempts)|0 };
+    QUAL._last={ pass:rv.qualFb.pass, companyId:cr.companyId, due:rv.due|0, shown:false }; }
+  if(rv&&rv.qual) qualClear(cr&&cr.qual?'evaluated':'qual-mismatch');                                   // exam over (attempt was counted — or voided — in careerRecordRun ONLY); difficulty restored
   { const c=PROFILE.city;                                                                               // citywide
     if(Object.values(PROFILE.engines).filter(x=>x.runs>0).length>=5) award(c.badges,'traveled',earned);
     let tot=0; for(const k in PROFILE.engines) tot+=PROFILE.engines[k].saves; if(tot>=100) award(c.badges,'century',earned); }
@@ -3920,23 +4059,29 @@ function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                
   } return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
   const cur=(DRIVE.stationId&&PROFILE.engines[DRIVE.stationId])?DRIVE.stationId:null, rows=[];
-  const posRow=(t,i)=>{ const info=careerPosInfo(t||null), col=t?RANK_C[t.rank|0]:'#3a4a63';   // NOT STARTED ≠ ROOKIE: an absent track renders muted, no earned progress pretended
+  const posRow=(t,i,engId)=>{ const info=careerPosInfo(t||null), col=t?RANK_C[t.rank|0]:'#3a4a63';   // NOT STARTED ≠ ROOKIE: an absent track renders muted, no earned progress pretended
+    const ready=!!info.qualReady, att=(t&&t.qual&&t.qual.attempts)|0;
     const sub= info.mastered?('MASTERED'+(info.qualPassed?' · QUALIFICATION PASSED':''))
+      : ready?'CHIEF QUALIFICATION READY'
       : !t?(i===0?'Ride out — your first box starts this career':('Set 🚒 DUE: '+['1ST','2ND','3RD','4TH'][i]+' in Settings to ride this slot'))
       : (info.blocker?('Next: '+info.blocker.text):('Progress to '+info.next));
-    const reqs=(t&&!info.mastered)?info.reqs.map(q=>q.have+'/'+q.need+' '+q.label).join(' · '):'';
-    return '<div class="pdPos'+(t?'':' ns')+(info.mastered?' done':'')+'" style="--c:'+col+'">'+
+    let reqs='';
+    if(t&&!info.mastered){ reqs=info.reqs.filter(q=>q.k!=='qual').map(q=>q.have+'/'+q.need+' '+q.label+(q.done?' ✓':'')).join(' · ');
+      if(ready){ if(att>0) reqs+='<div class="pdQualNote">Attempts: '+att+'</div>';
+        reqs+='<button class="pdQualStart" data-qeng="'+engId+'" data-qdue="'+(i+1)+'">🎖 START CHIEF QUALIFICATION</button>'; } }
+    else if(info.mastered&&info.qualPassed){ reqs='QUALIFICATION PASSED'+(att>0?' · Attempts: '+att:''); }
+    return '<div class="pdPos'+(t?'':' ns')+(info.mastered?' done':'')+(ready?' ready':'')+'" style="--c:'+col+'">'+
       '<span class="pdLbl">'+POS_LABELS[i]+'</span>'+
       '<span class="pdRank">'+(t?RANKS[t.rank|0]:'NOT STARTED')+'</span>'+
-      '<span class="pdBar"><i style="width:'+Math.max(3,info.pct)+'%"></i></span>'+
-      '<span class="pdPct">'+(t?info.pct+'%':'—')+'</span>'+
+      '<span class="pdBar"><i style="width:'+Math.max(3,ready?100:info.pct)+'%"></i></span>'+
+      '<span class="pdPct">'+(t?(ready?100:info.pct)+'%':'—')+'</span>'+
       '<div class="pdSub">'+sub+'</div>'+
       (reqs?'<div class="pdReqs">'+reqs+'</div>':'')+
     '</div>'; };
   const fmt=(id,e)=>{ const bd=e.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
     let h='<div class="pdEng'+(id===cur?' cur':'')+'"><div class="pdHead"><b>Engine '+engNum(id)+'</b>'+
       '<span class="pdMy">LOCAL KNOWLEDGE '+companyMasteryOf(e)+'%</span></div>';
-    h+=POSITIONS.map((k,i)=>posRow(e.pos&&e.pos[k],i)).join('');
+    h+=POSITIONS.map((k,i)=>posRow(e.pos&&e.pos[k],i,id)).join('');
     if(id===cur){ const rec=careerRecommendOf(e);
       if(rec) h+='<div class="pdNext">🎯 NEXT TRAINING — '+rec.label+(rec.text?' · '+rec.text:'')+(rec.hint?'<span class="pdHint">'+rec.hint+'</span>':'')+'</div>'; }
     h+='<div class="pdStats">'+e.saves+' saves · '+e.runs+' runs · tap a due row for its full requirements'+(bd?'<div class="pcBadges">🎖 '+bd+'</div>':'')+'</div></div>';
@@ -3953,7 +4098,10 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       tx.value=n?JSON.stringify({type:'pfd_hydrant_submissions',build:BUILD,count:n,list:PROFILE.hyd}):'';
       tx.style.display='none'; cp.style.display=n?'block':'none'; } }
   el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
-document.getElementById('pcBody').addEventListener('click',e=>{ const g=e.target.closest('.pdPos'); if(g) g.classList.toggle('open'); });
+document.getElementById('pcBody').addEventListener('click',e=>{
+  const qb=e.target.closest('.pdQualStart');
+  if(qb){ e.stopPropagation(); qualUiOpen(qb.dataset.qeng,+qb.dataset.qdue); return; }
+  const g=e.target.closest('.pdPos'); if(g) g.classList.toggle('open'); });
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
@@ -4145,6 +4293,7 @@ function coachCapture(){ const t=state.target; if(!t||COACH.trail.length<2) retu
            time:(COACH.arriveT||GT)-COACH.t0, place:RIVALS.playerPlace||0, due:RIVALS.playerDue||0,
            uturns:COACH.uturns, arrStreet,
            guide:COACH.usedGuide?1:0, diff:DIFF.level,                          // captured run state — career + board read THESE, never re-infer
+           qual:(QUAL.active&&DRIVE.stationId===QUAL.companyId)?{companyId:QUAL.companyId,due:QUAL.due}:undefined,   // 🎖 structured exam stamp — ONLY while the runtime owns this dispatch (stale/pending QUAL can never stamp)
            box:t.box||'', addr:t.address||t.name||'', divStreet, optStreet }; }
 function coachLines(r){ const L=[];                                             // every line traces to a measured number
   const mi=m=>{ const v=m*0.000621371; return v<0.095?Math.round(m*3.28084)+' ft':v.toFixed(1)+' mi'; };
@@ -4169,6 +4318,12 @@ function showCoach(r){ const el=document.getElementById('coachCard');
   document.getElementById('coachSay').innerHTML=coachLines(r).map(q=>'<div>“'+q+'”</div>').join('');
   if(r.earned&&r.earned.length) document.getElementById('coachSay').innerHTML+=r.earned.map(q=>'<div class="ccBadge">🎖 '+q+'</div>').join('');
   if(r.careerFb&&r.careerFb.length) document.getElementById('coachSay').innerHTML+='<div class="ccCareer">'+r.careerFb.join('<br>')+'</div>';
+  if(r.qualFb){ const q=r.qualFb;                                              // 🎖 exam verdict block — words first, color as support
+    document.getElementById('coachSay').innerHTML+='<div class="ccQual '+(q.pass?'pass':'fail')+'">'+
+      '<div class="qTitle">🎖 CHIEF QUALIFICATION '+(q.pass?'PASSED':'NOT PASSED')+'</div>'+
+      'ENGINE '+engNum(q.companyId)+' · '+POS_LABELS[(q.due||1)-1]+'<br>'+
+      'Held Due '+(q.held?'✓':'✕')+' · Navigation '+(q.nav?'✓':'✕')+(!q.guideOK?' · Navigation Assistance ✕':'')+'<br>'+
+      (q.pass?'':'Qualification remains available. ')+(q.attempts?('Attempt '+q.attempts):'')+'</div>'; }
   const showOpt=!!(r.opt&&r.optLen>1&&(r.driven-r.optLen)/r.optLen>0.08);       // his line only when it was meaningfully better
   document.getElementById('coachLegend').style.display=showOpt?'flex':'none';
   el.classList.add('show'); el.setAttribute('aria-hidden','false');
@@ -4210,26 +4365,125 @@ function crossStreetFrom(a,b,d,street){ const cn=canonStreet(street); let guard=
     if(names.length)return {name:names[0],d}; const nx=sameStreetOn(a,b); if(!nx)break; d+=Math.hypot(nx.x-b.x,nx.z-b.z); a=b;b=nx; } return null; }
 function addressCrossStreets(x,z,street,edge){ const e=edge||addressRoadEdge(x,z,street); if(!e)return []; const L=Math.hypot(e.b.x-e.a.x,e.b.z-e.a.z)||1;
   const left=crossStreetFrom(e.b,e.a,e.t*L,street),right=crossStreetFrom(e.a,e.b,(1-e.t)*L,street); return [left,right].filter(Boolean); }
+function addressDispatchable(a){ if(!a) return null;                                                     // SHARED validity for normal + qualification dispatches — one source, never forked
+  const edge=addressRoadEdge(a[2],a[3],a[1]); if(!edge) return null;
+  const cross=addressCrossStreets(a[2],a[3],a[1],edge);
+  if(cross.length<2||canonStreet(cross[0].name)===canonStreet(cross[1].name)) return null;
+  return {edge,cross}; }
+function buildAddressTarget(a,edge,cross){ const kind=ADDRESS_INCIDENTS[(Math.random()*ADDRESS_INCIDENTS.length)|0]; lastAddress=a[0];
+  return {isAddress:true,name:a[0],address:a[0],street:a[1],x:edge.cx,z:edge.cz,bx:a[2],bz:a[3],zip:a[4],cross:cross.map(q=>q.name),d:kind+' | '+a[0]+' | Between '+cross[0].name+' and '+cross[1].name+'.',f:'Call cleared.'}; }
 function makeAddressDispatch(){ if(!ADDR||!ADDR.a||!ADDR.a.length)return null;
   const polys=[]; for(const st of stations){ const p=duePolygon(st.id); if(p) polys.push(p); }           // union of the traced first-due areas (the mapped play area)
   const inMapped=(x,z)=>{ if(!polys.length) return true; for(const p of polys) if(ptInRing(x,z,p)) return true; return false; };
   let pick=null, fallback=null; const total=ADDR.a.length,start=(addressCursor+977)%total; addressCursor=start;
   for(let tries=0;tries<total;tries++){ const a=ADDR.a[(start+tries)%total]; if(!a||a[0]===lastAddress)continue;
     const d=Math.hypot(a[2]-truck.x,a[3]-truck.z); if(d<300||d>3000)continue; if(!addressInDue(a[2],a[3]))continue;   // keep runs nearby (was up to 7500m)
-    const edge=addressRoadEdge(a[2],a[3],a[1]),cross=addressCrossStreets(a[2],a[3],a[1],edge);
-    if(!edge||cross.length<2||canonStreet(cross[0].name)===canonStreet(cross[1].name))continue;
-    if(inMapped(a[2],a[3])){ pick={a,edge,cross}; break; }                                                // ✅ inside a real first-due polygon → box reflects the right engine
-    if(!fallback) fallback={a,edge,cross}; }                                                              // else remember one so a run always exists
+    const v=addressDispatchable(a); if(!v)continue;
+    if(inMapped(a[2],a[3])){ pick={a,edge:v.edge,cross:v.cross}; break; }                                 // ✅ inside a real first-due polygon → box reflects the right engine
+    if(!fallback) fallback={a,edge:v.edge,cross:v.cross}; }                                               // else remember one so a run always exists
   pick=pick||fallback;
-  if(!pick)return null; const a=pick.a,kind=ADDRESS_INCIDENTS[(Math.random()*ADDRESS_INCIDENTS.length)|0]; lastAddress=a[0];
-  return {isAddress:true,name:a[0],address:a[0],street:a[1],x:pick.edge.cx,z:pick.edge.cz,bx:a[2],bz:a[3],zip:a[4],cross:pick.cross.map(q=>q.name),d:kind+' | '+a[0]+' | Between '+pick.cross[0].name+' and '+pick.cross[1].name+'.',f:'Call cleared.'}; }
-function newDispatch(){ if(MAP.bounds||DRAW.on||DRILL.on) return;                     // 🎓 the drill owns the radio while it runs                               // no runs in training/boundary mode
-  state.target=makeAddressDispatch(); if(!state.target){ radio('ADDRESS DISPATCH UNAVAILABLE - press RESTART.'); return; } state.douse=0; state.onScene=false;
+  if(!pick)return null;
+  return buildAddressTarget(pick.a,pick.edge,pick.cross); }
+function launchDispatch(target){                                                                        // shared dispatch tail — normal runs AND the qualification exam use this one path
+  state.target=target; if(!state.target){ radio('ADDRESS DISPATCH UNAVAILABLE - press RESTART.'); return false; } state.douse=0; state.onScene=false;
   { const ap=nearestAsphalt(state.target.x,state.target.z); state.arriveX=ap.x; state.arriveZ=ap.z; }   // curb-side arrival point
   const d=Math.hypot(state.target.x-truck.x,state.target.z-truck.z); const add=Math.max(CONFIG.timer.addMin,Math.min(CONFIG.timer.addMax,CONFIG.timer.addBase+d*CONFIG.timer.addK));
   const bx=state.target.bx!==undefined?state.target.bx:state.target.x, bz=state.target.bz!==undefined?state.target.bz:state.target.z;   // beacon over the building, not the roadway
   state.timeLeft=Math.min(CONFIG.timer.cap,state.timeLeft+add); beaconG.position.set(bx,groundHeight(bx,bz),bz); routeDirty=true;
-  assignBox(); radio(state.target.d); popup('🔔 BOX '+state.target.box); spawnRivals(); coachReset(); }
+  assignBox(); radio(state.target.d); popup('🔔 BOX '+state.target.box); spawnRivals(); coachReset(); return true; }
+function newDispatch(){ if(MAP.bounds||DRAW.on||DRILL.on) return;                     // 🎓 the drill owns the radio while it runs                               // no runs in training/boundary mode
+  if(QUAL.pending&&DRIVE.stationId===QUAL.companyId){ QUAL.pending=false; qualLaunch(); return; }       // 🎖 ONE-SHOT exam injection (qual-initiated shift start) — normal flow untouched after this fires
+  launchDispatch(makeAddressDispatch()); }
+/* 🎖 CHIEF QUALIFICATION runtime (P7b). Career data stores RESULTS (track.qual, via careerRecordRun — the
+   ONLY place attempts are counted); QUAL stores only the CURRENT attempt, memory-only and never persisted:
+   a reload simply abandons the attempt — attempts unchanged, READY intact, difficulty restored by the
+   normal boot path (PROFILE.settings.diff). */
+const QUAL={ active:false, pending:false, _own:false, companyId:null, due:0, box:null, addr:null, idx:-1, edge:null, cross:null, prevDiff:0, lastStats:null };
+function qualStart(companyId,due,confirmed){                                                             // → {ok:true,mode} | {ok:false,reason}; validates EVERYTHING before touching gameplay state
+  if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-already-active'};
+  if(DRILL.on||MAP.bounds||DRAW.on) return {ok:false,reason:'special-mode-active'};                      // the exam is EXCLUSIVE — never stacks with drill/training modes
+  const st=stations.find(s=>s.id===companyId); if(!st) return {ok:false,reason:'no-company'};
+  const k=posKey(due); if(!k) return {ok:false,reason:'invalid-due'};
+  const e=PROFILE.engines[companyId], track=e&&e.pos&&e.pos[k];
+  if(!track) return {ok:false,reason:'no-track'};
+  if(!qualReadyOf(track)) return {ok:false,reason:'not-ready'};                                          // DERIVED readiness — qual.avail is never trusted
+  const P=qualPool(companyId,due); QUAL.lastStats=P.stats;
+  if(!P.pool.length) return {ok:false,reason:P.reason||'no-eligible-box'};                               // → "QUALIFICATION TEMPORARILY UNAVAILABLE" (7c). Nothing consumed, career untouched, NO fallback due.
+  const lastBox=(function(){ const lg=(e.log||[]); for(let i=lg.length-1;i>=0;i--){ const r=lg[i]; if((r.due|0)===(due|0)&&r.box) return r.box; } return null; })();
+  const pick=qualSelectFrom(P.pool,lastBox); if(!pick) return {ok:false,reason:'no-eligible-box'};
+  if(state.running&&DRIVE.stationId===companyId&&!state.target&&!state.onScene){                         // riding the right company, between boxes → direct launch
+    qualArm(companyId,due,pick); return qualLaunch()?{ok:true,mode:'direct'}:{ok:false,reason:'launch-failed'}; }
+  if(state.target&&!confirmed) return {ok:false,reason:'needs-confirm-current-run'};                     // caller confirms (7c UI), then re-invokes with confirmed=true — the active run is NEVER silently discarded
+  qualArm(companyId,due,pick); QUAL.pending=true;                                                        // startShift path: injection in newDispatch fires exactly once after the bay intro
+  QUAL._own=true; startShift(st); QUAL._own=false;
+  return {ok:true,mode:'shift'}; }
+function qualArm(companyId,due,pick){ QUAL.companyId=companyId; QUAL.due=due|0; QUAL.box=pick.box;
+  QUAL.addr=pick.a; QUAL.idx=pick.idx; QUAL.edge=pick.edge; QUAL.cross=pick.cross; QUAL.prevDiff=DIFF.level; }
+function qualLaunch(){                                                                                   // spawn the exam dispatch (riding QUAL.companyId, no active box)
+  DIFF.level=2; applyDifficultyGates(); MAP.guide=false;                                                 // 🎯 temporary PRO override — PROFILE.settings.diff and pfd_diff are NEVER written; the PRO gate hides the GUIDE button (forced false as belt+braces — nothing can re-enable it while the button is gone)
+  { const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; }
+  if(!launchDispatch(buildAddressTarget(QUAL.addr,QUAL.edge,QUAL.cross))){ qualClear('launch-failed'); return false; }
+  if((RIVALS.playerDue|0)!==(QUAL.due|0) || state.target.box!==QUAL.box){                                // 🔒 runtime PROOF: actual assigned due + target box identity must equal the validated pick
+    try{ console.warn('[qual] runtime mismatch — due '+RIVALS.playerDue+' vs '+QUAL.due+', box '+state.target.box+' vs '+QUAL.box+' — attempt ABORTED (not counted)'); }catch(e){}
+    state.target=null; clearRivals(); qualClear('runtime-mismatch');
+    setTimeout(()=>{ if(state.running&&!state.target) newDispatch(); },900);                             // resume normal flow
+    return false; }
+  QUAL.active=true;
+  radio('🎖 CHIEF QUALIFICATION · Engine '+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · Box '+QUAL.box+' — hold your due, no guide, drive it clean.');
+  return true; }
+function qualClear(reason){                                                                              // ONE central cleanup — used by every exit path. NEVER touches qual.attempts or any career state.
+  if(!QUAL.active&&!QUAL.pending&&!QUAL.companyId) return;
+  if((QUAL.active||QUAL.pending)&&['home','shift-change','drill','rerun','game-over','cancel'].indexOf(reason)>=0)
+    try{ popup('🎖 Chief Qualification ended — no attempt recorded'); }catch(e){}                 // calm toast; the track stays READY
+  QUAL.active=false; QUAL.pending=false; QUAL._own=false; QUAL.companyId=null; QUAL.due=0; QUAL.box=null;
+  QUAL.addr=null; QUAL.idx=-1; QUAL.edge=null; QUAL.cross=null;
+  const d=(PROFILE.settings&&Number.isInteger(PROFILE.settings.diff)&&PROFILE.settings.diff>=0&&PROFILE.settings.diff<=3)
+    ? PROFILE.settings.diff : (QUAL.prevDiff|0);                                                         // PERSISTENT preference is authoritative; prevDiff is a diagnostic fallback only
+  DIFF.level=d; applyDifficultyGates();                                                                  // restores GUIDE from pfd_guide where the level allows it
+  { const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; }
+  try{ console.log('[qual] cleared ('+(reason||'?')+')'); }catch(e){} }
+/* 🎖 P7c qualification UI flow — the DOM never re-implements runtime rules: one handler calls
+   qualStart() and translates its structured result into player-facing states. */
+const QUALUI={ companyId:null, due:0, busy:false, confirming:false };
+function qualUiMsg(reason,due){ const pos=POS_LABELS[(due||1)-1];
+  if(reason==='no-eligible-box'||reason==='no-known-boxes')
+    return '<span class="qcHead">Qualification temporarily unavailable</span><br>We don\'t have enough verified '+pos+' boxes for this company yet.<br><b>Your career progress is unchanged.</b>';
+  if(reason==='special-mode-active')
+    return '<span class="qcHead">Finish your current drill first</span><br>Chief Qualification can\'t start while a drill or training mode is active.';
+  if(reason==='qual-already-active') return 'A Chief Qualification is already in progress.';
+  return 'Qualification isn\'t available right now.'; }
+function qualUiOpen(companyId,due){ const el=document.getElementById('qualCard'); if(!el) return;
+  QUALUI.companyId=companyId; QUALUI.due=due|0; QUALUI.busy=false; QUALUI.confirming=false;
+  const e=PROFILE.engines[companyId], t=e&&e.pos&&e.pos[posKey(due)];
+  const att=(t&&t.qual&&t.qual.attempts)|0;
+  document.getElementById('qcSub').textContent='ENGINE '+engNum(companyId)+' · '+POS_LABELS[due-1];
+  document.getElementById('qcBody').innerHTML='<span class="qcHead">One box · PRO rules</span>'+
+    '<ul class="qcRules"><li>No GUIDE</li><li>Hold your assigned due</li><li>Drive an efficient route</li>'+
+    '<li>One recovered mistake won\'t automatically fail you</li></ul>'+
+    (att>0?'<div class="pdQualNote">Attempts so far: '+att+'</div>':'');
+  const st=document.getElementById('qcStart'); st.style.display='block'; st.disabled=false; st.textContent='START QUALIFICATION';
+  document.getElementById('qcCancel').textContent='CANCEL';
+  el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+function qualUiHide(){ const el=document.getElementById('qualCard'); if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); } QUALUI.busy=false; QUALUI.confirming=false; }
+function qualUiCommit(){ if(QUALUI.busy) return; QUALUI.busy=true;             // double-tap guard (runtime stays authoritative regardless)
+  const st=document.getElementById('qcStart'); st.disabled=true; st.textContent='PREPARING QUALIFICATION…';
+  const confirmed=QUALUI.confirming;
+  setTimeout(function(){                                                       // let the loading state paint before the (usually ~50ms) pool scan
+    const r=qualStart(QUALUI.companyId,QUALUI.due,confirmed);
+    QUALUI.busy=false;
+    if(r.ok){ qualUiHide();
+      { const pc=document.getElementById('profileCard'); if(pc){ pc.classList.remove('show'); pc.setAttribute('aria-hidden','true'); } }
+      if(r.mode==='shift') popup('🎖 Riding out for the CHIEF QUALIFICATION');
+      return; }
+    if(r.reason==='needs-confirm-current-run'){ QUALUI.confirming=true;
+      document.getElementById('qcBody').innerHTML='<span class="qcHead">Start Chief Qualification?</span><br>'+
+        'This will end your current response and begin the Chief Qualification for<br><b>ENGINE '+engNum(QUALUI.companyId)+' · '+POS_LABELS[QUALUI.due-1]+'</b>';
+      st.disabled=false; st.textContent='START QUALIFICATION'; return; }
+    document.getElementById('qcBody').innerHTML=qualUiMsg(r.reason,QUALUI.due); // unavailable / conflict — informational, nothing consumed
+    st.style.display='none'; document.getElementById('qcCancel').textContent='CLOSE';
+  },30); }
+document.getElementById('qcStart').addEventListener('click',e=>{ e.preventDefault(); qualUiCommit(); });
+document.getElementById('qcCancel').addEventListener('click',e=>{ e.preventDefault(); qualUiHide(); });
 function completeDispatch(){ const t=state.target; const _rv=coachCapture(); if(_rv) _rv.earned=profileRun(_rv,true); state.saves++; const reward=Math.round(CONFIG.reward.base*state.combo); state.cash+=reward; sfx.ding(); sfx.splash();   // no timer → flat reward
   popup('🔥 FIRE OUT · '+state.saves+(state.saves===1?' SAVE':' SAVES'),'green'); radio('🔥 OUT at '+t.name+'! '+t.f); const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta);
   for(let i=0;i<Math.min(60,water.n);i++) emit(water,truck.x+fx*3,2.4,truck.z+fz*3,Math.cos(i/60*6.28)*6+Math.random()*3,6+Math.random()*7,Math.sin(i/60*6.28)*6+Math.random()*3,0.9+Math.random()*0.5);
@@ -4393,9 +4647,11 @@ function buildStationHouse(st){
 function returnToStation(){ const st=stations.find(s=>s.id===DRIVE.stationId)||stations[0]; if(!st) return;   // teleport back to the firehouse curb and re-park (pull-out prompt returns)
   parkAtStation(st); camTheta=truck.theta; CAMLOOK.yaw=0; CAMLOOK.pitch=0; radio('🏠 Back in quarters — '+st.companies[0]+' available.'); }
 function saveBest(){ if(state.saves>best.saves||(state.saves===best.saves&&state.cash>best.cash)){ best={saves:state.saves,cash:state.cash}; try{ localStorage.setItem('pfd_ef_best',JSON.stringify(best)); }catch(e){} } }
-function gameOver(title,why){ state.running=false; state.over=true; saveBest(); { const e=DRIVE.stationId?profEng():null; if(e&&state.saves>e.bestT){ e.bestT=state.saves; saveProfile(); } } document.getElementById('finalCash').textContent=state.saves+(state.saves===1?' SAVE':' SAVES');
+function gameOver(title,why){ qualClear('game-over'); state.running=false; state.over=true; saveBest(); { const e=DRIVE.stationId?profEng():null; if(e&&state.saves>e.bestT){ e.bestT=state.saves; saveProfile(); } } document.getElementById('finalCash').textContent=state.saves+(state.saves===1?' SAVE':' SAVES');
   { const h=document.querySelector('#over .card h1'); if(h) h.textContent=title||'⏰ SHIFT OVER'; }
-  document.getElementById('finalStats').textContent= why || (state.saves+' dispatches completed on the riverfront'); document.getElementById('finalBest').textContent=best.saves>0?('BEST: '+best.saves+(best.saves===1?' save':' saves')):'';
+  document.getElementById('finalStats').textContent= why || (state.saves+' dispatches completed on the riverfront');
+  if(QUAL._last&&!QUAL._last.shown){ QUAL._last.shown=true;                     // 🎖 beaten-in during the exam → verdict on the game-over card (coach card never shows)
+    document.getElementById('finalStats').textContent+=' · 🎖 CHIEF QUALIFICATION NOT PASSED — it remains ready, no progress lost.'; } document.getElementById('finalBest').textContent=best.saves>0?('BEST: '+best.saves+(best.saves===1?' save':' saves')):'';
   document.getElementById('finalFact').textContent='Local fact: '+LMK[(Math.random()*LMK.length)|0].f; document.getElementById('over').classList.add('show'); }
 function resetRun(){ state.cash=0; state.saves=0; state.timeLeft=CONFIG.timer.start; state.over=false; state.target=null; state.combo=1;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=0; truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; state.running=true; newDispatch(); }
@@ -4608,7 +4864,7 @@ function closeHomeMap(){ if(HOMEMAP.raf){ cancelAnimationFrame(HOMEMAP.raf); HOM
   window.addEventListener('resize',()=>{ if(homeEl.classList.contains('show')){ HOMEMAP.ready=false; HOMEMAP.dots=[]; HOMEMAP.rot=undefined; buildHomeBase(); } });
   if(homeEl.classList.contains('show')) openHomeMap();
 })();
-function goHome(){ document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); openHomeMap(); }
+function goHome(){ qualClear('home'); document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); openHomeMap(); }
 /* 📱 Reopen → home. The installed PWA can resume a run mid-drive after being backgrounded (iOS keeps
    the page in memory), which lands you confusingly mid-street. If the app was away >60s and a run is live,
    return to the firehouse picker on the way back in. Brief app-switches (<60s) keep your run going. */
@@ -4624,6 +4880,7 @@ document.addEventListener('visibilitychange',()=>{
   __awayAt=0;
 });
 function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
+  if(!(QUAL.pending&&QUAL._own&&st&&st.id===QUAL.companyId)) qualClear('shift-change');                  // 🎖 any shift change abandons an exam — EXCEPT the qual-initiated startShift itself (_own)
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
   state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; RIVALS.on=true;
