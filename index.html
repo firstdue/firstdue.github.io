@@ -75,6 +75,34 @@
     box-shadow:0 3px 13px rgba(0,0,0,.5); pointer-events:none;
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
   #drillHUD.show { display:flex; }
+  /* 🎓 D2 Box Recall HUD + report */
+  #boxdHUD { position:absolute; z-index:16; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right));
+    top:calc(max(8px,env(safe-area-inset-top)) + 44px); display:none; flex-wrap:wrap; align-items:center; gap:7px;
+    background:rgba(13,22,38,.95); border:1.5px solid #f4b950; border-radius:13px; padding:7px 11px;
+    box-shadow:0 3px 13px rgba(0,0,0,.5); font-family:"Barlow Condensed","Arial Narrow",sans-serif; }
+  #boxdHUD.show { display:flex; }
+  #boxdHUD .bdBox { font-weight:800; font-size:clamp(15px,4vw,19px); letter-spacing:.5px; color:#ffd27a; }
+  #boxdHUD .bdTag { font-weight:700; font-size:10px; letter-spacing:.14em; color:#95a4bd; }
+  #boxdHUD .bdHint { flex-basis:100%; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-weight:700; font-size:12px; color:#e9eef7; }
+  #boxdHUD .bdNudge { flex-basis:100%; font-weight:700; font-size:11px; letter-spacing:.06em; color:#f4b950; }
+  #boxdHUD button { pointer-events:auto; border:none; border-radius:9px; padding:6px 10px; font-family:"Barlow Condensed","Arial Narrow",sans-serif;
+    font-weight:800; letter-spacing:.08em; font-size:12px; cursor:pointer; background:#22304a; color:#e9eef7; }
+  #boxdHUD button.pri { background:linear-gradient(180deg,#f4b950,#c98d2a); color:#241a05; }
+  #boxdRep { position:absolute; inset:0; z-index:67; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.8); pointer-events:auto; }
+  #boxdRep.show { display:flex; }
+  #boxdRep .cc { width:min(420px,92vw); background:linear-gradient(180deg,#131f31,#0f1a2b); border:1px solid #26364f; border-radius:20px; padding:0 16px 14px; overflow:hidden; color:#e9eef7; }
+  #boxdRep .bdHaz { height:7px; margin:0 -16px 12px; background:repeating-linear-gradient(-52deg,#f4b950 0 10px,#20293b 10px 20px); }
+  #boxdRep h3 { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:.06em; font-size:22px; color:#f4b950; margin:0 0 2px; }
+  #boxdRep .bdSub { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.14em; font-size:12px; color:#95a4bd; margin-bottom:11px; }
+  #boxdRep .bdRow { display:flex; justify-content:space-between; padding:5px 0; font-size:13px; font-weight:700; border-bottom:1px solid #1d2942; }
+  #boxdRep .bdRow b { color:#ffd27a; }
+  #boxdRep .bdLK { margin-top:12px; padding:11px; border-radius:12px; background:#182642; border:1px solid #f4b950; text-align:center; }
+  #boxdRep .bdLKn { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:34px; line-height:1; color:#ffd27a; }
+  #boxdRep .bdLKpct { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:15px; color:#e9eef7; margin-top:7px; }
+  #boxdRep .bdLKpct span { color:#95a4bd; font-size:12px; }
+  #boxdRep .bdLKl { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.16em; font-size:11px; color:#95a4bd; }
+  #boxdRep .bdNext { margin-top:9px; font-size:12px; color:#95a4bd; text-align:center; }
+  #boxdRep button { display:block; width:100%; margin-top:12px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; cursor:pointer; }
   #drillHUD .dIcon { font-size:17px; }
   #drillHUD .dName { color:#fff; font-weight:900; font-size:clamp(12px,3.2vw,15px); letter-spacing:.3px; }
   #drillHUD .dTag  { color:#9fe8bf; font-weight:800; font-size:10px; letter-spacing:1px;
@@ -374,6 +402,11 @@
   .pdPos.ready { border-color:#f4b950; border-left-color:#f4b950; box-shadow:0 0 10px rgba(244,185,80,.18); }
   .pdPos.ready .pdSub { color:#ffd27a; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:12px; }
   .pdPos .pdRideOut { grid-column:1/-1; margin-top:6px; padding:7px; font-size:12px; }
+  .pdLKline { margin:2px 0 8px; padding:7px 10px; border-radius:10px; background:#0f1a2b; border:1px solid #26364f; }
+  .pdLKline b { display:block; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:13px; color:#ffd27a; }
+  .pdLKline span { display:block; font-size:11px; color:#95a4bd; margin-top:2px; }
+  .pdLKline.ns b { color:#95a4bd; }
+  .pdTrain { display:block; width:100%; margin-top:8px; background:linear-gradient(180deg,#37c274,#248a52); color:#04160c; border:none; border-radius:10px; padding:10px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:13px; cursor:pointer; pointer-events:auto; }
   .pdRideOut { display:block; width:100%; margin-top:7px; background:#182642; color:#ffd27a; border:1px solid #f4b950; border-radius:10px; padding:9px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:13px; cursor:pointer; pointer-events:auto; }
   .pdQualStart { display:block; width:100%; margin-top:7px; background:linear-gradient(180deg,#f4b950,#c98d2a); color:#241a05; border:none; border-radius:10px; padding:10px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:14px; cursor:pointer; pointer-events:auto; }
   .pdQualNote { margin-top:5px; font-size:11px; color:#95a4bd; }
@@ -574,6 +607,16 @@
 <div id="rivals"></div>
 <div id="dueChip"><span class="dueDot"></span><span class="dueTxt">1ST IN</span><span class="dueWho"></span></div>
 <div id="drillHUD"></div>
+<div id="boxdHUD"></div>
+<div id="boxdRep" aria-hidden="true">
+  <div class="cc">
+    <div class="bdHaz"></div>
+    <h3>Session complete</h3>
+    <div class="bdSub" id="bdRepSub"></div>
+    <div id="bdRepBody"></div>
+    <button id="bdRepClose">BACK ON THE BOX</button>
+  </div>
+</div>
 <div id="satAttr">Imagery © Esri, Maxar, Earthstar Geographics</div>
 <div id="settingsShade"></div>
 <div id="settingsPanel" aria-hidden="true">
@@ -788,7 +831,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v17d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3302,6 +3345,7 @@ function drillNext(){
 }
 function startDrill(){
   if(!state.running){ radio('🎓 Start a shift first.'); return; }
+  if(BOXD.on) boxdClear('landmark-drill');                                     // the two drills are mutually exclusive
   qualClear('drill');                                                          // 🎖 exam and drill are mutually exclusive
   DRILL.on=true; DRILL.done=0; DRILL.streak=0; DRILL.pool=drillPool();
   state.target=null; clearRivals();                                            // no fire while drilling
@@ -3689,6 +3733,357 @@ function qualSelectFrom(pool,lastBox,rnd){ rnd=rnd||Math.random;               /
   if(lastBox&&c.length>1){ const f=c.filter(x=>x.box!==lastBox); if(f.length) c=f; }
   return c[(rnd()*c.length)|0]; }
 /* ===CAREER-RUN-END=== */
+/* ===KNOWLEDGE-START=== (D1 foundation — pure logic, extracted verbatim by the node test harness)
+   \U0001f393 LOCAL KNOWLEDGE. Career asks "can you perform your due position?"; drills ask "how well do you
+   actually know this local?". The two never touch: nothing here writes PROFILE.engines / pos / rank, and
+   Local Knowledge is NOT folded into companyMasteryOf until D7.
+   ⚠️ Response history (knowledge[id].boxes — what a player has ENCOUNTERED on calls) is deliberately
+   kept separate from drill evidence (knowledge[id].drill — what they have DEMONSTRATED from memory).
+   Response history may inform selection; only demonstrated recall earns mastery. */
+const KNOW={ masterStreak:2,
+  boxArriveR:75,      // m to any valid anchor of the box = arrived (a box is an AREA; the call radius is 20m). Tunable here after real play.
+  sessionItems:8,     // items in a TRAIN MY LOCAL session
+  itemCapSec:300,     // hard per-item cap → records MISS and advances (a session can never wedge)
+  hintNudgeSec:90,    // OFFERS help; never records a miss on its own — a slow-but-correct driver must not fail on a timer                                                   // clean first-attempt recalls since the last miss → MASTERED (v1: 2; config-tunable, no migration)
+  relearnGap:4,                                                                // items that must pass before an item can return — enforces spacing, blocks back-to-back repeats
+                                                                               // (measured: ~5 new boxes + ~3 mastered per 8-item session)
+  pickOrder:['unresolved','taught','near','unseen','learning'],                // Coverage = maximize LEARNING, not unique items: once a box has one clean
+                                                                               // recall it is unusually valuable material — one properly spaced second
+                                                                               // recall converts it to demonstrated mastery, so it outranks 40 unseen boxes.
+                                                                               // Mastered items still vanish entirely, so this cannot become grinding.
+  dims:{ boxes:    { active:true,  weight:1.0, minItems:8  },                  // D2 — live
+         due:      { active:false, weight:0.6, minItems:4  },                  // D3
+         landmarks:{ active:false, weight:0.6, minItems:6  },                  // D4
+         streets:  { active:false, weight:0.8, minItems:20 },                  // D5
+         hydrants: { active:false, weight:0.5, minItems:8  } } };              // D6 — capability-gated (e2 has 0 hydrants, e66 has 2)
+const KNOW_DEF_SCOPE='d1';                                                     // v1 trains FIRST DUE only; d2–d4 slot in later with NO migration
+function knowDue(scope){ const n=parseInt(String(scope||KNOW_DEF_SCOPE).replace(/\D/g,''),10); return (n>=1&&n<=4)?n:1; }
+function knowDrill(companyId){ const k=profKnow(companyId); if(!k) return null;   // lazy namespace — saves stay lean until a drill actually writes
+  if(!k.drill||typeof k.drill!=='object') k.drill={ v:1, sessions:0, lastAt:0, assessed:false };
+  if(typeof k.drill.assessed!=='boolean') k.drill.assessed=false;
+  return k.drill; }
+function knowScope(companyId,scope){ const d=knowDrill(companyId); if(!d) return null;
+  scope=scope||KNOW_DEF_SCOPE; if(!d[scope]) d[scope]={}; return d[scope]; }
+function knowMap(companyId,dim,scope){ const s=knowScope(companyId,scope); if(!s) return null;
+  if(!s[dim]) s[dim]={}; return s[dim]; }                                      // dimension maps are created lazily, on first write
+function knowItem(companyId,dim,key,scope){ const s=knowScope(companyId,scope);
+  return (s&&s[dim])?s[dim][key]:undefined; }
+function isMastered(it){ return !!(it&&(it.streak|0)>=KNOW.masterStreak); }     // DERIVED from evidence — never a stored flag, so it cannot drift
+function knowState(it){                                                        // one exclusive state, read by selection instead of inferring from counters
+  if(!it) return 'unseen';
+  if(isMastered(it)) return 'mastered';
+  if(it.lastOutcome==='miss')   return 'unresolved';                            // missed and NOT yet taught → teach it
+  if(it.lastOutcome==='lesson') return 'taught';                                // taught but unproven → test it again, spaced
+  return 'learning'; }                                                          // has a clean recall, not yet at the bar
+function knowRecord(companyId,dim,key,outcome,anchor,scope){
+  /* THE only writer of drill evidence. Exactly three outcomes:
+       recall — clean, first attempt      → exposures+1, recalls+1, streak+1
+       miss   — failed the attempt        → exposures+1, misses+1,  streak→0
+       lesson — revealed/guided completion → exposures+1 ONLY  (a taught answer can NEVER earn mastery) */
+  if(['recall','miss','lesson'].indexOf(outcome)<0) return null;
+  const m=knowMap(companyId,dim,scope); if(!m) return null;
+  const it=m[key]||(m[key]={ exposures:0, recalls:0, misses:0, streak:0, lastAt:0, lastOutcome:null });
+  if(anchor&&Number.isFinite(anchor.x)&&Number.isFinite(anchor.z)){ it.x=anchor.x; it.z=anchor.z; }   // location is IDENTITY; the printed box number is only content
+  it.exposures=(it.exposures|0)+1;
+  if(outcome==='recall'){ it.recalls=(it.recalls|0)+1; it.streak=(it.streak|0)+1; }
+  else if(outcome==='miss'){ it.misses=(it.misses|0)+1; it.streak=0; }
+  it.lastOutcome=outcome;
+  it.lastAt=(typeof GT!=='undefined'?Math.round(GT):0)||it.lastAt||1;
+  return it; }
+function knowMarkAssessed(companyId){ const d=knowDrill(companyId); if(!d) return false;   // D2 calls this at the end of the first completed session
+  d.assessed=true; d.sessions=(d.sessions|0)+1; d.lastAt=(typeof GT!=='undefined'?Math.round(GT):0)||d.lastAt||1; return true; }
+const KNOW_UNI={};                                                             // per-session universe cache (deterministic within a build)
+function knowUniverseReset(){ for(const k in KNOW_UNI) delete KNOW_UNI[k]; }
+function boxUniverse(companyId,scope){                                         // the coverage DENOMINATOR — derived at runtime, never stored, so it cannot go stale
+  scope=scope||KNOW_DEF_SCOPE; const ck='box|'+companyId+'|'+scope;
+  if(KNOW_UNI[ck]) return KNOW_UNI[ck];
+  const st=stations.find(s=>s.id===companyId); if(!st) return null;
+  const due=knowDue(scope), seen=new Map();
+  for(const a of ADDR.a){ if(!a) continue;
+    const d=Math.hypot(a[2]-st.x,a[3]-st.z); if(d<300||d>3000) continue;
+    const r=computeResponders(a[2],a[3]); const s=r[due-1];
+    if(!s||s.id!==companyId) continue;
+    const box=computeBox(r[0],a[2],a[3]);
+    /* ⚠️ computeBox derives numbers from DISTANCE RINGS, so ~10% of boxes are angularly ambiguous —
+       e35 box 3540 covers two real places 1871m apart. Every address that computes to the box is a
+       legitimate answer, so we keep them ALL as anchors and accept arrival at any one. */
+    if(!seen.has(box)) seen.set(box,{ key:box, box:box, x:a[2], z:a[3], street:a[1], anchors:[] });
+    seen.get(box).anchors.push({ x:a[2], z:a[3], street:a[1] }); }
+  const arr=Array.from(seen.values()); KNOW_UNI[ck]=arr; return arr; }
+function knowUniverse(companyId,dim,scope){ if(dim==='boxes') return boxUniverse(companyId,scope); return null; }   // other dimensions stay inert until their drill ships
+function mergeDrillItems(list){
+  if(list.length===1) return list[0];                                          // 1:1 rename — unambiguous, evidence carries intact
+  /* ⚠️ N:1 collapse: lifetime counters may sum, but a map re-bake must NEVER grant mastery, so the
+     merged streak is capped BELOW the bar regardless of the sources. */
+  const out={ exposures:0, recalls:0, misses:0, streak:0, lastAt:0, lastOutcome:null };
+  let best=null, mx=0;
+  for(const it of list){ if(!it) continue;
+    out.exposures+=it.exposures|0; out.recalls+=it.recalls|0; out.misses+=it.misses|0;
+    if((it.streak|0)>mx) mx=it.streak|0;
+    if((it.lastAt|0)>=out.lastAt){ out.lastAt=it.lastAt|0; best=it; } }
+  if(best){ out.lastOutcome=best.lastOutcome; if(Number.isFinite(best.x)){ out.x=best.x; out.z=best.z; } }
+  out.streak=Math.min(mx, KNOW.masterStreak-1);
+  return out; }
+function reconcileDrillBoxes(companyId,scope,universe){
+  /* A map re-bake can renumber a box. The stored x/z ANCHOR is identity, so evidence moves forward
+     instead of duplicating; anchors that no longer resolve are retired to `orphans`, never deleted. */
+  scope=scope||KNOW_DEF_SCOPE;
+  const s=knowScope(companyId,scope); if(!s||!s.boxes) return {moved:0,merged:0,orphaned:0};
+  const map=s.boxes, uni=universe||boxUniverse(companyId,scope); if(!uni) return {moved:0,merged:0,orphaned:0};
+  const live=new Set(uni.map(u=>u.key));
+  const stale=Object.keys(map).filter(k=>!live.has(k));
+  if(!stale.length) return {moved:0,merged:0,orphaned:0};
+  const due=knowDue(scope), groups={}, orphans=[];
+  for(const k of stale){ const it=map[k]; let target=null;
+    if(it&&Number.isFinite(it.x)&&Number.isFinite(it.z)){
+      const r=computeResponders(it.x,it.z); const who=r[due-1];
+      if(who&&who.id===companyId){ const nb=computeBox(r[0],it.x,it.z); if(live.has(nb)) target=nb; } }
+    if(target){ (groups[target]=groups[target]||[]).push({k,it}); } else orphans.push({k,it}); }
+  let moved=0, merged=0;
+  for(const t in groups){ const srcs=groups[t].map(g=>g.it);
+    if(map[t]) srcs.push(map[t]);
+    const rec=mergeDrillItems(srcs);
+    for(const g of groups[t]) if(g.k!==t) delete map[g.k];
+    map[t]=rec;
+    if(srcs.length>1) merged++; else moved++; }
+  if(orphans.length){ s.orphans=s.orphans||{};
+    for(const o of orphans){ s.orphans[o.k]=o.it; delete map[o.k]; } }
+  return {moved,merged,orphaned:orphans.length}; }
+function knowDimsEligible(companyId,scope){                                    // ELIGIBLE = drill released AND the company has enough real data
+  scope=scope||KNOW_DEF_SCOPE; const out=[];
+  for(const key in KNOW.dims){ const cfg=KNOW.dims[key]; if(!cfg.active) continue;
+    const uni=knowUniverse(companyId,key,scope); if(!uni) continue;
+    if(uni.length<cfg.minItems) continue;                                      // capability gate — a company with no data is EXCLUDED, never scored 0
+    out.push({ key, cfg, available:uni.length }); }
+  return out; }
+function localKnowledge(companyId,scope){
+  /* Only dimensions that are BOTH released and supported count, and weights renormalize over them —
+     a player is never scored 0/133 on streets before a street drill exists. Before the first completed
+     session the score is withheld entirely (assessed:false → "NOT ASSESSED"). */
+  scope=scope||KNOW_DEF_SCOPE;
+  const d=knowDrill(companyId);
+  const dims=[]; let wsum=0, acc=0;
+  for(const e of knowDimsEligible(companyId,scope)){
+    const map=(knowScope(companyId,scope)||{})[e.key]||{};
+    let mastered=0; for(const k in map) if(isMastered(map[k])) mastered++;
+    const frac=e.available?mastered/e.available:0;
+    dims.push({ key:e.key, mastered, available:e.available, pct:Math.round(frac*100), weight:e.cfg.weight });
+    wsum+=e.cfg.weight; acc+=e.cfg.weight*frac; }
+  if(!d||!d.assessed) return { assessed:false, pct:null, dims };
+  return { assessed:true, pct: wsum?Math.round(acc/wsum*100):0, dims }; }
+function drillPick(companyId,dim,scope,session){
+  /* The Coverage policy, available to D2 from its first release: unresolved → unseen → taught (spaced)
+     → near → learning. Mastered items are NEVER served, so repetition cannot be ground for progress. */
+  scope=scope||KNOW_DEF_SCOPE; session=session||{};
+  const uni=knowUniverse(companyId,dim,scope); if(!uni||!uni.length) return null;
+  if(dim==='boxes') reconcileDrillBoxes(companyId,scope,uni);
+  const map=(knowScope(companyId,scope)||{})[dim]||{};
+  const recent=session.recent||[];
+  const tiers={ unresolved:[], unseen:[], taught:[], near:[], learning:[] };
+  for(const u of uni){ if(recent.indexOf(u.key)>=0) continue;                  // never twice in a row within a session (also enforces the taught-item gap)
+    const st=knowState(map[u.key]);
+    if(st==='mastered') continue;
+    if(st==='learning'&&(map[u.key].streak|0)===KNOW.masterStreak-1) tiers.near.push(u);
+    else if(tiers[st]) tiers[st].push(u); }
+  for(const tier of KNOW.pickOrder){ let list=tiers[tier]; if(!list||!list.length) continue;
+    if(tier==='unseen'){                                                       // among unseen, prefer boxes they have RESPONDED to but never proven from memory
+      const kn=profKnow(companyId)||{}, hist=kn.boxes||{};
+      const seenOnCalls=list.filter(u=>hist[u.key]);
+      if(seenOnCalls.length) list=seenOnCalls; }
+    return list[(Math.random()*list.length)|0]; }
+  return null; }
+function drillSession(){ return { recent:[], served:0, results:[] }; }          // D2 owns the session; D1 only defines its shape
+function drillSessionServe(session,key){ if(!session) return;
+  session.served=(session.served|0)+1; session.recent.push(key);
+  while(session.recent.length>KNOW.relearnGap) session.recent.shift(); }
+/* ===KNOWLEDGE-END=== */
+/* ===BOXDRILL-START=== (D2 — Box Recall. Pure-ish logic + runtime; extracted by the node harness)
+   \U0001f393 The drill withholds what a normal response gives away for free: the ADDRESS. The player is given a
+   box number and must know where it is. A miss is never answered with a map pin — the first teaching
+   step is TEXT (cross streets), because following a marker teaches nothing. */
+const BOXD={ on:false, companyId:null, scope:'d1', items:0, idx:0, item:null, stage:'idle',
+  t0:0, missRecorded:false, lessonRecorded:false, hint:'', session:null, log:[], nudged:false };
+function boxdActive(){ return !!BOXD.on; }
+function boxdHint(item){
+  /* Deterministic hint hierarchy. The FIRST hint is always textual location knowledge, never a pin:
+       1. two distinct cross streets   2. hundred-block + street   3. street name   4. nearest named street
+     Imperfect map data degrades one step at a time instead of fabricating text or jumping to the map. */
+  if(!item) return '';
+  const ax=item.x, az=item.z, stn=item.street||'';
+  try{ const edge=addressRoadEdge(ax,az,stn); const cr=addressCrossStreets(ax,az,stn,edge);
+    if(cr&&cr.length>=2&&canonStreet(cr[0].name)!==canonStreet(cr[1].name))
+      return (stn?stn+' — ':'')+'between '+cr[0].name+' and '+cr[1].name; }catch(e){}
+  try{ const hb=currentHundredBlock(ax,az,stn); if(hb&&stn) return hb+' block of '+stn; }catch(e){}
+  if(stn) return 'on '+stn;
+  try{ const nm=streetName(ax,az); if(nm&&nm!=='—') return 'near '+nm; }catch(e){}
+  return 'in your first-due'; }
+function boxdArrived(item){ if(!item) return false;                     // ANY anchor of the box counts — all are legitimately that box
+  const list=(item.anchors&&item.anchors.length)?item.anchors:[{x:item.x,z:item.z}];
+  for(const a of list) if(Math.hypot(truck.x-a.x, truck.z-a.z)<KNOW.boxArriveR) return true;
+  return false; }
+function boxdRecordMiss(){ if(BOXD.missRecorded||!BOXD.item) return false;   // at most ONE miss per attempt
+  BOXD.missRecorded=true;
+  knowRecord(BOXD.companyId,'boxes',BOXD.item.key,'miss',BOXD.item,BOXD.scope);
+  return true; }
+function boxdRecordLesson(){ if(BOXD.lessonRecorded||!BOXD.item) return false;   // at most ONE lesson per attempt
+  BOXD.lessonRecorded=true;
+  knowRecord(BOXD.companyId,'boxes',BOXD.item.key,'lesson',BOXD.item,BOXD.scope);
+  return true; }
+function boxdOutcome(kind){                                             // close the current item and log it for the report card
+  if(!BOXD.item) return;
+  BOXD.log.push({ key:BOXD.item.key, kind, mastered:isMastered(knowItem(BOXD.companyId,'boxes',BOXD.item.key,BOXD.scope)) });
+  drillSessionServe(BOXD.session, BOXD.item.key);
+  BOXD.item=null; BOXD.stage='idle'; }
+function boxdNext(){
+  if(BOXD.idx>=BOXD.items){ boxdFinish('complete'); return; }
+  const pick=drillPick(BOXD.companyId,'boxes',BOXD.scope,BOXD.session);
+  if(!pick){ boxdFinish(BOXD.log.length?'exhausted':'empty'); return; }
+  if(!knowItem(BOXD.companyId,'boxes',pick.key,BOXD.scope)) BOXD.newSeen=(BOXD.newSeen|0)+1;   // first time this box has ever been put to the player
+  BOXD.idx++; BOXD.item=pick; BOXD.stage='prompt'; BOXD.t0=GT;
+  BOXD.missRecorded=false; BOXD.lessonRecorded=false; BOXD.hint=''; BOXD.nudged=false;
+  state.target=null; clearRivals(); routeDirty=true;
+  radio('\U0001f393 BOX '+pick.key+' — you know where that is. Take me there.');
+  popup('\U0001f393 BOX '+pick.key);
+  boxdRenderHUD(); }
+function boxdHintNow(){                                                 // player accepted help → the cold recall is spent
+  if(!BOXD.item||BOXD.stage==='idle') return null;
+  boxdRecordMiss();
+  BOXD.hint=boxdHint(BOXD.item); BOXD.stage='hint';
+  radio('\U0001f393 BOX '+BOXD.item.key+' — '+BOXD.hint);
+  boxdRenderHUD(); return BOXD.hint; }
+function boxdRevealNow(){                                               // explicit second step: the map pin
+  if(!BOXD.item) return false;
+  boxdRecordMiss();                                                     // no-op if the hint already recorded it
+  if(!BOXD.hint) BOXD.hint=boxdHint(BOXD.item);
+  BOXD.stage='reveal';
+  state.target={ isAddress:true, name:'BOX '+BOXD.item.key, address:'BOX '+BOXD.item.key, street:BOXD.item.street||'',
+    x:BOXD.item.x, z:BOXD.item.z, bx:BOXD.item.x, bz:BOXD.item.z, box:BOXD.item.key, drill:true,
+    d:'\U0001f393 BOX '+BOXD.item.key+' — '+BOXD.hint, f:'' };
+  { const ap=nearestAsphalt(BOXD.item.x,BOXD.item.z); state.arriveX=ap.x; state.arriveZ=ap.z; }
+  routeDirty=true; boxdRenderHUD(); return true; }
+function boxdSkip(){ if(!BOXD.item) return;                             // gave up: miss stands, no lesson (nothing was taught)
+  boxdRecordMiss(); state.target=null; clearRivals();
+  boxdOutcome(BOXD.lessonRecorded?'lesson':'miss'); boxdNext(); }
+function updateBoxDrill(dt){
+  if(!BOXD.on||!BOXD.item) return;
+  const el=GT-BOXD.t0;
+  if(!BOXD.nudged&&BOXD.stage==='prompt'&&el>=KNOW.hintNudgeSec){ BOXD.nudged=true; boxdRenderHUD(); }   // OFFERS help; records nothing
+  if(el>=KNOW.itemCapSec){ boxdRecordMiss(); state.target=null; clearRivals();                            // hard cap: a session can never wedge
+    popup('\U0001f393 Moving on — that one stays on your list'); boxdOutcome('miss'); boxdNext(); return; }
+  if(boxdArrived(BOXD.item)){
+    DRIVE.going=false; state.target=null; clearRivals();
+    if(!BOXD.missRecorded){ knowRecord(BOXD.companyId,'boxes',BOXD.item.key,'recall',BOXD.item,BOXD.scope);   // COLD recall
+      const m=isMastered(knowItem(BOXD.companyId,'boxes',BOXD.item.key,BOXD.scope));
+      popup(m?'✅ BOX '+BOXD.item.key+' — MASTERED':'✅ BOX '+BOXD.item.key+' — correct','green');
+      radio('✅ BOX '+BOXD.item.key+' — straight there, no help.');
+      boxdOutcome('recall'); }
+    else { boxdRecordLesson();
+      popup('\U0001f4cd BOX '+BOXD.item.key+' — learned','green');
+      radio('\U0001f4cd BOX '+BOXD.item.key+' — '+BOXD.hint+'. Now you have been there.');
+      boxdOutcome('lesson'); }
+    boxdNext(); return; }
+  boxdRenderHUD(); }
+function boxdStart(companyId,scope){
+  if(BOXD.on) return {ok:false,reason:'already-running'};
+  if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-active'};        // the exam owns the truck
+  if(DRILL.on||MAP.bounds||DRAW.on) return {ok:false,reason:'special-mode-active'};
+  if(!state.running) return {ok:false,reason:'not-riding'};
+  companyId=companyId||DRIVE.stationId; scope=scope||KNOW_DEF_SCOPE;
+  if(!companyId||companyId!==DRIVE.stationId) return {ok:false,reason:'wrong-company'};
+  const uni=boxUniverse(companyId,scope);
+  if(!uni||!uni.length) return {ok:false,reason:'no-universe'};
+  const sess=drillSession();
+  if(!drillPick(companyId,'boxes',scope,sess)) return {ok:false,reason:'all-mastered'};
+  BOXD.on=true; BOXD.companyId=companyId; BOXD.scope=scope; BOXD.session=sess;
+  BOXD.items=Math.min(KNOW.sessionItems,uni.length); BOXD.idx=0; BOXD.log=[]; BOXD.item=null; BOXD.newSeen=0;
+  BOXD.startPct=(function(){ const m=(knowScope(companyId,scope)||{}).boxes||{}; let n=0; for(const k in m) if(isMastered(m[k])) n++; return {mastered:n,total:uni.length}; })();
+  state.target=null; clearRivals();
+  boxdNext();
+  return {ok:true,items:BOXD.items}; }
+function boxdFinish(reason){
+  /* VALID (report + baseline): the player explicitly ENDs, or the session reaches its natural stop —
+     in both cases with >=1 scored attempt. ABANDONMENT (reload / shift change / qualification takeover /
+     RESTART / goHome) never establishes the baseline. */
+  const scored=BOXD.log.length;
+  const valid=(reason==='complete'||reason==='exhausted'||reason==='ended')&&scored>0;
+  const summary=boxdSummary(valid);
+  BOXD.on=false; BOXD.item=null; BOXD.stage='idle'; BOXD.session=null;
+  state.target=null; clearRivals(); boxdRenderHUD();
+  if(valid){ knowMarkAssessed(summary.companyId); saveProfile(); boxdShowReport(summary); }
+  else { saveProfile(); if(state.running) newDispatch(); }
+  return summary; }
+function boxdSummary(valid){
+  const cid=BOXD.companyId, scope=BOXD.scope;
+  const recall=BOXD.log.filter(r=>r.kind==='recall').length;
+  const lesson=BOXD.log.filter(r=>r.kind==='lesson').length;
+  const miss=BOXD.log.filter(r=>r.kind==='miss').length;
+  const uni=boxUniverse(cid,scope)||[];
+  const map=(knowScope(cid,scope)||{}).boxes||{};
+  let mastered=0; for(const k in map) if(isMastered(map[k])) mastered++;
+  const before=BOXD.startPct||{mastered:0,total:uni.length};
+  const wasAssessed=!!(knowDrill(cid)||{}).assessed;
+  return { valid, companyId:cid, scope, recall, lesson, miss, scored:BOXD.log.length, newSeen:BOXD.newSeen|0,
+    gained:Math.max(0,mastered-before.mastered), mastered, total:uni.length,
+    beforeMastered:before.mastered, firstAssessment:!wasAssessed }; }
+function boxdClear(reason){ if(!BOXD.on) return;                        // abandonment path — evidence already recorded stands, baseline does NOT flip
+  BOXD.on=false; BOXD.item=null; BOXD.stage='idle'; BOXD.session=null; BOXD.log=[];
+  state.target=null; clearRivals(); boxdRenderHUD();
+  try{ console.log('[boxdrill] abandoned ('+(reason||'?')+')'); }catch(e){} }
+function boxdEnd(){ if(!BOXD.on) return null; return boxdFinish('ended'); }   // explicit END — counts as valid when >=1 item was scored
+function trainMyLocal(companyId){
+  const r=boxdStart(companyId);
+  if(r.ok){ const pc=document.getElementById('profileCard'); if(pc){ pc.classList.remove('show'); pc.setAttribute('aria-hidden','true'); }
+    popup('🎓 TRAIN MY LOCAL — '+r.items+' boxes','green'); return r; }
+  const msg={ 'not-riding':'Ride out of this house first, then train your local.',
+    'wrong-company':'Ride out of that house first — you train the local you are riding.',
+    'qual-active':'Finish your Chief Qualification first.',
+    'special-mode-active':'Finish your current drill first.',
+    'all-mastered':'You have proven every box in this first-due. 🎖',
+    'no-universe':'No verified boxes are available for this company yet.',
+    'already-running':'A session is already running.' }[r.reason]||'Training is unavailable right now.';
+  popup('🎓 '+msg); radio('🎓 '+msg);
+  return r; }
+function boxdRenderHUD(){ const el=document.getElementById('boxdHUD'); if(!el) return;
+  if(!BOXD.on||!BOXD.item){ el.classList.remove('show'); el.innerHTML=''; return; }
+  const it=BOXD.item;
+  let h='<span class="bdBox">\U0001f393 BOX '+it.key+'</span><span class="bdTag">'+BOXD.idx+' / '+BOXD.items+'</span>';
+  if(BOXD.stage==='prompt'){                                              // NOTHING but the number — that is the whole test
+    h+='<button id="bdHint">HINT</button><button id="bdSkip">SKIP</button>';
+    if(BOXD.nudged) h+='<span class="bdNudge">Need a cross-street hint?</span>'; }
+  else { h+='<button id="bdShow" class="pri">SHOW ME</button><button id="bdSkip">SKIP</button>';
+    h+='<span class="bdHint">\U0001f4cd '+BOXD.hint+'</span>'; }
+  el.innerHTML=h; el.classList.add('show');
+  const hb=document.getElementById('bdHint'); if(hb) hb.onclick=e=>{ e.preventDefault(); boxdHintNow(); };
+  const sb=document.getElementById('bdShow'); if(sb) sb.onclick=e=>{ e.preventDefault(); boxdRevealNow(); };
+  const kb=document.getElementById('bdSkip'); if(kb) kb.onclick=e=>{ e.preventDefault(); boxdSkip(); }; }
+function boxdShowReport(s){ const el=document.getElementById('boxdRep'); if(!el) return;
+  const lk=localKnowledge(s.companyId,s.scope);
+  document.getElementById('bdRepSub').textContent='ENGINE '+engNum(s.companyId)+' · BOX KNOWLEDGE';
+  let h='';
+  h+='<div class="bdRow"><span>New boxes encountered</span><b>'+s.newSeen+'</b></div>';
+  h+='<div class="bdRow"><span>Boxes mastered</span><b>'+s.gained+'</b></div>';
+  h+='<div class="bdRow"><span>Recalled cold</span><b>'+s.recall+'</b></div>';
+  h+='<div class="bdRow"><span>Learned</span><b>'+s.lesson+'</b></div>';
+  if(s.miss) h+='<div class="bdRow"><span>Left on your list</span><b>'+s.miss+'</b></div>';
+  h+='<div class="bdRow"><span>Boxes proven overall</span><b>'+s.mastered+' of '+s.total+'</b></div>';
+  /* Framing: the concrete achievement LEADS, the percentage follows. A first number is the start of a map
+     being filled in, not a grade — so no warning colours, no letter grade, no "low"/"needs improvement". */
+  const left=Math.max(0,s.total-s.mastered);
+  h+='<div class="bdLK">'+
+     (s.firstAssessment?'<div class="bdLKl" style="color:#f4b950">BASELINE ESTABLISHED</div>':'')+
+     '<div class="bdLKn">'+s.mastered+' of '+s.total+'</div><div class="bdLKl">BOXES PROVEN</div>'+
+     '<div class="bdLKpct">LOCAL KNOWLEDGE '+(lk.pct==null?'—':lk.pct+'%')+
+       ((!s.firstAssessment&&s.beforeMastered!==s.mastered)?' <span>(was '+Math.round((s.beforeMastered/Math.max(1,s.total))*100)+'%)</span>':'')+'</div>'+
+     '<div class="bdNext">'+(left?(left+' box'+(left===1?'':'es')+' still waiting to be proven.'):'Every box in your first-due is proven.')+'</div>'+
+   '</div>';
+  document.getElementById('bdRepBody').innerHTML=h;
+  el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+document.getElementById('bdRepClose').addEventListener('click',e=>{ e.preventDefault();
+  const el=document.getElementById('boxdRep'); el.classList.remove('show'); el.setAttribute('aria-hidden','true');
+  if(state.running&&!state.target) newDispatch(); });
+/* ===BOXDRILL-END=== */
+
+
 { // 🎯 boot: difficulty comes from the player's own setting (PROFILE.settings.diff), not from any career
   if(PROFILE.settings&&Number.isInteger(PROFILE.settings.diff)&&PROFILE.settings.diff>=0&&PROFILE.settings.diff<=3){
     DIFF.level=PROFILE.settings.diff; try{ localStorage.setItem('pfd_diff',DIFF.level); }catch(e){} }
@@ -4092,9 +4487,14 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
     '</div>'; };
   const fmt=(id,e)=>{ const bd=e.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
     let h='<div class="pdEng'+(id===cur?' cur':'')+'"><div class="pdHead"><b>Engine '+engNum(id)+'</b>'+
-      '<span class="pdMy">LOCAL KNOWLEDGE '+companyMasteryOf(e)+'%</span></div>';
+      '<span class="pdMy">COMPANY MASTERY '+companyMasteryOf(e)+'%</span></div>';
+    { const lk=localKnowledge(id,KNOW_DEF_SCOPE), bx=lk.dims.find(d=>d.key==='boxes');   // demonstrated-from-memory knowledge — always states what it counts, never a grade
+      h+= lk.assessed
+        ? ('<div class="pdLKline"><b>LOCAL KNOWLEDGE '+lk.pct+'%</b>'+(bx?'<span>'+bx.mastered+' of '+bx.available+' boxes proven</span>':'')+'</div>')
+        : '<div class="pdLKline ns"><b>LOCAL KNOWLEDGE — NOT ASSESSED</b><span>Train your local to establish your baseline.</span></div>'; }
     h+=POSITIONS.map((k,i)=>posRow(e.pos&&e.pos[k],i,id)).join('');
-    if(id===cur){ const rec=careerRecommendOf(e);
+    if(id===cur){ h+='<button class="pdTrain" data-teng="'+id+'">🎓 TRAIN MY LOCAL · BOX KNOWLEDGE</button>';
+      const rec=careerRecommendOf(e);
       if(rec) h+='<div class="pdNext">🎯 NEXT TRAINING — '+rec.label+(rec.text?' · '+rec.text:'')+
         (rec.qual?'':'<button class="pdRideOut" data-reng="'+id+'" data-rdue="'+rec.due+'">RIDE OUT</button>')+'</div>'; }
     h+='<div class="pdStats">'+e.saves+' saves · '+e.runs+' runs · tap a due row for its full requirements'+(bd?'<div class="pcBadges">🎖 '+bd+'</div>':'')+'</div></div>';
@@ -4112,6 +4512,8 @@ document.getElementById('pcBody').addEventListener('click',e=>{
   if(qb){ e.stopPropagation(); qualUiOpen(qb.dataset.qeng,+qb.dataset.qdue); return; }
   const rb=e.target.closest('.pdRideOut');
   if(rb){ e.stopPropagation(); trainingRideOut(rb.dataset.reng,+rb.dataset.rdue); return; }
+  const tb=e.target.closest('.pdTrain');
+  if(tb){ e.stopPropagation(); trainMyLocal(tb.dataset.teng); return; }
   const g=e.target.closest('.pdPos'); if(g) g.classList.toggle('open'); });
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
@@ -4357,7 +4759,7 @@ function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCa
   c.fillStyle='#fff'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),5,0,6.283); c.fill(); c.fillStyle='#1e6fd9'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),3.2,0,6.283); c.fill();
   c.font='16px sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('🔥',sx(r.fx),sy(r.fz)); }
 document.getElementById('btnCoachNext').addEventListener('click',()=>{ coachHide(); if(!state.running) return; returnToStation(); newDispatch(); });
-const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw,updateDrill,updateCoach];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
+const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw,updateDrill,updateBoxDrill,updateCoach];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
 const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() calls drawMapView (the only view now)
 MAP.on=false; document.body.classList.remove('mapmode');
 state.cam=3; LIVE3D.group.visible=true; { const b=document.getElementById('btnCam'); if(b) b.textContent='\uD83E\uDDED TILT'; }   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
@@ -4409,7 +4811,7 @@ function launchDispatch(target){                                                
   const bx=state.target.bx!==undefined?state.target.bx:state.target.x, bz=state.target.bz!==undefined?state.target.bz:state.target.z;   // beacon over the building, not the roadway
   state.timeLeft=Math.min(CONFIG.timer.cap,state.timeLeft+add); beaconG.position.set(bx,groundHeight(bx,bz),bz); routeDirty=true;
   assignBox(); radio(state.target.d); popup('🔔 BOX '+state.target.box); spawnRivals(); coachReset(); return true; }
-function newDispatch(){ if(MAP.bounds||DRAW.on||DRILL.on) return;                     // 🎓 the drill owns the radio while it runs                               // no runs in training/boundary mode
+function newDispatch(){ if(MAP.bounds||DRAW.on||DRILL.on||BOXD.on) return;                     // 🎓 the drill owns the radio while it runs                               // no runs in training/boundary mode
   if(QUAL.pending&&DRIVE.stationId===QUAL.companyId){ QUAL.pending=false; qualLaunch(); return; }       // 🎖 ONE-SHOT exam injection (qual-initiated shift start) — normal flow untouched after this fires
   const tgt=makeAddressDispatch();
   if(!tgt&&MAP.dueLevel&&!dueCallsAvailable(MAP.dueLevel)){                  // strict: never quietly widen to another due
@@ -4423,9 +4825,10 @@ function newDispatch(){ if(MAP.bounds||DRAW.on||DRILL.on) return;               
    a reload simply abandons the attempt — attempts unchanged, READY intact, difficulty restored by the
    normal boot path (PROFILE.settings.diff). */
 const QUAL={ active:false, pending:false, _own:false, companyId:null, due:0, box:null, addr:null, idx:-1, edge:null, cross:null, prevDiff:0, lastStats:null };
-function qualStart(companyId,due,confirmed){                                                             // → {ok:true,mode} | {ok:false,reason}; validates EVERYTHING before touching gameplay state
+function qualStart(companyId,due,confirmed){
+  if(BOXD.on&&confirmed) boxdClear('qual-takeover');                            // exam wins once the player has confirmed                                                             // → {ok:true,mode} | {ok:false,reason}; validates EVERYTHING before touching gameplay state
   if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-already-active'};
-  if(DRILL.on||MAP.bounds||DRAW.on) return {ok:false,reason:'special-mode-active'};                      // the exam is EXCLUSIVE — never stacks with drill/training modes
+  if(DRILL.on||MAP.bounds||DRAW.on||BOXD.on) return {ok:false,reason:'special-mode-active'};            // the exam is EXCLUSIVE — never stacks with drill/training modes
   const st=stations.find(s=>s.id===companyId); if(!st) return {ok:false,reason:'no-company'};
   const k=posKey(due); if(!k) return {ok:false,reason:'invalid-due'};
   const e=PROFILE.engines[companyId], track=e&&e.pos&&e.pos[k];
@@ -4687,7 +5090,7 @@ function buildStationHouse(st){
 function returnToStation(){ const st=stations.find(s=>s.id===DRIVE.stationId)||stations[0]; if(!st) return;   // teleport back to the firehouse curb and re-park (pull-out prompt returns)
   parkAtStation(st); camTheta=truck.theta; CAMLOOK.yaw=0; CAMLOOK.pitch=0; radio('🏠 Back in quarters — '+st.companies[0]+' available.'); }
 function saveBest(){ if(state.saves>best.saves||(state.saves===best.saves&&state.cash>best.cash)){ best={saves:state.saves,cash:state.cash}; try{ localStorage.setItem('pfd_ef_best',JSON.stringify(best)); }catch(e){} } }
-function gameOver(title,why){ qualClear('game-over'); state.running=false; state.over=true; saveBest(); { const e=DRIVE.stationId?profEng():null; if(e&&state.saves>e.bestT){ e.bestT=state.saves; saveProfile(); } } document.getElementById('finalCash').textContent=state.saves+(state.saves===1?' SAVE':' SAVES');
+function gameOver(title,why){ boxdClear('game-over'); qualClear('game-over'); state.running=false; state.over=true; saveBest(); { const e=DRIVE.stationId?profEng():null; if(e&&state.saves>e.bestT){ e.bestT=state.saves; saveProfile(); } } document.getElementById('finalCash').textContent=state.saves+(state.saves===1?' SAVE':' SAVES');
   { const h=document.querySelector('#over .card h1'); if(h) h.textContent=title||'⏰ SHIFT OVER'; }
   document.getElementById('finalStats').textContent= why || (state.saves+' dispatches completed on the riverfront');
   if(QUAL._last&&!QUAL._last.shown){ QUAL._last.shown=true;                     // 🎖 beaten-in during the exam → verdict on the game-over card (coach card never shows)
@@ -4904,7 +5307,7 @@ function closeHomeMap(){ if(HOMEMAP.raf){ cancelAnimationFrame(HOMEMAP.raf); HOM
   window.addEventListener('resize',()=>{ if(homeEl.classList.contains('show')){ HOMEMAP.ready=false; HOMEMAP.dots=[]; HOMEMAP.rot=undefined; buildHomeBase(); } });
   if(homeEl.classList.contains('show')) openHomeMap();
 })();
-function goHome(){ qualClear('home'); document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); openHomeMap(); }
+function goHome(){ boxdClear('home'); qualClear('home'); document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); openHomeMap(); }
 /* 📱 Reopen → home. The installed PWA can resume a run mid-drive after being backgrounded (iOS keeps
    the page in memory), which lands you confusingly mid-street. If the app was away >60s and a run is live,
    return to the firehouse picker on the way back in. Brief app-switches (<60s) keep your run going. */
@@ -4920,6 +5323,7 @@ document.addEventListener('visibilitychange',()=>{
   __awayAt=0;
 });
 function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
+  boxdClear('shift-change');
   if(!(QUAL.pending&&QUAL._own&&st&&st.id===QUAL.companyId)) qualClear('shift-change');                  // 🎖 any shift change abandons an exam — EXCEPT the qual-initiated startShift itself (_own)
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
