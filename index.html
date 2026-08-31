@@ -373,6 +373,7 @@
   /* 🎖 P7c Chief Qualification UI */
   .pdPos.ready { border-color:#f4b950; border-left-color:#f4b950; box-shadow:0 0 10px rgba(244,185,80,.18); }
   .pdPos.ready .pdSub { color:#ffd27a; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:12px; }
+  .pdPos .pdRideOut { grid-column:1/-1; margin-top:6px; padding:7px; font-size:12px; }
   .pdRideOut { display:block; width:100%; margin-top:7px; background:#182642; color:#ffd27a; border:1px solid #f4b950; border-radius:10px; padding:9px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:13px; cursor:pointer; pointer-events:auto; }
   .pdQualStart { display:block; width:100%; margin-top:7px; background:linear-gradient(180deg,#f4b950,#c98d2a); color:#241a05; border:none; border-radius:10px; padding:10px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:14px; cursor:pointer; pointer-events:auto; }
   .pdQualNote { margin-top:5px; font-size:11px; color:#95a4bd; }
@@ -787,7 +788,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v16y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v16z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4073,7 +4074,7 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
     const ready=!!info.qualReady, att=(t&&t.qual&&t.qual.attempts)|0;
     const sub= info.mastered?('MASTERED'+(info.qualPassed?' · QUALIFICATION PASSED':''))
       : ready?'CHIEF QUALIFICATION READY'
-      : !t?(i===0?'Ride out — your first box starts this career':('Set 🚒 DUE: '+['1ST','2ND','3RD','4TH'][i]+' in Settings to ride this slot'))
+      : !t?(i===0?'Ride out — your first box starts this career':'Not started — one tap starts training this position')
       : (info.blocker?('Next: '+info.blocker.text):('Progress to '+info.next));
     let reqs='';
     if(t&&!info.mastered){ reqs=info.reqs.filter(q=>q.k!=='qual').map(q=>q.have+'/'+q.need+' '+q.label+(q.done?' ✓':'')).join(' · ');
@@ -4086,6 +4087,7 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       '<span class="pdBar"><i style="width:'+Math.max(3,ready?100:info.pct)+'%"></i></span>'+
       '<span class="pdPct">'+(t?(ready?100:info.pct)+'%':'—')+'</span>'+
       '<div class="pdSub">'+sub+'</div>'+
+      ((!t&&i>0)?'<button class="pdRideOut" data-reng="'+engId+'" data-rdue="'+(i+1)+'">RIDE OUT · '+POS_LABELS[i]+'</button>':'')+
       (reqs?'<div class="pdReqs">'+reqs+'</div>':'')+
     '</div>'; };
   const fmt=(id,e)=>{ const bd=e.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
