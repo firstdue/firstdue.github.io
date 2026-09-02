@@ -402,6 +402,11 @@
   .pdPos.ready { border-color:#f4b950; border-left-color:#f4b950; box-shadow:0 0 10px rgba(244,185,80,.18); }
   .pdPos.ready .pdSub { color:#ffd27a; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:12px; }
   .pdPos .pdRideOut { grid-column:1/-1; margin-top:6px; padding:7px; font-size:12px; }
+  .pdFresh { font-size:12px; color:#95a4bd; margin:2px 0 9px; }
+  .pdDoor { margin:7px 0; padding:9px 11px; border-radius:12px; background:#182642; border:1px solid #26364f; }
+  .pdDoor b { display:block; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:13px; color:#ffd27a; }
+  .pdDoor span { display:block; font-size:11.5px; color:#95a4bd; margin:3px 0 8px; }
+  .pdDoor .pdRideOut, .pdDoor .pdTrain { margin-top:0; }
   .pdLKline { margin:2px 0 8px; padding:7px 10px; border-radius:10px; background:#0f1a2b; border:1px solid #26364f; }
   .pdLKline b { display:block; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.1em; font-size:13px; color:#ffd27a; }
   .pdLKline span { display:block; font-size:11px; color:#95a4bd; margin-top:2px; }
@@ -831,7 +836,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v17d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v17e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3549,6 +3554,8 @@ function careerPosInfo(t){                                                     /
   return { started:true, mastered:false, rank, rankName:RANKS[rank], next:RANKS[rank+1], pct:Math.round(careerProgress(t)*100), reqs, blocker, qualPassed:!!(t.qual&&t.qual.passed), qualReady:qualReadyOf(t) };
 }
 function careerRecommendOf(e){                                                 // NEXT TRAINING: master 1st → expand 2nd → learn 3rd/4th; near-promotion (≥80%) tracks jump the queue; CHIEF never recommended
+  if(!e||!e.pos||!Object.keys(e.pos).length)                                   // fresh company: a career has NOT STARTED — ROOKIE begins only once a real track exists
+    return { due:1, k:'d1', label:POS_LABELS[0], text:'ride your first box to start your career', hint:null, fresh:true };
   const infos=POSITIONS.map((k,i)=>({k,due:i+1,t:(e&&e.pos&&e.pos[k])||null}));
   for(const x of infos){ if(x.t&&qualReadyOf(x.t))                             // 🎖 a READY qualification outranks every ordinary advancement recommendation
     return { due:x.due, k:x.k, label:POS_LABELS[x.due-1], text:'Chief Qualification Ready', hint:null, qual:true }; }
@@ -3901,7 +3908,8 @@ function drillSessionServe(session,key){ if(!session) return;
    \U0001f393 The drill withholds what a normal response gives away for free: the ADDRESS. The player is given a
    box number and must know where it is. A miss is never answered with a map pin — the first teaching
    step is TEXT (cross streets), because following a marker teaches nothing. */
-const BOXD={ on:false, companyId:null, scope:'d1', items:0, idx:0, item:null, stage:'idle',
+const BOXD={ on:false, pending:false, _own:false, pendCompany:null,                                       // pending = "start a session once that company is actually active" (memory-only, mirrors QUAL.pending)
+  companyId:null, scope:'d1', items:0, idx:0, item:null, stage:'idle',
   t0:0, missRecorded:false, lessonRecorded:false, hint:'', session:null, log:[], nudged:false };
 function boxdActive(){ return !!BOXD.on; }
 function boxdHint(item){
@@ -4025,14 +4033,33 @@ function boxdSummary(valid){
   return { valid, companyId:cid, scope, recall, lesson, miss, scored:BOXD.log.length, newSeen:BOXD.newSeen|0,
     gained:Math.max(0,mastered-before.mastered), mastered, total:uni.length,
     beforeMastered:before.mastered, firstAssessment:!wasAssessed }; }
-function boxdClear(reason){ if(!BOXD.on) return;                        // abandonment path — evidence already recorded stands, baseline does NOT flip
-  BOXD.on=false; BOXD.item=null; BOXD.stage='idle'; BOXD.session=null; BOXD.log=[];
+function boxdClear(reason){ if(!BOXD.on&&!BOXD.pending) return;          // abandonment path — evidence already recorded stands, baseline does NOT flip
+  BOXD.on=false; BOXD.pending=false; BOXD._own=false; BOXD.pendCompany=null;
+  BOXD.item=null; BOXD.stage='idle'; BOXD.session=null; BOXD.log=[];
   state.target=null; clearRivals(); boxdRenderHUD();
   try{ console.log('[boxdrill] abandoned ('+(reason||'?')+')'); }catch(e){} }
 function boxdEnd(){ if(!BOXD.on) return null; return boxdFinish('ended'); }   // explicit END — counts as valid when >=1 item was scored
 function trainMyLocal(companyId){
+  companyId=companyId||DRIVE.stationId;
+  const closeCard=()=>{ const pc=document.getElementById('profileCard'); if(pc){ pc.classList.remove('show'); pc.setAttribute('aria-hidden','true'); } };
+  /* FULL SYMMETRY with RIDE OUT: training must be reachable from wherever riding out is, so if the player
+     is not on that company we ride out for them and inject the session after the bay intro (same proven
+     one-shot pattern as the Chief Qualification). Nothing here creates a Career record. */
+  if(!state.running||DRIVE.stationId!==companyId){
+    const st=stations.find(s=>s.id===companyId);
+    if(!st){ popup('🎓 That firehouse is unavailable.'); return {ok:false,reason:'no-company'}; }
+    if(QUAL.active||QUAL.pending){ popup('🎓 Finish your Chief Qualification first.'); return {ok:false,reason:'qual-active'}; }
+    if(DRILL.on||MAP.bounds||DRAW.on){ popup('🎓 Finish your current drill first.'); return {ok:false,reason:'special-mode-active'}; }
+    const uni=boxUniverse(companyId,KNOW_DEF_SCOPE);
+    if(!uni||!uni.length){ popup('🎓 No verified boxes are available for this company yet.'); return {ok:false,reason:'no-universe'}; }
+    closeCard();
+    BOXD.pending=true; BOXD.pendCompany=companyId; BOXD._own=true;
+    startShift(st);
+    BOXD._own=false;
+    popup('🎓 Riding out to train Engine '+engNum(companyId)+"'s local",'green');
+    return {ok:true,mode:'shift'}; }
   const r=boxdStart(companyId);
-  if(r.ok){ const pc=document.getElementById('profileCard'); if(pc){ pc.classList.remove('show'); pc.setAttribute('aria-hidden','true'); }
+  if(r.ok){ closeCard();
     popup('🎓 TRAIN MY LOCAL — '+r.items+' boxes','green'); return r; }
   const msg={ 'not-riding':'Ride out of this house first, then train your local.',
     'wrong-company':'Ride out of that house first — you train the local you are riding.',
@@ -4464,7 +4491,10 @@ function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                
     else if(ok&&rv&&COACH.usedGuide&&(rv.due>0&&rv.place>0&&rv.place<=rv.due)) popup('📘 Guide was on — great run, but it won\'t post to the board','');
   } return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
-  const cur=(DRIVE.stationId&&PROFILE.engines[DRIVE.stationId])?DRIVE.stationId:null, rows=[];
+  /* ⚠️ NO-MANUFACTURE RULE: opening Career must never create a career record. `cur` is the company the
+     player is on, record or not; an absent record renders as a FRESH company. Only a completed response
+     (profileRun → careerTrack → profEng) starts a career. */
+  const cur=DRIVE.stationId||PROFILE.lastPlayed||null, rows=[];
   const posRow=(t,i,engId)=>{ const info=careerPosInfo(t||null), col=t?RANK_C[t.rank|0]:'#3a4a63';   // NOT STARTED ≠ ROOKIE: an absent track renders muted, no earned progress pretended
     const ready=!!info.qualReady, att=(t&&t.qual&&t.qual.attempts)|0;
     const sub= info.mastered?('MASTERED'+(info.qualPassed?' · QUALIFICATION PASSED':''))
@@ -4485,9 +4515,19 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       ((!t&&i>0)?'<button class="pdRideOut" data-reng="'+engId+'" data-rdue="'+(i+1)+'">RIDE OUT · '+POS_LABELS[i]+'</button>':'')+
       (reqs?'<div class="pdReqs">'+reqs+'</div>':'')+
     '</div>'; };
-  const fmt=(id,e)=>{ const bd=e.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
+  const fmt=(id,e)=>{ const fresh=!e||!e.pos||!Object.keys(e.pos).length;      // absent record === fresh company (never fabricated)
+    const bd=((e&&e.badges)||[]).map(b=>BADGE_NAMES[b]||b).join(', ');
     let h='<div class="pdEng'+(id===cur?' cur':'')+'"><div class="pdHead"><b>Engine '+engNum(id)+'</b>'+
-      '<span class="pdMy">COMPANY MASTERY '+companyMasteryOf(e)+'%</span></div>';
+      (fresh?'<span class="pdMy">NEW LOCAL</span>':'<span class="pdMy">COMPANY MASTERY '+companyMasteryOf(e)+'%</span>')+'</div>';
+    if(fresh&&id===cur){                                                        // 🚪 the two doors — neither behind the other
+      h+='<div class="pdFresh">Your career here hasn\'t started yet.</div>'+
+        '<div class="pdDoor"><b>CAREER · NOT STARTED</b><span>Ride your first box to begin your career.</span>'+
+        '<button class="pdRideOut" data-reng="'+id+'" data-rdue="1">🚒 RIDE OUT · 1ST DUE</button></div>'+
+        '<div class="pdDoor"><b>LOCAL KNOWLEDGE · NOT ASSESSED</b><span>Practice your first-due boxes without starting Career progress.</span>'+
+        '<button class="pdTrain" data-teng="'+id+'">🎓 TRAIN MY LOCAL</button></div>'+
+        POSITIONS.slice(1).map((k,i)=>posRow(null,i+1,id)).join('')+
+      '</div>';
+      return h; }
     { const lk=localKnowledge(id,KNOW_DEF_SCOPE), bx=lk.dims.find(d=>d.key==='boxes');   // demonstrated-from-memory knowledge — always states what it counts, never a grade
       h+= lk.assessed
         ? ('<div class="pdLKline"><b>LOCAL KNOWLEDGE '+lk.pct+'%</b>'+(bx?'<span>'+bx.mastered+' of '+bx.available+' boxes proven</span>':'')+'</div>')
@@ -4497,10 +4537,11 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       const rec=careerRecommendOf(e);
       if(rec) h+='<div class="pdNext">🎯 NEXT TRAINING — '+rec.label+(rec.text?' · '+rec.text:'')+
         (rec.qual?'':'<button class="pdRideOut" data-reng="'+id+'" data-rdue="'+rec.due+'">RIDE OUT</button>')+'</div>'; }
-    h+='<div class="pdStats">'+e.saves+' saves · '+e.runs+' runs · tap a due row for its full requirements'+(bd?'<div class="pcBadges">🎖 '+bd+'</div>':'')+'</div></div>';
+    h+='<div class="pdStats">'+((e&&e.saves)|0)+' saves · '+((e&&e.runs)|0)+' runs · tap a due row for its full requirements'+(bd?'<div class="pcBadges">🎖 '+bd+'</div>':'')+'</div></div>';
     return h; };
-  if(cur) rows.push(fmt(cur,PROFILE.engines[cur]));
-  for(const id of Object.keys(PROFILE.engines)) if(id!==cur&&PROFILE.engines[id].runs>0) rows.push(fmt(id,PROFILE.engines[id]));
+  if(cur) rows.push(fmt(cur,PROFILE.engines[cur]||null));                       // may be null — fresh company
+  for(const id of Object.keys(PROFILE.engines)){ const en=PROFILE.engines[id];   // defensive: a blank/absent entry is simply a company with nothing to show
+    if(id!==cur&&en&&en.runs>0) rows.push(fmt(id,en)); }
   if(!rows.length) rows.push('<div class="pcRow">No runs yet — ride out and hold your due slot. Every firehouse tracks a separate career for 1st, 2nd, 3rd and 4th due.</div>');
   const cb=PROFILE.city.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
   if(cb) rows.push('<div class="pcRow"><b>CITYWIDE</b><div class="pcBadges">🎖 '+cb+'</div></div>');
@@ -4813,6 +4854,8 @@ function launchDispatch(target){                                                
   assignBox(); radio(state.target.d); popup('🔔 BOX '+state.target.box); spawnRivals(); coachReset(); return true; }
 function newDispatch(){ if(MAP.bounds||DRAW.on||DRILL.on||BOXD.on) return;                     // 🎓 the drill owns the radio while it runs                               // no runs in training/boundary mode
   if(QUAL.pending&&DRIVE.stationId===QUAL.companyId){ QUAL.pending=false; qualLaunch(); return; }       // 🎖 ONE-SHOT exam injection (qual-initiated shift start) — normal flow untouched after this fires
+  if(BOXD.pending&&DRIVE.stationId===BOXD.pendCompany){ BOXD.pending=false; BOXD.pendCompany=null;       // 🎓 ONE-SHOT drill injection — TRAIN MY LOCAL rode us out, so train instead of dispatching
+    const r=boxdStart(DRIVE.stationId); if(r.ok) return; }                                               // if it can't start, fall through to a normal box
   const tgt=makeAddressDispatch();
   if(!tgt&&MAP.dueLevel&&!dueCallsAvailable(MAP.dueLevel)){                  // strict: never quietly widen to another due
     const nm=['','1st','2nd','3rd','4th'][MAP.dueLevel];
@@ -5323,7 +5366,7 @@ document.addEventListener('visibilitychange',()=>{
   __awayAt=0;
 });
 function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
-  boxdClear('shift-change');
+  if(!(BOXD.pending&&BOXD._own&&st&&st.id===BOXD.pendCompany)) boxdClear('shift-change');                  // a drill-initiated ride-out keeps its own pending
   if(!(QUAL.pending&&QUAL._own&&st&&st.id===QUAL.companyId)) qualClear('shift-change');                  // 🎖 any shift change abandons an exam — EXCEPT the qual-initiated startShift itself (_own)
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
