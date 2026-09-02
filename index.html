@@ -836,7 +836,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v17e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v17f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4523,7 +4523,9 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       h+='<div class="pdFresh">Your career here hasn\'t started yet.</div>'+
         '<div class="pdDoor"><b>CAREER · NOT STARTED</b><span>Ride your first box to begin your career.</span>'+
         '<button class="pdRideOut" data-reng="'+id+'" data-rdue="1">🚒 RIDE OUT · 1ST DUE</button></div>'+
-        '<div class="pdDoor"><b>LOCAL KNOWLEDGE · NOT ASSESSED</b><span>Practice your first-due boxes without starting Career progress.</span>'+
+        (function(){ const lk=localKnowledge(id,KNOW_DEF_SCOPE), bx=lk.assessed?lk.dims.find(d=>d.key==='boxes'):null;   // the door reflects real knowledge — CAREER NOT STARTED and LOCAL KNOWLEDGE n% is a first-class state
+          return '<div class="pdDoor"><b>'+(lk.assessed?'LOCAL KNOWLEDGE · '+lk.pct+'%':'LOCAL KNOWLEDGE · NOT ASSESSED')+'</b>'+
+            '<span>'+(lk.assessed&&bx?(bx.mastered+' of '+bx.available+' boxes proven — training never starts Career progress.'):'Practice your first-due boxes without starting Career progress.')+'</span>'; })()+
         '<button class="pdTrain" data-teng="'+id+'">🎓 TRAIN MY LOCAL</button></div>'+
         POSITIONS.slice(1).map((k,i)=>posRow(null,i+1,id)).join('')+
       '</div>';
