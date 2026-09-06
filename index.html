@@ -597,7 +597,6 @@
 <div id="combo" class="hud">🔥 x1.0</div>
 <div id="saves" class="hud">SAVES 0 · BEST 0</div>
 <div id="cornerBtns">
-  <button class="abtn" id="btnBoundaryMap">🗺️ RUN MAP</button>
   <button class="abtn" id="btnSettings">⚙ SETTINGS</button>
   <button class="abtn" id="btnAccount">👤 ACCOUNT</button>
 </div>
@@ -657,6 +656,7 @@
 <div id="settingsPanel" aria-hidden="true">
   <div class="toolTitle"><span>⚙ SETTINGS</span><button class="toolClose" id="btnSettingsClose" aria-label="Close settings">×</button></div>
   <div class="settingsGrid">
+  <button class="abtn" id="btnBoundaryMap">🗺️ RUN MAP</button>
   <button class="abtn" id="btnCam">🎥 CAMERA</button>
   <button class="abtn" id="btnNight">🌙 NIGHT</button>
   <button class="abtn on" id="btnRoute">🧭 ROUTE</button>
@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v17v";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v17w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1384,7 +1384,7 @@ function closeBoundaryMap(){ boundaryOverlay.classList.remove('show');boundaryOv
 document.getElementById('btnSettings').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();toggleSettings();});
 document.getElementById('btnSettingsClose').addEventListener('click',closeSettings);
 settingsShade.addEventListener('click',closeSettings);
-document.getElementById('btnBoundaryMap').addEventListener('click',openBoundaryMap);document.getElementById('btnFirstDueHome').addEventListener('click',openCityLeaderboard);
+document.getElementById('btnBoundaryMap').addEventListener('click',()=>{closeSettings();openBoundaryMap();});document.getElementById('btnFirstDueHome').addEventListener('click',openCityLeaderboard);
 document.getElementById('btnBoundaryClose').addEventListener('click',closeBoundaryMap);boundaryOverlay.addEventListener('click',e=>{if(e.target===boundaryOverlay)closeBoundaryMap();});
 boundaryEngine.addEventListener('change',()=>{BOUNDARY_UI.engine=boundaryEngine.value;drawBoundaryOverview();});
 
@@ -2297,7 +2297,7 @@ let hurryShown=false;
 function updateHUD(dt){
   const rp=(MAP.on&&MAP.free)?mapCenter():[truck.x,truck.z];   // when the camera is panned in training mode, read the street/block at the VIEW CENTRE (crosshair), not the truck
   const curStreet=streetName(rp[0],rp[1]),curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
-  elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
+  elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+(FPSM.avg?' · '+(FPSM.avg|0)+' FPS · dip '+((FPSM.shownMin===999?FPSM.avg:FPSM.shownMin)|0):'')+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
   { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = (MAP.bounds||DRAW.on) ? '🎓 TRAINING » ' : '📻 DISPATCH » '; }   // boundary/training mode is not a live call
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
@@ -5897,7 +5897,10 @@ updateBest();
 
 /* ============================ 11. MAIN LOOP (fixed timestep) ============================ */
 let GT=0, last=performance.now(), acc=0;
+const FPSM={t:0,winT:0,avg:0,min:999,shownMin:999};
 function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=now; if(dt>CONFIG.maxDt) dt=CONFIG.maxDt; GT=now/1000;
+  { const rn=performance.now(); if(FPSM.t){ const d=rn-FPSM.t; if(d>0&&d<1000){ const f=1000/d; FPSM.avg=FPSM.avg?FPSM.avg*0.92+f*0.08:f; if(f<FPSM.min)FPSM.min=f; } }
+    FPSM.t=rn; if(rn-FPSM.winT>2000){ FPSM.shownMin=FPSM.min; FPSM.min=999; FPSM.winT=rn; } }   // owner perf review: rolling avg + worst frame of the last 2s, shown on the SAVES line
   if(!MAP.on){ const pr=renderer.getPixelRatio(), tw=Math.round(innerWidth*pr), th=Math.round(innerHeight*pr);   // 3D views: keep the WebGL canvas full-screen (mobile address-bar/viewport changes can leave it short → a gap below the render)
     if(tw>2 && th>2 && (renderer.domElement.width!==tw || renderer.domElement.height!==th)) onResize(); }
   if(state.running&&!duedPaused()){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
