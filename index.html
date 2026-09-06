@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v17r";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v17s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3103,13 +3103,19 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         const ang=Math.atan2(dx,dz),ux=dx/l,uz=dz/l,n=Math.max(1,Math.ceil(l/24)),pl=l/n;
         for(let j=0;j<n;j++){const o=(j+0.5)*pl,px=a[0]+ux*o,pz=a[1]+uz*o;
           let y0,y1;
-          if(rw.bridge){const t0=(segAlong+o-pl/2)/(len||1),t1=(segAlong+o+pl/2)/(len||1);y0=sY+(eY-sY)*t0;y1=sY+(eY-sY)*t1;}
+          if(rw.bridge){const t0=(segAlong+o-pl/2)/(len||1),t1=(segAlong+o+pl/2)/(len||1);y0=sY+(eY-sY)*t0;y1=sY+(eY-sY)*t1;
+            // Owner-verified (Falls Road, Sep 6 2026): the DEM cannot see rail embankments, so a
+            // bridge-tagged deck interpolated from its abutments can land at street level. A tagged
+            // bridge is above ground by definition — floor the deck at local ground + 6m so spans
+            // clear the streets they cross (estimate, like all deck heights here).
+            const g0=navGroundY(px-ux*pl/2,pz-uz*pl/2)+6,g1=navGroundY(px+ux*pl/2,pz+uz*pl/2)+6;
+            if(y0<g0)y0=g0;if(y1<g1)y1=g1;}
           else{y0=navTerrain(px-ux*pl/2,pz-uz*pl/2);y1=navTerrain(px+ux*pl/2,pz+uz*pl/2);}
           const y=(y0+y1)/2,pitch=-Math.atan2(y1-y0,pl),pll=pl*1.06;
           if(rw.bridge){rDeck.push({x:px,y:y-0.6,z:pz,w:5.2,h:1.2,l:pll,ang,pitch});
             for(const side of [-1,1])rWall.push({x:px-uz*2.4*side,y:y+0.35,z:pz+ux*2.4*side,w:0.4,h:1.0,l:pll,ang,pitch});
             const ground=navGroundY(px,pz),hh=y-ground-1.2;
-            if(hh>4&&j%2===0)rPier.push({x:px,y:ground+hh/2,z:pz,w:3.4,h:hh,l:1.8,ang,pitch:0});}
+            if(hh>4&&j%2===0&&!onAsphalt(px,pz))rPier.push({x:px,y:ground+hh/2,z:pz,w:3.4,h:hh,l:1.8,ang,pitch:0});}   // no piers planted in the roadway below a span
           else ballast.push({x:px,y:y+0.12,z:pz,w:3.6,h:0.5,l:pll,ang,pitch});   // top at +0.37: reads as a crossing pad where it meets the +0.22 road plane, no z-fight
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
     for(const [list,color] of [[deck,0x828b8c],[rails,0xb5bab4],[piers,0x91958b],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
