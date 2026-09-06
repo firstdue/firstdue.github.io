@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v17u";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v17v";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3103,10 +3103,20 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     // 🚆 RAILROAD (OSM mainline/branch rail; NAVGEO.rail, separate from road bridges so navRoadY can
     // never lift the truck onto a rail deck). Ground track = ballast + twin rails per ≤24m piece;
     // bridge track = estimated deck (terrain at the way's ends, same approach as road bridges) + walls + piers.
-    const ballast=[],railBars=[],rDeck=[],rWall=[],rPier=[];
+    const ballast=[],railBars=[],rDeck=[],rWall=[],rPier=[],rAbut=[];
     for(const rw of (NAVGEO.rail||[])){ if(rw.tunnel)continue;
       let len=0;for(let i=1;i<rw.p.length;i++)len+=Math.hypot(rw.p[i][0]-rw.p[i-1][0],rw.p[i][1]-rw.p[i-1][1]);
       const sY=navTerrain(...rw.p[0]),eY=navTerrain(...rw.p[rw.p.length-1]);let along=0;
+      // Stone abutments (owner Street View reference, Falls Rd underpass, Sep 6 2026): a rail span's
+      // deck ends rest on ground-to-deck masonry walls, which also mask the DEM-blind embankment step.
+      if(rw.bridge&&Math.hypot(rw.p[0][0]-J.cx,rw.p[0][1]-J.cz)<LOCAL.R+80){
+        for(const [pe,po] of [[rw.p[0],rw.p[1]],[rw.p[rw.p.length-1],rw.p[rw.p.length-2]]]){
+          const dxA=po[0]-pe[0],dzA=po[1]-pe[1],lA=Math.hypot(dxA,dzA)||1,uxA=dxA/lA,uzA=dzA/lA;
+          let ax=null,az=null;
+          for(const off of [1.2,2.8,4.5,6.5]){const tx=pe[0]-uxA*off,tz=pe[1]-uzA*off;if(!onAsphalt(tx,tz)){ax=tx;az=tz;break;}}
+          if(ax===null)continue;
+          const g=navGroundY(ax,az),deckTopY=Math.max(navTerrain(pe[0],pe[1]),g+6),under=deckTopY-1.2,H=under-g+0.4;
+          if(H>2)rAbut.push({x:ax,y:g+H/2-0.2,z:az,w:7.2,h:H,l:3.0,ang:Math.atan2(dxA,dzA),pitch:0});}}
       for(let i=1;i<rw.p.length;i++){const a=rw.p[i-1],q=rw.p[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz);
         if(!l){continue;}
         const mx=(a[0]+q[0])/2,mz=(a[1]+q[1])/2,segAlong=along;along+=l;
@@ -3137,7 +3147,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             ballast.push({x:px,y:y+0.12,z:pz,w:3.6,h:0.5,l:pll,ang,pitch});   // top at +0.37: reads as a crossing pad where it meets the +0.22 road plane, no z-fight
           }
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
-    for(const [list,color] of [[deck,0x828b8c],[rails,0xb5bab4],[piers,0x91958b],[truss,0xdcded9],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+    for(const [list,color] of [[deck,0x828b8c],[rails,0xb5bab4],[piers,0x91958b],[truss,0xdcded9],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
       list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
   }
   if(NAVGEO.active){
