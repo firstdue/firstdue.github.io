@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18j";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18k";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -947,10 +947,18 @@ for(const b of NAVGEO.bridges){ if(!b.bridge||!(b.length>1)) continue;
 const RAMP_GRADE={width:20,source:'Ridge connector over Kelly Dr and under City Ave — owner Google Street View sequence, Apr 2025 / Sep 7 2026',p:[[-720,161,12.7],[-775,181,13.4],[-820,179,14.2],[-868,167,15.0],[-1013,127,15.4],[-1036,114,15.6],[-1050,101,15.8],[-1060,91,16.0],[-1072,78,16.2],[-1094,55,16.4],[-1106,42,16.7],[-1148,-9,17.3],[-1146,-34,18.0],[-1129,-47,18.8],[-1113,-47,20.0],[-1088,-28,20.5],[-1079,-3,20.4],[-1084,31,20.0]]};
 function navRampY(x,z,name){if(name)return null;let best=null,bd=RAMP_GRADE.width;for(let i=1;i<RAMP_GRADE.p.length;i++){const a=RAMP_GRADE.p[i-1],b=RAMP_GRADE.p[i],dx=b[0]-a[0],dz=b[1]-a[1],L=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/L)),cx=a[0]+dx*t,cz=a[1]+dz*t,d=Math.hypot(x-cx,z-cz);if(d<bd){bd=d;best=a[2]+(b[2]-a[2])*t;}}return best;}
 function bridgePointAt(b,t){const target=Math.max(0,Math.min(1,t))*(b.length||1);let d=0;for(let i=1;i<b.p.length;i++){const a=b.p[i-1],q=b.p[i],l=Math.hypot(q[0]-a[0],q[1]-a[1]);if(d+l>=target||i===b.p.length-1){const f=Math.max(0,Math.min(1,(target-d)/(l||1)));return [a[0]+(q[0]-a[0])*f,a[1]+(q[1]-a[1])*f,target];}d+=l;}return [b.p[0][0],b.p[0][1],target];}
-function deckY(b,t){const P=b.prof,u=Math.max(0,Math.min(1,t)),i=P?Math.min(P.length-2,(u*(P.length-1))|0):0,f=P?u*(P.length-1)-i:0;let y=P?P[i]+(P[i+1]-P[i])*f:b.startY+(b.endY-b.startY)*u;const p=bridgePointAt(b,u);
-  if(!b.name){const ramp=navRampY(p[0],p[1],'');if(ramp!==null)y=Math.max(y,ramp);}
-  if(b.id===42705846&&p[2]>b.length-72)y=Math.max(y,21.5);                         // upper City Ave structure over the mid-level ramp
-  if(b.id===12206122&&p[2]<42)y=Math.max(y,20+Math.min(2.2,p[2]*0.10));            // second City Ave carriageway; starts at the ramp merge
+// City Ave deck floors at the ramp interchange, keyed to fixed WORLD segments instead of OSM way
+// ids — a re-bake that renumbers ways or re-chains fragments cannot silently detach them. Each
+// zone is [ax,az,bx,bz]: a deck point counts when its projection lands inside the segment within
+// 6m across (verified to select exactly the same deck pieces as the old id+arc-length checks).
+const CITY_LIFT=[
+  {s:[-1110.5,125.6,-1058.5,75.8],f:()=>21.5},                    // upper City Ave structure over the mid-level ramp
+  {s:[-1083.6,30.6,-1111.9,61.4],f:u=>20+Math.min(2.2,u*4.2)}];   // second carriageway; starts at 20 at the ramp merge, rising 0.10/m over the 42m zone
+function cityLiftY(x,z){for(const c of CITY_LIFT){const A=c.s,dx=A[2]-A[0],dz=A[3]-A[1],L2=dx*dx+dz*dz,u=((x-A[0])*dx+(z-A[1])*dz)/L2;
+  if(u<0||u>1||Math.abs((x-A[0])*dz-(z-A[1])*dx)/Math.sqrt(L2)>=6)continue;return c.f(u);}return null;}
+function deckY(b,t){const P=b.prof,u=Math.max(0,Math.min(1,t)),i=P?Math.min(P.length-2,(u*(P.length-1))|0):0,f=P?u*(P.length-1)-i:0;let y=P?P[i]+(P[i+1]-P[i])*f:b.startY+(b.endY-b.startY)*u;
+  if(!b.name){const p=bridgePointAt(b,u),ramp=navRampY(p[0],p[1],'');if(ramp!==null)y=Math.max(y,ramp);}                   // unnamed decks ride the ramp profile
+  else if(b.name==='City Avenue'){const p=bridgePointAt(b,u),lift=cityLiftY(p[0],p[1]);if(lift!==null)y=Math.max(y,lift);} // bridgePointAt only when a floor could apply — this runs per car per frame
   return y;}
 function navRoadY(x,z,name=null){if(!NAVGEO.active)return 0;const ramp=navRampY(x,z,name);if(ramp!==null)return ramp;const s=navSpan(x,z,name);return (!s||!s.b.bridge)?navTerrain(x,z):deckY(s.b,s.t);}
 function navGroundY(x,z){return NAVGEO.active?navTerrain(x,z):0;}
@@ -3252,7 +3260,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
           if(Math.hypot(px-J.cx,pz-J.cz)>LOCAL.R)continue;
           const y0=deckY(b,(segStart+s0)/BL),y1=deckY(b,(segStart+s1)/BL),py=(y0+y1)/2,pp=-Math.atan2(y1-y0,pl);
           deck.push({x:px,y:py-0.5,z:pz,w:hw*2+2,h:0.9,l:pl,ang,pitch:pp});
-          if(b.id===42705846||b.id===12206122)for(const side of [-0.66,0,0.66])roadGirder.push({x:px-uz*hw*side,y:py-1.02,z:pz+ux*hw*side,w:0.34,h:1.15,l:pl,ang,pitch:pp}); // photo-matched dark steel beams beneath City Ave
+          if(b.name==='City Avenue'&&Math.hypot(px+1166,pz-123)<150)for(const side of [-0.66,0,0.66])roadGirder.push({x:px-uz*hw*side,y:py-1.02,z:pz+ux*hw*side,w:0.34,h:1.15,l:pl,ang,pitch:pp}); // photo-matched dark steel beams beneath City Ave at the ramp interchange (world-coord test, not way ids — survives re-bakes; the next City Ave span sits 190m+ away)
           for(const side of [-1,1]){const ox=-uz*side,oz=ux*side;                            // 🌉 bridge furniture per side (owner Street View: solid concrete parapets, not thin bars):
             para.push({x:px+ox*(hw+0.55),y:py+0.5,z:pz+oz*(hw+0.55),w:0.32,h:1.0,l:pl,ang,pitch:pp});      // solid parapet wall, deck to +1.0m
             rails.push({x:px+ox*(hw+0.55),y:py+1.08,z:pz+oz*(hw+0.55),w:0.46,h:0.16,l:pl,ang,pitch:pp});   // coping cap with a slight overhang
@@ -3272,12 +3280,13 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     // concrete barrier on the left, metal guardrail on the right and spaced center supports.
     // The final loop rises to meet City Ave; both City structures remain above the earlier section.
     if(J.immersive&&Math.hypot(J.cx+1000,J.cz-80)<LOCAL.R+450){const rp=RAMP_GRADE.p,hw=4.35;
+      const overNamedRoad=(x,z)=>{for(const s of segNear(x,z)){if(!s.name)continue;const c=closestSeg(x,z,s);if(c.d<CLASSW[s.cls]/2+1)return true;}return false;};   // plain onAsphalt would always hit the ramp's own unnamed street
       for(let i=1;i<rp.length;i++){const a=rp[i-1],q=rp[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz);if(!l)continue;const ux=dx/l,uz=dz/l,ang=Math.atan2(dx,dz),n=Math.max(1,Math.ceil(l/16)),pl=l/n;
         for(let k=0;k<n;k++){const t0=k/n,t1=(k+1)/n,tm=(t0+t1)/2,px=a[0]+dx*tm,pz=a[1]+dz*tm;if(Math.hypot(px-J.cx,pz-J.cz)>LOCAL.R)continue;const y0=a[2]+(q[2]-a[2])*t0,y1=a[2]+(q[2]-a[2])*t1,py=(y0+y1)/2,pp=-Math.atan2(y1-y0,pl),ll=pl*1.07;
           deck.push({x:px,y:py-0.5,z:pz,w:hw*2+0.8,h:0.9,l:ll,ang,pitch:pp});
           para.push({x:px+uz*(hw+0.25),y:py+0.48,z:pz-ux*(hw+0.25),w:0.34,h:1.0,l:ll,ang,pitch:pp});
           roadGuard.push({x:px-uz*(hw+0.28),y:py+0.82,z:pz+ux*(hw+0.28),w:0.22,h:0.24,l:ll,ang,pitch:pp});
-          if(k%3===1){guardPost.push({x:px-uz*(hw+0.28),y:py+0.38,z:pz+ux*(hw+0.28),w:0.18,h:0.9,l:0.18,ang,pitch:0});const g=navGroundY(px,pz),h=py-g-0.9;if(h>3)piers.push({x:px,y:g+h/2,z:pz,w:1.8,h,l:2.3,ang,pitch:0});}
+          if(k%3===1){guardPost.push({x:px-uz*(hw+0.28),y:py+0.38,z:pz+ux*(hw+0.28),w:0.18,h:0.9,l:0.18,ang,pitch:0});const g=navGroundY(px,pz),h=py-g-0.9;if(h>3&&!overNamedRoad(px,pz))piers.push({x:px,y:g+h/2,z:pz,w:1.8,h,l:2.3,ang,pitch:0});}   // no supports planted in Kelly Dr's roadway below the span (same rule as rail piers)
         }} }
     // 🚆 RAILROAD (OSM mainline/branch rail; NAVGEO.rail, separate from road bridges so navRoadY can
     // never lift the truck onto a rail deck). Ground track = ballast + twin rails per ≤24m piece;

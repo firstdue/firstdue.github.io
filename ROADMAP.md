@@ -1,6 +1,11 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 7, 2026. **v18j is public and matches the local build.**
+Planning snapshot: September 7, 2026. **v18k is public and matches the local build.**
+
+- [x] v18k hardening pass on the interchange: City Ave deck floors and girders keyed to fixed
+  world coordinates instead of OSM way ids (numerically verified to select the identical deck
+  pieces; a re-bake can no longer silently detach them), no viaduct supports planted in Kelly
+  Drive's roadway, lazy along-bridge point walk in the deck lookup, README history cleanup.
 
 - [x] Rebuild the Ridge/City approach as a photo-guided three-level interchange: ramp over Kelly,
   ramp under City Avenue, then ramp-to-City merge, with viaduct and bridge structure detail.
