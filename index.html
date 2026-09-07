@@ -176,7 +176,7 @@
   .parkStreetChoice.selected .block { color:rgba(255,255,255,.8); }
   .parkStreetChoice.selected::after { border-top-color:#1f6ff0; }
   .parkStreetChoice.wrong { background:#bd2926; color:#fff; border-color:#fff; box-shadow:0 2px 8px rgba(100,15,15,.35); }
-  .parkStreetChoice.wrong .block { color:#fff; font-size:9px; letter-spacing:.6px; }
+  .parkStreetChoice.wrong .block { color:rgba(255,255,255,.85); }
   .parkStreetChoice.wrong::after { border-top-color:#bd2926; }
   .parkStreetChoice.wrong.selected { outline:3px solid #ffcf66; outline-offset:2px; }
   .parkStreetChoice:active { transform:translate(-50%,-50%) scale(.96); }
@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v17x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v17y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1448,7 +1448,10 @@ function gradeSeparatedCrossing(A,B,X,Z){const a=navSpan(X,Z,A.nm),b=navSpan(X,Z
 // so an intersection often ends up as two or three nodes 0.7–1.4m apart with edges criss-crossing between them.
 // A street then has no continuation edge at the junction (its far half hangs off the twin), which made the truck
 // either veer onto the cross street or stop dead. Collapse each cluster into one real junction node.
-(function weldNodes(){ const R=1.8, CS=4, grid=new Map(), all=[...gnodes.values()];
+// R was 1.8, raised to 3.0 for v17y: W School House Ln × Gypsy Ln split into twin nodes 2.4m apart joined by a
+// mislabeled stub, so the truck stopped there — 380 such 1.8–3m twin pairs citywide, EVERY one already edge-joined
+// (none are separate carriageways; a median pair can't be 3m apart), so widening only heals fragmented junctions.
+(function weldNodes(){ const R=3.0, CS=4, grid=new Map(), all=[...gnodes.values()];
   for(const n of all){ const k=Math.floor(n.x/CS)+':'+Math.floor(n.z/CS); let a=grid.get(k); if(!a){a=[];grid.set(k,a);} a.push(n); }
   const rep=new Map(), kids=new Map(), isRep=new Set();
   for(const n of all){ if(rep.has(n)) continue; isRep.add(n);
@@ -1596,7 +1599,7 @@ const LBL_DIR=[[/^West\b/,'W'],[/^East\b/,'E'],[/^North\b/,'N'],[/^South\b/,'S']
 function abbrevStreet(n){ let s=String(n||'');
   if(s.split(' ').length>=3) for(const [re,to] of LBL_DIR) s=s.replace(re,to);   // 'South Broad Street'→'S Broad St', but SOUTH STREET keeps its name ('S St' was nonsense)
   for(const [re,to] of LBL_ABBR) s=s.replace(re,to); return s; }
-function labelTex(name,block,wrong){ const bl=wrong?'WRONG WAY':blockLine(block), key=name+'|'+bl+(wrong?'|W':''); if(LBL.cache[key]) return LBL.cache[key];
+function labelTex(name,block,wrong){ const bl=blockLine(block), key=name+'|'+bl+(wrong?'|W':''); if(LBL.cache[key]) return LBL.cache[key];   // a wrong-way sign stays RED but keeps its hundred block like every other sign (owner: the red alone says it)
   name=abbrevStreet(name);                                                         // shorten long names so the pill stays small (W School House Ln)
   const S=2,pad=9*S,ptr=5*S,fs=15*S,bfs=8.5*S,r=8*S;                               // two-line sign: hundred block above the street name (compact)
   const fnt='600 '+fs+'px -apple-system,"Helvetica Neue",Arial,sans-serif', bfnt='800 '+bfs+'px -apple-system,"Helvetica Neue",Arial,sans-serif';
@@ -1622,7 +1625,9 @@ function updateStreetLabels(dt){
     const cand=[], seen={}, cur=streetName(truck.x,truck.z), curKey=canonStreet((DRIVE.parked&&DRIVE.faces)||cur); // a street you can't turn onto (parallel, unconnected) must never get a callout.
     const addBranch=(node,e,first=null,from=null)=>{                               // one pooled sign per street + hundred block
       const nm=e.name||streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);
-      if(!nm||nm==='—'||canonStreet(nm)===curKey) return;
+      if(!nm||nm==='—') return;
+      const sameRoadTurn=canonStreet(nm)===curKey;
+      if(sameRoadTurn&&(!from||keepStreet(from,node)===e.to))return;
       const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1;
       const off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));             // at the house keep the sign close to the corner, inside the Chase frame
       const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=hundredBlock(lx,lz,nm),key=canonStreet(nm)+'|'+block+'|'+!!e.wrong;
@@ -1630,7 +1635,7 @@ function updateStreetLabels(dt){
       const prev=seen[key];                                                       // a wrong-way branch gets a RED sign, not silence — tapping it still turns (user: 'if you have to you still can')
       if(prev!==undefined) return;                                               // keep legal and wrong-way directions separate, even within the same hundred block
       seen[key]=cand.length;
-      cand.push({name:nm,block,x:lx,z:lz,pick,wrong:!!e.wrong}); };
+      cand.push({name:nm,block,x:lx,z:lz,pick,wrong:!!e.wrong,sameRoadTurn}); };
     let a=DRIVE.fromN, b=DRIVE.toN, guard=0;
     if(DRIVE.parked&&DRIVE.stationNode){                                           // parked engines have no fromN/toN: preview the first real cross street both ways
       const root=DRIVE.stationNode, scan=Math.min(LBL._far,180);
@@ -1655,11 +1660,11 @@ function updateStreetLabels(dt){
     for(let i=0;i<LBL.pool.length;i++){ const sp=LBL.pool[i], cd=cand[i];
       if(!cd){ sp.visible=false; sp._name=null; sp._key=null; sp._block=null; sp._pick=null; continue; }
       const key=cd.name+'|'+cd.block+(cd.wrong?'|W':''); if(sp._key!==key){ const info=labelTex(cd.name,cd.block,cd.wrong); sp.material.map=info.tex; sp.material.needsUpdate=true; sp._key=key; sp._name=cd.name; sp._aspect=info.aspect; }
-      sp._block=cd.block; sp._pick=cd.pick||null; sp._wrong=cd.wrong;
+      sp._block=cd.block; sp._pick=cd.pick||null; sp._wrong=cd.wrong; sp._sameRoadTurn=cd.sameRoadTurn;
       sp.position.set(cd.x,groundHeight(cd.x,cd.z)+LBL.float,cd.z); sp.visible=true; } }
   const curNow=streetName(truck.x,truck.z);                                            // hide the street you're on every frame (no throttle-lag flash when you turn onto it)
   for(const sp of LBL.pool){ if(!sp.visible) continue;                                 // smooth per-frame fade: near = solid, far = gone
-    if(sp._name===curNow){ sp.visible=false; continue; }
+    if(sp._name===curNow&&!sp._sameRoadTurn){ sp.visible=false; continue; }
     const d=Math.hypot(truck.x-sp.position.x,truck.z-sp.position.z);
     if(d>LBL._far){ sp.visible=false; continue; }
     let op=Math.max(0,Math.min(1,(LBL._far-d)/Math.max(1,LBL._far-LBL._near)*1.9));   // ramps to full opacity about halfway in, not at the last moment
@@ -2523,6 +2528,7 @@ function toggleStreetChoice(sp,x,y){ const p=sp&&sp._pick; if(!p||!p.at||!p.next
   DRIVE.arrow=(hx*dz-hz*dx)>0?1:-1; DRIVE.arrowT=8;
   PARK_UI.selected={name:sp._name,block:sp._block,x,y,pick:p,at:p.at,next:p.next,direct:false,until:Infinity};
   popup('SELECTED '+sp._name+' · '+blockLine(sp._block)); return true; }
+function streetChoiceCaption(p,block){return p&&Math.hypot(p.at.x+819,p.at.z-574)<25&&p.next.z>p.at.z&&edgeName(p.at,p.next)==='Falls Road'?'TO CONSHOHOCKEN AVE':blockLine(block);}
 function streetChoiceWrong(p){ return !!(p&&p.at&&p.next&&p.at.adj.some(e=>e.to===p.next&&e.wrong)); }
 function updateParkedStreetChoices(){ const root=PARK_UI.root, rect=renderer.domElement.getBoundingClientRect(), placed=[];
   const hideFrom=n=>{ for(let i=n;i<PARK_UI.buttons.length;i++){ PARK_UI.buttons[i].style.display='none'; PARK_UI.buttons[i]._sp=null; } };
@@ -2543,14 +2549,14 @@ function updateParkedStreetChoices(){ const root=PARK_UI.root, rect=renderer.dom
     const wrong=streetChoiceWrong(sp._pick);
     placed.push({x,y,w}); const b=PARK_UI.buttons[count++]; b.className='parkStreetChoice'+(isSelected?' selected':'')+(wrong?' wrong':''); b.style.display='block'; b.style.width=w+'px';
     b.style.left=x+'px'; b.style.top=y+'px'; b.dataset.x=x; b.dataset.y=y; b._sp=sp;
-    b.querySelector('.block').textContent=wrong?'WRONG WAY':blockLine(sp._block); b.querySelector('.street').textContent=disp;
+    b.querySelector('.block').textContent=streetChoiceCaption(sp._pick,sp._block); b.querySelector('.street').textContent=disp;   // red card + hundred block; the color alone flags wrong-way
     b.setAttribute('aria-label',(wrong?'Wrong way, ':'')+sp._name+(isSelected?', selected':''));
     if(count>=PARK_UI.buttons.length) break; }
   if(sel&&!selectedShown&&count<LBL.showCap){                                        // never add a third Chase card just to preserve an older selection
     const dispSel=abbrevStreet(sel.name), w=Math.min(170,Math.max(78,dispSel.length*6.4+24)),b=PARK_UI.buttons[count++],x=Math.max(8+w/2,Math.min(innerWidth-8-w/2,sel.x)),y=Math.max(170,Math.min(innerHeight-165,sel.y));
     const wrong=streetChoiceWrong(sel.pick);
     b.className='parkStreetChoice selected'+(wrong?' wrong':''); b.style.display='block'; b.style.width=w+'px'; b.style.left=x+'px'; b.style.top=y+'px'; b.dataset.x=x; b.dataset.y=y;
-    b._sp={_pick:sel.pick,_name:sel.name,_block:sel.block}; b.querySelector('.block').textContent=wrong?'WRONG WAY':blockLine(sel.block); b.querySelector('.street').textContent=dispSel;
+    b._sp={_pick:sel.pick,_name:sel.name,_block:sel.block}; b.querySelector('.block').textContent=streetChoiceCaption(sel.pick,sel.block); b.querySelector('.street').textContent=dispSel;
     b.setAttribute('aria-label',(wrong?'Wrong way, ':'')+sel.name+', selected'); }
   hideFrom(count); root.classList.toggle('show',count>0); }
 function worldTap3D(clientX,clientY){ if(MAP.on||!state.running) return;
