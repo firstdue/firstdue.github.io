@@ -1,6 +1,14 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 7, 2026. **v18k is public and matches the local build.**
+Planning snapshot: September 7, 2026. **v18l is public and matches the local build.**
+
+- [x] v18l owner-playtest fixes: highway rules on ramps (only the ramp's destination card shows —
+  no Kelly Dr / Ridge Ave / Lincoln Dr cards mid-ramp; wrong-way ramps never get a card), plus
+  smooth cornering (look-ahead aim; visible truck and chase camera ride a rounded path midpoint,
+  drive/route/arrival logic untouched). Verified headless in the real graph: on the ramp only
+  "RAMP TO City Avenue" shows; the Ridge Avenue gantry still offers both destinations.
+- [ ] Owner re-check on the phone: interchange signs, bend smoothness (Ridge/Kelly and the other
+  choppy bends noticed), and that exits still read on City Ave.
 
 - [x] v18k hardening pass on the interchange: City Ave deck floors and girders keyed to fixed
   world coordinates instead of OSM way ids (numerically verified to select the identical deck

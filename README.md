@@ -1,6 +1,18 @@
 # Philly Fire Dispatch — Local
 
-**Current: PUBLIC = LOCAL = v18k (September 7, 2026).** The Ridge Avenue connector forms the
+**Current: PUBLIC = LOCAL = v18l (September 7, 2026).** Owner playtest feedback on the interchange:
+highway rules on ramps — once you're on a ramp, the only card shown is where that ramp leads
+(committed gantry choice, planned route, or the ramp's own continuation); cross streets passing
+under the deck (Kelly Dr) and other ramps' cards (Ridge Ave, Lincoln Dr) no longer appear, and a
+wrong-way ramp never gets a card anywhere (unlike a street, it has no "remember not to turn"
+value). Exits reappear on the named road itself. Bends also drive smoothly now: the truck aims at
+a look-ahead point on its actual path, and the visible truck and chase camera ride a rounded
+midpoint of the driven trail and the path ahead — straights are unchanged, corners arc instead of
+stepping. Route, arrival and turn logic are untouched (same contract as the lane offset).
+
+## Release history
+
+**v18k (September 7, 2026).** The Ridge Avenue connector forms the
 three-level interchange shown in the owner's Street View photos: it rises over Kelly Drive, passes
 beneath City Avenue, and climbs to merge, with a continuous deck, barriers, guardrail, supports
 and a steel bridge underside. v18k hardens v18j: the City Avenue deck floors and steel girders are
@@ -8,8 +20,6 @@ keyed to fixed world coordinates instead of OSM way ids (re-bake safe; verified 
 identical deck pieces), viaduct supports are never planted in Kelly Drive's roadway, and the deck
 lookup skips its along-bridge point walk except where a floor can apply. Validation, evidence and
 rollback notes live in the authoring folder's `START-HERE.md` (not in this public checkout).
-
-## Release history
 
 **v18j (September 7, 2026).** Three-level Ridge/City interchange: ramp over Kelly Drive, under
 City Avenue, then the merge, plus viaduct and bridge structure detail.

@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18k";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1080,6 +1080,16 @@ function hundredBlock(x,z,name){ const ni=BLOCK.nameId.get(canonStreet(name)), g
   if(value&&best<450*450) return value; return fallback<28*28?fallbackValue:0; }
 function currentHundredBlock(x,z,name){ const q=BLOCK.last; if(q.name!==name||Math.hypot(x-q.x,z-q.z)>12){ q.x=x;q.z=z;q.name=name;q.value=hundredBlock(x,z,name); } return q.value; }
 function blockLine(v){ return v==='RAMP' ? 'RAMP TO' : (v ? v+' BLOCK' : 'BLOCK —'); }   // 'RAMP' marker: an unnamed connector labeled by the street it leads to
+// The street the ramp under the truck actually leads to: the queued gantry turn's label, then the
+// planned route's first named edge, then the straightest chain's first named street (same walk the
+// RAMP TO cards use). Null when the chain never reaches a name.
+function rampDestName(){
+  if(DRIVE.pending&&DRIVE.pending.label) return DRIVE.pending.label;
+  if(DRIVE.plan&&DRIVE.plan.length){ let pa=DRIVE.toN; for(const n of DRIVE.plan.slice(0,8)){ const e=pa&&pa.adj.find(e2=>e2.to===n); if(e&&e.name) return e.name; pa=n; } }
+  let pa=DRIVE.fromN,pb=DRIVE.toN,walked=0,g=0;
+  while(pa&&pb&&g++<12&&walked<450){ const named=pb.adj.find(e2=>e2.to!==pa&&e2.name); if(named) return named.name;
+    const nx=straightest(pa,pb); if(!nx) break; walked+=Math.hypot(nx.x-pb.x,nx.z-pb.z); pa=pb; pb=nx; }
+  return null; }
 function onAsphalt(x,z){ for(const s of segNear(x,z)){ const c=closestSeg(x,z,s); if(c.d<CLASSW[s.cls]/2+1) return true; } return false; }
 // Put every dispatch pin on the street its radio call actually names. Half the landmarks were hand-placed on the
 // wrong block (W.B. Saul said "Henry Ave" but sat 486m away on Valley Ave; Dobson Mills said "Ridge Ave" but sat on
@@ -1721,6 +1731,7 @@ function updateStreetLabels(dt){
     const cand=[], seen={}, cur=streetName(truck.x,truck.z), curKey=canonStreet((DRIVE.parked&&DRIVE.faces)||cur); // a street you can't turn onto (parallel, unconnected) must never get a callout.
     const addBranch=(node,e,first=null,from=null)=>{                               // one pooled sign per street + hundred block
       const sg=RAMP_SIGNS.find(q=>Math.hypot(node.x-q.x,node.z-q.z)<8&&Math.hypot(e.to.x-q.tx,e.to.z-q.tz)<8);
+      if(sg&&e.wrong) return;                                                          // the other direction's on-ramp: you can never take it, so no card at all (owner: red ramp cards confuse — unlike a street, a ramp has no 'remember not to turn' value)
       if(sg){ const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1,off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));   // real gantry wording wins over the derived label
         const lx=node.x+dx/l*off,lz=node.z+dz/l*off,pick=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null);
         sg.signs.forEach((sn,i)=>{ const label=sn.label||sn, key='SIGN|'+label; if(seen[key]!==undefined) return; seen[key]=cand.length;
@@ -1735,6 +1746,7 @@ function updateStreetLabels(dt){
           walked+=Math.hypot(nx.x-pb2.x,nx.z-pb2.z); pa2=pb2; pb2=nx; }
         if(dest&&dest!==guess){ nm=dest; ramp=true; }                              // leads somewhere else → "RAMP TO <street>" card (City Ave ramps at Ridge were invisible: no name, no band, NO SIGN)
         else nm=guess; }                                                           // plain stub → keep the band name as before
+      if(ramp&&e.wrong) return;                                                    // derived ramps follow the same rule as gantry ones: a wrong-way ramp gets no card
       if(!nm||nm==='—') return;
       const sameRoadTurn=!ramp&&canonStreet(nm)===curKey;
       if(sameRoadTurn&&(!from||keepStreet(from,node)===e.to))return;
@@ -1771,6 +1783,10 @@ function updateStreetLabels(dt){
     { const legal=new Set(); if(!DRIVE.parked&&curKey&&cur!=='—') legal.add(curKey);             // the street under the truck is legally present by definition — its divided-twin/opposite-
       for(const c of cand) if(!c.wrong) legal.add(canonStreet(c.name));   // carriageway red cards are noise. And a red card is noise when the SAME street also has a legal card here (two-way road with
       for(let i=cand.length-1;i>=0;i--) if(cand[i].wrong&&legal.has(canonStreet(cand[i].name))) cand.splice(i,1); }   // one-way ramp fragments, or a divided twin in the next block) — red survives only for streets with no legal entry
+    if(!DRIVE.parked&&DRIVE.fromN&&DRIVE.toN){ const de=DRIVE.fromN.adj.find(e=>e.to===DRIVE.toN);   // 🛣️ highway rules ON a ramp (owner): you're committed — no cross-street callouts (Kelly Dr under
+      if(de&&!de.name){ const dn=canonStreet(rampDestName()||'');                                    // the deck), no cards for other ramps (Ridge, Lincoln). Only the sign for where THIS ramp
+        for(let i=cand.length-1;i>=0;i--){ const c=cand[i];                                          // leads survives; exits reappear once you're on the named road itself.
+          if(!(c.block==='RAMP'&&dn&&canonStreet(c.name)===dn)) cand.splice(i,1); } } }
     if(cand.some(c=>c.sign)) cand.sort((p,q)=>(q.sign?1:0)-(p.sign?1:0));        // sourced gantry cards survive the cap (stable sort keeps the rest in walk order)
     if(cand.length>LBL.showCap) cand.length=LBL.showCap;                         // nearest choices only: prevent a stack of future-intersection signs
     for(let i=0;i<LBL.pool.length;i++){ const sp=LBL.pool[i], cd=cand[i];
@@ -2130,6 +2146,13 @@ function updateTiltMap(dt){                                                    /
     if(!FLATCITY.job && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.requestRebuild(truck.x,truck.z); }
   const driveEdge=DRIVE.fromN?.adj.find(e=>e.to===DRIVE.toN);                 // an unnamed ramp must match only an unnamed bridge; null used to match nearby City Ave and lift the truck onto its deck
   const navY=navRoadY(truck.x,truck.z,driveEdge?.name??'');
+  { const T=VIS.trail,last=T[T.length-1];                                     // record the driven path for the corner-rounding midpoint
+    if(last&&Math.hypot(truck.x-last.x,truck.z-last.z)>15) T.length=0;        // a jump (respawn, carriageway slide) restarts the trail
+    if(!last||Math.hypot(truck.x-last.x,truck.z-last.z)>0.4) T.push({x:truck.x,z:truck.z});
+    if(T.length>60) T.splice(0,T.length-60); }
+  let vx=truck.x, vz=truck.z;
+  if(DRIVE.going&&!DRIVE.parked&&!INTRO.active){ const bp=visTrailBack(5.5), fp=drivePathPoint(5.5);
+    if(bp&&fp){ vx=(bp.x+fp.x)/2; vz=(bp.z+fp.z)/2; } }
   truckG.position.y=navY+0.24;
   truckG.rotation.set(0,truck.theta,0);                                       // no pitch/roll on flat ground
   { let tgt=0;                                                                // 🚚 lane offset: the graph rides the street CENTRELINE, so the truck straddled the yellow line — shift the VISUAL into the right-hand lane like a real nav app (DRIVE/route/logic untouched)
@@ -2138,7 +2161,7 @@ function updateTiltMap(dt){                                                    /
       if(bhw) tgt=Math.max(1.6,Math.min(3.0,bhw*0.5)); }
     MAP.laneOff=(MAP.laneOff||0)+(tgt-(MAP.laneOff||0))*Math.min(1,dt*3);     // ease so junction width changes and parking don't pop
     const lfx=-Math.sin(truck.theta), lfz=-Math.cos(truck.theta);             // right of travel = (-fz, fx)
-    truckG.position.x=truck.x-lfz*MAP.laneOff; truckG.position.z=truck.z+lfx*MAP.laneOff; }
+    truckG.position.x=vx-lfz*MAP.laneOff; truckG.position.z=vz+lfx*MAP.laneOff; }
   for(const sp of LBL.pool){ if(sp.visible) sp.position.y=navRoadY(sp.position.x,sp.position.z,sp._name)+2.6; }
   if(beaconG.visible) beaconG.position.y=navRoadY(beaconG.position.x,beaconG.position.z)+0.1;
   routeMesh.visible=false; routeMeshFlat.visible = routeEdgeFlat.visible = !!(state.route && MAP.guide && routePts && routePts.length>1);   // flat road-hugging blue-purple route + its darker border
@@ -2146,8 +2169,8 @@ function updateTiltMap(dt){                                                    /
   const back=(TILTCAM.back+spd*0.26)*tz, h=(TILTCAM.h+spd*0.2)*tz, ahead=TILTCAM.ahead*tz;   // lower + closer than before: a GPS-nav camera that keeps the truck in the lower third and shows more roadway ahead
   const cyw=Math.cos(CAMLOOK.yaw), syw=Math.sin(CAMLOOK.yaw), rfx=fx*cyw-fz*syw, rfz=fx*syw+fz*cyw;   // drag-to-look yaw
   camera.up.set(0,1,0); camera.fov=CONFIG.render.fov+6; camera.near=2; camera.updateProjectionMatrix();   // near 2 (not 0.1): tilt map depth precision — kills route/marking z-fight shimmer at distance
-  camera.position.set(truck.x-rfx*back, navY+h+CAMLOOK.pitch*20, truck.z-rfz*back);
-  camera.lookAt(truck.x+rfx*ahead, navY, truck.z+rfz*ahead);
+  camera.position.set(vx-rfx*back, navY+h+CAMLOOK.pitch*20, vz-rfz*back);            // chase the SMOOTHED visual point, so the camera track rounds the same corners the truck does
+  camera.lookAt(vx+rfx*ahead, navY, vz+rfz*ahead);
   if(NAVGEO.active){LIVE3D.group.visible=false;if(STHOUSE.group)STHOUSE.group.position.y=navGroundY(STHOUSE.group.position.x,STHOUSE.group.position.z);}
   /* The chase camera can sit INSIDE the station (it stands behind the truck, which faces the street), which
      rendered the roof slab across the top of the frame. Rather than hijack the camera — that broke
@@ -2700,9 +2723,33 @@ function worldTap3D(clientX,clientY){ if(MAP.on||!state.running) return;
 function mapRot(){ const base = MAP.northUp ? 0 : (-Math.PI/2 - Math.atan2(-Math.cos(truck.theta),-Math.sin(truck.theta))); return base + (MAP.userRot||0); }   // + user twist (training mode)
 // ==== Road-following driving: the truck rides its road; tap it to GO/STOP, tap a street to pick the next turn ====
 const DRIVE={ going:false, parked:false, atChoice:false, stationId:null, stationNode:null, fromN:null, toN:null, t:0, speed:15, pending:null, arrow:0, arrowT:0 };
+// 🚚 Visual corner rounding. The graph is a polyline, so the truck's track has hard corners at every
+// node (owner: bends read choppy). The VISUAL truck rides the midpoint of two points 5.5m behind
+// (driven trail) and 5.5m ahead (drive path) — identical on straights, a smooth arc through corners.
+// DRIVE/route/arrival logic never sees this, same contract as the lane offset.
+const VIS={trail:[]};
+function visTrailBack(d){ const T=VIS.trail; let acc=0,px=truck.x,pz=truck.z;
+  for(let i=T.length-1;i>=0;i--){ const q=T[i],l=Math.hypot(px-q.x,pz-q.z);
+    if(acc+l>=d){ const f=(d-acc)/(l||1); return {x:px+(q.x-px)*f,z:pz+(q.z-pz)*f}; }
+    acc+=l; px=q.x; pz=q.z; }
+  return null; }
+// Point `offset` metres further along the drive path than the truck. Walks forward through the same
+// branch the drive itself will take (queued turn, then planned route, then road continuation), so the
+// look-ahead aim below steers into the turn the truck is really about to make. Clamps at path ends.
+function drivePathPoint(offset){ let a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return null;
+  let seg=Math.hypot(b.x-a.x,b.z-a.z)||1, s=(DRIVE.t||0)*seg+offset, g=0;
+  while(s>seg&&g++<6){ let next=null;
+    if(DRIVE.pending&&DRIVE.pending.at===b) next=DRIVE.pending.next;
+    if(!next&&DRIVE.plan&&DRIVE.plan.length&&!DRIVE.planWait&&b.adj.some(e=>e.to===DRIVE.plan[0])) next=DRIVE.plan[0];
+    if(!next) next=roadContinuation(a,b);
+    if(!next||next===a) break;
+    s-=seg; a=b; b=next; seg=Math.hypot(b.x-a.x,b.z-a.z)||1; }
+  const t=Math.max(0,Math.min(1,s/seg)); return {x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t}; }
 function driveOrient(smooth){ const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return; truck.x=a.x+(b.x-a.x)*DRIVE.t; truck.z=a.z+(b.z-a.z)*DRIVE.t;
   const dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1; DRIVE.aim=Math.atan2(-dx/l,-dz/l);
-  if(!smooth) truck.theta=DRIVE.aim;                                                   // snap on pull-out / U-turn / init; while driving updateDrive eases into it
+  if(smooth){ const q=drivePathPoint(Math.max(7,Math.min(18,(DRIVE.speed||15)*0.8)));            // 🎯 aim at a point ahead ON THE PATH, not down the current segment — the heading starts
+    if(q){ const qx=q.x-truck.x,qz=q.z-truck.z; if(qx*qx+qz*qz>4) DRIVE.aim=Math.atan2(-qx,-qz); } }   // turning before the node instead of stepping at it (owner: bends read choppy)
+  if(!smooth){ truck.theta=DRIVE.aim; VIS.trail.length=0; }                            // snap on pull-out / U-turn / init; while driving updateDrive eases into it. A snap also voids the driven trail (a U-turn's trail points the wrong way)
   truck.y=groundHeight(truck.x,truck.z);
   truck.vx=DRIVE.going?-Math.sin(truck.theta)*DRIVE.speed:0; truck.vz=DRIVE.going?-Math.cos(truck.theta)*DRIVE.speed:0; }
 function driveInit(){ const n=nearestNode(truck.x,truck.z); DRIVE.fromN=n; DRIVE.t=0; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0;
