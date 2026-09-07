@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1685,7 +1685,8 @@ function labelTex(name,block,wrong){ const bl=blockLine(block), key=name+'|'+bl+
 // ramp mouth (junction node → first ramp node, world coords) gets exactly those cards. Same evidence bar as
 // BRIDGE_STYLE / NAME_FIX — a photo or public record, never a guess.
 const RAMP_SIGNS=[
-  { x:-687, z:135, tx:-720, tz:161, signs:['City Ave','Lincoln Dr'],     // Ridge Ave NW-bound on-ramp at the Wissahickon interchange: gantry reads
+  { x:-687, z:135, tx:-720, tz:161, signs:[{label:'City Ave',dest:[-1262,203]},{label:'Lincoln Dr',dest:[-1067,-385]}],   // Ridge Ave NW-bound on-ramp at the Wissahickon interchange: gantry reads
+    // each card carries a destination point: tapping it routes the whole way there (legal A*) so the truck rides the interchange without stopping at the split
     source:'Overhead gantry "TO 76 / 1 City Ave" + "Lincoln Drive" — Google Street View Apr 2025, owner photo Sep 7 2026' }, // "TO 76/1 City Ave ↓ · Lincoln Drive ↗ (no trucks)"
 ];
 function updateStreetLabels(dt){
@@ -1699,8 +1700,8 @@ function updateStreetLabels(dt){
       const sg=RAMP_SIGNS.find(q=>Math.hypot(node.x-q.x,node.z-q.z)<8&&Math.hypot(e.to.x-q.tx,e.to.z-q.tz)<8);
       if(sg){ const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1,off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));   // real gantry wording wins over the derived label
         const lx=node.x+dx/l*off,lz=node.z+dz/l*off,pick=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null);
-        sg.signs.forEach((label,i)=>{ const key='SIGN|'+label; if(seen[key]!==undefined) return; seen[key]=cand.length;
-          cand.push({name:label,block:'RAMP',x:lx,z:lz,pick,wrong:!!e.wrong,sameRoadTurn:false,sign:true,stack:i}); });   // all cards select the same ramp; the split itself is a later choice
+        sg.signs.forEach((sn,i)=>{ const label=sn.label||sn, key='SIGN|'+label; if(seen[key]!==undefined) return; seen[key]=cand.length;
+          cand.push({name:label,block:'RAMP',x:lx,z:lz,pick,wrong:!!e.wrong,sameRoadTurn:false,sign:true,stack:i,dest:sn.dest||null}); });   // each card selects the ramp AND plans the legal route to its destination
         return; }
       let nm=e.name, ramp=false;
       if(!nm){ const guess=streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);        // unnamed edge: a noding stub of the street whose band it sits in — OR a ramp/connector chain.
@@ -1752,7 +1753,7 @@ function updateStreetLabels(dt){
     for(let i=0;i<LBL.pool.length;i++){ const sp=LBL.pool[i], cd=cand[i];
       if(!cd){ sp.visible=false; sp._name=null; sp._key=null; sp._block=null; sp._pick=null; continue; }
       const key=cd.name+'|'+cd.block+(cd.wrong?'|W':''); if(sp._key!==key){ const info=labelTex(cd.name,cd.block,cd.wrong); sp.material.map=info.tex; sp.material.needsUpdate=true; sp._key=key; sp._name=cd.name; sp._aspect=info.aspect; }
-      sp._block=cd.block; sp._pick=cd.pick||null; sp._wrong=cd.wrong; sp._sameRoadTurn=cd.sameRoadTurn;
+      sp._block=cd.block; sp._pick=cd.pick||null; sp._wrong=cd.wrong; sp._sameRoadTurn=cd.sameRoadTurn; sp._dest=cd.dest||null;
       sp.position.set(cd.x,groundHeight(cd.x,cd.z)+LBL.float,cd.z); sp.visible=true; } }
   const curNow=streetName(truck.x,truck.z);                                            // hide the street you're on every frame (no throttle-lag flash when you turn onto it)
   for(const sp of LBL.pool){ if(!sp.visible) continue;                                 // smooth per-frame fade: near = solid, far = gone
@@ -2406,7 +2407,7 @@ function updateHUD(dt){
       sa.classList.toggle('show', show); } }
   if(DRIVE.pending && DRIVE.arrowT>0){ const jn=DRIVE.pending.at, nx=DRIVE.pending.next;                 // next-turn banner
     elTurn.style.display='flex'; elTurn.querySelector('.dir').textContent=DRIVE.arrow>0?'→':'←';
-    elTurn.querySelector('.st').textContent=streetName((jn.x+nx.x)/2,(jn.z+nx.z)/2); }
+    elTurn.querySelector('.st').textContent=DRIVE.pending.label||streetName((jn.x+nx.x)/2,(jn.z+nx.z)/2); }   // a gantry card names its destination; an unnamed ramp otherwise borrows the band name (read 'Ridge Ave' — owner)
   else if(DRIVE.atChoice){ elTurn.style.display='flex'; elTurn.querySelector('.dir').textContent='↕'; elTurn.querySelector('.st').textContent='TAP TRUCK = STRAIGHT · ←/→ TO TURN'; }
   else elTurn.style.display='none';
   { const ww=DRIVE.wrongWay && DRIVE.going && state.running && !MAP.bounds; const el=document.getElementById('wrongWay');   // one-way wrong-way warning
@@ -2613,13 +2614,15 @@ function sameStreetChoice(s,p){ return !!(s&&p&&s.at===p.at&&s.next===p.next); }
 function toggleStreetChoice(sp,x,y){ const p=sp&&sp._pick; if(!p||!p.at||!p.next) return false;
   if(sameStreetChoice(PARK_UI.selected,p)){                                           // tap the same blue street again = cancel only that exact queued turn
     if(DRIVE.pending&&DRIVE.pending.at===p.at&&DRIVE.pending.next===p.next){ DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; }
-    PARK_UI.selected=null; popup('STREET DESELECTED'); return false; }
+    DRIVE.plan=null; PARK_UI.selected=null; popup('STREET DESELECTED'); return false; }
   if(!p.from) return false;                                                          // a direct-from-bay choice can be deselected visually, but cannot queue a new driving turn without an approach
-  DRIVE.pending={at:p.at,next:p.next};
+  DRIVE.pending={at:p.at,next:p.next}; DRIVE.plan=null;
+  if(sp._dest){ const r=routeNodes(p.next.x,p.next.z,sp._dest[0],sp._dest[1]);         // a gantry card with a destination: plan the legal route from the ramp so the whole
+    if(r&&r.length>1){ DRIVE.plan=r.slice(1); DRIVE.pending.label=sp._name; } }         // interchange rides through without a stop (owner: 'select one before getting on')
   const hx=p.at.x-p.from.x,hz=p.at.z-p.from.z,dx=p.next.x-p.at.x,dz=p.next.z-p.at.z;
   DRIVE.arrow=(hx*dz-hz*dx)>0?1:-1; DRIVE.arrowT=8;
   PARK_UI.selected={name:sp._name,block:sp._block,x,y,pick:p,at:p.at,next:p.next,direct:false,until:Infinity};
-  popup('SELECTED '+sp._name+' · '+blockLine(sp._block)); return true; }
+  popup(DRIVE.plan?'TO '+sp._name.toUpperCase()+' · ROUTE SET':'SELECTED '+sp._name+' · '+blockLine(sp._block)); return true; }
 function streetChoiceCaption(p,block){return p&&Math.hypot(p.at.x+819,p.at.z-574)<25&&p.next.z>p.at.z&&edgeName(p.at,p.next)==='Falls Road'?'TO CONSHOHOCKEN AVE':blockLine(block);}
 function streetChoiceWrong(p){ return !!(p&&p.at&&p.next&&p.at.adj.some(e=>e.to===p.next&&e.wrong)); }
 function updateParkedStreetChoices(){ const root=PARK_UI.root, rect=renderer.domElement.getBoundingClientRect(), placed=[];
@@ -2751,6 +2754,10 @@ function updateDrive(dt){ if(!state.running){ return; }
       if(!next && DRIVE.pending && DRIVE.pending.at!==b && Math.hypot(DRIVE.pending.at.x-b.x,DRIVE.pending.at.z-b.z)<40){   // fragmented junction cluster (Ridge x Lincoln x City Ave ramps): the drive threads a TWIN node metres from
         if(b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; }   // the one the tapped sign anchored to — take the selected branch from here,
         else { const jog=b.adj.find(e=>e.to===DRIVE.pending.at); if(jog){ next=jog.to; DRIVE.atChoice=false; } } }             // or jog across to the anchor node first (pending stays armed) — before, the selection silently never fired
+      if(!next && DRIVE.plan && DRIVE.plan.length){ const P=DRIVE.plan; let idx=-1;                                                 // a tapped destination card planned the legal route: follow it node by node (cluster twins may skip a step)
+        for(let i=0;i<P.length&&i<6;i++){ if(b.adj.some(e=>e.to===P[i])){ idx=i; break; } }
+        if(idx>=0){ next=P[idx]; DRIVE.plan=P.slice(idx+1); DRIVE.atChoice=false; if(!DRIVE.plan.length) DRIVE.plan=null; }
+        else if(Math.hypot(P[0].x-b.x,P[0].z-b.z)>80) DRIVE.plan=null; }                                                            // left the plan (U-turn, other tap) — drop it, never yank the truck back
       if(!next) next=roadContinuation(a,b);                                                  // same street, or the only possible forward road
       if(!next){ const choices=b.adj.filter(e=>e.to!==a); DRIVE.t=1; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=choices.length>0; break; } // a sharp reversing continuation still waits for confirmation; a dead end simply stops
       DRIVE.fromN=b; DRIVE.toN=next; DRIVE.t=0; DRIVE.atChoice=false; } }
