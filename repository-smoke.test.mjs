@@ -65,6 +65,14 @@ test('extracted data loads before the game script that reads it', () => {
   }
 });
 
+test('index.html stays small enough to edit on a phone', () => {
+  // The whole point of the extraction: a 10MB file with multi-megabyte lines crashes mobile clients
+  // when rendered as a diff. Keep the game file itself modest and free of giant lines.
+  assert.ok(html.length < 1_500_000, `index.html is ${html.length} bytes; keep baked data in data/`);
+  const worst = html.split('\n').reduce((a, l) => Math.max(a, l.length), 0);
+  assert.ok(worst < 8_000, `longest line is ${worst} chars; wrap it or move it to data/`);
+});
+
 test('PWA references exist and service worker compiles', () => {
   assert.match(html, /<link\b[^>]*rel=["']manifest["'][^>]*href=["']manifest.json["']/i);
   assert.match(html, /serviceWorker\.register\(["']sw\.js["']\)/);
