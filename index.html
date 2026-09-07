@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2612,13 +2612,13 @@ function takeParkedStreet(sp){ const p=sp&&sp._pick; if(!p||!p.root||!p.next||IN
   driveOrient(); routeDirty=true; popup('TAKE '+sp._name+' · '+blockLine(sp._block)); return true; }
 function sameStreetChoice(s,p){ return !!(s&&p&&s.at===p.at&&s.next===p.next); }
 function toggleStreetChoice(sp,x,y){ const p=sp&&sp._pick; if(!p||!p.at||!p.next) return false;
-  if(sameStreetChoice(PARK_UI.selected,p)){                                           // tap the same blue street again = cancel only that exact queued turn
+  if(sameStreetChoice(PARK_UI.selected,p)&&PARK_UI.selected.name===sp._name){         // tap the same blue street again = cancel only that exact queued turn (two gantry cards share one ramp edge — the OTHER card re-selects, it doesn't cancel)
     if(DRIVE.pending&&DRIVE.pending.at===p.at&&DRIVE.pending.next===p.next){ DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; }
     DRIVE.plan=null; PARK_UI.selected=null; popup('STREET DESELECTED'); return false; }
   if(!p.from) return false;                                                          // a direct-from-bay choice can be deselected visually, but cannot queue a new driving turn without an approach
   DRIVE.pending={at:p.at,next:p.next}; DRIVE.plan=null;
   if(sp._dest){ const r=routeNodes(p.next.x,p.next.z,sp._dest[0],sp._dest[1]);         // a gantry card with a destination: plan the legal route from the ramp so the whole
-    if(r&&r.length>1){ DRIVE.plan=r.slice(1); DRIVE.pending.label=sp._name; } }         // interchange rides through without a stop (owner: 'select one before getting on')
+    if(r&&r.length>1){ DRIVE.plan=r.slice(1); DRIVE.planWait=true; DRIVE.pending.label=sp._name; } }   // interchange rides through without a stop (owner: 'select one before getting on'); planWait = the plan sleeps until the ramp turn fires (junctions passed BEFORE the ramp must not drop it)
   const hx=p.at.x-p.from.x,hz=p.at.z-p.from.z,dx=p.next.x-p.at.x,dz=p.next.z-p.at.z;
   DRIVE.arrow=(hx*dz-hz*dx)>0?1:-1; DRIVE.arrowT=8;
   PARK_UI.selected={name:sp._name,block:sp._block,x,y,pick:p,at:p.at,next:p.next,direct:false,until:Infinity};
@@ -2640,7 +2640,7 @@ function updateParkedStreetChoices(){ const root=PARK_UI.root, rect=renderer.dom
     let x=rect.left+(_tv.x*.5+.5)*rect.width,y=rect.top+(-_tv.y*.5+.5)*rect.height;
     x=Math.max(8+w/2,Math.min(innerWidth-8-w/2,x)); y=Math.max(minY,Math.min(maxY,y));
     for(const q of placed) if(Math.abs(x-q.x)<(w+q.w)/2+8&&Math.abs(y-q.y)<38) y=Math.min(maxY,q.y+42);
-    const isSelected=sameStreetChoice(sel,sp._pick); if(isSelected){ selectedShown=true; sel.x=x; sel.y=y; }
+    const isSelected=sameStreetChoice(sel,sp._pick)&&sel.name===sp._name; if(isSelected){ selectedShown=true; sel.x=x; sel.y=y; }   // name too: gantry cards share the ramp edge, only the tapped one goes blue
     const wrong=streetChoiceWrong(sp._pick);
     placed.push({x,y,w}); const b=PARK_UI.buttons[count++]; b.className='parkStreetChoice'+(isSelected?' selected':'')+(wrong?' wrong':''); b.style.display='block'; b.style.width=w+'px';
     b.style.left=x+'px'; b.style.top=y+'px'; b.dataset.x=x; b.dataset.y=y; b._sp=sp;
@@ -2724,7 +2724,13 @@ function roadContinuation(a,b){ if(!b) return null;
   const same=sameStreetOn(a,b); if(same) return same;
   const fwd=b.adj.filter(e=>e.to!==a);                                          // every physical branch (incl. wrong-way carriageways)
   const ceR=a.adj.find(e=>e.to===b), curWrongR=!!(ceR&&ceR.wrong);
-  const choices=fwd.filter(e=>!e.wrong||curWrongR);                             // never auto-continue the WRONG way — unless the player is ALREADY deliberately wrong-way, then keep flowing
+  const legalDepth=(n0,n1,H)=>{ let pa=n0,pb=n1,d=1;                              // how far an unnamed connector can be driven LEGALLY before it dead-ends (or reaches a named street = far enough)
+    for(let g=0;g<H;g++){ const cont=pb.adj.filter(e=>e.to!==pa&&!e.wrong); if(!cont.length) return d; if(cont.some(e=>e.name)) return H;
+      const hx=pb.x-pa.x,hz=pb.z-pa.z,hl=Math.hypot(hx,hz)||1; let best=null,bd=-2;
+      for(const e of cont){ const dx=e.to.x-pb.x,dz=e.to.z-pb.z,l=Math.hypot(dx,dz)||1,dot=(hx*dx+hz*dz)/(hl*l); if(dot>bd){bd=dot;best=e.to;} }
+      pa=pb; pb=best; d++; } return d; };
+  const choices=fwd.filter(e=>(!e.wrong||curWrongR)&&(e.name||legalDepth(b,e.to,6)>=5));   // never auto-continue the WRONG way — unless already deliberately wrong-way; and an unnamed stub that turns wrong-way within a few hops
+                                                                                            // (an off-ramp's mouth tagged two-way — the Ridge on-ramp split) is not a real choice, so it must not stop the truck
   // a street present on 2+ branches here PASSES THROUGH this node — an arterial's two directions, or a divided
   // road's legal + opposite carriageway. Reaching it means we're T-ing ONTO a through road, so never auto-turn:
   // stop and let the player pick left/right. (This is the Gates St → Henry Ave "it just turned by itself" case.)
@@ -2739,7 +2745,10 @@ function roadContinuation(a,b){ if(!b) return null;
   if(choices.length>1){ const scored=choices.map(e=>({e,s:branchForwardness(a,b,e.to)})).sort((p,q)=>q.s-p.s);
     if(through(scored[0].e)) return null;                                      // straightest option is a turn onto a through road — stop and ask
     if(scored[0].s>0.55 && (scored[0].s-scored[1].s)>0.3) return scored[0].e.to;     // a clear straight-through name change (e.g. an interchange) — keep rolling
-    if(scored[0].s>0.85 && scored[1].s<0.7) return scored[0].e.to; }           // dead-ahead continuation with only a peel-off connector beside it (interchange chains stopped 'every few feet' — owner) — roll; a real Y-split (both near-straight) still stops
+    if(scored[0].s>0.85 && scored[1].s<0.7) return scored[0].e.to;             // dead-ahead continuation with only a peel-off connector beside it (interchange chains stopped 'every few feet' — owner) — roll; a real Y-split (both near-straight) still stops
+    if(!scored[0].e.name && !scored[1].e.name && scored[0].s>0.7 && scored[1].s>0.7){   // two unnamed near-straight branches that REJOIN within a few hops = parallel lanes of one ramp, not a fork — roll (the Ridge on-ramp mouth)
+      const reach=(n0,n1)=>{ const s=new Set([n1]); let pa=n0,pb=n1; for(let g=0;g<8;g++){ const nx=straightest(pa,pb); if(!nx) break; s.add(nx); pa=pb; pb=nx; } return s; };
+      const A1=reach(b,scored[0].e.to), B1=reach(b,scored[1].e.to); for(const n of A1) if(B1.has(n)) return scored[0].e.to; } }
   return null; }
 function keepStreet(a,b){ return roadContinuation(a,b); }                    // labels + guide preview the exact automatic continuation
 function nextJunction(){ let a=DRIVE.fromN,b=DRIVE.toN,g=0; while(g++<400){ if(!b) break; const fwd=b.adj.filter(e=>e.to!==a); if(fwd.length!==1) return {node:b,from:a}; a=b; b=fwd[0].to; } return {node:b,from:a}; }
@@ -2750,11 +2759,12 @@ function updateDrive(dt){ if(!state.running){ return; }
   while(dist>0 && guard++<60){ const a=DRIVE.fromN,b=DRIVE.toN, seg=Math.hypot(b.x-a.x,b.z-a.z)||1, remain=(1-DRIVE.t)*seg;
     if(dist<remain){ DRIVE.t+=dist/seg; dist=0; }
     else { dist-=remain; let next=null;
-      if(DRIVE.pending && DRIVE.pending.at===b && b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; }
+      if(DRIVE.pending && DRIVE.pending.at===b && b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; DRIVE.planWait=false; }
       if(!next && DRIVE.pending && DRIVE.pending.at!==b && Math.hypot(DRIVE.pending.at.x-b.x,DRIVE.pending.at.z-b.z)<40){   // fragmented junction cluster (Ridge x Lincoln x City Ave ramps): the drive threads a TWIN node metres from
-        if(b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; }   // the one the tapped sign anchored to — take the selected branch from here,
+        if(b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; DRIVE.planWait=false; }   // the one the tapped sign anchored to — take the selected branch from here,
         else { const jog=b.adj.find(e=>e.to===DRIVE.pending.at); if(jog){ next=jog.to; DRIVE.atChoice=false; } } }             // or jog across to the anchor node first (pending stays armed) — before, the selection silently never fired
-      if(!next && DRIVE.plan && DRIVE.plan.length){ const P=DRIVE.plan; let idx=-1;                                                 // a tapped destination card planned the legal route: follow it node by node (cluster twins may skip a step)
+      if(DRIVE.plan && DRIVE.planWait && !DRIVE.pending){ DRIVE.plan=null; DRIVE.planWait=false; }                                  // the ramp turn was cancelled before it fired — its route goes with it
+      if(!next && DRIVE.plan && DRIVE.plan.length && !DRIVE.planWait){ const P=DRIVE.plan; let idx=-1;                             // a tapped destination card planned the legal route: follow it node by node (cluster twins may skip a step)
         for(let i=0;i<P.length&&i<6;i++){ if(b.adj.some(e=>e.to===P[i])){ idx=i; break; } }
         if(idx>=0){ next=P[idx]; DRIVE.plan=P.slice(idx+1); DRIVE.atChoice=false; if(!DRIVE.plan.length) DRIVE.plan=null; }
         else if(Math.hypot(P[0].x-b.x,P[0].z-b.z)>80) DRIVE.plan=null; }                                                            // left the plan (U-turn, other tap) — drop it, never yank the truck back
