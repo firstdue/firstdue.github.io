@@ -1,15 +1,74 @@
 # Philly Fire Dispatch — Local
 
+**Current: PUBLIC = LOCAL = v18i (September 7, 2026).** The Ridge Avenue route toward City Avenue
+now drives beneath the City Avenue bridge on the lower connector before climbing and joining City
+Avenue. The truck and blue guide follow the connector's elevation, and phone-size checks confirm
+about 5.35m between the lower road and bridge deck at the crossing. The height is an illustrative
+terrain estimate. See `START-HERE.md` for validation, evidence and rollback.
+
+**Current: LOCAL v17m geography prototype; PUBLIC v17l (verified September 6, 2026).**
+Engine 35 graphics/red signs are now public at https://firstdue.github.io, commit bbc9ed4.
+Local v17m adds source-based terrain and bridge/water rendering in Engine 35 Tilt.
+761 source bridge/tunnel way records; 60 matched above/below crossings automatically audited.
+Falls Bridge water and Henry Avenue above Lincoln Drive validated on a touch-sized preview.
+Deck heights are estimated from ground at abutments, not surveyed. Water import currently
+covers five full reference-corridor relations; citywide request timed out. No citywide-complete
+claim. See notes/navigation-geography.md for sources, checks and remaining work.
+17 Node and 17 gameplay browser scenarios pass; intersection coverage now 129–580 per company.
+Next: refine terrain/sidewalk/bridge profiles, land-cover exclusions and expand water coverage
+before citywide terrain rollout. Local Knowledge remains paused.
+
+
+**Latest: v17l — Engine 35 scenery refresh and landscaping (LOCAL ONLY).**
+Fix: startShift refreshes already-built scenery after company selection and house construction,
+clearing pending old-company jobs. Engine 35 therefore receives its textured streetscape even
+when the home preview built a plain block first. Added clustered tree canopies, round trunks,
+road-clearing planting beds, roof rims/decks and rooftop equipment. Red WRONG WAY signs retained.
+Verified: 17 Node tests, 17 gameplay browser checks, wrong-way signs, company switching with
+a pending rebuild, 375 x 812 and desktop screenshots. Sample view: 128 draw calls, 151,874
+triangles; real-phone performance still needs owner review. LIVE remains v17f.
+Backup: v17l-scenery-refresh-and-landscaping.html; pre-edit: v17k-pre-landscaping.html.
+Next: owner review in Engine 35 Tilt; continue visual refinement before citywide rollout.
+
+
+**Latest: v17k — red WRONG WAY street signs (local only, September 6, 2026).**
+Tilt street-choice signs show red WRONG WAY above the street name when the selected
+branch is flagged wrong-way in the existing graph. Selected warnings stay red with an amber
+outline. Normal manual turn and deselection behavior remains. Available for all companies;
+the richer building sample remains Engine 35 only. Verified at Eveline Street in a 375 x 812
+preview, including selected/retained warning and legal-branch checks. 17 Node tests and
+17 gameplay browser scenarios pass. LIVE remains v17f. Backup: v17k-red-wrong-way-signs.html.
+
+
+**Current checkpoint: v17j — Engine 35 streetscape sample (September 6, 2026), LOCAL ONLY.**
+The owner accepted Intersection Recall for now and authorized the graphics phase. New Local
+Knowledge features are paused. Engine 35 now previews street-aligned masonry/window facades,
+flat roof caps, warmer building colors, richer greens and darker roads. Other companies keep
+previous scenery. These buildings are illustrative procedural forms, not surveyed footprints.
+Select Engine 35, use Tilt and drive along Ridge Avenue to review. No Gemini integration.
+LIVE remains v17f; this checkpoint has not been published.
+
+Validation: 17 Node tests and 17 Intersection Recall browser scenarios pass. The offline visual
+comparison passed at 375 x 812 and 1280 x 800; sample building-road clearance, shared texture
+reuse and unchanged non-sample generation passed. One controlled view used 126 draw calls /
+71,674 triangles versus 127 / 83,482 before; this is not a real-phone frame-rate measurement.
+Evidence: tests/streetscape-preview.browser.cjs, tests/streetscape-preview-results.json and
+streetscape-sample-375.png / streetscape-sample-1280.png in tests/. Backup before edits:
+v17i-pre-immersive-streetscape.html. Current backup: v17j-immersive-streetscape-sample.html.
+Next: review this first visual sample, then refine landscaping, lighting/depth and scene variety
+before extending citywide. Existing navigation labels and Tilt/Map cameras remain as before.
+
+
 A phone-friendly Philadelphia fire-engine navigation game. Choose a real company, learn its streets and first-due area, and race AI responders to the box.
 
 **[Play Local](https://firstdue.github.io)** · **[Roadmap](ROADMAP.md)**
 
 ## Current state
 
-Project handoff snapshot, September 5, 2026:
+Project handoff snapshot, September 6, 2026:
 
 - **Published: v17f**, with first-time company onboarding and Box Recall.
-- **Local checkpoint: v17g**, with the Due Knowledge truth model disabled behind `KNOW.dims.due.active:false`. The Due drill session is next; the checkpoint is not released.
+- **Local checkpoint: v17i**, with Intersection Recall. TRAIN MY LOCAL asks for a named street intersection with no destination pin. Generated-box training and Due Order are disabled; the checkpoint is tested but not published.
 - Public repository: `firstdue/firstdue.github.io`. The author's working folder contains development notes and the checkpoint; its `gh-pages-deploy/` subfolder is the public checkout with the released game.
 
 ## Features
@@ -18,7 +77,7 @@ Project handoff snapshot, September 5, 2026:
 - Real Philadelphia streets, first-due zones, manual turns, and advisory route guidance.
 - Tilt and Map views, AI responders, arrival handling, and return to quarters.
 - Per-company/per-due careers, independent difficulty, Chief Qualification, coaching, and badges.
-- TRAIN MY LOCAL Box Recall; training evidence stays separate from career progress.
+- Local v17i: Intersection Recall with location hints, optional practice pin, separate saved evidence, and two cold recalls for mastery.
 - Local saves and player hydrants; online magic-link accounts, career sync, and leaderboards.
 
 Core gameplay and JavaScript live in one `index.html`, with no package install or build step. Live imagery and account services need internet access. The vector map supports offline play; the hosted PWA caches the game after an online visit and installs as **Local**.
@@ -39,6 +98,8 @@ Use Node.js 24:
 
 ```sh
 node --test repository-smoke.test.mjs
+# In the authoring folder, also run:
+node --test tests/intersection-drill.test.mjs tests/due-drill.test.mjs
 ```
 
 Windows fallback if Node is missing from the terminal PATH:
@@ -60,3 +121,7 @@ Run `node ship.js --check` before edits and back up `index.html` before substant
 For a tested game release, `node ship.js --name short-slug --note "what changed"` packages the build and updates local history. Publishing is separate: copy the approved `index.html` into `gh-pages-deploy/`, commit intended files, and push `origin main` there. Batch releases. **GitHub Pages is the only active host; Netlify is retired.** Documentation/test maintenance does not require a game version bump or copying the unreleased checkpoint.
 
 Keep service-role credentials and payment secrets out of browser code. Preserve in-game data and imagery attributions, including OpenStreetMap, CARTO, and Esri.
+
+The local v17i checkpoint passes 17 Node tests and 17 browser scenarios, including all-60-company checks. See `tests/README.md` for the browser harness. These authoring tests are not yet in the public checkout.
+
+**Data limits:** generated box numbers and proximity-based second/third-due estimates are not official PFD assignments. The new drill uses mapped connected intersections instead. Old box/due scores are preserved but do not count as intersection knowledge. The baked graph has incomplete bridge/layer metadata; known exclusions and connectivity checks improve prompts but do not constitute an independent survey.

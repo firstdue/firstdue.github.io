@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18i";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -941,7 +941,12 @@ for(const b of NAVGEO.bridges){ if(!b.bridge||!(b.length>1)) continue;
   for(let k=N-1;k>=0;k--) prof[k]=Math.max(prof[k],prof[k+1]-0.15*ds);
   b.prof=prof; }
 function deckY(b,t){ const P=b.prof; if(!P) return b.startY+(b.endY-b.startY)*t; const u=Math.max(0,Math.min(1,t))*(P.length-1), i=Math.min(P.length-2,u|0), f=u-i; return P[i]+(P[i+1]-P[i])*f; }
-function navRoadY(x,z,name=null){if(!NAVGEO.active)return 0;const s=navSpan(x,z,name);if(!s||!s.b.bridge)return navTerrain(x,z);return deckY(s.b,s.t);}
+// Owner/Street View verified ramp profile at the Wissahickon interchange: the unnamed Ridge
+// connector descends under both City Ave carriageways before climbing to the bridge. This is a
+// visual grade estimate, not surveyed elevation. Named City Ave is never lowered by this zone.
+const ROAD_GRADE=[{x:-1074,z:73,ux:-0.431,uz:-0.902,half:95,width:42,depth:2.2,source:'City Ave over unnamed Ridge connector — Google Street View Apr 2025, owner review Sep 7 2026'}];
+function navRoadCutDepth(x,z,name){if(name)return 0;let best=0;for(const c of ROAD_GRADE){const dx=x-c.x,dz=z-c.z,along=Math.abs(dx*c.ux+dz*c.uz),across=Math.abs(-dx*c.uz+dz*c.ux);if(along>=c.half||across>=c.width)continue;const fa=Math.min(1,(c.half-along)/38),fp=Math.min(1,(c.width-across)/18);best=Math.max(best,c.depth*fa*fp);}return best;}
+function navRoadY(x,z,name=null){if(!NAVGEO.active)return 0;const s=navSpan(x,z,name),base=(!s||!s.b.bridge)?navTerrain(x,z):deckY(s.b,s.t);return base-navRoadCutDepth(x,z,name);}
 function navGroundY(x,z){return NAVGEO.active?navTerrain(x,z):0;}
 function navRailCutDepth(x,z){let best=0;for(const rw of (NAVGEO.rail||[])){const c=rw.cut;if(!c)continue;
   const dx=x-c[0],dz=z-c[1],along=Math.abs(dx*c[2]+dz*c[3]),across=Math.abs(-dx*c[3]+dz*c[2]);
@@ -2109,7 +2114,8 @@ const TILTCAM={back:18,h:26,ahead:27};                                     // GP
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
   if(FLATCITY.built){ FLATCITY.tick();                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
     if(!FLATCITY.job && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.requestRebuild(truck.x,truck.z); }
-  const navY=navRoadY(truck.x,truck.z,DRIVE.fromN?.adj.find(e=>e.to===DRIVE.toN)?.name||null);
+  const driveEdge=DRIVE.fromN?.adj.find(e=>e.to===DRIVE.toN);                 // an unnamed ramp must match only an unnamed bridge; null used to match nearby City Ave and lift the truck onto its deck
+  const navY=navRoadY(truck.x,truck.z,driveEdge?.name??'');
   truckG.position.y=navY+0.24;
   truckG.rotation.set(0,truck.theta,0);                                       // no pitch/roll on flat ground
   { let tgt=0;                                                                // 🚚 lane offset: the graph rides the street CENTRELINE, so the truck straddled the yellow line — shift the VISUAL into the right-hand lane like a real nav app (DRIVE/route/logic untouched)
@@ -2216,7 +2222,7 @@ function updateTraffic(dt){ if(!state.running) return;
     let x=a[0]+(b[0]-a[0])*c.t+nx*lane, z=a[1]+(b[1]-a[1])*c.t+nz*lane;
     const pdx=x-truck.x, pdz=z-truck.z, pd=Math.hypot(pdx,pdz)||1;
     if(state.siren&&pd<CONFIG.traffic.scatter){ c.scare=Math.min(1,c.scare+dt*3); x+=pdx/pd*7*c.scare; z+=pdz/pd*7*c.scare; c.speed=Math.min(18,c.speed+10*dt); } else c.scare=Math.max(0,c.scare-dt);
-    c.x=x; c.z=z; c.g.position.set(x,navRoadY(x,z,c.s?.name||null),z); c.g.rotation.y=Math.atan2(-dx*c.dir,-dz*c.dir);
+    c.x=x; c.z=z; c.g.position.set(x,navRoadY(x,z,c.s?.name??''),z); c.g.rotation.y=Math.atan2(-dx*c.dir,-dz*c.dir);
     if(pd<CONFIG.traffic.bump){ const nnx=(truck.x-x)/pd, nnz=(truck.z-z)/pd; truck.x+=nnx*(CONFIG.traffic.bump-pd); truck.z+=nnz*(CONFIG.traffic.bump-pd);
       const vn=truck.vx*nnx+truck.vz*nnz; if(vn<0){ truck.vx-=nnx*vn*1.5; truck.vz-=nnz*vn*1.5; } truck.vx*=0.75; truck.vz*=0.75; shake=Math.min(1.2,shake+0.45); comboBreak(); sfx.crash(); burstSparks(x,1.2,z,8); }
   }
@@ -2480,11 +2486,11 @@ function updateMinimap(dt){ if(!FLAGS.minimap||!MINI.ctx) return;
 let routePts=null, routeDirty=false, routeTimer=0;
 function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geometry, oldE=routeEdgeFlat.geometry;
   if(!routePts||routePts.length<2){ routeMesh.visible=false; routeMeshFlat.visible=false; routeEdgeFlat.visible=false; routeMesh.geometry=new THREE.BufferGeometry(); routeMeshFlat.geometry=new THREE.BufferGeometry(); routeEdgeFlat.geometry=new THREE.BufferGeometry(); old.dispose(); oldF.dispose(); oldE.dispose(); return; }
-  const pts=routePts.filter((p,i)=>!i||Math.hypot(p.x-routePts[i-1].x,p.z-routePts[i-1].z)>.2),pos=[],posF=[],posE=[],idx=[],hw=.72,hwF=1.55,hwE=2.25,RY=(x,z)=>groundHeight(x,z)+0.42;   // wider ribbon on the flat map + a slightly wider border pass
+  const pts=routePts.filter((p,i)=>!i||Math.hypot(p.x-routePts[i-1].x,p.z-routePts[i-1].z)>.2),pos=[],posF=[],posE=[],idx=[],hw=.72,hwF=1.55,hwE=2.25;   // wider ribbon on the flat map + a slightly wider border pass
   for(let i=0;i<pts.length;i++){ const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
     let routeName=null,best=Infinity;if(NAVGEO.active)for(const s of segNear(p.x,p.z)){const sx=s.bx-s.ax,sz=s.bz-s.az,sl=Math.hypot(sx,sz)||1,score=closestSeg(p.x,p.z,s).d+20*(1-Math.abs((sx*dx+sz*dz)/(sl*l)));if(score<best){best=score;routeName=s.name;}}
     const navY=navRoadY(p.x,p.z,routeName);
-    pos.push(p.x+nx*hw,RY(p.x+nx*hw,p.z+nz*hw),p.z+nz*hw, p.x-nx*hw,RY(p.x-nx*hw,p.z-nz*hw),p.z-nz*hw);
+    pos.push(p.x+nx*hw,navY+0.42,p.z+nz*hw, p.x-nx*hw,navY+0.42,p.z-nz*hw);
     const LN=2.4;                                                                          // shift the flat ribbon into the right-hand lane so it runs under the lane-offset truck (nx,nz is already right-of-travel)
     posF.push(p.x+nx*(LN+hwF),navY+0.52,p.z+nz*(LN+hwF), p.x+nx*(LN-hwF),navY+0.52,p.z+nz*(LN-hwF));
     posE.push(p.x+nx*(LN+hwE),navY+0.46,p.z+nz*(LN+hwE), p.x+nx*(LN-hwE),navY+0.46,p.z+nz*(LN-hwE));
@@ -3314,7 +3320,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   }
   if(NAVGEO.active){
     const p=[],gx=NAVGEO.terrain,step=gx.dx,stepZ=gx.dz,r=LOCAL.R+60,x0=gx.minX+Math.floor((J.cx-r-gx.minX)/step)*step,z0=gx.minZ+Math.floor((J.cz-r-gx.minZ)/stepZ)*stepZ;
-    const vertex=(x,z)=>p.push(x,navGroundY(x,z)-0.6-navRailCutDepth(x,z),z);
+    const vertex=(x,z)=>p.push(x,navGroundY(x,z)-0.6-navRailCutDepth(x,z)-navRoadCutDepth(x,z,''),z);
     for(let x=x0;x<J.cx+r;x+=step)for(let z=z0;z<J.cz+r;z+=stepZ){vertex(x,z);vertex(x,z+stepZ);vertex(x+step,z+stepZ);vertex(x,z);vertex(x+step,z+stepZ);vertex(x+step,z);}
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();
     const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0xc5c9ad}));FLATCITY.group.add(m);FLATCITY.parts.push(m);
