@@ -74,6 +74,9 @@ test('index.html stays small enough to edit on a phone', () => {
 });
 
 test('PWA references exist and service worker compiles', () => {
+  // GitHub Pages runs Jekyll, which filters some paths out of the published site. The game now
+  // depends on data/ and vendor/ being served verbatim, so .nojekyll is load-bearing, not cosmetic.
+  assert.ok(existsSync(localAsset('.nojekyll')), '.nojekyll must exist so Pages publishes data/ and vendor/');
   assert.match(html, /<link\b[^>]*rel=["']manifest["'][^>]*href=["']manifest.json["']/i);
   assert.match(html, /serviceWorker\.register\(["']sw\.js["']\)/);
   new Script(readFileSync(localAsset('sw.js'), 'utf8'), { filename: 'sw.js' });
