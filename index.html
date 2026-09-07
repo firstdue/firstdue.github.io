@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v17z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18a";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1017,7 +1017,7 @@ function hundredBlock(x,z,name){ const ni=BLOCK.nameId.get(canonStreet(name)), g
     if(f[0]===ni&&fd<best){best=fd;value=f[1];} if(fd<fallback){fallback=fd;fallbackValue=f[1];} } }
   if(value&&best<450*450) return value; return fallback<28*28?fallbackValue:0; }
 function currentHundredBlock(x,z,name){ const q=BLOCK.last; if(q.name!==name||Math.hypot(x-q.x,z-q.z)>12){ q.x=x;q.z=z;q.name=name;q.value=hundredBlock(x,z,name); } return q.value; }
-function blockLine(v){ return v ? v+' BLOCK' : 'BLOCK —'; }
+function blockLine(v){ return v==='RAMP' ? 'RAMP TO' : (v ? v+' BLOCK' : 'BLOCK —'); }   // 'RAMP' marker: an unnamed connector labeled by the street it leads to
 function onAsphalt(x,z){ for(const s of segNear(x,z)){ const c=closestSeg(x,z,s); if(c.d<CLASSW[s.cls]/2+1) return true; } return false; }
 // Put every dispatch pin on the street its radio call actually names. Half the landmarks were hand-placed on the
 // wrong block (W.B. Saul said "Henry Ave" but sat 486m away on Valley Ave; Dobson Mills said "Ridge Ave" but sat on
@@ -1624,13 +1624,21 @@ function updateStreetLabels(dt){
   if(LBL.acc<=0){ LBL.acc=0.12;                                                     // ~8x/sec: label ONLY the cross streets at junctions actually ahead on your road —
     const cand=[], seen={}, cur=streetName(truck.x,truck.z), curKey=canonStreet((DRIVE.parked&&DRIVE.faces)||cur); // a street you can't turn onto (parallel, unconnected) must never get a callout.
     const addBranch=(node,e,first=null,from=null)=>{                               // one pooled sign per street + hundred block
-      const nm=e.name||streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);
+      let nm=e.name, ramp=false;
+      if(!nm){ const guess=streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);        // unnamed edge: a noding stub of the street whose band it sits in — OR a ramp/connector chain.
+        let dest=null,pa2=node,pb2=e.to,walked=Math.hypot(e.to.x-node.x,e.to.z-node.z),g=0;   // walk the chain to the first REALLY-named street: that's where the ramp factually leads
+        while(g++<12&&walked<450){ const named=pb2.adj.find(e2=>e2.to!==pa2&&e2.name);
+          if(named){ dest=named.name; break; }
+          const nx=straightest(pa2,pb2); if(!nx) break;
+          walked+=Math.hypot(nx.x-pb2.x,nx.z-pb2.z); pa2=pb2; pb2=nx; }
+        if(dest&&dest!==guess){ nm=dest; ramp=true; }                              // leads somewhere else → "RAMP TO <street>" card (City Ave ramps at Ridge were invisible: no name, no band, NO SIGN)
+        else nm=guess; }                                                           // plain stub → keep the band name as before
       if(!nm||nm==='—') return;
-      const sameRoadTurn=canonStreet(nm)===curKey;
+      const sameRoadTurn=!ramp&&canonStreet(nm)===curKey;
       if(sameRoadTurn&&(!from||keepStreet(from,node)===e.to))return;
       const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1;
       const off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));             // at the house keep the sign close to the corner, inside the Chase frame
-      const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=hundredBlock(lx,lz,nm),key=canonStreet(nm)+'|'+block;
+      const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=ramp?'RAMP':hundredBlock(lx,lz,nm),key=canonStreet(nm)+'|'+block;
       const pick=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null);
       const prev=seen[key];                                                       // one card per street+block: a two-way road's split one-way ramps (Falls Bridge south end) were doubling it
       if(prev!==undefined){                                                       // with a red twin. If both a legal and a wrong-way branch exist, the LEGAL one is the card;
@@ -1658,6 +1666,9 @@ function updateStreetLabels(dt){
       const branches=b.adj.filter(e=>e.to!==a);
       if(branches.length>1) for(const e of branches){ addBranch(b,e,null,a); if(cand.length>=LBL.cap) break; } // every visible driving sign stores its exact junction + branch
       const nx=keepStreet(a,b); if(!nx) break; a=b; b=nx; }                                 // preview the same path the truck will actually take
+    { const legal=new Set(); if(!DRIVE.parked&&curKey&&cur!=='—') legal.add(curKey);             // the street under the truck is legally present by definition — its divided-twin/opposite-
+      for(const c of cand) if(!c.wrong) legal.add(canonStreet(c.name));   // carriageway red cards are noise. And a red card is noise when the SAME street also has a legal card here (two-way road with
+      for(let i=cand.length-1;i>=0;i--) if(cand[i].wrong&&legal.has(canonStreet(cand[i].name))) cand.splice(i,1); }   // one-way ramp fragments, or a divided twin in the next block) — red survives only for streets with no legal entry
     if(cand.length>LBL.showCap) cand.length=LBL.showCap;                         // nearest choices only: prevent a stack of future-intersection signs
     for(let i=0;i<LBL.pool.length;i++){ const sp=LBL.pool[i], cd=cand[i];
       if(!cd){ sp.visible=false; sp._name=null; sp._key=null; sp._block=null; sp._pick=null; continue; }
@@ -2565,7 +2576,9 @@ function worldTap3D(clientX,clientY){ if(MAP.on||!state.running) return;
   const rect=renderer.domElement.getBoundingClientRect(); if(rect.width<2||rect.height<2) return;
   if(DRIVE.parked) return;                                                        // parked street choices are DOM bubbles above the canvas
   if(DRIVE.atChoice){ _tv.set(truckG.position.x,truckG.position.y+1.6,truckG.position.z).project(camera);   // stopped at a junction: tap the left / right half to pick the branch
-    const tsx=(_tv.x*0.5+0.5)*rect.width, lx=clientX-rect.left; chooseAtT(lx < (_tv.z>=1?rect.width/2:tsx) ? -1 : 1); return; }
+    const tsx=(_tv.x*0.5+0.5)*rect.width, tsy=(-_tv.y*0.5+0.5)*rect.height, lx=clientX-rect.left, ly=clientY-rect.top;
+    if(_tv.z<1&&Math.hypot(lx-tsx,ly-tsy)<52){ chooseStraight(); return; }      // tap ON the truck = straight, exactly as the banner promises (mapTap already did this; Tilt was coin-flipping left/right — owner got spun around at the City Ave ramps)
+    chooseAtT(lx < (_tv.z>=1?rect.width/2:tsx) ? -1 : 1); return; }
   DRIVE.going=!DRIVE.going; }                                                     // any tap on the map surface = GO / STOP (street-name bubbles are DOM buttons that catch their own taps first)
 (function init3DTap(){ const el=renderer.domElement, ps=new Map(); let moved=false, lastX=0, lastY=0, pinchD=0;   // 1 finger drag = look around; 2 fingers = pinch-zoom the tilt map; clean tap = go/stop or turn
   const twoDist=()=>{ const a=[...ps.values()]; return a.length>=2?Math.hypot(a[0].cx-a[1].cx,a[0].cy-a[1].cy):0; };
@@ -2654,6 +2667,9 @@ function updateDrive(dt){ if(!state.running){ return; }
     if(dist<remain){ DRIVE.t+=dist/seg; dist=0; }
     else { dist-=remain; let next=null;
       if(DRIVE.pending && DRIVE.pending.at===b && b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; }
+      if(!next && DRIVE.pending && DRIVE.pending.at!==b && Math.hypot(DRIVE.pending.at.x-b.x,DRIVE.pending.at.z-b.z)<40){   // fragmented junction cluster (Ridge x Lincoln x City Ave ramps): the drive threads a TWIN node metres from
+        if(b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; }   // the one the tapped sign anchored to — take the selected branch from here,
+        else { const jog=b.adj.find(e=>e.to===DRIVE.pending.at); if(jog){ next=jog.to; DRIVE.atChoice=false; } } }             // or jog across to the anchor node first (pending stays armed) — before, the selection silently never fired
       if(!next) next=roadContinuation(a,b);                                                  // same street, or the only possible forward road
       if(!next){ const choices=b.adj.filter(e=>e.to!==a); DRIVE.t=1; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=choices.length>0; break; } // a sharp reversing continuation still waits for confirmation; a dead end simply stops
       DRIVE.fromN=b; DRIVE.toN=next; DRIVE.t=0; DRIVE.atChoice=false; } }
