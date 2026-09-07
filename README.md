@@ -1,5 +1,10 @@
 # Philly Fire Dispatch — Local
 
+**Current: PUBLIC = LOCAL = v18j (September 7, 2026).** The Ridge Avenue connector now forms the
+three-level interchange shown in the owner's Street View photos: it rises over Kelly Drive, passes
+beneath City Avenue, and climbs to merge. The ramp also has a continuous deck, barriers, guardrail,
+supports and a steel bridge underside. See `START-HERE.md` for checks and rollback.
+
 **Current: PUBLIC = LOCAL = v18i (September 7, 2026).** The Ridge Avenue route toward City Avenue
 now drives beneath the City Avenue bridge on the lower connector before climbing and joining City
 Avenue. The truck and blue guide follow the connector's elevation, and phone-size checks confirm

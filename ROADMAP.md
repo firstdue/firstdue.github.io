@@ -1,6 +1,9 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 7, 2026. **v18i is public and matches the local build.**
+Planning snapshot: September 7, 2026. **v18j is public and matches the local build.**
+
+- [x] Rebuild the Ridge/City approach as a photo-guided three-level interchange: ramp over Kelly,
+  ramp under City Avenue, then ramp-to-City merge, with viaduct and bridge structure detail.
 
 - [x] Ridge-to-City connector drives beneath City Avenue before climbing onto it; truck and guide
   share the lower elevation and permanent phone coverage verifies the grade separation.
