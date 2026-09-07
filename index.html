@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -925,7 +925,23 @@ function railNear(x,z,r=5){if(r>20)r=20;for(const s of railGrid.get(Math.floor(x
 function navSpan(x,z,name=null,r=12){let best=null,dist=r;for(const s of navBridgeGrid.get(Math.floor(x/NAVCELL)+':'+Math.floor(z/NAVCELL))||[]){if(name!==null&&s.b.name!==name)continue;
   const dx=s.q[0]-s.a[0],dz=s.q[1]-s.a[1],t=Math.max(0,Math.min(1,((x-s.a[0])*dx+(z-s.a[1])*dz)/(s.l*s.l||1))),d=Math.hypot(x-s.a[0]-dx*t,z-s.a[1]-dz*t);
   if(d<dist){dist=d;best={b:s.b,t:(s.along+t*s.l)/(s.b.length||1),d};}}return best;}
-function navRoadY(x,z,name=null){if(!NAVGEO.active)return 0;const s=navSpan(x,z,name);if(!s||!s.b.bridge)return navTerrain(x,z);return s.b.startY+(s.b.endY-s.b.startY)*s.t;}
+// Deck PROFILE with a clearance floor. The abutment-to-abutment line is still the base estimate, but a road bridge
+// must clear the ground it spans — under a viaduct the DEM *is* the road below, and the pure linear estimate put
+// the northbound City Ave viaduct at truck-roof height over Kelly Dr (owner screenshot). Interior stations more
+// than 22m from either end are floored at local ground + 5.2m, capped by a 12% grade from each abutment so the
+// deck still meets its approaches; a grade pass keeps humps drivable. Rail decks keep their own v17s floor.
+for(const b of NAVGEO.bridges){ if(!b.bridge||!(b.length>1)) continue;
+  const cum=[0]; for(let i=1;i<b.p.length;i++) cum.push(cum[i-1]+Math.hypot(b.p[i][0]-b.p[i-1][0],b.p[i][1]-b.p[i-1][1]));
+  const ptAt=d=>{ let i=1; while(i<cum.length-1&&cum[i]<d) i++; const a=b.p[i-1],q=b.p[i],t=(d-cum[i-1])/((cum[i]-cum[i-1])||1); return [a[0]+(q[0]-a[0])*t,a[1]+(q[1]-a[1])*t]; };
+  const L=b.length, N=Math.max(2,Math.ceil(L/8)), ds=L/N, prof=[];
+  for(let k=0;k<=N;k++){ const d=ds*k, lin=b.startY+(b.endY-b.startY)*k/N; let y=lin;
+    if(k>0&&k<N){ const p=ptAt(d), floor=Math.min(navTerrain(p[0],p[1])+5.2, b.startY+0.15*d, b.endY+0.15*(L-d)); y=Math.max(lin,floor); }   // the 15% caps alone protect the abutments — no dead zone near the ends (the City Ave eastbound deck's tagged end lands 20m past Kelly Dr, and a dead zone left it at truck-roof height there)
+    prof.push(y); }
+  for(let k=1;k<=N;k++) prof[k]=Math.max(prof[k],prof[k-1]-0.15*ds);        // never drop faster than 15% coming off a raised section (ends stay put — the caps above guarantee it)
+  for(let k=N-1;k>=0;k--) prof[k]=Math.max(prof[k],prof[k+1]-0.15*ds);
+  b.prof=prof; }
+function deckY(b,t){ const P=b.prof; if(!P) return b.startY+(b.endY-b.startY)*t; const u=Math.max(0,Math.min(1,t))*(P.length-1), i=Math.min(P.length-2,u|0), f=u-i; return P[i]+(P[i+1]-P[i])*f; }
+function navRoadY(x,z,name=null){if(!NAVGEO.active)return 0;const s=navSpan(x,z,name);if(!s||!s.b.bridge)return navTerrain(x,z);return deckY(s.b,s.t);}
 function navGroundY(x,z){return NAVGEO.active?navTerrain(x,z):0;}
 for(const w of NAVGEO.water){for(const p of [...w.outer,...w.inner]){let a=1e9,b=1e9,c=-1e9,d=-1e9;for(const q of p){if(q[0]<a)a=q[0];if(q[1]<b)b=q[1];if(q[0]>c)c=q[0];if(q[1]>d)d=q[1];}p.bounds=[a,b,c,d];}   // loop, not spread — citywide river rings have thousands of points
   let a=1e9,b=1e9,c=-1e9,d=-1e9;for(const p of w.outer){if(p.bounds[0]<a)a=p.bounds[0];if(p.bounds[1]<b)b=p.bounds[1];if(p.bounds[2]>c)c=p.bounds[2];if(p.bounds[3]>d)d=p.bounds[3];}w.bb=[a,b,c,d];}
@@ -1665,6 +1681,13 @@ function labelTex(name,block,wrong){ const bl=blockLine(block), key=name+'|'+bl+
   return (LBL.cache[key]={tex:t,aspect:w/h}); }
 (function initLabels(){ for(let i=0;i<LBL.cap;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthTest:false,depthWrite:false,opacity:0}));
   s.center.set(0.5,0); s.renderOrder=20; s.visible=false; scene.add(s); LBL.pool.push(s); } })();
+// Sourced ramp signage: where the real overhead gantry names destinations the map data cannot derive, the
+// ramp mouth (junction node → first ramp node, world coords) gets exactly those cards. Same evidence bar as
+// BRIDGE_STYLE / NAME_FIX — a photo or public record, never a guess.
+const RAMP_SIGNS=[
+  { x:-687, z:135, tx:-720, tz:161, signs:['City Ave','Lincoln Dr'],     // Ridge Ave NW-bound on-ramp at the Wissahickon interchange: gantry reads
+    source:'Overhead gantry "TO 76 / 1 City Ave" + "Lincoln Drive" — Google Street View Apr 2025, owner photo Sep 7 2026' }, // "TO 76/1 City Ave ↓ · Lincoln Drive ↗ (no trucks)"
+];
 function updateStreetLabels(dt){
   if(!FLAGS.streetLabels || !state.running){ for(const sp of LBL.pool) sp.visible=false; return; }
   const spd=Math.max(8,DRIVE.speed||15);                                              // look further ahead the faster you drive, so a name still has time to read
@@ -1673,6 +1696,12 @@ function updateStreetLabels(dt){
   if(LBL.acc<=0){ LBL.acc=0.12;                                                     // ~8x/sec: label ONLY the cross streets at junctions actually ahead on your road —
     const cand=[], seen={}, cur=streetName(truck.x,truck.z), curKey=canonStreet((DRIVE.parked&&DRIVE.faces)||cur); // a street you can't turn onto (parallel, unconnected) must never get a callout.
     const addBranch=(node,e,first=null,from=null)=>{                               // one pooled sign per street + hundred block
+      const sg=RAMP_SIGNS.find(q=>Math.hypot(node.x-q.x,node.z-q.z)<8&&Math.hypot(e.to.x-q.tx,e.to.z-q.tz)<8);
+      if(sg){ const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1,off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));   // real gantry wording wins over the derived label
+        const lx=node.x+dx/l*off,lz=node.z+dz/l*off,pick=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null);
+        sg.signs.forEach((label,i)=>{ const key='SIGN|'+label; if(seen[key]!==undefined) return; seen[key]=cand.length;
+          cand.push({name:label,block:'RAMP',x:lx,z:lz,pick,wrong:!!e.wrong,sameRoadTurn:false,sign:true,stack:i}); });   // all cards select the same ramp; the split itself is a later choice
+        return; }
       let nm=e.name, ramp=false;
       if(!nm){ const guess=streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);        // unnamed edge: a noding stub of the street whose band it sits in — OR a ramp/connector chain.
         let dest=null,pa2=node,pb2=e.to,walked=Math.hypot(e.to.x-node.x,e.to.z-node.z),g=0;   // walk the chain to the first REALLY-named street: that's where the ramp factually leads
@@ -1718,6 +1747,7 @@ function updateStreetLabels(dt){
     { const legal=new Set(); if(!DRIVE.parked&&curKey&&cur!=='—') legal.add(curKey);             // the street under the truck is legally present by definition — its divided-twin/opposite-
       for(const c of cand) if(!c.wrong) legal.add(canonStreet(c.name));   // carriageway red cards are noise. And a red card is noise when the SAME street also has a legal card here (two-way road with
       for(let i=cand.length-1;i>=0;i--) if(cand[i].wrong&&legal.has(canonStreet(cand[i].name))) cand.splice(i,1); }   // one-way ramp fragments, or a divided twin in the next block) — red survives only for streets with no legal entry
+    if(cand.some(c=>c.sign)) cand.sort((p,q)=>(q.sign?1:0)-(p.sign?1:0));        // sourced gantry cards survive the cap (stable sort keeps the rest in walk order)
     if(cand.length>LBL.showCap) cand.length=LBL.showCap;                         // nearest choices only: prevent a stack of future-intersection signs
     for(let i=0;i<LBL.pool.length;i++){ const sp=LBL.pool[i], cd=cand[i];
       if(!cd){ sp.visible=false; sp._name=null; sp._key=null; sp._block=null; sp._pick=null; continue; }
@@ -2695,16 +2725,18 @@ function roadContinuation(a,b){ if(!b) return null;
   // a street present on 2+ branches here PASSES THROUGH this node — an arterial's two directions, or a divided
   // road's legal + opposite carriageway. Reaching it means we're T-ing ONTO a through road, so never auto-turn:
   // stop and let the player pick left/right. (This is the Gates St → Henry Ave "it just turned by itself" case.)
-  const cnt=new Map(); for(const e of fwd){ if(e.name) cnt.set(e.name,(cnt.get(e.name)||0)+1); }
-  const through=e=> e.name && cnt.get(e.name)>=2;
+  const cnt=new Map(); for(const e of choices){ if(e.name) cnt.set(e.name,(cnt.get(e.name)||0)+1); }   // count LEGAL directions only: a ramp merging onto a one-way carriageway (Kelly Dr) meets ONE
+  const through=e=> e.name && cnt.get(e.name)>=2;                                                    // drivable Kelly, not a T — the old count included the wrong-way twin and stopped at every merge
   if(choices.length===1){ const c=choices[0], s=branchForwardness(a,b,c.to);
     const sameName=c.name && edgeName(a,b)===c.name;                           // our OWN road, narrowly missed by sameStreetOn (a sharp same-street bend)
     if(sameName && fwd.length===1) return s>-0.25?c.to:null;                   // keep flowing around the bend of our own road
     if(through(c)) return null;                                                // T-ing onto a through road (an arterial) — stop and ask left/right
+    if(!c.name && !(a.adj.find(e=>e.to===b)||{}).name) return c.to;            // an unnamed connector with ONE legal way on: a ramp's hairpin loop is still the only road — follow it (interchange chains stopped at every bend — owner). Raw edge names: the band fallback would borrow a neighbour's name
     return s>0.5?c.to:null; }                                                  // a name-change / turn onto another street: auto-roll ONLY if near-straight; a real turn (e.g. Fountain St → Henry Ave at 66°) stops to ask
   if(choices.length>1){ const scored=choices.map(e=>({e,s:branchForwardness(a,b,e.to)})).sort((p,q)=>q.s-p.s);
     if(through(scored[0].e)) return null;                                      // straightest option is a turn onto a through road — stop and ask
-    if(scored[0].s>0.55 && (scored[0].s-scored[1].s)>0.3) return scored[0].e.to; }   // a clear straight-through name change (e.g. an interchange) — keep rolling
+    if(scored[0].s>0.55 && (scored[0].s-scored[1].s)>0.3) return scored[0].e.to;     // a clear straight-through name change (e.g. an interchange) — keep rolling
+    if(scored[0].s>0.85 && scored[1].s<0.7) return scored[0].e.to; }           // dead-ahead continuation with only a peel-off connector beside it (interchange chains stopped 'every few feet' — owner) — roll; a real Y-split (both near-straight) still stops
   return null; }
 function keepStreet(a,b){ return roadContinuation(a,b); }                    // labels + guide preview the exact automatic continuation
 function nextJunction(){ let a=DRIVE.fromN,b=DRIVE.toN,g=0; while(g++<400){ if(!b) break; const fwd=b.adj.filter(e=>e.to!==a); if(fwd.length!==1) return {node:b,from:a}; a=b; b=fwd[0].to; } return {node:b,from:a}; }
@@ -3075,6 +3107,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
       for(let i=EV.length-1;i>0;i--){ if(Math.abs(EV[i].t-EV[i-1].t)<3){                    // a chain split AT the crossing shows up as two Ts from opposite sides — merge to one X
           const m=EV[i-1]; m.t=(m.t+EV[i].t)/2; m.hw=Math.max(m.hw,EV[i].hw);
           if(EV[i].both||m.both||EV[i].side!==m.side){ m.both=true; m.side=0; } EV.splice(i,1); } } }
+    if(!s.name) continue;                                                                  // unnamed = ramps/connectors: road surface only — no sidewalks, trees or buildings on an on-ramp (owner, City Ave interchange)
     if(sl>=6 && S.length<LOCAL.maxS){                                                      // 🛣️ kerb / sidewalk slab down each side of this street
       const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2;
       if((mx-cx)**2+(mz-cz)**2<=R2){ const walk=s.cls<=1?4.2:3.2, ang=Math.atan2(dx,dz);
@@ -3175,21 +3208,26 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   const B=J.B, T=J.T, S=J.S;
   if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[];
     for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=J.list.find(s=>s.name===b.name);if(!street)continue;const hw=CLASSW[street.cls]/2;let along=0;
-      for(let i=1;i<b.p.length;i++){const a=b.p[i-1],q=b.p[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz),mid=(along+l/2)/(b.length||1),y=b.startY+(b.endY-b.startY)*mid;along+=l;
-        const x=(a[0]+q[0])/2,z=(a[1]+q[1])/2;if(!l||Math.hypot(x-J.cx,z-J.cz)>LOCAL.R)continue;
-        const ang=Math.atan2(dx,dz),pitch=-Math.atan2(b.endY-b.startY,b.length);
-        deck.push({x,y:y-0.5,z,w:hw*2+2,h:0.9,l,ang,pitch});
-        const ground=navGroundY(x,z),height=y-ground-0.9;
-        if(height>5&&l>22)piers.push({x,y:ground+height/2,z,w:hw*1.1,h:height,l:2.5,ang,pitch:0});
-        for(const side of [-1,1]){const ox=-dz/l*side,oz=dx/l*side;                 // 🌉 bridge furniture per side (owner Street View: solid concrete parapets, not thin bars):
-          para.push({x:x+ox*(hw+0.55),y:y+0.5,z:z+oz*(hw+0.55),w:0.32,h:1.0,l,ang,pitch});      // solid parapet wall, deck to +1.0m
-          rails.push({x:x+ox*(hw+0.55),y:y+1.08,z:z+oz*(hw+0.55),w:0.46,h:0.16,l,ang,pitch});   // coping cap with a slight overhang
-          bwalk.push({x:x+ox*(hw-0.75),y:y+0.12,z:z+oz*(hw-0.75),w:1.5,h:0.28,l,ang,pitch});}   // raised sidewalk inside the parapet (curb reads over the road paint)
+      for(let i=1;i<b.p.length;i++){const a=b.p[i-1],q=b.p[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz);const segStart=along;along+=l;
+        if(!l)continue;const ang=Math.atan2(dx,dz),ux=dx/l,uz=dz/l,BL=b.length||1;
+        const x=(a[0]+q[0])/2,z=(a[1]+q[1])/2;if(Math.hypot(x-J.cx,z-J.cz)>LOCAL.R+l)continue;
+        const y=(deckY(b,segStart/BL)+deckY(b,along/BL))/2,pitch=-Math.atan2(deckY(b,along/BL)-deckY(b,segStart/BL),l);   // segment-level (truss, pier)
+        { const ground=navGroundY(x,z),height=y-ground-0.9;
+          if(height>5&&l>22)piers.push({x,y:ground+height/2,z,w:hw*1.1,h:height,l:2.5,ang,pitch:0}); }
+        const nSub=Math.max(1,Math.ceil(l/20));                                               // deck + furniture in ≤20m pieces so the clearance hump in the profile actually shows
+        for(let k=0;k<nSub;k++){const s0=l*k/nSub,s1=l*(k+1)/nSub,pl=s1-s0,px=a[0]+ux*(s0+s1)/2,pz=a[1]+uz*(s0+s1)/2;
+          if(Math.hypot(px-J.cx,pz-J.cz)>LOCAL.R)continue;
+          const y0=deckY(b,(segStart+s0)/BL),y1=deckY(b,(segStart+s1)/BL),py=(y0+y1)/2,pp=-Math.atan2(y1-y0,pl);
+          deck.push({x:px,y:py-0.5,z:pz,w:hw*2+2,h:0.9,l:pl,ang,pitch:pp});
+          for(const side of [-1,1]){const ox=-uz*side,oz=ux*side;                            // 🌉 bridge furniture per side (owner Street View: solid concrete parapets, not thin bars):
+            para.push({x:px+ox*(hw+0.55),y:py+0.5,z:pz+oz*(hw+0.55),w:0.32,h:1.0,l:pl,ang,pitch:pp});      // solid parapet wall, deck to +1.0m
+            rails.push({x:px+ox*(hw+0.55),y:py+1.08,z:pz+oz*(hw+0.55),w:0.46,h:0.16,l:pl,ang,pitch:pp});   // coping cap with a slight overhang
+            bwalk.push({x:px+ox*(hw-0.75),y:py+0.12,z:pz+oz*(hw-0.75),w:1.5,h:0.28,l:pl,ang,pitch:pp});}}  // raised sidewalk inside the parapet (curb reads over the road paint)
         // 🌉 Through-truss superstructure (b.truss — sourced per bridge, e.g. Falls Bridge 1895
         // camelback truss, owner photo Sep 2026): side posts + top chords + overhead cross-beams +
         // alternating diagonals you drive through, in weathered steel white.
-        if(b.truss){const H=6.0,panel=5.5,ux=dx/l,uz=dz/l,alongStart=along-l;
-          const yAt=s=>b.startY+(b.endY-b.startY)*((alongStart+s)/(b.length||1));
+        if(b.truss){const H=6.0,panel=5.5,alongStart=segStart;
+          const yAt=s=>deckY(b,(alongStart+s)/BL);
           for(const side of [-1,1])truss.push({x:x-dz/l*(hw+1.1)*side,y:y+H,z:z+dx/l*(hw+1.1)*side,w:0.45,h:0.45,l,ang,pitch});   // top chords
           for(let s=panel/2,k=0;s<l;s+=panel,k++){const yD=yAt(s),px=a[0]+ux*s,pz=a[1]+uz*s;
             for(const side of [-1,1])truss.push({x:px-uz*(hw+1.1)*side,y:yD+H/2,z:pz+ux*(hw+1.1)*side,w:0.32,h:H,l:0.32,ang,pitch:0});   // posts
