@@ -1,0 +1,6 @@
+# Baked data and the vendored library are generated artefacts, not hand-edited source.
+# Suppressing their diffs keeps `git diff`/`git show` small enough to render on a phone,
+# which is the whole reason these blobs were moved out of index.html. Drop the `-diff`
+# on a file if you ever need to review a re-bake line by line.
+data/*.js -diff linguist-generated
+vendor/*.js -diff linguist-generated

@@ -25,16 +25,52 @@ test('complete game document has a mobile viewport and build tag', () => {
   assert.equal([...html.matchAll(/const BUILD\s*=\s*["']v\d+[a-z]["']/g)].length, 1);
 });
 
-test('all inline scripts compile without external script dependencies', () => {
+// The library and the baked data live in vendor/ and data/ so that index.html stays small enough to
+// read, diff and edit on a phone. They are plain classic scripts loaded before the game script, so
+// their top-level `const` bindings are in scope for it exactly as when they were inline.
+test('every script compiles, and external scripts are local files loaded before the game', () => {
   const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)];
-  assert.ok(scripts.length >= 2, 'expected embedded library and game scripts');
+  assert.ok(scripts.length >= 2, 'expected library and game scripts');
+  let sawExternal = false;
   for (const [i, [, attributes, source]] of scripts.entries()) {
-    assert.doesNotMatch(attributes, /\bsrc\s*=/i, 'keep scripts embedded');
     assert.doesNotMatch(attributes, /\btype\s*=\s*["']module["']/i, 'update checker if adopting modules');
+    assert.doesNotMatch(attributes, /\b(?:defer|async)\b/i, 'data must execute before the game script');
+    const src = attributes.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1];
+    if (src) {
+      sawExternal = true;
+      assert.equal(source.trim(), '', 'a script with src must have no body');
+      new Script(readFileSync(localAsset(src), 'utf8'), { filename: src });
+      continue;
+    }
     const type = attributes.match(/\btype\s*=\s*["']([^"']+)["']/i)?.[1];
     if (type === 'application/ld+json' || type === 'application/json') JSON.parse(source);
     else new Script(source, { filename: `index.html:inline-script-${i + 1}` });
   }
+  assert.ok(sawExternal, 'expected the extracted vendor/data scripts');
+});
+
+test('extracted data loads before the game script that reads it', () => {
+  const order = [...html.matchAll(/<script\b([^>]*)>/gi)].map(m => m[1]);
+  const srcs = order.map(a => a.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1] ?? null);
+  const gameScript = srcs.lastIndexOf(null);
+  for (const [i, src] of srcs.entries()) {
+    if (src && /^(?:data|vendor)\//.test(src)) assert.ok(i < gameScript, `${src} must precede the game script`);
+  }
+  // Each extracted global is declared exactly once, in its own file, and no longer in index.html.
+  for (const name of ['ADDR', 'RB', 'AB', 'LMKS', 'NAVGEO', 'LANDCOVER']) {
+    const file = `data/${name.toLowerCase()}.js`;
+    if (!srcs.includes(file)) continue;
+    assert.doesNotMatch(html, new RegExp(`^const ${name}\\s*=`, 'm'), `${name} should live in ${file}`);
+    assert.match(readFileSync(localAsset(file), 'utf8'), new RegExp(`^const ${name}\\s*=`));
+  }
+});
+
+test('index.html stays small enough to edit on a phone', () => {
+  // The whole point of the extraction: a 10MB file with multi-megabyte lines crashes mobile clients
+  // when rendered as a diff. Keep the game file itself modest and free of giant lines.
+  assert.ok(html.length < 1_500_000, `index.html is ${html.length} bytes; keep baked data in data/`);
+  const worst = html.split('\n').reduce((a, l) => Math.max(a, l.length), 0);
+  assert.ok(worst < 8_000, `longest line is ${worst} chars; wrap it or move it to data/`);
 });
 
 test('PWA references exist and service worker compiles', () => {
