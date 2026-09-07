@@ -1974,6 +1974,13 @@ const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-pe
 renderer.setPixelRatio(Math.min(devicePixelRatio,CONFIG.render.prCap));
 renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=false;
 document.getElementById('wrap').appendChild(renderer.domElement);
+// three.js already preventDefaults webglcontextlost and re-initialises the context on restore, so the
+// renderer recovers on its own. What it cannot do is tell the GAME: without this the fixed-timestep sim
+// keeps running against a canvas nobody is drawing, so the truck drives on behind a frozen screen and
+// the first frame after restore arrives with a huge dt. Skip the tick instead, and restart the clock.
+const GL={lost:false};
+renderer.domElement.addEventListener('webglcontextlost',()=>{ GL.lost=true; });
+renderer.domElement.addEventListener('webglcontextrestored',()=>{ GL.lost=false; last=performance.now(); });
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0xb9d3e8);
 scene.fog=new THREE.Fog(0xb9d3e8,CONFIG.render.fogNear,CONFIG.render.fogFar);
 const camera=new THREE.PerspectiveCamera(CONFIG.render.fov,innerWidth/innerHeight,0.5,2400);
@@ -3403,10 +3410,18 @@ const SAT_TILES={"meta":{"z":16,"tx0":19069,"ty0":24795,"cols":18,"rows":16,"lat
 const TILE_STYLE='voyager_nolabels';   // CARTO street look: swap for 'positron_nolabels' (light) or 'dark_nolabels'
 function makeTileLayer(tileUrl, opts){ opts=opts||{}; const m=SAT_TILES.meta, LAT0=m.lat0, LON0=m.lon0, cosLat=Math.cos(LAT0*Math.PI/180);   // same origin/projection as SAT + the game (verified <1m alignment)
   const cache=new Map(); const st={ ok:false, err:0, blocked:false }; const minZ=opts.minZ||12, maxZ=opts.maxZ||19, CAP=opts.cap||400;
-  function tile(z,x,y){ const key=z+'/'+x+'/'+y; let im=cache.get(key);
-    if(!im){ im=new Image(); im.crossOrigin='anonymous';
-      im.onload=()=>{ st.ok=true; }; im.onerror=()=>{ if(!st.ok){ st.err++; if(st.err>=4) st.blocked=true; } };
-      im.src=tileUrl(z,x,y); cache.set(key,im); if(cache.size>700){ const k=cache.keys().next().value; cache.delete(k); } }
+  // A decoded 256x256 tile costs ~256KB of image memory, and both 2D layers cache independently while
+  // only one is ever on screen: 700 each measured at ~370MB resident after a long drive. Halving it is
+  // ample for a 390x812 phone (~15 tiles on screen), but the cache must never drop below CAP - one wide
+  // draw can touch that many tiles, and a smaller cache would evict tiles that same draw still needs and
+  // refetch them every frame.
+  const IMGCAP=Math.max(opts.imgCap||350, CAP);
+  function tile(z,x,y){ const key=z+'/'+x+'/'+y; const hit=cache.get(key);
+    if(hit){ cache.delete(key); cache.set(key,hit); return hit; }        // touch on hit: eviction drops least-RECENTLY-USED, not oldest-fetched
+    const im=new Image(); im.crossOrigin='anonymous';
+    im.onload=()=>{ st.ok=true; }; im.onerror=()=>{ if(!st.ok){ st.err++; if(st.err>=4) st.blocked=true; } };
+    im.src=tileUrl(z,x,y); cache.set(key,im);
+    while(cache.size>IMGCAP){ const k=cache.keys().next().value; if(k===key) break; cache.delete(k); }
     return im; }
   const pickZ=ppm=>Math.max(minZ,Math.min(maxZ,Math.floor(Math.log2(156543.034*cosLat*ppm))));
   const w2lon=x=>LON0+x/(cosLat*111320), w2lat=zc=>LAT0-zc/110540;
@@ -3439,10 +3454,21 @@ function makeTileLayer3D(tileUrl, opts){ opts=opts||{}; const m=SAT_TILES.meta, 
   const pool=[], texCache=new Map(); const st={ok:false,err:0};
   function getMesh(){ let mesh=null; for(const p of pool){ if(!p.userData.active){ mesh=p; break; } }
     if(!mesh){ mesh=new THREE.Mesh(new THREE.PlaneGeometry(1,1), new THREE.MeshBasicMaterial({depthWrite:true,color:opts.tint===undefined?0xffffff:opts.tint})); mesh.rotation.x=-Math.PI/2; mesh.renderOrder=0; group.add(mesh); pool.push(mesh); } return mesh; }
-  function getTex(z,x,y){ const key=z+'/'+x+'/'+y; if(texCache.has(key)) return texCache.get(key);
+  const TEXCAP=opts.texCap||360;
+  const texOnScreen=tex=>{ for(const p of pool){ if(p.userData.active && p.material.map===tex) return true; } return false; };
+  function getTex(z,x,y){ const key=z+'/'+x+'/'+y;
+    if(texCache.has(key)){ const t=texCache.get(key); texCache.delete(key); texCache.set(key,t); return t; }   // LRU touch
     const tex=loader.load(tileUrl(z,x,y), ()=>{ st.ok=true; }, undefined, ()=>{ st.err++; texCache.set(key,null); });
     if('colorSpace' in tex && THREE.SRGBColorSpace) tex.colorSpace=THREE.SRGBColorSpace;
-    texCache.set(key,tex); if(texCache.size>360){ const k=texCache.keys().next().value, old=texCache.get(k); if(old&&old.dispose) old.dispose(); texCache.delete(k); } return tex; }
+    texCache.set(key,tex);
+    // Evict least-recently-used first, and never dispose a texture a visible mesh is still sampling —
+    // that used to free the GPU copy of a tile still on screen and force three to re-upload it.
+    if(texCache.size>TEXCAP){ for(const k of texCache.keys()){ if(texCache.size<=TEXCAP) break; if(k===key) continue;
+      const old=texCache.get(k);
+      if(old==null){ texCache.delete(k); continue; }
+      if(texOnScreen(old)) continue;
+      old.dispose(); texCache.delete(k); } }
+    return tex; }
   function update(cx,cz,z,R){ z=Math.max(minZ,Math.min(maxZ,Math.round(z))); const n=Math.pow(2,z);
     for(const p of pool) p.userData.active=false;
     let tx0=Math.floor(lon2tx(w2lon(cx-R),n)), tx1=Math.floor(lon2tx(w2lon(cx+R),n));
@@ -6496,6 +6522,7 @@ updateBest();
 let GT=0, last=performance.now(), acc=0;
 const FPSM={t:0,winT:0,avg:0,min:999,shownMin:999};
 function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=now; if(dt>CONFIG.maxDt) dt=CONFIG.maxDt; GT=now/1000;
+  if(GL.lost && !MAP.on) return;                                         // 3D context gone: don't simulate behind a frozen canvas (the 2D map needs no GL, so it keeps running)
   { const rn=performance.now(); if(FPSM.t){ const d=rn-FPSM.t; if(d>0&&d<1000){ const f=1000/d; FPSM.avg=FPSM.avg?FPSM.avg*0.92+f*0.08:f; if(f<FPSM.min)FPSM.min=f; } }
     FPSM.t=rn; if(rn-FPSM.winT>2000){ FPSM.shownMin=FPSM.min; FPSM.min=999; FPSM.winT=rn; } }   // owner perf review: rolling avg + worst frame of the last 2s, shown on the SAVES line
   if(!MAP.on){ const pr=renderer.getPixelRatio(), tw=Math.round(innerWidth*pr), th=Math.round(innerHeight*pr);   // 3D views: keep the WebGL canvas full-screen (mobile address-bar/viewport changes can leave it short → a gap below the render)
