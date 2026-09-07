@@ -866,7 +866,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18b";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -890,6 +890,29 @@ function landBlocksBuilding(x,z,r=0){for(const f of landNear(x,z)){if(x+r<f.bb[0
 const NAVCELL=120, navBridgeGrid=new Map();
 function navTerrain(x,z){const g=NAVGEO.terrain,u=Math.max(0,Math.min(g.nx-1.001,(x-g.minX)/g.dx)),v=Math.max(0,Math.min(g.nz-1.001,(z-g.minZ)/g.dz)),i=u|0,j=v|0,a=u-i,b=v-j,k=j*g.nx+i;
   const h=g.h,A=h[k],B=h[k+1],C=h[k+g.nx],D=h[k+g.nx+1];return Math.max(0,a>=b?A+(B-A)*a+(D-B)*b:A+(C-A)*b+(D-C)*a);}
+// Chain contiguous bridge fragments of the same street+layer into ONE span before profiling. OSM splits long
+// bridges into little ways, and a fragment whose own endpoint hangs over water profiles its deck from the
+// riverbed — the City Ave eastbound deck sagged 8m below its westbound twin. A full chain's ends sit on land.
+// Consecutive OSM ways share exact nodes, so projected endpoint coords match exactly (bake rounds to 0.1m).
+(function chainBridges(){ const km=p=>p[0].toFixed(1)+','+p[1].toFixed(1);
+  const byEnd=new Map(), add=(k,b)=>{ let l=byEnd.get(k); if(!l){l=[];byEnd.set(k,l);} if(!l.includes(b)) l.push(b); };
+  for(const b of NAVGEO.bridges){ if(b.bridge){ add(km(b.p[0]),b); add(km(b.p[b.p.length-1]),b); } }
+  const link=(b,end)=>{ const l=byEnd.get(km(end))||[];                          // the unique same-street continuation at this endpoint, if any
+    const c=l.filter(o=>o!==b&&o.bridge&&o.name===b.name&&o.layer===b.layer);
+    return (c.length===1 && l.filter(o=>o.bridge).length===2) ? c[0] : null; };
+  const done=new Set();
+  for(const b of NAVGEO.bridges){ if(!b.bridge||done.has(b)) continue;
+    let head=b, guard=0;                                                          // walk to the chain's start
+    for(;;){ const prev=link(head,head.p[0]); if(!prev||done.has(prev)||guard++>40) break;
+      const pl=prev.p, samePt=km(pl[pl.length-1])===km(head.p[0]); if(!samePt) prev.p=pl.slice().reverse();   // orient prev to flow into head
+      head=prev; }
+    const chain=[head]; done.add(head); guard=0;
+    for(;;){ const last=chain[chain.length-1], nx=link(last,last.p[last.p.length-1]); if(!nx||done.has(nx)||guard++>40) break;
+      if(km(nx.p[0])!==km(last.p[last.p.length-1])) nx.p=nx.p.slice().reverse();
+      chain.push(nx); done.add(nx); }
+    if(chain.length>1){ const A=chain[0];
+      for(let i=1;i<chain.length;i++){ A.p=A.p.concat(chain[i].p.slice(1)); if(chain[i].truss)A.truss=1; chain[i]._merged=true; } } }
+  NAVGEO.bridges=NAVGEO.bridges.filter(b=>!b._merged); })();
 for(const b of NAVGEO.bridges){b.length=0;b.startY=navTerrain(...b.p[0]);b.endY=navTerrain(...b.p[b.p.length-1]);
   for(let i=1;i<b.p.length;i++){const a=b.p[i-1],q=b.p[i],l=Math.hypot(q[0]-a[0],q[1]-a[1]);const s={b,a,q,l,along:b.length};b.length+=l;
     for(let x=Math.floor((Math.min(a[0],q[0])-20)/NAVCELL);x<=Math.floor((Math.max(a[0],q[0])+20)/NAVCELL);x++)for(let z=Math.floor((Math.min(a[1],q[1])-20)/NAVCELL);z<=Math.floor((Math.max(a[1],q[1])+20)/NAVCELL);z++){const k=x+':'+z;if(!navBridgeGrid.has(k))navBridgeGrid.set(k,[]);navBridgeGrid.get(k).push(s);}}}
@@ -3124,7 +3147,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); o.geometry.dispose(); o.material.dispose(); }
   FLATCITY.parts=[];
   const B=J.B, T=J.T, S=J.S;
-  if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[];
+  if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[];
     for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=J.list.find(s=>s.name===b.name);if(!street)continue;const hw=CLASSW[street.cls]/2;let along=0;
       for(let i=1;i<b.p.length;i++){const a=b.p[i-1],q=b.p[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz),mid=(along+l/2)/(b.length||1),y=b.startY+(b.endY-b.startY)*mid;along+=l;
         const x=(a[0]+q[0])/2,z=(a[1]+q[1])/2;if(!l||Math.hypot(x-J.cx,z-J.cz)>LOCAL.R)continue;
@@ -3132,7 +3155,10 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         deck.push({x,y:y-0.5,z,w:hw*2+2,h:0.9,l,ang,pitch});
         const ground=navGroundY(x,z),height=y-ground-0.9;
         if(height>5&&l>22)piers.push({x,y:ground+height/2,z,w:hw*1.1,h:height,l:2.5,ang,pitch:0});
-        for(const side of [-1,1])rails.push({x:x-dz/l*(hw+0.7)*side,y:y+0.9,z:z+dx/l*(hw+0.7)*side,w:0.35,h:1.3,l,ang,pitch});
+        for(const side of [-1,1]){const ox=-dz/l*side,oz=dx/l*side;                 // 🌉 bridge furniture per side (owner Street View: solid concrete parapets, not thin bars):
+          para.push({x:x+ox*(hw+0.55),y:y+0.5,z:z+oz*(hw+0.55),w:0.32,h:1.0,l,ang,pitch});      // solid parapet wall, deck to +1.0m
+          rails.push({x:x+ox*(hw+0.55),y:y+1.08,z:z+oz*(hw+0.55),w:0.46,h:0.16,l,ang,pitch});   // coping cap with a slight overhang
+          bwalk.push({x:x+ox*(hw-0.75),y:y+0.12,z:z+oz*(hw-0.75),w:1.5,h:0.28,l,ang,pitch});}   // raised sidewalk inside the parapet (curb reads over the road paint)
         // 🌉 Through-truss superstructure (b.truss — sourced per bridge, e.g. Falls Bridge 1895
         // camelback truss, owner photo Sep 2026): side posts + top chords + overhead cross-beams +
         // alternating diagonals you drive through, in weathered steel white.
@@ -3191,7 +3217,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             ballast.push({x:px,y:y+0.12,z:pz,w:3.6,h:0.5,l:pll,ang,pitch});   // top at +0.37: reads as a crossing pad where it meets the +0.22 road plane, no z-fight
           }
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
-    for(const [list,color] of [[deck,0x828b8c],[rails,0xb5bab4],[piers,0x91958b],[truss,0xdcded9],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+    for(const [list,color] of [[deck,0x828b8c],[rails,0xd0cdc4],[piers,0x91958b],[truss,0xdcded9],[para,0xbdbab1],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
       list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
   }
   if(NAVGEO.active){
