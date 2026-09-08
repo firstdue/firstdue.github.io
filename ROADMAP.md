@@ -43,7 +43,7 @@ Explore clearer road/lane geometry, recognizable building forms, richer trees an
 better lighting/depth, and readable navigation labels. Preserve manual driving, advisory guidance,
 real geography, and mobile performance. Start with a representative street scene for visual review
 before extending the treatment citywide. This is a visual direction, not a request to integrate
-Gemini or replace the existing map provider. Existing Tilt/Map camera constraints remain in effect
+Gemini or replace the existing map provider. Existing Tilt camera constraints remain in effect
 unless the owner explicitly changes them.
 
 - [x] v17j local Engine 35 sample: facades, street alignment, flat roofs, palette and road contrast.
@@ -56,7 +56,7 @@ New Local Knowledge work (including D4–D7) waits until after this graphics pha
 ## Completed foundation
 
 - [x] GitHub Pages hosting and installable Local PWA.
-- [x] Citywide company selection, real streets and first-due zones, manual navigation, AI responders, Tilt/Map views.
+- [x] Citywide company selection, real streets and first-due zones, manual navigation, AI responders, Tilt view.
 - [x] Accounts, cloud career sync, leaderboard UI, and hydrant submissions.
 - [x] Career v2 with company/due-position tracks, independent difficulty, and Chief Qualification.
 - [x] D1 Local Knowledge evidence model and D2 Box Recall sessions.
@@ -93,7 +93,7 @@ New Local Knowledge work (including D4–D7) waits until after this graphics pha
 - Preserve a self-contained game with no required build step or external script CDN.
 - Use source-checked Philadelphia geography and facts.
 - Preserve manual turns, advisory guidance, curb placement, arrival handling, return to quarters, and phone controls.
-- Keep Tilt/Map only; do not restore Aerial or the removed ground-level Chase view.
+- Keep Tilt only; do not restore Aerial, the removed ground-level Chase view, or the removed 2D Map view / in-game boundary drawing (real PFD first-due polygons cover every land engine).
 - Back up major edits. Pass syntax, relevant graph/runtime checks, and phone verification before calling a game change shipped.
 - Publish tested batches to GitHub Pages; keep unreleased checkpoints distinct. Netlify stays retired.
 

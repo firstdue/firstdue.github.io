@@ -79,7 +79,7 @@ Evidence: tests/streetscape-preview.browser.cjs, tests/streetscape-preview-resul
 streetscape-sample-375.png / streetscape-sample-1280.png in tests/. Backup before edits:
 v17i-pre-immersive-streetscape.html. Current backup: v17j-immersive-streetscape-sample.html.
 Next: review this first visual sample, then refine landscaping, lighting/depth and scene variety
-before extending citywide. Existing navigation labels and Tilt/Map cameras remain as before.
+before extending citywide. Existing navigation labels and the Tilt camera remain as before.
 
 
 A phone-friendly Philadelphia fire-engine navigation game. Choose a real company, learn its streets and first-due area, and race AI responders to the box.
@@ -100,7 +100,7 @@ Project handoff snapshot, September 7, 2026:
 
 - Citywide map and battalion picker with 60 engine companies.
 - Real Philadelphia streets, first-due zones, manual turns, and advisory route guidance.
-- Tilt and Map views, AI responders, arrival handling, and return to quarters.
+- Tilt view, AI responders, arrival handling, and return to quarters.
 - Per-company/per-due careers, independent difficulty, Chief Qualification, coaching, and badges.
 - Intersection Recall with location hints, optional practice pin, separate saved evidence, and two cold recalls for mastery.
 - Local saves and player hydrants; online magic-link accounts, career sync, and leaderboards.
