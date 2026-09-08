@@ -138,9 +138,14 @@ The repository smoke suite catches packaging and syntax failures. It does not ce
 - [ ] `MAP.free` and `MAP.userRot` are now permanently false/zero but still assigned in three live
       places each (`recenterCamera`, the view button, `startShift`). Unpicking them reaches into
       `mapCenter`, `mapRot` and the view crosshair. Low value, wider blast radius than it looks.
-- [ ] The rival HUD only repopulates on a new dispatch: toggling RIVALS on mid-run with no active box
-      leaves `RIVALS.responders` empty until the next box. Owner hit this and thought the panel was
-      broken. Worth making the toggle repopulate directly.
+- [ ] **Rival HUD empty — diagnose before changing anything.** This item previously claimed the
+      RIVALS toggle does not repopulate the panel. That was wrong: the handler already calls
+      `spawnRivals()` when a run and a target exist, and `newDispatch` calls it for every new box.
+      The only path that leaves `RIVALS.responders` empty is toggling on with no active target,
+      which is arguably correct — no box, no race. The owner's reported empty panel resolved after
+      reloading onto v18m, so the likeliest cause was a stale cached build, not this code.
+      Reproduce it against a known-current build before touching the toggle; adding a second
+      `spawnRivals()` call would be redundant.
 
 ## Geography work — active
 
