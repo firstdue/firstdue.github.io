@@ -3,8 +3,8 @@
 **Current: PUBLIC = LOCAL = v18m (September 8, 2026).** Repository and view cleanup. The baked data
 and three.js moved out of `index.html` into `data/` and `vendor/` so the file can be opened, diffed and
 edited on a phone (10.1MB → ~670KB); TILT is now the only camera; the 2D Map view, in-game boundary
-drawing and the retired `MAP.bounds` trainer are gone; rival engines are drawn in the world again as
-numbered markers. See "Repository layout" and `CLAUDE.md` before editing.
+drawing and the retired `MAP.bounds` trainer are gone; rival engines are drawn in the world as pooled
+simple trucks with readable number plaques. See "Repository layout" and `CLAUDE.md` before editing.
 
 ## Release history
 
@@ -175,11 +175,11 @@ These are repository checks, not gameplay tests. Game releases still need releva
 ## Maintenance and publishing
 
 > **⚠️ v18m was authored in the PUBLIC repository, not the authoring folder.**
-> Everything from `index.html` splitting through the rival markers landed directly on
+> Everything from `index.html` splitting through the rival world visuals landed directly on
 > `firstdue/firstdue.github.io`. If the authoring folder still holds the pre-v18m monolithic
 > `index.html`, the usual publish step — copying that file into `gh-pages-deploy/` — would
 > **overwrite the entire v18m release**: the `data/`/`vendor/` split, TILT-only views, the tile
-> and camera fixes, and the rival markers.
+> and camera fixes, and the rival truck meshes.
 >
 > Before any `ship.js` run or manual publish, bring the authoring folder up to date **from this
 > repository**, not the other way round. What changed here: `index.html`, the new `data/` and

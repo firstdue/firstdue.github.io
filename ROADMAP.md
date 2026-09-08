@@ -125,16 +125,17 @@ The repository smoke suite catches packaging and syntax failures. It does not ce
 - [x] TILT is the only view: camera toggle, 2D Map view, both 2D raster tile layers, the base-map
       style button and in-game boundary drawing all removed.
 - [x] Rival engines drawn in the world again as numbered markers (`RVM`), after the 2D map removal
-      took away the only place they had ever been drawn.
+      took away the only place they had ever been drawn; then upgraded to pooled simple truck meshes
+      with high-contrast engine-number plaques.
 
 ### Next up
 
-- [ ] **Owner: eyeball the rival markers in ordinary play.** Their size and draw distance were not
-      verifiable here — rivals start kilometres away and every close-range test needed positions
-      forced. `RVM.H` (6.2 world units) and `RVM.R` (520m) are the knobs.
-- [ ] **Rival trucks instead of markers** — the owner chose markers "for now". The placement, heading
-      and culling work is done and reusable; this is a mesh swap. Rival state already carries `x`,
-      `z`, the current path segment (heading), engine number and arrival.
+- [x] **Rival trucks instead of markers.** The existing six-object pool, 520m culling, path position,
+      `navRoadY` height, path-segment heading and arrival state are preserved. The simple orange/navy
+      trucks stay distinct from the detailed red-and-white player truck; a billboard plaque keeps the
+      engine number readable. Browser-verified at 390 × 844 and 375 × 812 with local tile fulfilment:
+      running and arrived materials, heading, road height, culling and pool reuse; no page errors and
+      `window.__mapErr` remained null.
 - [x] ~~`MAP.free` / `MAP.userRot` cleanup~~ — already done. Both, along with `mapCenter`, `mapRot`
       and the view crosshair, went with the 2D map view in the same commit that claimed to leave
       them alone. Zero references remain; the surviving `MAP` fields are `guide`, `dueLevel`,
