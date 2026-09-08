@@ -94,6 +94,9 @@ New Local Knowledge work (including D4–D7) waits until after this graphics pha
 - Use source-checked Philadelphia geography and facts.
 - Preserve manual turns, advisory guidance, curb placement, arrival handling, return to quarters, and phone controls.
 - Keep Tilt only; do not restore Aerial, the removed ground-level Chase view, or the removed 2D Map view / in-game boundary drawing (real PFD first-due polygons cover every land engine).
+- Keep the baked data in `data/` and three.js in `vendor/`. Re-inlining them into `index.html` would
+  restore the multi-megabyte diffs that made the repo unworkable from a phone; the smoke test fails
+  if `index.html` exceeds 1.5MB or gains a line over 8,000 characters.
 - Back up major edits. Pass syntax, relevant graph/runtime checks, and phone verification before calling a game change shipped.
 - Publish tested batches to GitHub Pages; keep unreleased checkpoints distinct. Netlify stays retired.
 
@@ -102,6 +105,40 @@ The repository smoke suite catches packaging and syntax failures. It does not ce
 - [x] v17k: red WRONG WAY street hints in Tilt, including selected turns; phone verified.
 
 - [x] v17l: company-selection scenery refresh fix, fuller trees, planting beds and roof detail.
+
+## Repository and views — v18m (September 8, 2026)
+
+- [x] Extract the six baked datasets and three.js out of `index.html` into `data/` and `vendor/`
+      (10,133,695 → ~670,000 bytes; longest line 3,311,667 → 6,341 chars). Data is byte-identical;
+      only newlines at commas outside strings were inserted. Typical code diff: 7.5MB → under 1KB.
+- [x] `.nojekyll` so Pages publishes `data/` and `vendor/` verbatim.
+- [x] Tile-cache work: 2D image caches 700 → `max(350, CAP)` per layer, LRU eviction on both caches,
+      and never dispose a GPU texture a visible mesh is still sampling (that was measurable —
+      `renderer.info.memory.textures` collapsed 17 → 7 at the cap). Measured plateau 1651 → 1514MB.
+- [x] Pause the 3D sim on WebGL context loss (three.js recovers the renderer itself; it cannot tell
+      the game, which otherwise simulates behind a frozen canvas).
+- [x] Fix the pinch-then-lift camera snap (`lastX/lastY` were frozen during a two-finger gesture, so
+      lifting one finger applied the whole pinch distance as one yaw step — 43.8° measured, now 2.6°).
+- [x] Remove the retired `MAP.bounds` boundary trainer (declared false, never assigned, 25 dead reads).
+- [x] TILT is the only view: camera toggle, 2D Map view, both 2D raster tile layers, the base-map
+      style button and in-game boundary drawing all removed.
+- [x] Rival engines drawn in the world again as numbered markers (`RVM`), after the 2D map removal
+      took away the only place they had ever been drawn.
+
+### Next up
+
+- [ ] **Owner: eyeball the rival markers in ordinary play.** Their size and draw distance were not
+      verifiable here — rivals start kilometres away and every close-range test needed positions
+      forced. `RVM.H` (6.2 world units) and `RVM.R` (520m) are the knobs.
+- [ ] **Rival trucks instead of markers** — the owner chose markers "for now". The placement, heading
+      and culling work is done and reusable; this is a mesh swap. Rival state already carries `x`,
+      `z`, the current path segment (heading), engine number and arrival.
+- [ ] `MAP.free` and `MAP.userRot` are now permanently false/zero but still assigned in three live
+      places each (`recenterCamera`, the view button, `startShift`). Unpicking them reaches into
+      `mapCenter`, `mapRot` and the view crosshair. Low value, wider blast radius than it looks.
+- [ ] The rival HUD only repopulates on a new dispatch: toggling RIVALS on mid-run with no active box
+      leaves `RIVALS.responders` empty until the next box. Owner hit this and thought the panel was
+      broken. Worth making the toggle repopulate directly.
 
 ## Geography work — active
 
