@@ -608,7 +608,7 @@
     <button id="bdRepClose">BACK TO THE LOCAL</button>
   </div>
 </div>
-<div id="satAttr">Imagery © Esri, Maxar, Earthstar Geographics</div>
+<div id="satAttr">© OpenStreetMap contributors © CARTO</div>
 <div id="settingsShade"></div>
 <div id="settingsPanel" aria-hidden="true">
   <div class="toolTitle"><span>⚙ SETTINGS</span><button class="toolClose" id="btnSettingsClose" aria-label="Close settings">×</button></div>
@@ -806,7 +806,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18m";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
