@@ -5357,7 +5357,7 @@ function computeBox(firstDue,x,z){ const eng=engNum(firstDue.id).padStart(2,'0')
 function assignBox(){ if(!state.target) return; const t=state.target, cx=t.bx!==undefined?t.bx:t.x, cz=t.bz!==undefined?t.bz:t.z;   // classify by the BUILDING point (same point the dispatch filter uses) so you're reliably first-due for your own calls
   const fd=computeResponders(cx,cz)[0]; t.firstDue=fd.id; t.box=computeBox(fd,cx,cz); }
 function clearRivals(){ RIVALS.list=[]; RIVALS.responders=[]; RIVALS.order=[]; RIVALS.playerPlaced=false; RIVALS.playerPlace=0; renderRivalHUD();
-  if(typeof RVM!=='undefined') for(const sp of RVM.pool) sp.visible=false; }   // no rivals => no markers left hanging in the world
+  if(typeof RVM!=='undefined') for(const g of RVM.pool) g.visible=false; }   // no rivals => no trucks left hanging in the world
 function spawnRivals(){ clearRivals();
   if(!RIVALS.on||!state.target) return; const tx=state.target.x, tz=state.target.z;
   RIVALS.fire={x:tx,z:tz}; RIVALS.playerD0=Math.max(1,Math.hypot(truck.x-tx,truck.z-tz));   // your starting distance to the fire (for your live % progress)
@@ -5372,33 +5372,52 @@ function spawnRivals(){ clearRivals();
       total:routeLength(path)||1, traveled:0, speed:DIFF.spd[DIFF.level][0]+Math.random()*DIFF.spd[DIFF.level][1], arrived:false, arriveT:0 }); }   // per-engine variation, scaled by difficulty
   renderRivalHUD();
 }
-// 🚑 Rival markers in the world. The rivals have always been fully simulated — updateRivals walks each
-// one along a real road route every tick — but they were only ever DRAWN on the 2D map, so removing that
-// view left them invisible. These are pooled sprites: a numbered disc on the road surface, orange while
-// running and grey once on scene, depth-tested off so a building never hides the race from you.
-const RVM={ pool:[], cache:{}, cap:6, R:520, H:6.2 };                       // cap 6 = the 4 responders + headroom; R = draw radius around the camera
-function rivalMarkerTex(num, arrived){ const key=num+(arrived?'-a':''); if(RVM.cache[key]) return RVM.cache[key];
-  const S=2, d=54*S, cv=document.createElement('canvas'); cv.width=cv.height=d; const c=cv.getContext('2d');
-  c.translate(d/2,d/2);
-  c.beginPath(); c.arc(0,0,24*S,0,6.2832); c.fillStyle=arrived?'#6b7280':'#f5920b'; c.fill();   // same palette the 2D map used
-  c.lineWidth=4.5*S; c.strokeStyle='#fff'; c.stroke();
-  c.fillStyle='#fff'; c.font='800 '+(26*S)+'px -apple-system,"Helvetica Neue",Arial'; c.textAlign='center'; c.textBaseline='middle';
-  c.fillText(String(num),0,1*S);
+// 🚒 Rival trucks in the world. Simulation, culling and pool size are unchanged from the numbered
+// markers; only the pooled visual changed. Their simple orange/navy silhouette stays distinct from
+// the player's detailed red-and-white pumper, while the small billboard keeps the engine number legible.
+const RVM={ pool:[], cache:{}, cap:6, R:520, labelW:4.8, labelH:2.1 };       // cap 6 = the 4 responders + headroom; R = draw radius around the camera
+const RVMG={
+  chassis:new THREE.BoxGeometry(2.12,0.34,6.1), body:new THREE.BoxGeometry(2.18,1.45,3.65),
+  cab:new THREE.BoxGeometry(2.08,1.48,1.92), roof:new THREE.BoxGeometry(2.16,0.24,2.04),
+  glass:new THREE.BoxGeometry(1.76,0.54,0.10), stripe:new THREE.BoxGeometry(2.24,0.20,3.7),
+  bumper:new THREE.BoxGeometry(2.32,0.25,0.26), lightbar:new THREE.BoxGeometry(1.28,0.18,0.34),
+  wheel:new THREE.CylinderGeometry(0.54,0.54,0.38,10) };
+const RVMM={
+  run:{ chassis:lambert(0x202731), body:lambert(0xe07917), cab:lambert(0xf09a1a), roof:lambert(0x26394d),
+    glass:lambert(0x172534), stripe:lambert(0xffd44f), bumper:lambert(0xbec5ca), wheel:lambert(0x15181d), light:new THREE.MeshBasicMaterial({color:0xff3658}) },
+  arrived:{ chassis:lambert(0x343941), body:lambert(0x707780), cab:lambert(0x7e858d), roof:lambert(0x3f4852),
+    glass:lambert(0x26303a), stripe:lambert(0xa7adb3), bumper:lambert(0x8a9198), wheel:lambert(0x24272c), light:new THREE.MeshBasicMaterial({color:0x6b7280}) } };
+function rivalTruckPart(g,geo,slot,x,y,z,rz=0){ const m=new THREE.Mesh(geo,RVMM.run[slot]); m.position.set(x,y,z); m.rotation.z=rz; m.userData.rvmSlot=slot; g.add(m); g.userData.parts.push(m); return m; }
+function rivalNumberTex(num,arrived){ const key=num+(arrived?'-a':''); if(RVM.cache[key]) return RVM.cache[key];
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=112; const c=cv.getContext('2d');
+  c.fillStyle=arrived?'rgba(55,62,71,.92)':'rgba(20,34,48,.94)'; c.fillRect(5,5,246,102);
+  c.lineWidth=8; c.strokeStyle=arrived?'#c4c8cc':'#f5a623'; c.strokeRect(5,5,246,102);
+  c.textAlign='center'; c.textBaseline='middle'; c.fillStyle='#fff'; c.font='800 23px -apple-system,"Helvetica Neue",Arial'; c.fillText('ENGINE',128,29);
+  c.font='900 65px -apple-system,"Helvetica Neue",Arial'; c.fillText(String(num),128,75);
   const t=new THREE.CanvasTexture(cv); t.anisotropy=4; t.minFilter=THREE.LinearFilter; t.generateMipmaps=false;
   return (RVM.cache[key]=t); }
-(function initRivalMarkers(){ for(let i=0;i<RVM.cap;i++){
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthTest:false,depthWrite:false,opacity:0}));
-  s.center.set(0.5,0); s.renderOrder=21; s.visible=false; scene.add(s); RVM.pool.push(s); } })();
-function updateRivalMarkers(){
+function makeRivalTruck(){ const g=new THREE.Group(); g.userData.parts=[];                    // nose = -Z, matching the player truck
+  rivalTruckPart(g,RVMG.chassis,'chassis',0,0.55,0);
+  rivalTruckPart(g,RVMG.body,'body',0,1.42,1.05); rivalTruckPart(g,RVMG.cab,'cab',0,1.48,-2.0);
+  rivalTruckPart(g,RVMG.roof,'roof',0,2.33,-2.0); rivalTruckPart(g,RVMG.glass,'glass',0,1.78,-2.98);
+  rivalTruckPart(g,RVMG.stripe,'stripe',0,1.55,1.05); rivalTruckPart(g,RVMG.bumper,'bumper',0,0.66,-3.14);
+  rivalTruckPart(g,RVMG.lightbar,'light',0,2.58,-1.98);
+  for(const wx of [-1.08,1.08]) for(const wz of [-2.0,1.72]) rivalTruckPart(g,RVMG.wheel,'wheel',wx,0.58,wz,Math.PI/2);
+  const label=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthTest:false,depthWrite:false}));
+  label.center.set(0.5,0); label.position.set(0,2.75,0); label.scale.set(RVM.labelW,RVM.labelH,1); label.renderOrder=21; g.add(label);
+  g.userData.label=label; g.userData.state=''; g.visible=false; scene.add(g); return g; }
+(function initRivalTrucks(){ for(let i=0;i<RVM.cap;i++) RVM.pool.push(makeRivalTruck()); })();
+function updateRivalTrucks(){
   const show = RIVALS.on && state.running && state.target && state.cam===3;
   let n=0;
   if(show) for(const r of RIVALS.list){ if(n>=RVM.pool.length) break;
     if(Math.hypot(r.x-camera.position.x, r.z-camera.position.z) > RVM.R) continue;      // far side of the city: skip, costs nothing
-    const sp=RVM.pool[n++];
-    sp.material.map=rivalMarkerTex(r.num, r.arrived); sp.material.opacity=r.arrived?0.72:1; sp.material.needsUpdate=true;
-    sp.scale.set(RVM.H,RVM.H,1);
-    sp.position.set(r.x, navRoadY(r.x,r.z)+1.2, r.z);
-    sp.visible=true; }
+    const g=RVM.pool[n++], status=r.arrived?'arrived':'run', key=r.num+'-'+status;
+    if(g.userData.state!==key){ for(const m of g.userData.parts) m.material=RVMM[status][m.userData.rvmSlot];
+      g.userData.label.material.map=rivalNumberTex(r.num,r.arrived); g.userData.label.material.needsUpdate=true; g.userData.state=key; }
+    const si=Math.max(0,Math.min(r.seg,r.path.length-2)), a=r.path[si], b=r.path[si+1], dx=b.x-a.x, dz=b.z-a.z;
+    if(Math.hypot(dx,dz)>0.01) g.rotation.y=Math.atan2(-dx,-dz);                    // path heading; nose points down -Z like truckG
+    g.position.set(r.x,navRoadY(r.x,r.z)+0.08,r.z); g.visible=true; }
   for(let i=n;i<RVM.pool.length;i++) RVM.pool[i].visible=false; }
 function updateRivals(dt){ if(!RIVALS.on||!state.target) return;
   for(const r of RIVALS.list){ if(r.arrived) continue; let move=r.speed*dt;
@@ -6129,7 +6148,7 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
   if(state.running&&!duedPaused()){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
   if(BOXD.pending&&!INTRO.active) newDispatch();
-  if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateRivalMarkers(); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
+  if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateRivalTrucks(); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
   else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
