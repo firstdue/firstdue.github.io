@@ -3079,7 +3079,12 @@ function worldTap3D(clientX,clientY){ if(MAP.on||!state.running) return;
     if(Math.hypot(e.clientX-p.dx,e.clientY-p.dy)>12) moved=true;
     if(moved){ CAMLOOK.yaw -= (e.clientX-lastX)*0.009; CAMLOOK.pitch = Math.max(-0.5,Math.min(0.9, CAMLOOK.pitch - (e.clientY-lastY)*0.005)); }   // drag the WORLD: pull left → view swings left
     lastX=e.clientX; lastY=e.clientY; });
-  const up=e=>{ const solo=ps.size===1, had=ps.has(e.pointerId); ps.delete(e.pointerId); if(ps.size<2) pinchD=0; if(had&&!moved&&solo) worldTap3D(e.clientX,e.clientY); };
+  const up=e=>{ const solo=ps.size===1, had=ps.has(e.pointerId); ps.delete(e.pointerId); if(ps.size<2) pinchD=0;
+    // Pinch → one finger: lastX/lastY were frozen while the two-finger branch ran, so the look-around
+    // below would otherwise apply the whole distance that finger travelled during the pinch as a single
+    // yaw step and snap the camera to the side of the truck. Re-baseline on the finger that stayed down.
+    if(ps.size===1){ const r=ps.values().next().value; lastX=r.cx; lastY=r.cy; }
+    if(had&&!moved&&solo) worldTap3D(e.clientX,e.clientY); };
   el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); el.addEventListener('lostpointercapture',up); addEventListener('blur',()=>ps.clear()); })();
 function mapRot(){ const base = MAP.northUp ? 0 : (-Math.PI/2 - Math.atan2(-Math.cos(truck.theta),-Math.sin(truck.theta))); return base + (MAP.userRot||0); }   // + user twist (training mode)
 // ==== Road-following driving: the truck rides its road; tap it to GO/STOP, tap a street to pick the next turn ====
