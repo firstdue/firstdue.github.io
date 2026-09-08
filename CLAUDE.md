@@ -86,13 +86,14 @@ writing. Two aborts on this repo caught mistakes that would otherwise have shipp
 
 ## Before you publish, check which way the copy goes
 
-v18m was authored **in this public repository**, not in the owner's authoring folder. That
-reverses the project's usual direction, where the authoring folder is the source of truth and
-`gh-pages-deploy/` receives a copy.
+v18m was authored **in this public repository**, not in the owner's authoring folder — the reverse
+of the project's usual direction. That has since been reconciled: the authoring folder was synced
+from this repo on September 8, 2026, both are at v18m, and `ship.js` handles the split layout. The
+normal authoring-folder-is-source-of-truth flow has resumed.
 
-If the authoring folder still has the pre-v18m single-file `index.html`, copying it here would
-destroy the whole v18m release. Sync the authoring folder *from* this repo first. Once they
-match, the normal flow resumes.
+The rule that outlasts the reconciliation: never copy an older monolithic `index.html` over the
+split one. The pre-split build is kept as `v18j-pre-v18m-cloud-sync.html` in the authoring root —
+untracked, and it must never enter `gh-pages-deploy/`, git, or publishing.
 
 ## Current state
 
@@ -112,11 +113,11 @@ match, the normal flow resumes.
 ## If you are working from the owner's authoring folder
 
 `START-HERE.md`, `MEMORY.md`, `SHIPLOG.md`, `ship.js` and the authoring folder's own `CLAUDE.md`
-are **not in this repository** and were not updated by the v18m work. If they still describe a
-single-file `index.html` and an authoring-folder-to-`gh-pages-deploy` publish, they are stale and
-following them will overwrite this release.
+are **not in this repository**. `START-HERE.md` and `ship.js` were brought up to date on
+September 8, 2026; `MEMORY.md` and `SHIPLOG.md` were not checked, so treat any single-file
+`index.html` description in them as stale.
 
-The owner can paste this into their `START-HERE.md` to bring it level:
+The text `START-HERE.md` now carries, kept here so it can be re-applied if that file is ever lost:
 
 > **v18m (September 2026) was authored in the public repo, not here.** `firstdue/firstdue.github.io`
 > is the source of truth until this folder is synced from it. `index.html` is no longer one file:
