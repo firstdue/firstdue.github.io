@@ -1,6 +1,14 @@
 # Philly Fire Dispatch — Local
 
-**Current: PUBLIC = LOCAL = v18l (September 7, 2026).** Owner playtest feedback on the interchange:
+**Current: PUBLIC = LOCAL = v18m (September 8, 2026).** Repository and view cleanup. The baked data
+and three.js moved out of `index.html` into `data/` and `vendor/` so the file can be opened, diffed and
+edited on a phone (10.1MB → ~670KB); TILT is now the only camera; the 2D Map view, in-game boundary
+drawing and the retired `MAP.bounds` trainer are gone; rival engines are drawn in the world again as
+numbered markers. See "Repository layout" and `CLAUDE.md` before editing.
+
+## Release history
+
+**v18l (September 7, 2026).** Owner playtest feedback on the interchange:
 highway rules on ramps — once you're on a ramp, the only card shown is where that ramp leads
 (committed gantry choice, planned route, or the ramp's own continuation); cross streets passing
 under the deck (Kelly Dr) and other ramps' cards (Ridge Ave, Lincoln Dr) no longer appear, and a
@@ -9,8 +17,6 @@ value). Exits reappear on the named road itself. Bends also drive smoothly now: 
 a look-ahead point on its actual path, and the visible truck and chase camera ride a rounded
 midpoint of the driven trail and the path ahead — straights are unchanged, corners arc instead of
 stepping. Route, arrival and turn logic are untouched (same contract as the lane offset).
-
-## Release history
 
 **v18k (September 7, 2026).** The Ridge Avenue connector forms the
 three-level interchange shown in the owner's Street View photos: it rises over Kelly Drive, passes
@@ -90,8 +96,10 @@ A phone-friendly Philadelphia fire-engine navigation game. Choose a real company
 
 Project handoff snapshot, September 7, 2026:
 
-- **Published: v18k**, matching the local build — the three-level Ridge/City interchange plus the
-  Engine 35 terrain, bridge, rail and streetscape work above.
+- **Published: v18m**, matching the local build — the repository split, TILT-only views and rival
+  markers described above, on top of the v18j–v18l Ridge/City interchange work.
+- The build tag in the HUD (top left, next to SAVES) is the fastest way to tell whether a phone has
+  picked up a deploy or is serving a cached page.
 - Intersection Recall is the active TRAIN MY LOCAL drill: a named street intersection with no
   destination pin. Generated-box training and Due Order remain disabled.
 - Public repository: `firstdue/firstdue.github.io`. The author's working folder contains development notes and the checkpoint; its `gh-pages-deploy/` subfolder is the public checkout with the released game.
@@ -105,7 +113,34 @@ Project handoff snapshot, September 7, 2026:
 - Intersection Recall with location hints, optional practice pin, separate saved evidence, and two cold recalls for mastery.
 - Local saves and player hydrants; online magic-link accounts, career sync, and leaderboards.
 
-Core gameplay and JavaScript live in one `index.html`, with no package install or build step. Live imagery and account services need internet access. The vector map supports offline play; the hosted PWA caches the game after an online visit and installs as **Local**.
+Core gameplay lives in `index.html`; the baked datasets and three.js are sibling files under `data/` and `vendor/`, loaded as plain classic `<script src>` tags before the game script. There is still no package install and no build step, but the game must now be served over http(s) — opening `index.html` from `file://` no longer works, because it fetches those siblings. Live imagery and account services need internet access. The vector map supports offline play; the hosted PWA caches the game after an online visit and installs as **Local**.
+
+## Repository layout
+
+```
+index.html              game code (~670KB) — HTML, CSS, and the game script
+data/rb.js              baked road geometry + names          (RB)
+data/ab.js              address/street lookup tables         (AB)
+data/addr.js            OPA address points                   (ADDR)
+data/landcover.js       10,678 park/landuse polygons         (LANDCOVER)
+data/navgeo.js          terrain, rail, bridges, water        (NAVGEO)
+data/lmks.js            2,621 named landmarks                (LMKS)
+vendor/three.147.min.js three.js r147
+sw.js  manifest.json  .nojekyll  icons
+```
+
+Each `data/*.js` file is a single `const NAME = {...};` declaration loaded by a plain
+`<script src>` **before** the game script, so its top-level binding is in scope for the game
+exactly as when it was inline. Order matters and is asserted by the smoke test.
+
+These files were moved out of `index.html` because a 10.1MB file with multi-megabyte lines
+produced diffs large enough to crash mobile clients — a data re-bake used to yield a 7.5MB diff
+on one unbreakable line. `.gitattributes` marks `data/` and `vendor/` as `-diff` so a re-bake now
+shows as `Bin … → …` instead. Drop the flag on a file if you genuinely need to review one line by
+line.
+
+`.nojekyll` is load-bearing: GitHub Pages runs Jekyll, which filters some paths, and the game now
+depends on `data/` and `vendor/` being served verbatim.
 
 ## Run locally
 
@@ -115,7 +150,7 @@ From the folder containing `index.html`:
 python -m http.server 8099
 ```
 
-Open `http://127.0.0.1:8099/index.html`. In the authoring folder, PWA assets live in `gh-pages-deploy/`, so a missing root `sw.js` request is expected. Serve that checkout itself to test the complete PWA shell.
+Open `http://127.0.0.1:8099/index.html`. A server is now required rather than optional, since the page fetches `data/` and `vendor/`. In the authoring folder, PWA assets live in `gh-pages-deploy/`, so a missing root `sw.js` request is expected. Serve that checkout itself to test the complete PWA shell.
 
 ## Checks
 
@@ -133,7 +168,7 @@ Windows fallback if Node is missing from the terminal PATH:
 & 'C:\Program Files\nodejs\node.exe' --test repository-smoke.test.mjs
 ```
 
-The dependency-free suite checks document structure, every inline script's syntax, embedded script dependencies, and the PWA manifest, service worker syntax, and icon dimensions. It works in the public checkout and full authoring folder. `.github/workflows/repository-smoke.yml` runs it on pushes, pull requests, and manual runs, using the official [checkout](https://github.com/actions/checkout) and [setup-node](https://github.com/actions/setup-node) actions.
+The dependency-free suite checks document structure; every script's syntax, inline and external; that external scripts are local files carrying no `defer`/`async` and loaded before the game script; that each extracted global lives in its own `data/` file and nowhere in `index.html`; that `index.html` stays under 1.5MB with no line over 8,000 characters; that `.nojekyll` exists; and the PWA manifest, service worker syntax, and icon dimensions. It works in the public checkout and full authoring folder. `.github/workflows/repository-smoke.yml` runs it on pushes, pull requests, and manual runs, using the official [checkout](https://github.com/actions/checkout) and [setup-node](https://github.com/actions/setup-node) actions.
 
 These are repository checks, not gameplay tests. Game releases still need relevant graph/runtime checks and touch/layout verification at **375 × 812**. The handoff's historical 358-test result is not reproduced by this suite; those test files are absent from the current working folder.
 
@@ -141,7 +176,7 @@ These are repository checks, not gameplay tests. Game releases still need releva
 
 In the full authoring folder, read `START-HERE.md`, `MEMORY.md`, `CLAUDE.md`, `notes/firetruck-game.md`, then `SHIPLOG.md`. These notes and `ship.js` are not included in the public checkout.
 
-Run `node ship.js --check` before edits and back up `index.html` before substantial changes. Preserve real sourced geography, manual turns, advisory-only guidance, the self-contained game, and the Tilt/Map camera cycle.
+Run `node ship.js --check` before edits and back up `index.html` before substantial changes. Preserve real sourced geography, manual turns, advisory-only guidance, and the TILT camera as the only view. The game is no longer a single file: keep the baked data in `data/` (see `CLAUDE.md`), which is what keeps diffs small enough to review on a phone.
 
 For a tested game release, `node ship.js --name short-slug --note "what changed"` packages the build and updates local history. Publishing is separate: copy the approved `index.html` into `gh-pages-deploy/`, commit intended files, and push `origin main` there. Batch releases. **GitHub Pages is the only active host; Netlify is retired.** Documentation/test maintenance does not require a game version bump or copying the unreleased checkpoint.
 

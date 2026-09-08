@@ -5355,7 +5355,8 @@ function computeBox(firstDue,x,z){ const eng=engNum(firstDue.id).padStart(2,'0')
   return eng+String(sub).padStart(2,'0'); }
 function assignBox(){ if(!state.target) return; const t=state.target, cx=t.bx!==undefined?t.bx:t.x, cz=t.bz!==undefined?t.bz:t.z;   // classify by the BUILDING point (same point the dispatch filter uses) so you're reliably first-due for your own calls
   const fd=computeResponders(cx,cz)[0]; t.firstDue=fd.id; t.box=computeBox(fd,cx,cz); }
-function clearRivals(){ RIVALS.list=[]; RIVALS.responders=[]; RIVALS.order=[]; RIVALS.playerPlaced=false; RIVALS.playerPlace=0; renderRivalHUD(); }
+function clearRivals(){ RIVALS.list=[]; RIVALS.responders=[]; RIVALS.order=[]; RIVALS.playerPlaced=false; RIVALS.playerPlace=0; renderRivalHUD();
+  if(typeof RVM!=='undefined') for(const sp of RVM.pool) sp.visible=false; }   // no rivals => no markers left hanging in the world
 function spawnRivals(){ clearRivals();
   if(!RIVALS.on||!state.target) return; const tx=state.target.x, tz=state.target.z;
   RIVALS.fire={x:tx,z:tz}; RIVALS.playerD0=Math.max(1,Math.hypot(truck.x-tx,truck.z-tz));   // your starting distance to the fire (for your live % progress)
@@ -5370,6 +5371,34 @@ function spawnRivals(){ clearRivals();
       total:routeLength(path)||1, traveled:0, speed:DIFF.spd[DIFF.level][0]+Math.random()*DIFF.spd[DIFF.level][1], arrived:false, arriveT:0 }); }   // per-engine variation, scaled by difficulty
   renderRivalHUD();
 }
+// 🚑 Rival markers in the world. The rivals have always been fully simulated — updateRivals walks each
+// one along a real road route every tick — but they were only ever DRAWN on the 2D map, so removing that
+// view left them invisible. These are pooled sprites: a numbered disc on the road surface, orange while
+// running and grey once on scene, depth-tested off so a building never hides the race from you.
+const RVM={ pool:[], cache:{}, cap:6, R:520, H:6.2 };                       // cap 6 = the 4 responders + headroom; R = draw radius around the camera
+function rivalMarkerTex(num, arrived){ const key=num+(arrived?'-a':''); if(RVM.cache[key]) return RVM.cache[key];
+  const S=2, d=54*S, cv=document.createElement('canvas'); cv.width=cv.height=d; const c=cv.getContext('2d');
+  c.translate(d/2,d/2);
+  c.beginPath(); c.arc(0,0,24*S,0,6.2832); c.fillStyle=arrived?'#6b7280':'#f5920b'; c.fill();   // same palette the 2D map used
+  c.lineWidth=4.5*S; c.strokeStyle='#fff'; c.stroke();
+  c.fillStyle='#fff'; c.font='800 '+(26*S)+'px -apple-system,"Helvetica Neue",Arial'; c.textAlign='center'; c.textBaseline='middle';
+  c.fillText(String(num),0,1*S);
+  const t=new THREE.CanvasTexture(cv); t.anisotropy=4; t.minFilter=THREE.LinearFilter; t.generateMipmaps=false;
+  return (RVM.cache[key]=t); }
+(function initRivalMarkers(){ for(let i=0;i<RVM.cap;i++){
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthTest:false,depthWrite:false,opacity:0}));
+  s.center.set(0.5,0); s.renderOrder=21; s.visible=false; scene.add(s); RVM.pool.push(s); } })();
+function updateRivalMarkers(){
+  const show = RIVALS.on && state.running && state.target && state.cam===3;
+  let n=0;
+  if(show) for(const r of RIVALS.list){ if(n>=RVM.pool.length) break;
+    if(Math.hypot(r.x-camera.position.x, r.z-camera.position.z) > RVM.R) continue;      // far side of the city: skip, costs nothing
+    const sp=RVM.pool[n++];
+    sp.material.map=rivalMarkerTex(r.num, r.arrived); sp.material.opacity=r.arrived?0.72:1; sp.material.needsUpdate=true;
+    sp.scale.set(RVM.H,RVM.H,1);
+    sp.position.set(r.x, navRoadY(r.x,r.z)+1.2, r.z);
+    sp.visible=true; }
+  for(let i=n;i<RVM.pool.length;i++) RVM.pool[i].visible=false; }
 function updateRivals(dt){ if(!RIVALS.on||!state.target) return;
   for(const r of RIVALS.list){ if(r.arrived) continue; let move=r.speed*dt;
     while(move>0 && r.seg<r.path.length-1){ const a=r.path[r.seg],b=r.path[r.seg+1],L=Math.hypot(b.x-a.x,b.z-a.z)||1e-4,rem=L*(1-r.t);
@@ -6099,7 +6128,7 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
   if(state.running&&!duedPaused()){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
   if(BOXD.pending&&!INTRO.active) newDispatch();
-  if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
+  if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateRivalMarkers(); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
   else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
