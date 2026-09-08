@@ -103,8 +103,9 @@ match, the normal flow resumes.
   (Engines 15 and 32 are fireboats). `RUN_BOUNDARIES` holds 81 hand-traced records that still feed
   `dueAdjacency` for 2nd/3rd-due expansion and the Run Map overview screen. Both are live; neither
   is dead weight.
-- **Rivals** are fully simulated by `updateRivals` and drawn as pooled numbered markers (`RVM`).
-  The owner chose markers over trucks "for now" — see ROADMAP "Next up".
+- **Rivals** are fully simulated by `updateRivals` and drawn as pooled simple truck groups (`RVM`).
+  They use the existing path segment for heading, `navRoadY` for road height, the existing 520m
+  draw radius, and billboard number plaques for distance readability. See ROADMAP "Next up".
 - `sw.js` serves the document network-first and `data/`/`vendor/` stale-while-revalidate, so a
   re-bake is picked up on the following launch.
 
@@ -122,7 +123,7 @@ The owner can paste this into their `START-HERE.md` to bring it level:
 > game code (~670KB) plus `data/*.js` (RB, AB, ADDR, LANDCOVER, NAVGEO, LMKS) and
 > `vendor/three.147.min.js`, loaded as classic `<script src>` before the game script. Do **not**
 > copy an older monolithic `index.html` into `gh-pages-deploy/` — it silently destroys the split,
-> the TILT-only views and the rival markers. Sync this folder from the public repo first:
+> the TILT-only views and the rival truck meshes. Sync this folder from the public repo first:
 > `index.html`, `data/`, `vendor/`, `.gitattributes`, `.nojekyll`, `sw.js`,
 > `repository-smoke.test.mjs`, `README.md`, `ROADMAP.md`, `CLAUDE.md`. The game must be served
 > over http(s); `file://` no longer works. Read the repo's `CLAUDE.md` before editing.
