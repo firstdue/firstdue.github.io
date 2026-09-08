@@ -657,7 +657,6 @@
   <div class="toolTitle"><span>⚙ SETTINGS</span><button class="toolClose" id="btnSettingsClose" aria-label="Close settings">×</button></div>
   <div class="settingsGrid">
   <button class="abtn" id="btnBoundaryMap">🗺️ RUN MAP</button>
-  <button class="abtn" id="btnCam">🎥 CAMERA</button>
   <button class="abtn" id="btnNight">🌙 NIGHT</button>
   <button class="abtn on" id="btnRoute">🧭 ROUTE</button>
   <button class="abtn" id="btnSiren">🚨 SIREN</button>
@@ -2474,7 +2473,7 @@ let best={saves:0,cash:0}; try{ const s=localStorage.getItem('pfd_ef_best'); if(
 /* ============================ 9. INPUT ============================ */
 const keys=Object.create(null);
 addEventListener('keydown',e=>{ if(duedPaused()) return; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault(); keys[e.code]=true;
-  if(e.code==='KeyF') toggleSiren(); if(e.code==='KeyC') toggleCam(); if(e.code==='KeyN') toggleNight(); if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyE') doJump(); });
+  if(e.code==='KeyF') toggleSiren(); if(e.code==='KeyN') toggleNight(); if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyE') doJump(); });
 addEventListener('keyup',e=>{ keys[e.code]=false; });
 const TCH={ steer:0, gas:false, brake:false, drift:false };
 const AUTO={ active:false, route:null, i:0, dest:null, spd:0 };   // tap-to-drive autopilot (Map Mode); kinematic rail-follower
@@ -2489,18 +2488,20 @@ bindBtn('bGas',()=>TCH.gas=true,()=>TCH.gas=false); bindBtn('bBrake',()=>TCH.bra
   el.addEventListener('pointerdown',e=>{ e.preventDefault(); pid=e.pointerId; setFromX(e.clientX); try{ el.setPointerCapture(pid); }catch(_){}} ,{passive:false});
   el.addEventListener('pointermove',e=>{ if(e.pointerId===pid) setFromX(e.clientX); });
   const end=e=>{ if(e.pointerId===pid){ pid=null; TCH.steer=0; knob.style.left='50%'; } }; el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end); })();
-document.getElementById('btnSiren').addEventListener('click',toggleSiren); document.getElementById('btnCam').addEventListener('click',toggleCam);
+document.getElementById('btnSiren').addEventListener('click',toggleSiren);
 document.getElementById('btnRoute').addEventListener('click',toggleRoute);
 document.getElementById('btnNight').addEventListener('click',toggleNight);
 document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx.muted; document.getElementById('btnMute').textContent=sfx.muted?'🔇 MUTED':'🔊 SOUND'; if(AC){ if(sfx.muted){ sfx.eg.gain.value=0; sfx.sg.gain.value=0; } if(sfx.mg) sfx.mg.gain.value=sfx.muted?0:sfx.musicVol; } });
 function toggleSiren(){ state.siren=!state.siren; document.getElementById('btnSiren').classList.toggle('on',state.siren); }
-function toggleCam(){ state.cam = state.cam===3 ? 2 : 3; const b=document.getElementById('btnCam');   // cycle: TILT <-> MAP (ground-level 3D chase view removed — East-Falls-only + too heavy citywide)
+// TILT is the only view you ride out in (the ground-level 3D chase view went earlier — East-Falls-only
+// and too heavy citywide; the 2D MAP is no longer on the camera button, owner drives in TILT only).
+// MAP survives because DRAW renders its trace into drawMapView, so enterDraw/exitDraw swap the view.
+function setCam(n){ state.cam = n;
   LIVE3D.group.visible = state.cam===3;
   if(state.cam===3 && !FLATCITY.built){ popup('Building map…'); buildFlatCity(); }
   MAP.on = state.cam===2; document.body.classList.toggle('mapmode',MAP.on);
   if(!MAP.on){ AUTO.active=false; }
-  routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1;
-  b.textContent = state.cam===3?'\uD83E\uDDED TILT' : '\uD83D\uDDFA\uFE0F MAP'; }
+  routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1; }
 const TILTCAM={back:18,h:26,ahead:27};                                     // GPS-nav camera rig — ~30°: tilted enough to see well down the street (user asked; 43° was too top-down, 23° was all horizon)
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
   if(FLATCITY.built){ FLATCITY.tick();                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
@@ -2625,7 +2626,7 @@ function updateTraffic(dt){ if(!state.running) return;
       const vn=truck.vx*nnx+truck.vz*nnz; if(vn<0){ truck.vx-=nnx*vn*1.5; truck.vz-=nnz*vn*1.5; } truck.vx*=0.75; truck.vz*=0.75; shake=Math.min(1.2,shake+0.45); comboBreak(); sfx.crash(); burstSparks(x,1.2,z,8); }
   }
 }
-function updateDispatchZone(dt){ if(MAP.bounds||DRAW.on||!state.running||!state.target||state.target.drill) return;   // training/boundary mode pauses the game
+function updateDispatchZone(dt){ if(DRAW.on||!state.running||!state.target||state.target.drill) return;   // training/boundary mode pauses the game
   const dTgt=Math.hypot(state.target.x-truck.x,state.target.z-truck.z), dArr=Math.hypot(state.arriveX-truck.x,state.arriveZ-truck.z), d=FLAGS.roadLock?Math.min(dTgt,dArr):dTgt;
   if(d>=CONFIG.arriveR) state.onScene=false;
   /* ⚠️ Arrival used to require DRIVE.going, so a truck that was STOPPED inside the radius never registered —
@@ -2757,7 +2758,7 @@ document.getElementById('btnSat').addEventListener('click',e=>{ e.preventDefault
   e.currentTarget.classList.toggle('on', MAP.live||MAP.sat); });
 /* BOUNDARIES retired (v16d) — real PFD first-due zones cover the whole city; the hand-tracing trainer is gone. */
 document.getElementById('btnRivals').addEventListener('click',e=>{ e.preventDefault(); RIVALS.on=!RIVALS.on; e.currentTarget.classList.toggle('on',RIVALS.on);   // 🚑 rival engines on/off
-  if(RIVALS.on){ if(state.target&&state.running&&!MAP.bounds&&!DRAW.on) spawnRivals(); popup('🚑 RIVAL ENGINES ON'); } else { clearRivals(); popup('RIVAL ENGINES OFF'); } });
+  if(RIVALS.on){ if(state.target&&state.running&&!DRAW.on) spawnRivals(); popup('🚑 RIVAL ENGINES ON'); } else { clearRivals(); popup('RIVAL ENGINES OFF'); } });
 const DUE_LABELS=['🚒 DUE: ALL','🚒 DUE: 1ST','🚒 DUE: 2ND','🚒 DUE: 3RD','🚒 DUE: 4TH'];
 /* 🚒 THE single due setter — the Settings button and Career's NEXT TRAINING both go through here, so
    PROFILE.settings.due stays the one source of truth (MAP.dueLevel is just its runtime mirror). */
@@ -2772,7 +2773,7 @@ function setDueLevel(n,quiet){ n=((n|0)%5+5)%5;
     else { const nm=['','1st','2nd','3rd','4th'][n];
       popup(DUE_LABELS[n].replace('🚒 ','')+' ONLY','green');
       radio('📻 Only taking calls that put you '+nm+' due.'); } }
-  if(state.running&&!MAP.bounds&&!DRAW.on&&!QUAL.active){ state.target=null; state.onScene=false; newDispatch(); }   // re-pick a call that fits (never while the exam owns the dispatch)
+  if(state.running&&!DRAW.on&&!QUAL.active){ state.target=null; state.onScene=false; newDispatch(); }   // re-pick a call that fits (never while the exam owns the dispatch)
   return n; }
 document.getElementById('btnDue').addEventListener('click',e=>{ e.preventDefault(); setDueLevel(MAP.dueLevel+1); });
 document.getElementById('btnRestart').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); state.running=false; DRIVE.going=false; DRIVE.parked=false; goHome(); });
@@ -2804,10 +2805,10 @@ function updateHUD(dt){
   const rp=(MAP.on&&MAP.free)?mapCenter():[truck.x,truck.z];   // when the camera is panned in training mode, read the street/block at the VIEW CENTRE (crosshair), not the truck
   const curStreet=streetName(rp[0],rp[1]),curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
   elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+(FPSM.avg?' · '+(FPSM.avg|0)+' FPS · dip '+((FPSM.shownMin===999?FPSM.avg:FPSM.shownMin)|0):'')+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
-  { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = (MAP.bounds||DRAW.on) ? '🎓 TRAINING » ' : '📻 DISPATCH » '; }   // boundary/training mode is not a live call
+  { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = DRAW.on ? '🎓 TRAINING » ' : '📻 DISPATCH » '; }   // boundary/training mode is not a live call
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
-  { const training=(MAP.bounds||DRAW.on)&&state.running; const tc=document.getElementById('trainChip'); if(tc) tc.classList.toggle('show',training);   // small TRAINING chip top-left; hide the big dispatch banner while training
+  { const training=DRAW.on&&state.running; const tc=document.getElementById('trainChip'); if(tc) tc.classList.toggle('show',training);   // small TRAINING chip top-left; hide the big dispatch banner while training
     const rd=document.getElementById('radio'); if(rd) rd.style.display=training?'none':'';
     if(training){ const u=document.getElementById('btnUndo'); if(u) u.disabled=(DRAW.undo.length===0); }
     const sa=document.getElementById('satAttr'); if(sa){ const liveAttr=MAP.live&&!LIVE.st.blocked&&LIVE.st.ok, show=state.running&&(liveAttr||MAP.sat);   // credit whichever real basemap is actually drawing
@@ -2818,15 +2819,15 @@ function updateHUD(dt){
     elTurn.querySelector('.st').textContent=DRIVE.pending.label||streetName((jn.x+nx.x)/2,(jn.z+nx.z)/2); }   // a gantry card names its destination; an unnamed ramp otherwise borrows the band name (read 'Ridge Ave' — owner)
   else if(DRIVE.atChoice){ elTurn.style.display='flex'; elTurn.querySelector('.dir').textContent='↕'; elTurn.querySelector('.st').textContent='TAP TRUCK = STRAIGHT · ←/→ TO TURN'; }
   else elTurn.style.display='none';
-  { const ww=DRIVE.wrongWay && DRIVE.going && state.running && !MAP.bounds; const el=document.getElementById('wrongWay');   // one-way wrong-way warning
+  { const ww=DRIVE.wrongWay && DRIVE.going && state.running; const el=document.getElementById('wrongWay');   // one-way wrong-way warning
     el.style.display=ww?'block':'none'; if(ww){ elTurn.style.display='none'; } if(ww && !DRIVE._wwLatch){ popup('⚠️ WRONG WAY!','red'); try{ sfx&&sfx.ding&&sfx.ding(); }catch(e){} } DRIVE._wwLatch=ww; }
   elTruck.classList.toggle('go', DRIVE.going);
   if(window.__mapFocus){ elTruck.style.left=window.__mapFocus[0]+'px'; elTruck.style.top=window.__mapFocus[1]+'px'; }   // pin to the canvas's own focus point — immune to CSS % vs innerWidth drift
   document.getElementById('pullOut').style.display = (state.running&&(DRIVE.parked||DRIVE.atChoice)&&!INTRO.active)?'flex':'none';   // also becomes manual junction controls when a street ends
   document.getElementById('zoomBtns').style.display = state.running?'flex':'none';
-  { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!MAP.bounds&&!DRAW.on&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving                //
+  { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!DRAW.on&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving                //
   document.getElementById('btnRecenter').style.display = state.running&&(!MAP.on||MAP.free)?'block':'none';   // 3D camera control; in map mode, appears once you pan (snaps back to the truck)
-  document.getElementById('drawBtns').style.display = (state.running&&!INTRO.active&&(DRAW.on||(MAP.on&&MAP.bounds)))?'flex':'none';   // boundary DRAW controls: shown when boundaries are visible
+  document.getElementById('drawBtns').style.display = (state.running&&!INTRO.active&&DRAW.on)?'flex':'none';   // boundary DRAW controls: shown when boundaries are visible
   // ＋/－ speed buttons — show in every camera mode, not just the map
   elTruck.querySelector('.golabel').textContent = DRIVE.parked ? '🚒 Which way?' : (DRIVE.atChoice ? '🚒 PICK A TURN' : '👆 TAP TO GO');
   if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; } }
@@ -2942,7 +2943,7 @@ function updatePeds(dt){ if(!FLAGS.pedestrians) return; const C=CONFIG.ped;
     _pm.position.set(pd.x,groundHeight(pd.x,pd.z)+0.95,pd.z); _pm.rotation.set(0,-pd.hd,0); _pm.updateMatrix(); pedMesh.setMatrixAt(i,_pm.matrix); }
   pedMesh.instanceMatrix.needsUpdate=true; }
 /* ============================ 2D MAP MODE (offline, drawn from the real OSM data) ============================ */
-const MAP={ on:false, cv:document.getElementById('mapView'), ctx:null, dpr:1, ppm:3.1, bbox:null, grid:null, cell:640, guide:true, northUp:false, bounds:false, sat:false, live:true, free:false, viewX:0, viewZ:0, userRot:0, dueLevel:1, w:0, h:0, turnChoices:[], turnHits:[] };   // dueLevel 0=all calls, 1..4 = first..fourth-due area only (default 1 = your own first-due, so you run out of quarters first-due every time); live = CARTO live street basemap (hosted only; artifact CSP blocks it → auto vector fallback)
+const MAP={ on:false, cv:document.getElementById('mapView'), ctx:null, dpr:1, ppm:3.1, bbox:null, grid:null, cell:640, guide:true, northUp:false, sat:false, live:true, free:false, viewX:0, viewZ:0, userRot:0, dueLevel:1, w:0, h:0, turnChoices:[], turnHits:[] };   // dueLevel 0=all calls, 1..4 = first..fourth-due area only (default 1 = your own first-due, so you run out of quarters first-due every time); live = CARTO live street basemap (hosted only; artifact CSP blocks it → auto vector fallback)
 function mapCenter(){ return MAP.free ? [MAP.viewX, MAP.viewZ] : [truck.x, truck.z]; }   // the world point the map is centred on (truck, unless panned in training mode)
 (function initMap(){ if(!MAP.cv){ MAP.cv=document.createElement('canvas'); MAP.cv.id='mapView'; document.getElementById('wrap').appendChild(MAP.cv); }
   MAP.ctx=MAP.cv.getContext('2d');
@@ -2963,31 +2964,28 @@ function mapCenter(){ return MAP.free ? [MAP.viewX, MAP.viewZ] : [truck.x, truck
   MAP.resize(); addEventListener('resize',MAP.resize); addEventListener('orientationchange',MAP.resize);
   if(window.visualViewport) visualViewport.addEventListener('resize',MAP.resize);              // mobile chrome collapse/expand
   // Single finger = tap (go/stop, choose a turn). Two fingers = pinch-to-zoom (MAP.ppm).
-  const ptrs=new Map(); let pinchD0=0, pinchP0=0, pinchA0=0, pinchR0=0, pinched=false, panLast=null, panning=false, panDX=0, panDY=0;
+  const ptrs=new Map(); let pinchD0=0, pinchP0=0, pinched=false;
   MAP.cv.addEventListener('pointerdown',e=>{ e.preventDefault(); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.size===2){ const p=[...ptrs.values()]; pinchD0=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1; pinchP0=MAP.ppm; pinchA0=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x); pinchR0=MAP.userRot; pinched=true; DRAW.handStart=null; panning=false; panLast=null; }
+    if(ptrs.size===2){ const p=[...ptrs.values()]; pinchD0=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1; pinchP0=MAP.ppm; pinched=true; DRAW.handStart=null; }
     else if(ptrs.size===1 && DRAW.hand){ const w=mapScreenToWorld(e.clientX,e.clientY); const g=nearestStrokeEnd(w.x,w.z,26/MAP.ppm);   // ✋ LINE tool: grab an endpoint to extend/shorten, else drag a new straight segment
       if(g){ pushUndo(); DRAW.editIdx=g.s; DRAW.editVtx=g.vi; DRAW.handStart=null; } else { DRAW.editIdx=null; DRAW.handStart=[w.x,w.z]; DRAW.handEnd=[w.x,w.z]; } }
     else if(ptrs.size===1 && DRAW.erase){ pushUndo(); const w=mapScreenToWorld(e.clientX,e.clientY); DRAW.eraseR=24/MAP.ppm; DRAW.eraseCur=[w.x,w.z]; drawEraseAt(w.x,w.z,DRAW.eraseR); }   // 🧽 eraser: rub out lines under the finger (snapshot once at gesture start)
-    else if(ptrs.size===1 && MAP.bounds){ panLast={x:e.clientX,y:e.clientY}; panDX=e.clientX; panDY=e.clientY; panning=false; } },{passive:false});   // training mode: one-finger drag pans the camera
+ },{passive:false});
   MAP.cv.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId)) return; e.preventDefault(); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.size>=2){ const p=[...ptrs.values()]; const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1; const minP=MAP.bounds?0.08:0.3; MAP.ppm=Math.max(minP,Math.min(7,pinchP0*d/pinchD0));   // zoom out much further, especially in training/boundaries mode
-      if(MAP.bounds){ const a=Math.atan2(p[1].y-p[0].y,p[1].x-p[0].x); MAP.userRot=pinchR0+(a-pinchA0); } }   // two-finger twist rotates the flat map (training mode) — follows finger direction
+    if(ptrs.size>=2){ const p=[...ptrs.values()]; const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1; const minP=0.3; MAP.ppm=Math.max(minP,Math.min(7,pinchP0*d/pinchD0)); }
     else if(ptrs.size===1 && DRAW.hand){ const w=mapScreenToWorld(e.clientX,e.clientY);
       if(DRAW.editIdx!=null){ const st=DRAW.strokes[DRAW.editIdx]; if(st&&st[DRAW.editVtx]) st[DRAW.editVtx]=[w.x,w.z]; } else if(DRAW.handStart){ DRAW.handEnd=[w.x,w.z]; } }
     else if(ptrs.size===1 && DRAW.erase){ const w=mapScreenToWorld(e.clientX,e.clientY); DRAW.eraseR=24/MAP.ppm; DRAW.eraseCur=[w.x,w.z]; drawEraseAt(w.x,w.z,DRAW.eraseR); }
-    else if(ptrs.size===1 && MAP.bounds && panLast){ if(!panning && Math.hypot(e.clientX-panDX,e.clientY-panDY)>8){ panning=true; if(!MAP.free){ const c=mapCenter(); MAP.viewX=c[0]; MAP.viewZ=c[1]; MAP.free=true; } }
-      if(panning){ const rot=mapRot(),ca=Math.cos(-rot),sa=Math.sin(-rot),dsx=e.clientX-panLast.x,dsy=e.clientY-panLast.y; MAP.viewX-=(dsx*ca-dsy*sa)/MAP.ppm; MAP.viewZ-=(dsx*sa+dsy*ca)/MAP.ppm; panLast={x:e.clientX,y:e.clientY}; } } },{passive:false});
+ },{passive:false});
   const endPtr=e=>{ const had=ptrs.size; ptrs.delete(e.pointerId);
     if(ptrs.size===0){
       if(DRAW.hand && had===1 && DRAW.editIdx!=null){ DRAW.editIdx=null; popup('LINE ADJUSTED'); }   // finished dragging an endpoint
       else if(DRAW.hand && had===1 && DRAW.handStart && DRAW.handEnd){ const a=DRAW.handStart,b=DRAW.handEnd;                        // commit the straight line as a 2-point stroke
         if(Math.hypot(a[0]-b[0],a[1]-b[1])>=3){ pushUndo(); if(!DRAW.on){ DRAW.on=true; DRAW.eng=drawEng(); } DRAW.strokes.push([[a[0],a[1]],[b[0],b[1]]]); popup('LINE ADDED'); syncDrawBtn(); } DRAW.handStart=null; DRAW.handEnd=null; }
       else if(DRAW.erase && had===1){ DRAW.eraseCur=null; syncDrawBtn(); }   // finished an erase stroke
-      else if(panning){ /* was a camera pan, not a tap */ }
       else if(!pinched && had===1) mapTap(e.clientX,e.clientY);   // tap fires only on a clean one-finger release
-      pinched=false; panning=false; panLast=null; } };
-  MAP.cv.addEventListener('pointerup',endPtr); MAP.cv.addEventListener('pointercancel',e=>{ ptrs.delete(e.pointerId); if(ptrs.size===0){ pinched=false; DRAW.handStart=null; panning=false; panLast=null; DRAW.eraseCur=null; } }); })();
+      pinched=false; } };
+  MAP.cv.addEventListener('pointerup',endPtr); MAP.cv.addEventListener('pointercancel',e=>{ ptrs.delete(e.pointerId); if(ptrs.size===0){ pinched=false; DRAW.handStart=null; DRAW.eraseCur=null; } }); })();
 // 3D-view controls (chase / overhead): tap the truck = go/stop; tap left/right of the truck = turn that way at the next junction.
 // (Screen-side, not a ground raycast — the terrain is elevated so a sea-level raycast lands off the real roads.)
 const _tv=new THREE.Vector3();
@@ -3984,22 +3982,13 @@ function drawMapView(dt){ try{ const c=MAP.ctx; if(!c) return;
   for(const i of vis){ const cl=RB.st[i][1],pts=RB.st[i][2]; c.strokeStyle=rdCase(cl); c.lineWidth=CLASSW[cl]+RD_CASEW[cl]; c.beginPath(); c.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) c.lineTo(pts[k][0],pts[k][1]); c.stroke(); }
   for(const i of vis){ const cl=RB.st[i][1],pts=RB.st[i][2]; c.strokeStyle=rdFill(cl); c.lineWidth=CLASSW[cl]; c.beginPath(); c.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) c.lineTo(pts[k][0],pts[k][1]); c.stroke(); }
   }
-  if(!MAP.bounds && ppm>=1.0){ const hy=hydrantsNear(CTRX,CTRZ,R);                 // 🚒 fire hydrants drawn as small stylised kerbside markers, screen-constant (counter-rotate + unscale over the world transform)
+  if(ppm>=1.0){ const hy=hydrantsNear(CTRX,CTRZ,R);                 // 🚒 fire hydrants drawn as small stylised kerbside markers, screen-constant (counter-rotate + unscale over the world transform)
     for(const h of hy){ c.save(); c.translate(h[0],h[1]); c.rotate(-rot); c.scale(1/ppm,1/ppm);
       c.fillStyle=h[2]===2?'#e8a020':'#d8382a'; c.strokeStyle='rgba(255,255,255,.85)'; c.lineWidth=1;   // amber = player-submitted, not official PWD data
       c.beginPath(); c.roundRect(-2.4,-9,4.8,9,1.6); c.fill(); c.stroke();            // body
       c.beginPath(); c.moveTo(-3.3,-9); c.lineTo(3.3,-9); c.lineTo(0,-12.6); c.closePath(); c.fill(); c.stroke();   // bonnet
       c.fillRect(-4.6,-6.6,2.1,2.1); c.fillRect(2.5,-6.6,2.1,2.1);                    // side outlets
       c.restore(); } }
-  const runBounds=MAP.bounds ? RUN_BOUNDARIES.filter(q=>q.engines.includes(DRIVE.stationId)) : [];
-  if(MAP.bounds){ c.setLineDash([]);                                                              // context layer: OTHER engines' boundaries drawn faint, so an adjacent engine's full loop (e.g. 35 while tracing 12) reads as one line
-    for(const q of RUN_BOUNDARIES){ if(q.engines.includes(DRIVE.stationId)) continue; const pts=q.pts; if(pts.length<2) continue;
-      c.beginPath(); c.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) c.lineTo(pts[k][0],pts[k][1]);
-      c.strokeStyle='rgba(255,255,255,.55)'; c.lineWidth=4/ppm; c.stroke(); c.strokeStyle='rgba(20,120,70,.5)'; c.lineWidth=2.2/ppm; c.stroke(); } }
-  for(const q of runBounds){ const pts=q.pts; if(pts.length<2) continue;                          // first-due boundary overlay (toggle: 🟩 BOUNDARIES) — green so it reads over the road palette; dashed while unverified (complete:false)
-    c.beginPath(); c.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) c.lineTo(pts[k][0],pts[k][1]);
-    c.setLineDash([]); c.strokeStyle='rgba(248,247,242,.96)'; c.lineWidth=6.5/ppm; c.stroke();
-    c.setLineDash(q.complete?[]:[11/ppm,7/ppm]); c.strokeStyle='#14824b'; c.lineWidth=3.2/ppm; c.stroke(); c.setLineDash([]); }
   if(DRAW.on){                                                                                     // the trace you're drawing (world space) — orange while pen down, amber when lifted
     for(const st of DRAW.strokes){ if(st.length<1) continue; c.setLineDash([]);
       c.beginPath(); c.moveTo(st[0][0],st[0][1]); for(let k=1;k<st.length;k++) c.lineTo(st[k][0],st[k][1]);
@@ -4059,9 +4048,6 @@ function drawMapView(dt){ try{ const c=MAP.ctx; if(!c) return;
     c.beginPath(); c.arc(cx,cy,10,0,6.2832); c.strokeStyle='rgba(43,109,246,.9)'; c.lineWidth=2; c.stroke();
     c.beginPath(); c.moveTo(cx-16,cy); c.lineTo(cx-4,cy); c.moveTo(cx+4,cy); c.lineTo(cx+16,cy); c.moveTo(cx,cy-16); c.lineTo(cx,cy-4); c.moveTo(cx,cy+4); c.lineTo(cx,cy+16); c.stroke(); c.restore(); }
   const cosR=Math.cos(rot), sinR=Math.sin(rot), toScreen=(wx,wz)=>{ const dx=(wx-CTRX)*ppm, dz=(wz-CTRZ)*ppm; return [cx+dx*cosR-dz*sinR, cy+dx*sinR+dz*cosR]; };
-  for(const q of runBounds) for(const L of q.labels){ const p=toScreen(L.x,L.z); if(p[0]<-20||p[0]>W+20||p[1]<60||p[1]>H-95) continue;
-    const active=L.engine===DRIVE.stationId; c.beginPath(); c.arc(p[0],p[1],11,0,6.2832); c.fillStyle=active?'#25232a':'rgba(248,247,242,.96)'; c.fill();
-    c.lineWidth=1.5; c.strokeStyle=active?'#fff':'#25232a'; c.stroke(); c.font='800 10px -apple-system,"Helvetica Neue",Arial'; c.textAlign='center'; c.textBaseline='middle'; c.fillStyle=active?'#fff':'#25232a'; c.fillText(L.text,p[0],p[1]+.5); }
   let selected=PARK_UI.selected; if(selected&&!selected.direct&&(!DRIVE.pending||DRIVE.pending.at!==selected.at||DRIVE.pending.next!==selected.next)) PARK_UI.selected=selected=null;
   if(selected&&selected.direct&&GT>=selected.until) PARK_UI.selected=selected=null;
   const choices=mapChoiceCandidates(); MAP.turnChoices=choices; MAP.turnHits=[]; const wide=ppm<2.2,placed=[],ordered=choices.slice().sort((a,b)=>(sameStreetChoice(selected,b.pick)?1:0)-(sameStreetChoice(selected,a.pick)?1:0)||a.d-b.d);
@@ -4124,8 +4110,9 @@ function penDown(){ DRAW.pen=true; DRAW.hand=false; DRAW.handStart=null; DRAW.ed
 function penUp(){ DRAW.pen=false; const s=DRAW.strokes[DRAW.strokes.length-1]; if(s&&s.length<2) DRAW.strokes.pop(); }
 function enterDraw(){ DRAW.on=true; DRAW.eng=drawEng(); DRAW.strokes=[]; DRAW.undo=[]; state.target=null; state.onScene=false; state.douse=0;
   const d=document.getElementById('douse'); if(d) d.style.display='none';
+  setCam(2);                                                                   // the trace is drawn by drawMapView, so DRAW brings the 2D map up with it
   penDown(); popup('✏️ DRAW MODE'); radio('✏️ DRAW MODE — runs paused. Drive to trace '+drawEngLabel()+'. Retrace a line to erase it.'); syncDrawBtn(); }
-function exitDraw(){ DRAW.on=false; DRAW.pen=false; DRAW.hand=false; DRAW.handStart=null; DRAW.editIdx=null; DRAW.erase=false; DRAW.eraseCur=null; DRAW.strokes=[]; DRAW.undo=[]; syncDrawBtn(); }
+function exitDraw(){ DRAW.on=false; DRAW.pen=false; DRAW.hand=false; DRAW.handStart=null; DRAW.editIdx=null; DRAW.erase=false; DRAW.eraseCur=null; DRAW.strokes=[]; DRAW.undo=[]; setCam(3); syncDrawBtn(); }
 function updateDraw(dt){ if(!DRAW.on||!DRAW.pen||!DRIVE.going) return; const px=truck.x,pz=truck.z;
   for(let s=0;s<DRAW.strokes.length;s++){ const st=DRAW.strokes[s], isCur=(s===DRAW.strokes.length-1), lim=isCur?st.length-4:st.length;   // retrace within ERASE metres of an older point → truncate there
     for(let i=0;i<lim;i++){ if(Math.hypot(st[i][0]-px,st[i][1]-pz)<DRAW.ERASE){ st.length=i; if(st.length<2) DRAW.strokes.splice(s,1); return; } } }
@@ -4982,7 +4969,7 @@ function updateBoxDrill(dt){
 function boxdStart(companyId,scope){
   if(BOXD.on||DUED.on) return {ok:false,reason:'already-running'};
   if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-active'};        // the exam owns the truck
-  if(DRILL.on||MAP.bounds||DRAW.on) return {ok:false,reason:'special-mode-active'};
+  if(DRILL.on||DRAW.on) return {ok:false,reason:'special-mode-active'};
   if(!state.running) return {ok:false,reason:'not-riding'};
   companyId=companyId||DRIVE.stationId; scope=scope||KNOW_DEF_SCOPE;
   if(!companyId||companyId!==DRIVE.stationId) return {ok:false,reason:'wrong-company'};
@@ -5042,7 +5029,7 @@ function trainMyLocal(companyId,dim){
     const st=stations.find(s=>s.id===companyId);
     if(!st){ popup('🎓 That firehouse is unavailable.'); return {ok:false,reason:'no-company'}; }
     if(QUAL.active||QUAL.pending){ popup('🎓 Finish your Chief Qualification first.'); return {ok:false,reason:'qual-active'}; }
-    if(DRILL.on||MAP.bounds||DRAW.on){ popup('🎓 Finish your current drill first.'); return {ok:false,reason:'special-mode-active'}; }
+    if(DRILL.on||DRAW.on){ popup('🎓 Finish your current drill first.'); return {ok:false,reason:'special-mode-active'}; }
     const uni=knowUniverse(companyId,dim,KNOW_DEF_SCOPE);
     if(!uni||!uni.length){ popup('🎓 No reachable mapped intersections are available for this company yet.'); return {ok:false,reason:'no-universe'}; }
     closeCard();
@@ -5122,7 +5109,7 @@ function knowledgeProofText(lk){ return lk.dims.map(d=>d.mastered+' of '+d.avail
 function duedChoose(companyId){
   if(!stations.some(s=>s.id===companyId)) return {ok:false,reason:'no-company'};
   if(QUAL.active||QUAL.pending){ popup('🎓 Finish your Chief Qualification first.'); return {ok:false,reason:'qual-active'}; }
-  if(BOXD.on||BOXD.pending||DUED.on||DRILL.on||MAP.bounds||DRAW.on){ popup('🎓 Finish your current training first.'); return {ok:false,reason:'special-mode-active'}; }
+  if(BOXD.on||BOXD.pending||DUED.on||DRILL.on||DRAW.on){ popup('🎓 Finish your current training first.'); return {ok:false,reason:'special-mode-active'}; }
   DUED.companyId=companyId; DUED.view='choose';
   const intersections=intersectionUniverse(companyId);
   duedShell('<div class="ddTop"><span class="ddMeta">ENGINE '+engNum(companyId)+' · FIRST DUE</span><button data-dd="close">BACK</button></div>'+
@@ -5135,7 +5122,7 @@ function duedChoose(companyId){
 function duedStart(companyId,scope){
   if(DUED.on||BOXD.on) return {ok:false,reason:'already-running'};
   if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-active'};
-  if(DRILL.on||MAP.bounds||DRAW.on) return {ok:false,reason:'special-mode-active'};
+  if(DRILL.on||DRAW.on) return {ok:false,reason:'special-mode-active'};
   if(!state.running) return {ok:false,reason:'not-riding'};
   if(companyId!==DRIVE.stationId) return {ok:false,reason:'wrong-company'};
   scope=scope||KNOW_DEF_SCOPE;
@@ -5748,7 +5735,7 @@ function dueRankAt(x,z){
 const DUE_STYLE=[null,{t:'1ST IN',c:'#3ddc84'},{t:'2ND IN',c:'#ffd23b'},{t:'3RD IN',c:'#ff9f2e'},{t:'4TH IN',c:'#ff6b4a'}];
 function updateDueChip(dt){
   const el=document.getElementById('dueChip'); if(!el) return;
-  if(!state.running||MAP.bounds||DRAW.on||INTRO.active||homeEl.classList.contains('show')||boundaryOverlay.classList.contains('show')){ el.classList.remove('on'); return; }   // never over the picker or the first-due map
+  if(!state.running||DRAW.on||INTRO.active||homeEl.classList.contains('show')||boundaryOverlay.classList.contains('show')){ el.classList.remove('on'); return; }   // never over the picker or the first-due map
   DUECHIP.t-=dt; if(DUECHIP.flash>0) DUECHIP.flash-=dt;
   if(DUECHIP.t<=0){ DUECHIP.t=0.35;                                          // 60 zone tests + a sort — plenty at ~3x/second
     const r=dueRankAt(truck.x,truck.z), nr=r?r.rank:0;
@@ -5806,7 +5793,7 @@ function spawnRivals(){ clearRivals();
       total:routeLength(path)||1, traveled:0, speed:DIFF.spd[DIFF.level][0]+Math.random()*DIFF.spd[DIFF.level][1], arrived:false, arriveT:0 }); }   // per-engine variation, scaled by difficulty
   renderRivalHUD();
 }
-function updateRivals(dt){ if(!RIVALS.on||!state.target||MAP.bounds||DRAW.on) return;
+function updateRivals(dt){ if(!RIVALS.on||!state.target||DRAW.on) return;
   for(const r of RIVALS.list){ if(r.arrived) continue; let move=r.speed*dt;
     while(move>0 && r.seg<r.path.length-1){ const a=r.path[r.seg],b=r.path[r.seg+1],L=Math.hypot(b.x-a.x,b.z-a.z)||1e-4,rem=L*(1-r.t);
       if(move<rem){ r.t+=move/L; r.traveled+=move; move=0; } else { move-=rem; r.traveled+=rem; r.seg++; r.t=0; } }
@@ -5830,7 +5817,7 @@ function onPlayerArrive(){ if(!RIVALS.on||RIVALS.playerPlaced||!RIVALS.responder
   const place=RIVALS.order.length+1; RIVALS.playerPlace=place;                                        // rivals already on scene + you
   if(place===1) popup('🥇 FIRST IN!','green'); else popup(ordinal(place)+' DUE · Engine '+engNum(RIVALS.order[0])+' beat you','red'); }
 function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) return;
-  const show=RIVALS.on && state.target && RIVALS.responders.length && !MAP.bounds && !DRAW.on;
+  const show=RIVALS.on && state.target && RIVALS.responders.length && !DRAW.on;
   el.classList.toggle('show',!!show); if(!show){ el.innerHTML=''; return; }
   const F=RIVALS.fire;                                                                            // % of the way to the fire (straight-line) — same measure for you + rivals, a fair race gauge
   const pct=(x,z,d0)=> (F&&d0)?Math.max(0,Math.min(99,Math.round((1-Math.hypot(x-F.x,z-F.z)/d0)*100))):0;
@@ -5852,7 +5839,7 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
 const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0,usedGuide:false,uturns:0};
 function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0; COACH.uturns=0;
   COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; COACH.usedGuide=false; COACH.trail.push([truck.x,truck.z]); }
-function updateCoach(dt){ if(!state.target||!state.running||MAP.bounds||DRAW.on||DRILL.on) return;
+function updateCoach(dt){ if(!state.target||!state.running||DRAW.on||DRILL.on) return;
   if(MAP.guide) COACH.usedGuide=true;                                          // used the blue line at all → run doesn't count on the board
   if(DRIVE.wrongWay&&DRIVE.going) COACH.ww+=dt;
   if(!DRIVE.going&&!DRIVE.parked&&!state.onScene) COACH.stop+=dt;               // sat still mid-run (turnout + douse don't count)
@@ -5936,7 +5923,7 @@ document.getElementById('btnCoachNext').addEventListener('click',()=>{ coachHide
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw,updateDrill,updateBoxDrill,updateCoach];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
 const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() calls drawMapView (the only view now)
 MAP.on=false; document.body.classList.remove('mapmode');
-state.cam=3; LIVE3D.group.visible=true; { const b=document.getElementById('btnCam'); if(b) b.textContent='\uD83E\uDDED TILT'; }   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
+state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
 let radioQueue='', radioShown='', radioT=0, lastIdx=-1;
 function radio(m){ radioQueue=m; radioShown=''; radioT=0; }
@@ -5985,7 +5972,7 @@ function launchDispatch(target){                                                
   const bx=state.target.bx!==undefined?state.target.bx:state.target.x, bz=state.target.bz!==undefined?state.target.bz:state.target.z;   // beacon over the building, not the roadway
   state.timeLeft=Math.min(CONFIG.timer.cap,state.timeLeft+add); beaconG.position.set(bx,groundHeight(bx,bz),bz); routeDirty=true;
   assignBox(); radio(state.target.d); popup('🔔 BOX '+state.target.box); spawnRivals(); coachReset(); return true; }
-function newDispatch(){ if(MAP.bounds||DRAW.on||DRILL.on||BOXD.on||duedPaused()) return;
+function newDispatch(){ if(DRAW.on||DRILL.on||BOXD.on||duedPaused()) return;
   if(BOXD.pending&&INTRO.active) return;                     // 🎓 the drill owns the radio while it runs                               // no runs in training/boundary mode
   if(QUAL.pending&&DRIVE.stationId===QUAL.companyId){ QUAL.pending=false; qualLaunch(); return; }       // 🎖 ONE-SHOT exam injection (qual-initiated shift start) — normal flow untouched after this fires
   if(BOXD.pending&&DRIVE.stationId===BOXD.pendCompany){ BOXD.pending=false; BOXD.pendCompany=null;       // 🎓 ONE-SHOT drill injection — TRAIN MY LOCAL rode us out, so train instead of dispatching
@@ -6007,7 +5994,7 @@ const QUAL={ active:false, pending:false, _own:false, companyId:null, due:0, box
 function qualStart(companyId,due,confirmed){
   if((BOXD.on||BOXD.pending||duedPaused())&&confirmed) boxdClear('qual-takeover');                            // exam wins once the player has confirmed                                                             // → {ok:true,mode} | {ok:false,reason}; validates EVERYTHING before touching gameplay state
   if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-already-active'};
-  if(DRILL.on||MAP.bounds||DRAW.on||BOXD.on||BOXD.pending||duedPaused()) return {ok:false,reason:'special-mode-active'};            // the exam is EXCLUSIVE — never stacks with drill/training modes
+  if(DRILL.on||DRAW.on||BOXD.on||BOXD.pending||duedPaused()) return {ok:false,reason:'special-mode-active'};            // the exam is EXCLUSIVE — never stacks with drill/training modes
   const st=stations.find(s=>s.id===companyId); if(!st) return {ok:false,reason:'no-company'};
   const k=posKey(due); if(!k) return {ok:false,reason:'invalid-due'};
   const e=PROFILE.engines[companyId], track=e&&e.pos&&e.pos[k];
