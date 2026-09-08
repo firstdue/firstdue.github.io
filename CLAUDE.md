@@ -108,6 +108,25 @@ match, the normal flow resumes.
 - `sw.js` serves the document network-first and `data/`/`vendor/` stale-while-revalidate, so a
   re-bake is picked up on the following launch.
 
+## If you are working from the owner's authoring folder
+
+`START-HERE.md`, `MEMORY.md`, `SHIPLOG.md`, `ship.js` and the authoring folder's own `CLAUDE.md`
+are **not in this repository** and were not updated by the v18m work. If they still describe a
+single-file `index.html` and an authoring-folder-to-`gh-pages-deploy` publish, they are stale and
+following them will overwrite this release.
+
+The owner can paste this into their `START-HERE.md` to bring it level:
+
+> **v18m (September 2026) was authored in the public repo, not here.** `firstdue/firstdue.github.io`
+> is the source of truth until this folder is synced from it. `index.html` is no longer one file:
+> game code (~670KB) plus `data/*.js` (RB, AB, ADDR, LANDCOVER, NAVGEO, LMKS) and
+> `vendor/three.147.min.js`, loaded as classic `<script src>` before the game script. Do **not**
+> copy an older monolithic `index.html` into `gh-pages-deploy/` — it silently destroys the split,
+> the TILT-only views and the rival markers. Sync this folder from the public repo first:
+> `index.html`, `data/`, `vendor/`, `.gitattributes`, `.nojekyll`, `sw.js`,
+> `repository-smoke.test.mjs`, `README.md`, `ROADMAP.md`, `CLAUDE.md`. The game must be served
+> over http(s); `file://` no longer works. Read the repo's `CLAUDE.md` before editing.
+
 ## House rules
 
 - `BUILD` bumps and releases are the owner's call unless they ask.
