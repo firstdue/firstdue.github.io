@@ -135,9 +135,10 @@ The repository smoke suite catches packaging and syntax failures. It does not ce
 - [ ] **Rival trucks instead of markers** — the owner chose markers "for now". The placement, heading
       and culling work is done and reusable; this is a mesh swap. Rival state already carries `x`,
       `z`, the current path segment (heading), engine number and arrival.
-- [ ] `MAP.free` and `MAP.userRot` are now permanently false/zero but still assigned in three live
-      places each (`recenterCamera`, the view button, `startShift`). Unpicking them reaches into
-      `mapCenter`, `mapRot` and the view crosshair. Low value, wider blast radius than it looks.
+- [x] ~~`MAP.free` / `MAP.userRot` cleanup~~ — already done. Both, along with `mapCenter`, `mapRot`
+      and the view crosshair, went with the 2D map view in the same commit that claimed to leave
+      them alone. Zero references remain; the surviving `MAP` fields are `guide`, `dueLevel`,
+      `laneOff` and `tiltZoom`. Listed here only so the next reader does not go looking.
 - [ ] **Rival HUD empty — diagnose before changing anything.** This item previously claimed the
       RIVALS toggle does not repopulate the panel. That was wrong: the handler already calls
       `spawnRivals()` when a run and a target exist, and `newDispatch` calls it for every new box.
