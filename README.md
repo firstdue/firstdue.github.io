@@ -174,18 +174,15 @@ These are repository checks, not gameplay tests. Game releases still need releva
 
 ## Maintenance and publishing
 
-> **⚠️ v18m was authored in the PUBLIC repository, not the authoring folder.**
-> Everything from `index.html` splitting through the rival world visuals landed directly on
-> `firstdue/firstdue.github.io`. If the authoring folder still holds the pre-v18m monolithic
-> `index.html`, the usual publish step — copying that file into `gh-pages-deploy/` — would
-> **overwrite the entire v18m release**: the `data/`/`vendor/` split, TILT-only views, the tile
-> and camera fixes, and the rival truck meshes.
+> **Note: v18m was authored in the PUBLIC repository, not the authoring folder** — the reverse of
+> this project's usual direction. The authoring folder has since been synced from this repository
+> (September 8, 2026): both hold v18m, all split files match, `ship.js` understands the new layout,
+> and the pre-split build is kept as `v18j-pre-v18m-cloud-sync.html` in the authoring root, untracked
+> and never to be published. Normal authoring-folder-is-source-of-truth flow has resumed.
 >
-> Before any `ship.js` run or manual publish, bring the authoring folder up to date **from this
-> repository**, not the other way round. What changed here: `index.html`, the new `data/` and
-> `vendor/` directories, `.gitattributes`, `.nojekyll`, `sw.js`, `repository-smoke.test.mjs`,
-> `README.md`, `ROADMAP.md`, and a new `CLAUDE.md`. Once the authoring folder matches, normal
-> authoring-folder-is-source-of-truth flow resumes.
+> The rule that outlasts this note: `index.html` is no longer a single file. Never copy an older
+> monolithic `index.html` over it — that silently destroys the `data/`/`vendor/` split and every
+> view change with it.
 
 
 In the full authoring folder, read `START-HERE.md`, `MEMORY.md`, `CLAUDE.md`, `notes/firetruck-game.md`, then `SHIPLOG.md`. These notes and `ship.js` are not included in the public checkout.
