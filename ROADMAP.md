@@ -1,6 +1,8 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 7, 2026. **v18l is public and matches the local build.**
+Planning snapshot: September 8, 2026. **v18m is public and matches the local build.** Note that
+v18m was authored in the public repository rather than the authoring folder — see README
+"Maintenance and publishing" before any ship.
 
 - [x] v18l owner-playtest fixes: highway rules on ramps (only the ramp's destination card shows —
   no Kelly Dr / Ridge Ave / Lincoln Dr cards mid-ramp; wrong-way ramps never get a card), plus
