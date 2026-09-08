@@ -113,9 +113,11 @@ untracked, and it must never enter `gh-pages-deploy/`, git, or publishing.
 ## If you are working from the owner's authoring folder
 
 `START-HERE.md`, `MEMORY.md`, `SHIPLOG.md`, `ship.js` and the authoring folder's own `CLAUDE.md`
-are **not in this repository**. `START-HERE.md` and `ship.js` were brought up to date on
-September 8, 2026; `MEMORY.md` and `SHIPLOG.md` were not checked, so treat any single-file
-`index.html` description in them as stale.
+are **not in this repository**. All were reviewed and brought up to date on September 8, 2026:
+`START-HERE.md` and `ship.js` first, then `MEMORY.md` and the authoring `CLAUDE.md`, whose
+publishing sections had said a release copies `index.html` alone — it now copies the complete
+split site. `SHIPLOG.md` was deliberately left alone: its single-file references sit inside
+historical release entries, which should keep describing the layout as it was at the time.
 
 The text `START-HERE.md` now carries, kept here so it can be re-applied if that file is ever lost:
 
