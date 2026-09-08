@@ -144,7 +144,6 @@
   .legendSwatch { display:inline-block; width:22px; height:6px; border-radius:4px; margin-right:6px; vertical-align:middle; }
   .legendDone { background:#14824b; }
   .legendOpen { width:11px; height:11px; border-radius:50%; border:3px solid #f08a24; background:#fff4e7; }
-  .boundaryNote { margin-top:8px; font-size:11px; line-height:1.4; color:#69717a; }
   #hood { bottom:clamp(88px,18vh,132px); left:50%; transform:translateX(-50%); text-align:center; width:100%; }
   #hood .n { display:inline-flex; flex-direction:column; align-items:center; font-size:clamp(15px,3.5vw,21px); font-weight:600; color:#0a6cff; letter-spacing:.2px; line-height:1.05;
     background:#fff; border-radius:999px; padding:6px 20px 7px; min-width:150px; box-shadow:0 2px 8px rgba(0,0,0,.18), 0 0 0 .5px rgba(0,0,0,.05); font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
@@ -160,8 +159,6 @@
   #mini { top:clamp(92px,23vw,132px); left:max(10px, env(safe-area-inset-left)); width:clamp(92px,24vw,132px); height:clamp(92px,24vw,132px);
     border-radius:13px; overflow:hidden; border:2.5px solid rgba(255,255,255,.4); box-shadow:0 3px 13px rgba(0,0,0,.55); background:#20283a; z-index:11; display:none; }
   #mini canvas { display:block; width:100%; height:100%; }
-  #mapView { position:absolute; inset:0; z-index:6; display:none; touch-action:none; }
-  body.mapmode #mapView { display:block; }
   /* 2D nav game: hide the arcade HUD entirely (kept in DOM so old refs don't break) */
   #mini, #wp, #speed, #timer, #combo, #cash, #touchUI, #btnNight, #btnRoute, #btnSiren, #btnMute, #crt, #vig { display:none !important; }
   #parkedStreetChoices { position:absolute; inset:0; z-index:13; display:none; pointer-events:none; overflow:hidden; }
@@ -180,9 +177,7 @@
   .parkStreetChoice.wrong::after { border-top-color:#bd2926; }
   .parkStreetChoice.wrong.selected { outline:3px solid #ffcf66; outline-offset:2px; }
   .parkStreetChoice:active { transform:translate(-50%,-50%) scale(.96); }
-  #tapHint { position:absolute; left:50%; bottom:clamp(96px,20vh,150px); transform:translateX(-50%); z-index:11; display:none; pointer-events:none;
     background:rgba(20,24,32,.8); color:#fff; font-size:clamp(11px,2.6vw,14px); font-weight:700; padding:7px 14px; border-radius:999px; box-shadow:0 2px 8px rgba(0,0,0,.4); white-space:nowrap; }
-  body.mapmode #tapHint { display:block; }
   /* turn banner (top) */
   /* 🚑 rival engines panel — the 4 engines responding to the current fire */
   #rivals { position:absolute; z-index:14; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); top:calc(max(8px,env(safe-area-inset-top)) + 44px); bottom:auto;
@@ -220,33 +215,10 @@
     font-size:clamp(11px,2.8vw,14px); font-weight:800; box-shadow:0 3px 10px rgba(0,0,0,.35); cursor:pointer; font-family:inherit; }
   #btnRecenter:active { transform:scale(.95); }
   /* boundary DRAW authoring controls */
-  #drawBtns { position:absolute; left:50%; top:calc(max(8px,env(safe-area-inset-top)) + 44px); transform:translateX(-50%); z-index:15; display:none; gap:6px; flex-wrap:wrap; justify-content:center; max-width:calc(100vw - 12px); }
-  #drawBtns button { pointer-events:auto; border:none; border-radius:999px; padding:9px 13px; font-size:clamp(10px,2.6vw,14px); font-weight:800; box-shadow:0 2px 8px rgba(0,0,0,.3); cursor:pointer; font-family:inherit; white-space:nowrap; }
-  #trainChip { position:absolute; z-index:15; top:max(8px,env(safe-area-inset-top)); left:max(10px,env(safe-area-inset-left)); display:none; pointer-events:none;
     background:rgba(20,110,60,.92); color:#eaffef; font-weight:800; font-size:clamp(9px,2.2vw,11px); letter-spacing:1.5px; padding:5px 11px; border-radius:999px; box-shadow:0 2px 7px rgba(0,0,0,.32); }
-  #trainChip.show { display:block; }
   #satAttr { position:absolute; z-index:12; right:max(6px,env(safe-area-inset-right)); bottom:max(4px,env(safe-area-inset-bottom)); display:none; pointer-events:none;
     background:rgba(0,0,0,.5); color:#e9ecef; font-size:9px; font-weight:600; letter-spacing:.2px; padding:2px 6px; border-radius:5px; }
   #satAttr.show { display:block; }
-  #btnDraw { background:rgba(20,24,30,.92); color:#fff; border:2px solid #6e7781; }
-  #btnDraw.on { background:#e5552b; border-color:#ffc4a6; }
-  #btnHand { background:rgba(20,24,30,.92); color:#fff; border:2px solid #6e7781; }
-  #btnHand.on { background:#1b74e0; border-color:#a9cbff; }
-  #btnErase { background:rgba(20,24,30,.92); color:#fff; border:2px solid #6e7781; }
-  #btnErase.on { background:#e5352b; border-color:#ffb0a6; }
-  #btnUndo { background:rgba(20,24,30,.92); color:#fff; border:2px solid #6e7781; }
-  #btnUndo:disabled { opacity:.38; }
-  #btnFinish { background:#14824b; color:#fff; display:none; }
-  #btnDraw:active,#btnHand:active,#btnErase:active,#btnUndo:active,#btnFinish:active { transform:scale(.95); }
-  #drawReview { position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.82); pointer-events:auto; }
-  #drawReview.show { display:flex; }
-  #drawReview .boundaryCard { max-width:min(560px,94vw); }
-  #drawReviewCanvas { width:100%; height:300px; border-radius:10px; background:#eceae4; margin-top:6px; display:block; }
-  #drawReviewStats { font-size:12px; font-weight:700; color:#9fb; margin-top:6px; }
-  #drawExport { width:100%; height:74px; margin-top:10px; border-radius:8px; border:1px solid #556; background:#0e1220; color:#cfe; font:11px/1.4 monospace; padding:8px; resize:none; }
-  .drawReviewBtns { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
-  .drawReviewBtns button { flex:1 1 auto; pointer-events:auto; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; }
-  #btnDrawKeep { background:#343c49; color:#fff; }
   /* 👨‍🚒 senior-man post-run review */
   .cpHero{display:flex;align-items:center;gap:14px;margin-bottom:4px}
   .cpEmblem{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 30%,#24345a,#0e1929 74%);border:2px solid rgba(244,185,80,.55);box-shadow:0 0 0 5px rgba(244,185,80,.07)}
@@ -447,33 +419,19 @@
   #lbClose { width:100%; margin-top:12px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnProfileClose { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnHyd { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:calc(clamp(90px,20vh,150px) + 122px); z-index:13; display:none; pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#e8a020; color:#fff; font-size:23px; box-shadow:0 3px 10px rgba(0,0,0,.3); font-family:inherit; }
-  #btnDrawFinalize { background:#14824b; color:#fff; }
-  #btnDrawCopy { background:#274b8f; color:#fff; }
   /* the fire truck — a DOM marker fixed at the map's focus point, always pointing up */
-  #truckMarker { position:absolute; left:50%; top:60%; transform:translate(-50%,-50%); z-index:9; pointer-events:none; display:none; }
-  body.mapmode #truckMarker { display:block; }
-  #truckMarker .ring, #truckMarker .body { display:none !important; }   /* truck now drawn IN the map canvas (world space) — can't detach from its road */
-  #truckMarker .ring { position:absolute; left:0; top:0; width:58px; height:58px; margin:-29px 0 0 -29px; border-radius:50%;
     border:3px solid rgba(255,60,40,.85); background:rgba(255,60,40,.1); animation:tkPulse 1s ease-in-out infinite; }
-  #truckMarker.go .ring { border-color:rgba(43,109,246,.75); background:rgba(43,109,246,.14); animation:none; }
-  #truckMarker .body { position:absolute; left:0; top:0; width:30px; height:52px; margin:-26px 0 0 -15px; background:#d8342b; border-radius:7px;
     box-shadow:0 2px 8px rgba(0,0,0,.45); border:1px solid #a82219; }
-  #truckMarker .body::before { content:''; position:absolute; left:4px; right:4px; top:5px; height:13px; background:#eef1f4; border-radius:3px; }
-  #truckMarker .body::after { content:''; position:absolute; left:0; right:0; bottom:3px; height:5px; background:#ffd23b; border-radius:0 0 5px 5px; }
-  #truckMarker .golabel { position:absolute; left:0; top:-56px; transform:translateX(-50%); white-space:nowrap;
     background:rgba(20,24,32,.92); color:#fff; font-weight:800; font-size:14px; letter-spacing:.3px; padding:7px 14px; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.4); }
-  #truckMarker.go .golabel { display:none; }
   @keyframes tkPulse { 50% { transform:scale(1.16); } }
   #pullOut { position:absolute; left:50%; bottom:clamp(34px,8vh,72px); transform:translateX(-50%); z-index:14; display:none; gap:14px; }
   #pullOut button { pointer-events:auto; background:#2b6df6; color:#fff; border:none; border-radius:12px; padding:9px 13px;
     font-size:clamp(11px,2.8vw,14px); font-weight:800; box-shadow:0 3px 10px rgba(0,0,0,.3); cursor:pointer; font-family:inherit; white-space:nowrap; }
   #pullOut button:active { transform:scale(.95); }
   #zoomBtns { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:clamp(90px,20vh,150px); z-index:13; display:none; flex-direction:column; gap:8px; }
-  body.mapmode #zoomBtns { display:flex; }
   #zoomBtns button { pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#fff; color:#22252b;
     font-size:26px; font-weight:800; line-height:1; box-shadow:0 3px 10px rgba(0,0,0,.3); cursor:pointer; font-family:inherit; }
   #zoomBtns button:active { transform:scale(.93); }
-  #tapHint { display:none !important; }
   #speed { top:clamp(46px,11vw,80px); right:max(12px, env(safe-area-inset-right)); text-align:right; }
   #speed .num { font-size:clamp(22px,5vw,34px); font-weight:900; color:#fff; line-height:1; font-family:"Arial Black",sans-serif; text-shadow:0 0 10px rgba(255,255,255,.4), 0 3px 5px rgba(0,0,0,.7); }
   #speed .cap { font-size:clamp(8px,1.6vw,11px); font-weight:800; letter-spacing:3px; color:#bbb; }
@@ -600,7 +558,6 @@
   <button class="abtn" id="btnSettings">⚙ SETTINGS</button>
   <button class="abtn" id="btnAccount">👤 ACCOUNT</button>
 </div>
-<div id="trainChip">🎓 TRAINING</div>
 <div id="qualChip">🎖 CHIEF QUAL · <b id="qualChipTxt"></b></div>
 <div id="qualCard" aria-hidden="true">
   <div class="cc">
@@ -663,8 +620,6 @@
   <button class="abtn on" id="btnGuide">🔵 GUIDE</button>
   <button class="abtn on" id="btnDue">🚒 DUE: 1ST</button>
   <button class="abtn on" id="btnRivals">🚑 RIVALS</button>
-  <button class="abtn" id="btnView">🧭 HEADING</button>
-  <button class="abtn on" id="btnSat">🌐 LIVE MAP</button>
   <button class="abtn" id="btnDrill">🎓 KNOW YOUR LOCAL</button>
   <button class="abtn" id="btnDiff">🎯 FIREFIGHTER</button>
   <button class="abtn" id="btnRerun">🔁 RESTART RUN</button>
@@ -678,16 +633,6 @@
     <div class="boundaryControls"><label for="boundaryEngine">ENGINE</label><select id="boundaryEngine"></select></div>
     <div id="boundaryStats">Loading boundary work…</div>
     <canvas id="boundaryCanvas"></canvas>
-  </div>
-</div>
-<div id="drawReview" aria-hidden="true">
-  <div class="boundaryCard">
-    <div class="boundaryHead"><h2>✏️ YOUR BOUNDARY</h2><button class="toolClose" id="btnDrawReviewClose" aria-label="Close">×</button></div>
-    <div id="drawReviewStats"></div>
-    <canvas id="drawReviewCanvas"></canvas>
-    <div class="boundaryNote">This is what you traced. FINALIZE saves it as this engine's boundary (turns solid green) and keeps it on this device. Copy the coordinates to send back so it can be baked into the game permanently.</div>
-    <textarea id="drawExport" readonly></textarea>
-    <div class="drawReviewBtns"><button id="btnDrawKeep">↩ KEEP EDITING</button><button id="btnDrawCopy">📋 COPY COORDS</button><button id="btnDrawFinalize">✅ FINALIZE</button></div>
   </div>
 </div>
 <div id="authCard" aria-hidden="true">
@@ -772,13 +717,10 @@
 <div id="hood" class="hud"><div class="s" id="zoneN">EAST FALLS · 19129</div><div class="n" id="streetN"><span class="block">4200 BLOCK</span><span class="street">Ridge Avenue</span></div></div>
 <div id="wp" class="hud"><div class="arr"></div><div class="pin">🔥</div><div class="dist">0 ft</div></div>
 <div id="mini" class="hud"><canvas id="miniC"></canvas></div>
-<div id="truckMarker"><div class="ring"></div><div class="body"></div><div class="golabel">👆 TAP TO GO</div></div>
-<div id="tapHint">👆 Tap the truck to GO · tap a street to turn</div>
 <div id="turnBanner"><span class="dir">→</span><span class="st"></span></div>
 <div id="wrongWay">⚠️ WRONG WAY · ONE-WAY STREET</div>
 <button id="btnUturn">↩ U-TURN</button>
 <button id="btnRecenter">&#127919; RE-CENTER</button>
-<div id="drawBtns"><button id="btnDraw">✏️ DRAW</button><button id="btnHand">✋ LINE</button><button id="btnErase">🧽 ERASE</button><button id="btnUndo">↶ UNDO</button><button id="btnFinish">✓ FINISHED</button></div>
 <div id="pullOut"><button id="btnLeft">⬅ GO LEFT</button><button id="btnRight">GO RIGHT ➡</button></div>
 <div id="speed" class="hud"><div class="num">0</div><div class="cap">MPH</div></div>
 <div id="popup" class="hud"></div>
@@ -2493,15 +2435,6 @@ document.getElementById('btnRoute').addEventListener('click',toggleRoute);
 document.getElementById('btnNight').addEventListener('click',toggleNight);
 document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx.muted; document.getElementById('btnMute').textContent=sfx.muted?'🔇 MUTED':'🔊 SOUND'; if(AC){ if(sfx.muted){ sfx.eg.gain.value=0; sfx.sg.gain.value=0; } if(sfx.mg) sfx.mg.gain.value=sfx.muted?0:sfx.musicVol; } });
 function toggleSiren(){ state.siren=!state.siren; document.getElementById('btnSiren').classList.toggle('on',state.siren); }
-// TILT is the only view you ride out in (the ground-level 3D chase view went earlier — East-Falls-only
-// and too heavy citywide; the 2D MAP is no longer on the camera button, owner drives in TILT only).
-// MAP survives because DRAW renders its trace into drawMapView, so enterDraw/exitDraw swap the view.
-function setCam(n){ state.cam = n;
-  LIVE3D.group.visible = state.cam===3;
-  if(state.cam===3 && !FLATCITY.built){ popup('Building map…'); buildFlatCity(); }
-  MAP.on = state.cam===2; document.body.classList.toggle('mapmode',MAP.on);
-  if(!MAP.on){ AUTO.active=false; }
-  routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1; }
 const TILTCAM={back:18,h:26,ahead:27};                                     // GPS-nav camera rig — ~30°: tilted enough to see well down the street (user asked; 43° was too top-down, 23° was all horizon)
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
   if(FLATCITY.built){ FLATCITY.tick();                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
@@ -2626,7 +2559,7 @@ function updateTraffic(dt){ if(!state.running) return;
       const vn=truck.vx*nnx+truck.vz*nnz; if(vn<0){ truck.vx-=nnx*vn*1.5; truck.vz-=nnz*vn*1.5; } truck.vx*=0.75; truck.vz*=0.75; shake=Math.min(1.2,shake+0.45); comboBreak(); sfx.crash(); burstSparks(x,1.2,z,8); }
   }
 }
-function updateDispatchZone(dt){ if(DRAW.on||!state.running||!state.target||state.target.drill) return;   // training/boundary mode pauses the game
+function updateDispatchZone(dt){ if(!state.running||!state.target||state.target.drill) return;
   const dTgt=Math.hypot(state.target.x-truck.x,state.target.z-truck.z), dArr=Math.hypot(state.arriveX-truck.x,state.arriveZ-truck.z), d=FLAGS.roadLock?Math.min(dTgt,dArr):dTgt;
   if(d>=CONFIG.arriveR) state.onScene=false;
   /* ⚠️ Arrival used to require DRIVE.going, so a truck that was STOPPED inside the radius never registered —
@@ -2653,7 +2586,7 @@ function updateBeacon(dt){ if(state.target){ beaconG.visible=true;   // beacon r
   } else { beaconG.visible=false; } }
 function updateParticles(dt){ updPts(smoke,dt,-2.2); updPts(sparks,dt,22); updPts(water,dt,16); updPts(fireP,dt,-2); }
 const CAMLOOK={yaw:0,pitch:0};   // persistent drag-to-look offset in both 3D cameras; only RE-CENTER resets it
-function recenterCamera(){ CAMLOOK.yaw=0; CAMLOOK.pitch=0; camTheta=truck.theta; MAP.free=false; MAP.userRot=0; }   // also snaps the panned map back onto the truck and clears twist
+function recenterCamera(){ CAMLOOK.yaw=0; CAMLOOK.pitch=0; camTheta=truck.theta; }
 // ---- Shift-start cinematic: bay doors roll up, then the truck rolls out of the bay to the curb ----
 const INTRO={active:false, t:0, dur:4.2, doors:null, bx:0, bz:0, cx:0, cz:0};   // 4.2s: long enough for the 360° look at the firehouse
 function startIntro(st){ INTRO.active=false; INTRO.doors=st._doors||null; INTRO.t=0;
@@ -2700,7 +2633,7 @@ function updateAudio(dt){ sfx.tick(GT,Math.hypot(truck.vx,truck.vz),state.siren&
 const elTimer=document.getElementById('timer'), elTimerN=elTimer.querySelector('.num'), elCash=document.getElementById('cash'), elCombo=document.getElementById('combo'),
       elSaves=document.getElementById('saves'), elStreet=document.getElementById('streetN'), elZone=document.getElementById('zoneN'), elSpeed=document.querySelector('#speed .num'),
       elRadio=document.getElementById('radioTxt'), elDouse=document.getElementById('douse'), elDouseF=document.getElementById('douseFill'),
-      elTurn=document.getElementById('turnBanner'), elHint=document.getElementById('tapHint'), elTruck=document.getElementById('truckMarker');
+      elTurn=document.getElementById('turnBanner');
 const elStreetText=elStreet.querySelector('.street'),elStreetBlock=elStreet.querySelector('.block');
 document.getElementById('btnUturn').addEventListener('click',e=>{ e.preventDefault(); uTurn(); });
 document.getElementById('btnRecenter').addEventListener('click',e=>{ e.preventDefault(); recenterCamera(); });
@@ -2749,16 +2682,9 @@ document.getElementById('btnRight').addEventListener('click',e=>{ e.preventDefau
 function setDriveSpeed(v){ DRIVE.speed=Math.max(6,Math.min(70,v)); popup(Math.round(DRIVE.speed*2.237)+' MPH'); }   // world u/s ≈ m/s → mph; cap ~156 mph
 document.getElementById('btnZoomIn').addEventListener('click',e=>{ e.preventDefault(); setDriveSpeed(DRIVE.speed+6); });    // ＋ = faster
 document.getElementById('btnZoomOut').addEventListener('click',e=>{ e.preventDefault(); setDriveSpeed(DRIVE.speed-6); });   // － = slower  (zoom is now pinch)
-document.getElementById('btnView').addEventListener('click',e=>{ e.preventDefault(); MAP.northUp=!MAP.northUp; MAP.userRot=0;
-  e.currentTarget.textContent=MAP.northUp?'🧭 NORTH UP':'🧭 HEADING'; e.currentTarget.classList.toggle('on',MAP.northUp); });
-document.getElementById('btnSat').addEventListener('click',e=>{ e.preventDefault();   // cycle base map: 🌐 LIVE streets → 🗺️ CLASSIC vector → 🛰️ SATELLITE aerial
-  const next = MAP.live ? 'vector' : (MAP.sat ? 'live' : 'sat');
-  MAP.live = (next==='live'); MAP.sat = (next==='sat');
-  e.currentTarget.textContent = MAP.live?'🌐 LIVE MAP':(MAP.sat?'🛰️ SATELLITE':'🗺️ CLASSIC');
-  e.currentTarget.classList.toggle('on', MAP.live||MAP.sat); });
 /* BOUNDARIES retired (v16d) — real PFD first-due zones cover the whole city; the hand-tracing trainer is gone. */
 document.getElementById('btnRivals').addEventListener('click',e=>{ e.preventDefault(); RIVALS.on=!RIVALS.on; e.currentTarget.classList.toggle('on',RIVALS.on);   // 🚑 rival engines on/off
-  if(RIVALS.on){ if(state.target&&state.running&&!DRAW.on) spawnRivals(); popup('🚑 RIVAL ENGINES ON'); } else { clearRivals(); popup('RIVAL ENGINES OFF'); } });
+  if(RIVALS.on){ if(state.target&&state.running) spawnRivals(); popup('🚑 RIVAL ENGINES ON'); } else { clearRivals(); popup('RIVAL ENGINES OFF'); } });
 const DUE_LABELS=['🚒 DUE: ALL','🚒 DUE: 1ST','🚒 DUE: 2ND','🚒 DUE: 3RD','🚒 DUE: 4TH'];
 /* 🚒 THE single due setter — the Settings button and Career's NEXT TRAINING both go through here, so
    PROFILE.settings.due stays the one source of truth (MAP.dueLevel is just its runtime mirror). */
@@ -2773,7 +2699,7 @@ function setDueLevel(n,quiet){ n=((n|0)%5+5)%5;
     else { const nm=['','1st','2nd','3rd','4th'][n];
       popup(DUE_LABELS[n].replace('🚒 ','')+' ONLY','green');
       radio('📻 Only taking calls that put you '+nm+' due.'); } }
-  if(state.running&&!DRAW.on&&!QUAL.active){ state.target=null; state.onScene=false; newDispatch(); }   // re-pick a call that fits (never while the exam owns the dispatch)
+  if(state.running&&!QUAL.active){ state.target=null; state.onScene=false; newDispatch(); }   // re-pick a call that fits (never while the exam owns the dispatch)
   return n; }
 document.getElementById('btnDue').addEventListener('click',e=>{ e.preventDefault(); setDueLevel(MAP.dueLevel+1); });
 document.getElementById('btnRestart').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); state.running=false; DRIVE.going=false; DRIVE.parked=false; goHome(); });
@@ -2802,17 +2728,14 @@ document.getElementById('btnDrill').addEventListener('click',e=>{ e.preventDefau
   document.getElementById('btnDrill').classList.toggle('on',DRILL.on); });
 let hurryShown=false;
 function updateHUD(dt){
-  const rp=(MAP.on&&MAP.free)?mapCenter():[truck.x,truck.z];   // when the camera is panned in training mode, read the street/block at the VIEW CENTRE (crosshair), not the truck
+  const rp=[truck.x,truck.z];   // the street/block pill reads at the truck
   const curStreet=streetName(rp[0],rp[1]),curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
   elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+(FPSM.avg?' · '+(FPSM.avg|0)+' FPS · dip '+((FPSM.shownMin===999?FPSM.avg:FPSM.shownMin)|0):'')+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
-  { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = DRAW.on ? '🎓 TRAINING » ' : '📻 DISPATCH » '; }   // boundary/training mode is not a live call
+  { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = '📻 DISPATCH » '; }   // boundary/training mode is not a live call
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
-  { const training=DRAW.on&&state.running; const tc=document.getElementById('trainChip'); if(tc) tc.classList.toggle('show',training);   // small TRAINING chip top-left; hide the big dispatch banner while training
-    const rd=document.getElementById('radio'); if(rd) rd.style.display=training?'none':'';
-    if(training){ const u=document.getElementById('btnUndo'); if(u) u.disabled=(DRAW.undo.length===0); }
-    const sa=document.getElementById('satAttr'); if(sa){ const liveAttr=MAP.live&&!LIVE.st.blocked&&LIVE.st.ok, show=state.running&&(liveAttr||MAP.sat);   // credit whichever real basemap is actually drawing
-      if(show) sa.textContent = liveAttr ? '© OpenStreetMap contributors © CARTO' : 'Imagery © Esri, Maxar, Earthstar Geographics';
+  { const sa=document.getElementById('satAttr'); if(sa){ const show=state.running&&LIVE3D.st.ok;   // credit whichever real basemap is actually drawing
+      if(show) sa.textContent = '© OpenStreetMap contributors © CARTO';
       sa.classList.toggle('show', show); } }
   if(DRIVE.pending && DRIVE.arrowT>0){ const jn=DRIVE.pending.at, nx=DRIVE.pending.next;                 // next-turn banner
     elTurn.style.display='flex'; elTurn.querySelector('.dir').textContent=DRIVE.arrow>0?'→':'←';
@@ -2821,15 +2744,11 @@ function updateHUD(dt){
   else elTurn.style.display='none';
   { const ww=DRIVE.wrongWay && DRIVE.going && state.running; const el=document.getElementById('wrongWay');   // one-way wrong-way warning
     el.style.display=ww?'block':'none'; if(ww){ elTurn.style.display='none'; } if(ww && !DRIVE._wwLatch){ popup('⚠️ WRONG WAY!','red'); try{ sfx&&sfx.ding&&sfx.ding(); }catch(e){} } DRIVE._wwLatch=ww; }
-  elTruck.classList.toggle('go', DRIVE.going);
-  if(window.__mapFocus){ elTruck.style.left=window.__mapFocus[0]+'px'; elTruck.style.top=window.__mapFocus[1]+'px'; }   // pin to the canvas's own focus point — immune to CSS % vs innerWidth drift
   document.getElementById('pullOut').style.display = (state.running&&(DRIVE.parked||DRIVE.atChoice)&&!INTRO.active)?'flex':'none';   // also becomes manual junction controls when a street ends
   document.getElementById('zoomBtns').style.display = state.running?'flex':'none';
-  { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!DRAW.on&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving                //
-  document.getElementById('btnRecenter').style.display = state.running&&(!MAP.on||MAP.free)?'block':'none';   // 3D camera control; in map mode, appears once you pan (snaps back to the truck)
-  document.getElementById('drawBtns').style.display = (state.running&&!INTRO.active&&DRAW.on)?'flex':'none';   // boundary DRAW controls: shown when boundaries are visible
+  { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving                //
+  document.getElementById('btnRecenter').style.display = state.running?'block':'none';   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
-  elTruck.querySelector('.golabel').textContent = DRIVE.parked ? '🚒 Which way?' : (DRIVE.atChoice ? '🚒 PICK A TURN' : '👆 TAP TO GO');
   if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; } }
 // On-screen dispatch marker: projects the target to the screen, sticks to the edge with an arrow when off-screen, always shows distance.
 const _wpV=new THREE.Vector3(), _wpF=new THREE.Vector3();
@@ -2898,7 +2817,7 @@ function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geomet
   const gf=new THREE.BufferGeometry(); gf.setAttribute('position',new THREE.Float32BufferAttribute(posF,3)); gf.setIndex(idx.slice());
   const ge=new THREE.BufferGeometry(); ge.setAttribute('position',new THREE.Float32BufferAttribute(posE,3)); ge.setIndex(idx.slice());
   routeMesh.geometry=g; routeMeshFlat.geometry=gf; routeEdgeFlat.geometry=ge; old.dispose(); oldF.dispose(); oldE.dispose();
-  routeMesh.visible=(state.cam!==3)&&!MAP.on && state.route && MAP.guide;
+  routeMesh.visible=(state.cam!==3) && state.route && MAP.guide;
   routeMeshFlat.visible=routeEdgeFlat.visible=(state.cam===3)&&state.route&&MAP.guide; }
 function routeLength(path){ let d=0; for(let i=1;i<path.length;i++) d+=Math.hypot(path[i].x-path[i-1].x,path[i].z-path[i-1].z); return d; }
 function streamRoute(anchor,path){ const raw=[anchor]; if(path) for(const n of path){ const p=raw[raw.length-1]; if(Math.hypot(n.x-p.x,n.z-p.z)>.2) raw.push({x:n.x,z:n.z}); }
@@ -2943,49 +2862,7 @@ function updatePeds(dt){ if(!FLAGS.pedestrians) return; const C=CONFIG.ped;
     _pm.position.set(pd.x,groundHeight(pd.x,pd.z)+0.95,pd.z); _pm.rotation.set(0,-pd.hd,0); _pm.updateMatrix(); pedMesh.setMatrixAt(i,_pm.matrix); }
   pedMesh.instanceMatrix.needsUpdate=true; }
 /* ============================ 2D MAP MODE (offline, drawn from the real OSM data) ============================ */
-const MAP={ on:false, cv:document.getElementById('mapView'), ctx:null, dpr:1, ppm:3.1, bbox:null, grid:null, cell:640, guide:true, northUp:false, sat:false, live:true, free:false, viewX:0, viewZ:0, userRot:0, dueLevel:1, w:0, h:0, turnChoices:[], turnHits:[] };   // dueLevel 0=all calls, 1..4 = first..fourth-due area only (default 1 = your own first-due, so you run out of quarters first-due every time); live = CARTO live street basemap (hosted only; artifact CSP blocks it → auto vector fallback)
-function mapCenter(){ return MAP.free ? [MAP.viewX, MAP.viewZ] : [truck.x, truck.z]; }   // the world point the map is centred on (truck, unless panned in training mode)
-(function initMap(){ if(!MAP.cv){ MAP.cv=document.createElement('canvas'); MAP.cv.id='mapView'; document.getElementById('wrap').appendChild(MAP.cv); }
-  MAP.ctx=MAP.cv.getContext('2d');
-  MAP.bbox=RB.st.map(([n,c,pts])=>{ let a=1e18,b=1e18,C=-1e18,D=-1e18; for(const p of pts){ if(p[0]<a)a=p[0]; if(p[0]>C)C=p[0]; if(p[1]<b)b=p[1]; if(p[1]>D)D=p[1]; } return [a,b,C,D]; });
-  MAP.grid=new Map(); for(let i=0;i<MAP.bbox.length;i++){ const b=MAP.bbox[i], C=MAP.cell;
-    for(let x=Math.floor(b[0]/C);x<=Math.floor(b[2]/C);x++)for(let z=Math.floor(b[1]/C);z<=Math.floor(b[3]/C);z++){
-      const k=x+':'+z; let list=MAP.grid.get(k); if(!list){ list=[]; MAP.grid.set(k,list); } list.push(i); } }
-  window.__mapTiles=MAP.grid.size;
-  // Pin the canvas to an explicit pixel size we control, so the drawn coordinate space ALWAYS matches the
-  // displayed box. (On mobile browsers the element's own rect and innerWidth/innerHeight can each be wrong.)
-  MAP.resize=()=>{ const wrap=document.getElementById('wrap'), wr=wrap?wrap.getBoundingClientRect():null;
-    const vv=window.visualViewport;
-    let w=Math.round((wr&&wr.width>1?wr.width:0) || (vv&&vv.width>1?vv.width:0) || innerWidth || 360);
-    let h=Math.round((wr&&wr.height>1?wr.height:0) || (vv&&vv.height>1?vv.height:0) || innerHeight || 640);
-    MAP.w=Math.max(1,w); MAP.h=Math.max(1,h); MAP.dpr=Math.min(2,window.devicePixelRatio||1);
-    MAP.cv.style.width=MAP.w+'px'; MAP.cv.style.height=MAP.h+'px';                              // CSS size == drawing size
-    MAP.cv.width=Math.round(MAP.w*MAP.dpr); MAP.cv.height=Math.round(MAP.h*MAP.dpr); };
-  MAP.resize(); addEventListener('resize',MAP.resize); addEventListener('orientationchange',MAP.resize);
-  if(window.visualViewport) visualViewport.addEventListener('resize',MAP.resize);              // mobile chrome collapse/expand
-  // Single finger = tap (go/stop, choose a turn). Two fingers = pinch-to-zoom (MAP.ppm).
-  const ptrs=new Map(); let pinchD0=0, pinchP0=0, pinched=false;
-  MAP.cv.addEventListener('pointerdown',e=>{ e.preventDefault(); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.size===2){ const p=[...ptrs.values()]; pinchD0=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1; pinchP0=MAP.ppm; pinched=true; DRAW.handStart=null; }
-    else if(ptrs.size===1 && DRAW.hand){ const w=mapScreenToWorld(e.clientX,e.clientY); const g=nearestStrokeEnd(w.x,w.z,26/MAP.ppm);   // ✋ LINE tool: grab an endpoint to extend/shorten, else drag a new straight segment
-      if(g){ pushUndo(); DRAW.editIdx=g.s; DRAW.editVtx=g.vi; DRAW.handStart=null; } else { DRAW.editIdx=null; DRAW.handStart=[w.x,w.z]; DRAW.handEnd=[w.x,w.z]; } }
-    else if(ptrs.size===1 && DRAW.erase){ pushUndo(); const w=mapScreenToWorld(e.clientX,e.clientY); DRAW.eraseR=24/MAP.ppm; DRAW.eraseCur=[w.x,w.z]; drawEraseAt(w.x,w.z,DRAW.eraseR); }   // 🧽 eraser: rub out lines under the finger (snapshot once at gesture start)
- },{passive:false});
-  MAP.cv.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId)) return; e.preventDefault(); ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(ptrs.size>=2){ const p=[...ptrs.values()]; const d=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1; const minP=0.3; MAP.ppm=Math.max(minP,Math.min(7,pinchP0*d/pinchD0)); }
-    else if(ptrs.size===1 && DRAW.hand){ const w=mapScreenToWorld(e.clientX,e.clientY);
-      if(DRAW.editIdx!=null){ const st=DRAW.strokes[DRAW.editIdx]; if(st&&st[DRAW.editVtx]) st[DRAW.editVtx]=[w.x,w.z]; } else if(DRAW.handStart){ DRAW.handEnd=[w.x,w.z]; } }
-    else if(ptrs.size===1 && DRAW.erase){ const w=mapScreenToWorld(e.clientX,e.clientY); DRAW.eraseR=24/MAP.ppm; DRAW.eraseCur=[w.x,w.z]; drawEraseAt(w.x,w.z,DRAW.eraseR); }
- },{passive:false});
-  const endPtr=e=>{ const had=ptrs.size; ptrs.delete(e.pointerId);
-    if(ptrs.size===0){
-      if(DRAW.hand && had===1 && DRAW.editIdx!=null){ DRAW.editIdx=null; popup('LINE ADJUSTED'); }   // finished dragging an endpoint
-      else if(DRAW.hand && had===1 && DRAW.handStart && DRAW.handEnd){ const a=DRAW.handStart,b=DRAW.handEnd;                        // commit the straight line as a 2-point stroke
-        if(Math.hypot(a[0]-b[0],a[1]-b[1])>=3){ pushUndo(); if(!DRAW.on){ DRAW.on=true; DRAW.eng=drawEng(); } DRAW.strokes.push([[a[0],a[1]],[b[0],b[1]]]); popup('LINE ADDED'); syncDrawBtn(); } DRAW.handStart=null; DRAW.handEnd=null; }
-      else if(DRAW.erase && had===1){ DRAW.eraseCur=null; syncDrawBtn(); }   // finished an erase stroke
-      else if(!pinched && had===1) mapTap(e.clientX,e.clientY);   // tap fires only on a clean one-finger release
-      pinched=false; } };
-  MAP.cv.addEventListener('pointerup',endPtr); MAP.cv.addEventListener('pointercancel',e=>{ ptrs.delete(e.pointerId); if(ptrs.size===0){ pinched=false; DRAW.handStart=null; DRAW.eraseCur=null; } }); })();
+const MAP={ guide:true, dueLevel:1 };   // what survives of the old 2D map object: the guide-ribbon toggle and the run-map DUE level (tiltZoom is set lazily). The 2D map view, its canvas, grid and gestures are gone.
 // 3D-view controls (chase / overhead): tap the truck = go/stop; tap left/right of the truck = turn that way at the next junction.
 // (Screen-side, not a ground raycast — the terrain is elevated so a sea-level raycast lands off the real roads.)
 const _tv=new THREE.Vector3();
@@ -3033,7 +2910,7 @@ function streetChoiceCaption(p,block){return p&&Math.hypot(p.at.x+819,p.at.z-574
 function streetChoiceWrong(p){ return !!(p&&p.at&&p.next&&p.at.adj.some(e=>e.to===p.next&&e.wrong)); }
 function updateParkedStreetChoices(){ const root=PARK_UI.root, rect=renderer.domElement.getBoundingClientRect(), placed=[];
   const hideFrom=n=>{ for(let i=n;i<PARK_UI.buttons.length;i++){ PARK_UI.buttons[i].style.display='none'; PARK_UI.buttons[i]._sp=null; } };
-  if(MAP.on||!state.running){ root.classList.remove('show'); hideFrom(0); return; }
+  if(!state.running){ root.classList.remove('show'); hideFrom(0); return; }
   let sel=PARK_UI.selected;
   if(sel&&!sel.direct&&(!DRIVE.pending||DRIVE.pending.at!==sel.at||DRIVE.pending.next!==sel.next)) PARK_UI.selected=sel=null; // turn executed, replaced or cancelled
   if(sel&&sel.direct&&GT>=sel.until) PARK_UI.selected=sel=null;
@@ -3060,18 +2937,18 @@ function updateParkedStreetChoices(){ const root=PARK_UI.root, rect=renderer.dom
     b._sp={_pick:sel.pick,_name:sel.name,_block:sel.block}; b.querySelector('.block').textContent=streetChoiceCaption(sel.pick,sel.block); b.querySelector('.street').textContent=dispSel;
     b.setAttribute('aria-label',(wrong?'Wrong way, ':'')+sel.name+', selected'); }
   hideFrom(count); root.classList.toggle('show',count>0); }
-function worldTap3D(clientX,clientY){ if(MAP.on||!state.running) return;
+function worldTap3D(clientX,clientY){ if(!state.running) return;
   const rect=renderer.domElement.getBoundingClientRect(); if(rect.width<2||rect.height<2) return;
   if(DRIVE.parked) return;                                                        // parked street choices are DOM bubbles above the canvas
   if(DRIVE.atChoice){ _tv.set(truckG.position.x,truckG.position.y+1.6,truckG.position.z).project(camera);   // stopped at a junction: tap the left / right half to pick the branch
     const tsx=(_tv.x*0.5+0.5)*rect.width, tsy=(-_tv.y*0.5+0.5)*rect.height, lx=clientX-rect.left, ly=clientY-rect.top;
-    if(_tv.z<1&&Math.hypot(lx-tsx,ly-tsy)<52){ chooseStraight(); return; }      // tap ON the truck = straight, exactly as the banner promises (mapTap already did this; Tilt was coin-flipping left/right — owner got spun around at the City Ave ramps)
+    if(_tv.z<1&&Math.hypot(lx-tsx,ly-tsy)<52){ chooseStraight(); return; }      // tap ON the truck = straight, exactly as the banner promises (the old 2D map tap already did this; Tilt was coin-flipping left/right — owner got spun around at the City Ave ramps)
     chooseAtT(lx < (_tv.z>=1?rect.width/2:tsx) ? -1 : 1); return; }
   DRIVE.going=!DRIVE.going; }                                                     // any tap on the map surface = GO / STOP (street-name bubbles are DOM buttons that catch their own taps first)
 (function init3DTap(){ const el=renderer.domElement, ps=new Map(); let moved=false, lastX=0, lastY=0, pinchD=0;   // 1 finger drag = look around; 2 fingers = pinch-zoom the tilt map; clean tap = go/stop or turn
   const twoDist=()=>{ const a=[...ps.values()]; return a.length>=2?Math.hypot(a[0].cx-a[1].cx,a[0].cy-a[1].cy):0; };
   el.addEventListener('pointerdown',e=>{ if(ps.size===0) moved=false; ps.set(e.pointerId,{dx:e.clientX,dy:e.clientY,cx:e.clientX,cy:e.clientY}); lastX=e.clientX; lastY=e.clientY; if(ps.size>=2) pinchD=twoDist(); try{el.setPointerCapture(e.pointerId);}catch(_){} });
-  el.addEventListener('pointermove',e=>{ const p=ps.get(e.pointerId); if(!p||MAP.on) return; p.cx=e.clientX; p.cy=e.clientY;
+  el.addEventListener('pointermove',e=>{ const p=ps.get(e.pointerId); if(!p) return; p.cx=e.clientX; p.cy=e.clientY;
     if(ps.size>=2){ moved=true; const d=twoDist(); if(pinchD>0&&d>0&&state.cam===3) MAP.tiltZoom=Math.max(0.55,Math.min(2.4,(MAP.tiltZoom||1)*(pinchD/d))); pinchD=d; return; }   // spread fingers → zoom in
     if(ps.size!==1) return;
     if(Math.hypot(e.clientX-p.dx,e.clientY-p.dy)>12) moved=true;
@@ -3084,7 +2961,6 @@ function worldTap3D(clientX,clientY){ if(MAP.on||!state.running) return;
     if(ps.size===1){ const r=ps.values().next().value; lastX=r.cx; lastY=r.cy; }
     if(had&&!moved&&solo) worldTap3D(e.clientX,e.clientY); };
   el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); el.addEventListener('lostpointercapture',up); addEventListener('blur',()=>ps.clear()); })();
-function mapRot(){ const base = MAP.northUp ? 0 : (-Math.PI/2 - Math.atan2(-Math.cos(truck.theta),-Math.sin(truck.theta))); return base + (MAP.userRot||0); }   // + user twist (training mode)
 // ==== Road-following driving: the truck rides its road; tap it to GO/STOP, tap a street to pick the next turn ====
 const DRIVE={ going:false, parked:false, atChoice:false, stationId:null, stationNode:null, fromN:null, toN:null, t:0, speed:15, pending:null, arrow:0, arrowT:0 };
 // 🚚 Visual corner rounding. The graph is a polyline, so the truck's track has hard corners at every
@@ -3361,92 +3237,9 @@ function mapBranchPoint(node,next,name,want){ const cn=canonStreet(name); let a=
       const ex=e.to.x-b.x,ez=e.to.z-b.z,el=Math.hypot(ex,ez)||1,dot=ux*ex/el+uz*ez/el; if(dot>bd){bd=dot;best=e.to;} }
     if(!best) return {x:b.x,z:b.z,dx:ux,dz:uz}; a=b; b=best; }
   return {x:b?b.x:a.x,z:b?b.z:a.z,dx:ux,dz:uz}; }
-function mapChoiceCandidates(){ const out=[],seen=new Set(),spd=Math.max(8,DRIVE.speed||15),far=Math.min(320,70+spd*4.5),cur=streetName(truck.x,truck.z),curKey=canonStreet((DRIVE.parked&&DRIVE.faces)||cur),limit=10;
-  const add=(node,e,first=null,from=null)=>{ const nm=e.name||edgeName(node,e.to); if(!nm||canonStreet(nm)===curKey) return;
-    if(e.wrong) return;                                                        // never offer a turn that goes the WRONG way down a one-way / divided-road carriageway
-    const p=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null); if(!p) return;
-    const key=node.x+','+node.z+'|'+e.to.x+','+e.to.z; if(seen.has(key)) return; seen.add(key);
-    const pt=mapBranchPoint(node,e.to,nm,DRIVE.parked?38:42),x=pt.x,z=pt.z;
-    out.push({name:nm,block:hundredBlock(x,z,nm),x,z,dx:pt.dx,dz:pt.dz,d:Math.hypot(node.x-truck.x,node.z-truck.z),pick:p}); };
-  let a=DRIVE.fromN,b=DRIVE.toN,g=0;
-  if(DRIVE.parked&&DRIVE.stationNode){ const root=DRIVE.stationNode,scan=Math.min(far,180);
-    for(const e of root.adj) if(canonStreet(e.name||edgeName(root,e.to))!==curKey) add(root,e);
-    for(const first of root.adj){ if(canonStreet(first.name||edgeName(root,first.to))!==curKey) continue;
-      let pa=root,nb=first.to,walked=Math.hypot(nb.x-root.x,nb.z-root.z),sg=0;
-      while(nb&&sg++<24&&walked<=scan&&out.length<limit){ let found=false;
-        for(const e of nb.adj){ if(e.to===pa) continue; if(canonStreet(e.name||edgeName(nb,e.to))!==curKey){ add(nb,e,first.to,pa); found=true; } }
-        if(found) break; const nx=sameStreetOn(pa,nb); if(!nx) break; walked+=Math.hypot(nx.x-nb.x,nx.z-nb.z); pa=nb; nb=nx; } }
-    a=null; b=null; }
-  while(b&&g++<40&&out.length<limit){ if(Math.hypot(b.x-truck.x,b.z-truck.z)>far) break;
-    const branches=b.adj.filter(e=>e.to!==a); if(branches.length>1) for(const e of branches){ add(b,e,null,a); if(out.length>=limit) break; }
-    const nx=keepStreet(a,b); if(!nx) break; a=b; b=nx; }
-  out.sort((p,q)=>p.d-q.d); return out; }
-function pointSegDistance(px,py,ax,ay,bx,by){ const dx=bx-ax,dy=by-ay,L=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/L)); return Math.hypot(px-(ax+dx*t),py-(ay+dy*t)); }
-function mapChoiceAt(sx,sy,wx,wz){
-  let best=null,bd=28; for(const h of MAP.turnHits){ const d=pointSegDistance(sx,sy,h.ax,h.ay,h.bx,h.by); if(d<bd){bd=d;best=h.choice;} } if(best) return best;
-  const names=new Set(MAP.turnChoices.map(q=>canonStreet(q.name))),maxD=Math.max(8,30/MAP.ppm); let road=null,rd=maxD;
-  for(const seg of segNear(wx,wz)){ if(!seg.name||!names.has(canonStreet(seg.name))) continue; const q=closestSeg(wx,wz,seg); if(q.d<rd){rd=q.d;road=seg;} }
-  if(road){ const cn=canonStreet(road.name),bl=hundredBlock(wx,wz,road.name); let bs=1e18;
-    for(const q of MAP.turnChoices){ if(canonStreet(q.name)!==cn) continue; const score=(q.block===bl?0:80)+Math.hypot(q.x-wx,q.z-wz); if(score<bs){bs=score;best=q;} } if(best) return best; }
-  for(const h of MAP.turnHits){ if(!h.label) continue; const dx=sx-h.label.x,dy=sy-h.label.y,ca=Math.cos(h.label.ang),sa=Math.sin(h.label.ang),lx=dx*ca+dy*sa,ly=-dx*sa+dy*ca;
-    if(Math.abs(lx)<=h.label.w/2+9&&Math.abs(ly)<=h.label.h/2+9) return h.choice; } return null; }
-function takeMapChoice(ch,sx,sy){ if(!ch||!ch.pick) return false; const p=ch.pick,sp={_pick:p,_name:ch.name,_block:ch.block};
-  if(DRIVE.parked){ if(!takeParkedStreet(sp)) return false; PARK_UI.selected={name:ch.name,block:ch.block,x:sx,y:sy,pick:p,at:p.at,next:p.next,direct:!DRIVE.pending,until:GT+2.2}; return true; }
-  if(DRIVE.atChoice&&DRIVE.toN===p.at){ DRIVE.fromN=p.at; DRIVE.toN=p.next; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true; driveOrient();
-    PARK_UI.selected={name:ch.name,block:ch.block,x:sx,y:sy,pick:p,at:p.at,next:p.next,direct:true,until:GT+2.2}; popup('TAKE '+ch.name+' | '+blockLine(ch.block)); return true; }
-  return toggleStreetChoice(sp,sx,sy); }
-function mapScreenToWorld(clientX,clientY){ const rect=MAP.cv.getBoundingClientRect(),sx=clientX-rect.left,sy=clientY-rect.top,cx=(MAP.w||rect.width)/2,cy=(MAP.h||rect.height)*0.6,
-  rot=mapRot(),ca=Math.cos(-rot),sa=Math.sin(-rot),rx=sx-cx,ry=sy-cy,ctr=mapCenter(); return { x:ctr[0]+(rx*ca-ry*sa)/MAP.ppm, z:ctr[1]+(rx*sa+ry*ca)/MAP.ppm }; }
-function mapTap(clientX,clientY){ if(!MAP.on||!state.running||DRAW.hand) return;   // in ✋ LINE mode the map is a drawing surface, not tap-to-drive
-  const rect=MAP.cv.getBoundingClientRect(),sx=clientX-rect.left,sy=clientY-rect.top,cx=(MAP.w||rect.width)/2,cy=(MAP.h||rect.height)*0.6,rot=mapRot(),ctr=mapCenter();
-  const tdx=(truck.x-ctr[0])*MAP.ppm,tdz=(truck.z-ctr[1])*MAP.ppm,tsx=cx+tdx*Math.cos(rot)-tdz*Math.sin(rot),tsy=cy+tdx*Math.sin(rot)+tdz*Math.cos(rot);   // the truck's real screen spot (may be off-centre when the camera is panned)
-  if(!DRIVE.parked&&Math.hypot(sx-tsx,sy-tsy)<52){ if(DRIVE.atChoice){ chooseStraight(); } else DRIVE.going=!DRIVE.going; return; }   // tap truck at a fork = keep going straight through
-  const ca=Math.cos(-rot),sa=Math.sin(-rot),rx=sx-cx,ry=sy-cy,wx=ctr[0]+(rx*ca-ry*sa)/MAP.ppm,wz=ctr[1]+(rx*sa+ry*ca)/MAP.ppm;
-  const ch=mapChoiceAt(sx,sy,wx,wz); if(ch) takeMapChoice(ch,sx,sy); }                       // no directional guessing: tap the exact label or road
-
 const SAT_TILES={"meta":{"z":16,"tx0":19069,"ty0":24795,"cols":18,"rows":16,"lat0":40.0127,"lon0":-75.1924},"tiles":[]};
-// Embedded Esri z16 satellite snapshot (~7.3MB base64) was REMOVED to cut load/memory — satellite mode now streams live Esri tiles only (see SATLIVE).
-// SAT_TILES keeps only .meta (origin/projection) because makeTileLayer reuses it for the live CARTO + Esri layers.
-
-// 🌐 LIVE street basemap — CARTO Voyager (no labels), fetched per-view at the right zoom. Only works when HOSTED;
-// the offline artifact's CSP blocks these fetches, so after a few errors LIVE.st.blocked flips and drawMapView falls back to the vector map.
+// SAT_TILES keeps only .meta (origin/projection): makeTileLayer3D projects the live CARTO tiles onto the tilt ground with it. The embedded satellite snapshot and the 2D LIVE/SATLIVE raster layers are gone with the 2D map view.
 const TILE_STYLE='voyager_nolabels';   // CARTO street look: swap for 'positron_nolabels' (light) or 'dark_nolabels'
-function makeTileLayer(tileUrl, opts){ opts=opts||{}; const m=SAT_TILES.meta, LAT0=m.lat0, LON0=m.lon0, cosLat=Math.cos(LAT0*Math.PI/180);   // same origin/projection as SAT + the game (verified <1m alignment)
-  const cache=new Map(); const st={ ok:false, err:0, blocked:false }; const minZ=opts.minZ||12, maxZ=opts.maxZ||19, CAP=opts.cap||400;
-  // A decoded 256x256 tile costs ~256KB of image memory, and both 2D layers cache independently while
-  // only one is ever on screen: 700 each measured at ~370MB resident after a long drive. Halving it is
-  // ample for a 390x812 phone (~15 tiles on screen), but the cache must never drop below CAP - one wide
-  // draw can touch that many tiles, and a smaller cache would evict tiles that same draw still needs and
-  // refetch them every frame.
-  const IMGCAP=Math.max(opts.imgCap||350, CAP);
-  function tile(z,x,y){ const key=z+'/'+x+'/'+y; const hit=cache.get(key);
-    if(hit){ cache.delete(key); cache.set(key,hit); return hit; }        // touch on hit: eviction drops least-RECENTLY-USED, not oldest-fetched
-    const im=new Image(); im.crossOrigin='anonymous';
-    im.onload=()=>{ st.ok=true; }; im.onerror=()=>{ if(!st.ok){ st.err++; if(st.err>=4) st.blocked=true; } };
-    im.src=tileUrl(z,x,y); cache.set(key,im);
-    while(cache.size>IMGCAP){ const k=cache.keys().next().value; if(k===key) break; cache.delete(k); }
-    return im; }
-  const pickZ=ppm=>Math.max(minZ,Math.min(maxZ,Math.floor(Math.log2(156543.034*cosLat*ppm))));
-  const w2lon=x=>LON0+x/(cosLat*111320), w2lat=zc=>LAT0-zc/110540;
-  const lon2tx=(lon,n)=>(lon+180)/360*n, lat2ty=(lat,n)=>(1-Math.asinh(Math.tan(lat*Math.PI/180))/Math.PI)/2*n;
-  const tx2lon=(tx,n)=>tx/n*360-180, ty2lat=(ty,n)=>Math.atan(Math.sinh(Math.PI*(1-2*ty/n)))*180/Math.PI;
-  // draws the layer under the world-space ctx; returns true once ≥1 tile has ever loaded
-  function draw(c,cx,cz,R,ppm){ if(st.blocked) return st.ok;
-    const z=pickZ(ppm), n=Math.pow(2,z);
-    let tx0=Math.floor(lon2tx(w2lon(cx-R),n)), tx1=Math.floor(lon2tx(w2lon(cx+R),n));
-    let ty0=Math.floor(lat2ty(w2lat(cz-R),n)), ty1=Math.floor(lat2ty(w2lat(cz+R),n));
-    if(ty0>ty1){ const t=ty0; ty0=ty1; ty1=t; }
-    tx0=Math.max(0,tx0); ty0=Math.max(0,ty0); tx1=Math.min(n-1,tx1); ty1=Math.min(n-1,ty1);
-    if((tx1-tx0+1)*(ty1-ty0+1)>CAP) return st.ok;   // safety cap at extreme zoom-out
-    const pad=1/ppm; c.imageSmoothingEnabled=true;
-    for(let x=tx0;x<=tx1;x++) for(let y=ty0;y<=ty1;y++){ const im=tile(z,x,y); if(!im.complete||!im.naturalWidth) continue;
-      const lonW=tx2lon(x,n),lonE=tx2lon(x+1,n),latN=ty2lat(y,n),latS=ty2lat(y+1,n);
-      const xL=(lonW-LON0)*cosLat*111320, xR=(lonE-LON0)*cosLat*111320, zT=(LAT0-latN)*110540, zB=(LAT0-latS)*110540;
-      c.drawImage(im,xL,zT,(xR-xL)+pad,(zB-zT)+pad); }
-    return st.ok; }
-  return { draw, st }; }
-const LIVE=makeTileLayer((z,x,y)=>'https://'+['a','b','c','d'][(x+y)&3]+'.basemaps.cartocdn.com/rastertiles/'+TILE_STYLE+'/'+z+'/'+x+'/'+y+'.png');                        // 🌐 CARTO street basemap
-const SATLIVE=makeTileLayer((z,x,y)=>'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'+z+'/'+y+'/'+x, {maxZ:19});   // 🛰️ live Esri World Imagery — sharp at every zoom, whole city (Esri uses z/y/x order)
 // ── 🗺️ WebGL tilted-map: live tiles textured onto the 3D ground plane (Google-nav look) ──
 function makeTileLayer3D(tileUrl, opts){ opts=opts||{}; const m=SAT_TILES.meta, LAT0=m.lat0, LON0=m.lon0, cosLat=Math.cos(LAT0*Math.PI/180);
   const minZ=opts.minZ||14, maxZ=opts.maxZ||19;
@@ -3955,215 +3748,7 @@ function __oldBuildFlatCity(){ genCityData(); if(!buildData.length) return;
         dummy.scale.set(Math.max(b.w,b.d)*1.44,rh,Math.max(b.w,b.d)*1.44); dummy.rotation.set(0,Math.PI/4,0); dummy.updateMatrix(); rf.setMatrixAt(i,dummy.matrix); rf.setColorAt(i,col.setHex(rPal[i%rPal.length])); });
       rf.instanceMatrix.needsUpdate=true; if(rf.instanceColor)rf.instanceColor.needsUpdate=true; FLATCITY.group.add(rf); } } }
 
-function drawMapView(dt){ try{ const c=MAP.ctx; if(!c) return;
-  { const r=MAP.cv.getBoundingClientRect(); if(Math.abs((r.width||MAP.w)-MAP.w)>1||Math.abs((r.height||MAP.h)-MAP.h)>1) MAP.resize(); }
-  const W=MAP.w,H=MAP.h,ppm=MAP.ppm,dpr=MAP.dpr,cx=W/2,cy=H*0.6,rot=mapRot();
-  const live=MAP.live && !LIVE.st.blocked, sat=MAP.sat && !live,   // 🌐 live streets take priority; 🛰️ satellite = stylized aerial recolor (embedded, offline)
-    LAND=sat?'#31402b':MAP_LAND, OUT=sat?'#28331f':MAP_OUTSIDE, WAT=sat?'#22405f':MAP_WATER,
-    rdCase=cl=>sat?'#20281b':RD_CASE[cl], rdFill=cl=>sat?(cl===0?'#efe7cf':'#cbc3ab'):RD_FILL[cl];
-  c.setTransform(dpr,0,0,dpr,0,0); c.fillStyle=(RB.bd&&RB.bd.length?OUT:LAND); c.fillRect(0,0,W,H);
-  const R=(Math.hypot(W,H)/2)/ppm+50; const CTR=mapCenter(), CTRX=CTR[0], CTRZ=CTR[1];   // view centre = truck, or the panned camera point in training mode
-  c.save(); c.translate(cx,cy); c.rotate(rot); c.scale(ppm,ppm); c.translate(-CTRX,-CTRZ);
-  if(RB.bd&&RB.bd.length>2){ c.beginPath(); c.moveTo(RB.bd[0][0],RB.bd[0][1]); for(let i=1;i<RB.bd.length;i++) c.lineTo(RB.bd[i][0],RB.bd[i][1]); c.closePath();
-    c.fillStyle=LAND; c.fill(); c.strokeStyle=sat?'#151d10':'#a7aaa5'; c.lineWidth=1.25/ppm; c.stroke(); } // show the exact edge, but keep city-limit roads + truck visible just outside it
-  let liveShown=false;
-  if(live){ liveShown=LIVE.draw(c,CTRX,CTRZ,R,ppm); }                 // 🌐 CARTO live street tiles as the base layer (hosted only; commits once a tile loads)
-  if(sat){                                                             // 🛰️ satellite: stylized aerial recolor (set above) is the instant base, then sharp live Esri tiles stream on top (hosted)
-    if(!SATLIVE.st.blocked) SATLIVE.draw(c,CTRX,CTRZ,R,ppm);            // live Esri World Imagery — crisp at the current zoom, whole city
-  }
-  else if(!liveShown){ c.fillStyle=WAT; for(const poly of RB.wa){ if(poly.length<3) continue; c.beginPath(); c.moveTo(poly[0][0],poly[0][1]); for(let i=1;i<poly.length;i++) c.lineTo(poly[i][0],poly[i][1]); c.closePath(); c.fill(); } }   // skip vector water once the live/aerial basemap draws its own
-  c.lineCap='round'; c.lineJoin='round'; const vis=[], ids=new Set(), C=MAP.cell;
-  for(let x=Math.floor((CTRX-R)/C);x<=Math.floor((CTRX+R)/C);x++)for(let z=Math.floor((CTRZ-R)/C);z<=Math.floor((CTRZ+R)/C);z++){
-    const list=MAP.grid.get(x+':'+z); if(list) for(const i of list) ids.add(i); }
-  for(const i of ids){ const bb=MAP.bbox[i]; if(CTRX<bb[0]-R||CTRX>bb[2]+R||CTRZ<bb[1]-R||CTRZ>bb[3]+R) continue; vis.push(i); }
-  window.__visibleRoads=vis.length;
-  vis.sort((a,b)=>RB.st[b][1]-RB.st[a][1]);          // draw minor roads first so primary arterials sit on top (Apple hierarchy)
-  if(!liveShown){                                     // 🌐 live basemap already renders the streets — don't double them with the vector roads
-  for(const i of vis){ const cl=RB.st[i][1],pts=RB.st[i][2]; c.strokeStyle=rdCase(cl); c.lineWidth=CLASSW[cl]+RD_CASEW[cl]; c.beginPath(); c.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) c.lineTo(pts[k][0],pts[k][1]); c.stroke(); }
-  for(const i of vis){ const cl=RB.st[i][1],pts=RB.st[i][2]; c.strokeStyle=rdFill(cl); c.lineWidth=CLASSW[cl]; c.beginPath(); c.moveTo(pts[0][0],pts[0][1]); for(let k=1;k<pts.length;k++) c.lineTo(pts[k][0],pts[k][1]); c.stroke(); }
-  }
-  if(ppm>=1.0){ const hy=hydrantsNear(CTRX,CTRZ,R);                 // 🚒 fire hydrants drawn as small stylised kerbside markers, screen-constant (counter-rotate + unscale over the world transform)
-    for(const h of hy){ c.save(); c.translate(h[0],h[1]); c.rotate(-rot); c.scale(1/ppm,1/ppm);
-      c.fillStyle=h[2]===2?'#e8a020':'#d8382a'; c.strokeStyle='rgba(255,255,255,.85)'; c.lineWidth=1;   // amber = player-submitted, not official PWD data
-      c.beginPath(); c.roundRect(-2.4,-9,4.8,9,1.6); c.fill(); c.stroke();            // body
-      c.beginPath(); c.moveTo(-3.3,-9); c.lineTo(3.3,-9); c.lineTo(0,-12.6); c.closePath(); c.fill(); c.stroke();   // bonnet
-      c.fillRect(-4.6,-6.6,2.1,2.1); c.fillRect(2.5,-6.6,2.1,2.1);                    // side outlets
-      c.restore(); } }
-  if(DRAW.on){                                                                                     // the trace you're drawing (world space) — orange while pen down, amber when lifted
-    for(const st of DRAW.strokes){ if(st.length<1) continue; c.setLineDash([]);
-      c.beginPath(); c.moveTo(st[0][0],st[0][1]); for(let k=1;k<st.length;k++) c.lineTo(st[k][0],st[k][1]);
-      c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=7/ppm; c.stroke();
-      c.strokeStyle=DRAW.pen?'#ff6a1a':'#f0a91e'; c.lineWidth=4/ppm; c.stroke();
-      c.fillStyle='#ff6a1a'; const dot=Math.max(0.7,3/ppm); for(const p of st){ c.beginPath(); c.arc(p[0],p[1],dot,0,6.2832); c.fill(); } }
-    if(DRAW.hand){ const hr=Math.max(1.6,7/ppm); c.lineWidth=2/ppm; c.strokeStyle='#1b74e0';   // grab handles on each drawn line's ends — drag one to extend/shorten
-      for(let s=0;s<DRAW.strokes.length;s++){ const st=DRAW.strokes[s]; if(!st.length) continue;
-        for(const vi of (st.length>1?[0,st.length-1]:[0])){ const p=st[vi]; c.beginPath(); c.arc(p[0],p[1],hr,0,6.2832);
-          c.fillStyle=(DRAW.editIdx===s&&DRAW.editVtx===vi)?'#1b74e0':'#fff'; c.fill(); c.stroke(); } } }
-    if(DRAW.pen){ c.beginPath(); c.arc(truck.x,truck.z,DRAW.ERASE,0,6.2832); c.setLineDash([4/ppm,4/ppm]); c.strokeStyle='rgba(255,60,40,.7)'; c.lineWidth=1.6/ppm; c.stroke(); c.setLineDash([]); }
-    if(DRAW.hand&&DRAW.handStart&&DRAW.handEnd){ const a=DRAW.handStart,b=DRAW.handEnd; c.setLineDash([]); c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]);   // ✋ LINE rubber-band (blue)
-      c.strokeStyle='rgba(255,255,255,.9)'; c.lineWidth=7/ppm; c.stroke(); c.strokeStyle='#1b74e0'; c.lineWidth=4/ppm; c.stroke();
-      c.fillStyle='#1b74e0'; const hd=Math.max(1,4/ppm); c.beginPath();c.arc(a[0],a[1],hd,0,6.2832);c.fill(); c.beginPath();c.arc(b[0],b[1],hd,0,6.2832);c.fill(); }
-    if(DRAW.erase&&DRAW.eraseCur){ const r=DRAW.eraseR||24/ppm; c.beginPath(); c.arc(DRAW.eraseCur[0],DRAW.eraseCur[1],r,0,6.2832); c.fillStyle='rgba(229,53,43,.14)'; c.fill(); c.setLineDash([5/ppm,4/ppm]); c.strokeStyle='#e5352b'; c.lineWidth=1.8/ppm; c.stroke(); c.setLineDash([]); } }   // 🧽 eraser cursor
-  { const r=MAP.cv.getBoundingClientRect(), tdx=(truck.x-CTRX)*ppm, tdz=(truck.z-CTRZ)*ppm, cs=Math.cos(rot), sn=Math.sin(rot);
-    window.__mapFocus=[r.left+cx+tdx*cs-tdz*sn, r.top+cy+tdx*sn+tdz*cs]; }   // truck's real screen spot (canvas centre when following, offset when panned)
-  const rp=(MAP.guide&&state.route&&routePts)?routePts:null;                                   // one clean destination route; the truck never follows it automatically
-  if(rp&&rp.length>1){ c.lineCap='round'; c.lineJoin='round'; c.beginPath(); c.moveTo(rp[0].x,rp[0].z); for(let k=1;k<rp.length;k++) c.lineTo(rp[k].x,rp[k].z);
-    c.strokeStyle='rgba(255,255,255,.82)'; c.lineWidth=6.5/ppm; c.stroke(); c.strokeStyle='rgba(43,109,246,.82)'; c.lineWidth=3.5/ppm; c.stroke(); }
-  if(DRIVE.pending){ const jn=DRIVE.pending.at, nx=DRIVE.pending.next;                          // highlight the turn you picked; it is your choice, not an automatic turn
-    c.strokeStyle='#2b6df6'; c.lineWidth=3.5/ppm; c.lineCap='round'; c.beginPath(); c.moveTo(jn.x,jn.z); c.lineTo(nx.x,nx.z); c.stroke(); }
-  // 🚑 rival AI engines — numbered discs racing to the fire from their firehouses (drawn under the player truck)
-  if(RIVALS.on && state.target){ for(const r of RIVALS.list){ c.save(); c.translate(r.x,r.z); c.rotate(-rot); c.scale(1/ppm,1/ppm);
-    c.beginPath(); c.arc(0,0,13,0,6.2832); c.fillStyle=r.arrived?'#6b7280':'#f5920b'; c.fill(); c.lineWidth=2.5; c.strokeStyle='#fff'; c.stroke();
-    c.fillStyle='#fff'; c.font='800 15px -apple-system,"Helvetica Neue",Arial'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(r.num,0,1); c.restore(); } }
-  // the truck — drawn IN world space at its true position, so it can never detach from its road
-  c.save(); c.translate(truck.x,truck.z); c.rotate(-truck.theta); c.scale(1/ppm,1/ppm);
-  const pulse=DRIVE.going?1:(1+0.14*Math.sin(GT*4.5));
-  c.beginPath(); c.arc(0,0,30*pulse,0,6.2832); c.fillStyle=DRIVE.going?'rgba(43,109,246,.13)':'rgba(255,60,40,.12)'; c.fill();
-  c.lineWidth=3; c.strokeStyle=DRIVE.going?'rgba(43,109,246,.7)':'rgba(255,60,40,.8)'; c.stroke();
-  // top-down PFD pumper (nose = -y): white cab, red body, gold stripe, yellow hose bed under a black cargo net
-  c.save(); c.translate(1.4,2.4); c.fillStyle='rgba(0,0,0,.16)'; roundRect(c,-11,-25,22,50,6); c.fill(); c.restore();          // ground shadow
-  c.fillStyle='#2a2c30'; for(const wy of [-16,-2,12]){ c.fillRect(-12.6,wy,3.2,8); c.fillRect(9.4,wy,3.2,8); }                 // three axles a side
-  c.fillStyle='#d0342b'; roundRect(c,-11,-25,22,50,6); c.fill();                                                              // red body
-  c.fillStyle='#f1bd2b'; c.fillRect(-10.4,-24,1.1,48); c.fillRect(9.3,-24,1.1,48);                                            // gold side stripes
-  c.fillStyle='#f2f1ec'; roundRect(c,-10,-24,20,13.5,5); c.fill();                                                            // white cab roof (front)
-  c.fillStyle='#20252e'; roundRect(c,-8.6,-23,17.2,4.6,2); c.fill();                                                          // dark windshield
-  c.fillStyle='#ff3b30'; roundRect(c,-5.6,-14.6,5,2.2,1); c.fill(); c.fillStyle='#2f7bff'; roundRect(c,0.6,-14.6,5,2.2,1); c.fill();   // roof lightbar
-  c.fillStyle='#9c1f17'; c.fillRect(-10,-9.8,20,0.9);                                                                         // cab/pump seam
-  c.fillStyle='#e6c229'; roundRect(c,-7.4,-8.6,14.8,29,2); c.fill();                                                          // yellow hose bed
-  c.strokeStyle='rgba(18,18,20,.8)'; c.lineWidth=0.85;                                                                        // black cargo net over the hose bed
-  for(let ny=-7;ny<=20;ny+=3){ c.beginPath(); c.moveTo(-7.4,ny); c.lineTo(7.4,ny); c.stroke(); }
-  for(let nx2=-6;nx2<=6;nx2+=3){ c.beginPath(); c.moveTo(nx2,-8.6); c.lineTo(nx2,20.4); c.stroke(); }
-  c.strokeStyle='#17181b'; c.lineWidth=2; c.lineCap='round';                                                                  // black hard-suction hoses along the top edges
-  c.beginPath(); c.moveTo(-8.7,-8); c.lineTo(-8.7,19); c.stroke(); c.beginPath(); c.moveTo(8.7,-8); c.lineTo(8.7,19); c.stroke(); c.lineCap='butt';
-  c.strokeStyle='#9c1f17'; c.lineWidth=1.3; roundRect(c,-11,-25,22,50,6); c.stroke();                                         // body outline
-  c.fillStyle='#cfd3d9'; c.fillRect(-11,-25.6,22,2.3); c.fillRect(-11,23.3,22,2.3);                                           // chrome front + rear bumpers
-  c.fillStyle='#d21f1f'; c.fillRect(-9.5,22.2,3,2); c.fillStyle='#ff8a1e'; c.fillRect(6.5,22.2,3,2);                          // rear beacons
-  c.restore();
-  { const num=engNum(DRIVE.stationId||'');                                                                                   // 🚒 your engine number, floated just above the truck, always screen-upright
-    if(num){ c.save(); c.translate(truck.x,truck.z); c.rotate(-rot); c.scale(1/ppm,1/ppm);
-      c.beginPath(); c.arc(0,-33,12,0,6.2832); c.fillStyle='#d8342b'; c.fill(); c.lineWidth=2.5; c.strokeStyle='#fff'; c.stroke();
-      c.fillStyle='#fff'; c.font='800 14px -apple-system,"Helvetica Neue",Arial'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(num,0,-32); c.restore(); } }
-  c.restore();
-  if(MAP.free){ c.save(); c.setTransform(dpr,0,0,dpr,0,0);   // crosshair at the view centre — the point the street/block pill reads while panning
-    c.beginPath(); c.arc(cx,cy,10,0,6.2832); c.strokeStyle='rgba(43,109,246,.9)'; c.lineWidth=2; c.stroke();
-    c.beginPath(); c.moveTo(cx-16,cy); c.lineTo(cx-4,cy); c.moveTo(cx+4,cy); c.lineTo(cx+16,cy); c.moveTo(cx,cy-16); c.lineTo(cx,cy-4); c.moveTo(cx,cy+4); c.lineTo(cx,cy+16); c.stroke(); c.restore(); }
-  const cosR=Math.cos(rot), sinR=Math.sin(rot), toScreen=(wx,wz)=>{ const dx=(wx-CTRX)*ppm, dz=(wz-CTRZ)*ppm; return [cx+dx*cosR-dz*sinR, cy+dx*sinR+dz*cosR]; };
-  let selected=PARK_UI.selected; if(selected&&!selected.direct&&(!DRIVE.pending||DRIVE.pending.at!==selected.at||DRIVE.pending.next!==selected.next)) PARK_UI.selected=selected=null;
-  if(selected&&selected.direct&&GT>=selected.until) PARK_UI.selected=selected=null;
-  const choices=mapChoiceCandidates(); MAP.turnChoices=choices; MAP.turnHits=[]; const wide=ppm<2.2,placed=[],ordered=choices.slice().sort((a,b)=>(sameStreetChoice(selected,b.pick)?1:0)-(sameStreetChoice(selected,a.pick)?1:0)||a.d-b.d);
-  c.textAlign='center'; c.textBaseline='middle';
-  for(const L of ordered){ const p=toScreen(L.x,L.z),s1=toScreen(L.pick.at.x,L.pick.at.z),s2=toScreen(L.x,L.z),sa=toScreen(L.x-L.dx*8,L.z-L.dz*8),sb=toScreen(L.x+L.dx*8,L.z+L.dz*8); if(p[0]<-70||p[0]>W+70||p[1]<70||p[1]>H-115) continue;
-    let ang=Math.atan2(sb[1]-sa[1],sb[0]-sa[0]); if(ang>Math.PI/2)ang-=Math.PI; if(ang<-Math.PI/2)ang+=Math.PI;
-    MAP.turnHits.push({choice:L,ax:s1[0],ay:s1[1],bx:s2[0],by:s2[1],label:null});
-    const isSelected=sameStreetChoice(selected,L.pick);
-    const nx=-Math.sin(ang),ny=Math.cos(ang),side=nx*(p[0]-cx)+ny*(p[1]-cy)>=0?1:-1; p[0]+=nx*side*(wide?14:19); p[1]+=ny*side*(wide?14:19);
-    const vx=p[0]-cx,vy=p[1]-cy,vd=Math.hypot(vx,vy)||1; if(vd<88){ const push=88-vd; p[0]+=vx/vd*push; p[1]+=vy/vd*push; }
-    if(wide){ const lab=L.block?(L.block+' '+L.name):L.name; c.font='600 11px -apple-system,"Helvetica Neue",Arial'; const w=c.measureText(lab).width+16;   // keep the hundred-block number visible when zoomed out
-      if(placed.length>=5||placed.some(q=>Math.abs(q.x-p[0])<(q.w+w)/2+20&&Math.abs(q.y-p[1])<30)) continue; placed.push({x:p[0],y:p[1],w});
-      const h=22,hit=MAP.turnHits[MAP.turnHits.length-1]; hit.label={x:p[0],y:p[1],w,h,ang}; c.save(); c.translate(p[0],p[1]); c.rotate(ang); c.lineWidth=3.5; c.strokeStyle='rgba(248,247,242,.94)'; c.strokeText(lab,0,0); c.fillStyle=isSelected?SIGN_ACTIVE:'#4a4f57'; c.fillText(lab,0,0); c.restore(); continue; }
-    const bl=blockLine(L.block); c.font='600 11px -apple-system,"Helvetica Neue",Arial'; const nw=c.measureText(L.name).width; c.font='800 8px -apple-system,"Helvetica Neue",Arial'; const w=Math.min(184,Math.max(nw,c.measureText(bl).width)+18),h=30;
-    if(placed.length>=4||placed.some(q=>Math.abs(q.x-p[0])<(q.w+w)/2+18&&Math.abs(q.y-p[1])<44)) continue; placed.push({x:p[0],y:p[1],w});
-    const hit=MAP.turnHits[MAP.turnHits.length-1]; hit.label={x:p[0],y:p[1],w,h,ang}; c.save(); c.translate(p[0],p[1]); c.rotate(ang); c.shadowColor='rgba(0,0,0,.25)'; c.shadowBlur=4; c.shadowOffsetY=2;
-    c.fillStyle=isSelected?SIGN_ACTIVE:SIGN_BG; roundRect(c,-w/2,-h/2,w,h,9); c.fill(); c.shadowColor='transparent'; c.lineWidth=isSelected?1.5:1; c.strokeStyle=isSelected?'rgba(255,255,255,.9)':SIGN_EDGE; c.stroke();
-    c.font='800 8px -apple-system,"Helvetica Neue",Arial'; c.fillStyle=isSelected?'rgba(255,255,255,.82)':SIGN_SUB; c.fillText(bl,0,-6);
-    c.font='600 11px -apple-system,"Helvetica Neue",Arial'; c.fillStyle=isSelected?'#fff':SIGN_FG; c.fillText(L.name,0,6); c.restore(); }
-  if(state.target){ const raw=toScreen(state.target.x,state.target.z), m=24;
-    const p=[Math.max(m,Math.min(W-m,raw[0])),Math.max(178,Math.min(H-110,raw[1]))];   // keep the clamped-to-edge marker (incl. its pulsing halo) clear of the top HUD (responding strip + dispatch banner)
-    const clamped=(Math.abs(p[0]-raw[0])>0.5||Math.abs(p[1]-raw[1])>0.5), pulse=0.5+0.5*Math.sin(GT*4.5);   // pulsing halo pulls the eye to the active fire
-    c.save();
-    c.beginPath(); c.arc(p[0],p[1],14+pulse*9,0,6.2832); c.fillStyle='rgba(255,59,48,'+(0.30*(1-pulse)).toFixed(3)+')'; c.fill();   // expanding, fading ring
-    c.beginPath(); c.arc(p[0],p[1],14,0,6.2832); c.fillStyle='#ff3b30'; c.fill(); c.lineWidth=3; c.strokeStyle='#fff'; c.stroke();
-    c.textAlign='center'; c.textBaseline='middle'; c.font='15px sans-serif'; c.fillStyle='#fff'; c.fillText('🔥',p[0],p[1]);
-    if(clamped){ const ang=Math.atan2(raw[1]-p[1],raw[0]-p[0]), ax=p[0]+Math.cos(ang)*20, ay=p[1]+Math.sin(ang)*20;   // fire off-screen → caret points toward it
-      c.beginPath(); c.moveTo(ax+Math.cos(ang)*7,ay+Math.sin(ang)*7); c.lineTo(ax+Math.cos(ang+2.5)*7,ay+Math.sin(ang+2.5)*7); c.lineTo(ax+Math.cos(ang-2.5)*7,ay+Math.sin(ang-2.5)*7);
-      c.closePath(); c.fillStyle='#ff3b30'; c.fill(); c.lineWidth=2; c.strokeStyle='#fff'; c.stroke(); }
-    c.restore(); }
-}catch(e){ window.__mapErr=String(e); } }   /* truck marker = DOM element (#truckMarker), pinned to __mapFocus */
 /* ---- Boundary DRAW mode: trace an engine's first-due by driving it; retrace to erase; FINISHED → review → FINALIZE ---- */
-const DRAW={ on:false, pen:false, hand:false, handStart:null, handEnd:null, editIdx:null, editVtx:0, erase:false, eraseCur:null, eraseR:0, strokes:[], eng:null, STEP:5, ERASE:8, undo:[] };
-function pushUndo(){ try{ DRAW.undo.push({ s:JSON.stringify(DRAW.strokes), b:JSON.stringify(RUN_BOUNDARIES) }); if(DRAW.undo.length>20) DRAW.undo.shift(); }catch(e){} syncDrawBtn(); }   // snapshot before a destructive edit (erase / line add / endpoint drag)
-function doUndo(){ const u=DRAW.undo.pop(); if(!u){ popup('NOTHING TO UNDO'); return; }
-  try{ DRAW.strokes=JSON.parse(u.s); const nb=JSON.parse(u.b); RUN_BOUNDARIES.length=0; for(const q of nb) RUN_BOUNDARIES.push(q); saveBoundsSnapshot(); }catch(e){}
-  popup('↶ UNDID'); radio('↶ Undid the last edit — '+DRAW.undo.length+' more undo'+(DRAW.undo.length===1?'':'s')+' left.'); syncDrawBtn(); }
-function segDistPt(px,pz,ax,az,bx,bz){ const dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz; let t=L2?((px-ax)*dx+(pz-az)*dz)/L2:0; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(ax+dx*t),pz-(az+dz*t)); }
-function cutStroke(st,wx,wz,r){ const out=[]; if(st.length<2){ return st.length?[st]:[]; }   // split one polyline where it passes within r of the finger
-  let cur=[st[0]];
-  for(let i=1;i<st.length;i++){ const a=st[i-1],b=st[i];
-    if(segDistPt(wx,wz,a[0],a[1],b[0],b[1])<r){ if(cur.length>=2) out.push(cur); cur=[b]; } else cur.push(b); }
-  if(cur.length>=2) out.push(cur); return out; }
-function activeBoundEng(){ return (typeof DRIVE!=='undefined'&&DRIVE.stationId)||DRAW.eng||BOUNDARY_UI.engine; }
-function drawEraseAt(wx,wz,r){                                                  // 🧽 eraser: rub out current strokes AND already-finalized green lines for the active engine
-  const outS=[]; for(const st of DRAW.strokes) for(const p of cutStroke(st,wx,wz,r)) outS.push(p); DRAW.strokes=outS;
-  const eng=activeBoundEng(); let touched=false; const next=[];
-  for(const q of RUN_BOUNDARIES){ if(!q.engines.includes(eng)){ next.push(q); continue; }
-    const pieces=cutStroke(q.pts,wx,wz,r);
-    if(pieces.length===1 && pieces[0].length===q.pts.length){ next.push(q); continue; }   // untouched
-    touched=true; pieces.forEach((pp,k)=>{ next.push({ id:q.id+'-x'+k, order:q.order, engines:q.engines.slice(), complete:q.complete, pts:pp, labels:k===0?(q.labels||[]):[], source:(q.source||'')+' [trimmed in-game]' }); }); }
-  if(touched){ RUN_BOUNDARIES.length=0; for(const q of next) RUN_BOUNDARIES.push(q); saveBoundsSnapshot(); } }
-function nearestStrokeEnd(wx,wz,r){ let best=null,bd=r;                          // grab a drawn line's endpoint to extend/shorten it (✋ LINE mode)
-  for(let s=0;s<DRAW.strokes.length;s++){ const st=DRAW.strokes[s]; if(!st.length) continue;
-    for(const vi of (st.length>1?[0,st.length-1]:[0])){ const p=st[vi],d=Math.hypot(p[0]-wx,p[1]-wz); if(d<bd){ bd=d; best={s,vi}; } } }
-  return best; }
-function drawEng(){ return (typeof DRIVE!=='undefined'&&DRIVE.stationId)||BOUNDARY_UI.engine||'e35'; }
-function drawEngLabel(){ return boundaryEngineName(DRAW.eng||drawEng()); }
-function penDown(){ DRAW.pen=true; DRAW.hand=false; DRAW.handStart=null; DRAW.editIdx=null; DRAW.erase=false; DRAW.eraseCur=null; DRAW.strokes.push([[truck.x,truck.z]]); }
-function penUp(){ DRAW.pen=false; const s=DRAW.strokes[DRAW.strokes.length-1]; if(s&&s.length<2) DRAW.strokes.pop(); }
-function enterDraw(){ DRAW.on=true; DRAW.eng=drawEng(); DRAW.strokes=[]; DRAW.undo=[]; state.target=null; state.onScene=false; state.douse=0;
-  const d=document.getElementById('douse'); if(d) d.style.display='none';
-  setCam(2);                                                                   // the trace is drawn by drawMapView, so DRAW brings the 2D map up with it
-  penDown(); popup('✏️ DRAW MODE'); radio('✏️ DRAW MODE — runs paused. Drive to trace '+drawEngLabel()+'. Retrace a line to erase it.'); syncDrawBtn(); }
-function exitDraw(){ DRAW.on=false; DRAW.pen=false; DRAW.hand=false; DRAW.handStart=null; DRAW.editIdx=null; DRAW.erase=false; DRAW.eraseCur=null; DRAW.strokes=[]; DRAW.undo=[]; setCam(3); syncDrawBtn(); }
-function updateDraw(dt){ if(!DRAW.on||!DRAW.pen||!DRIVE.going) return; const px=truck.x,pz=truck.z;
-  for(let s=0;s<DRAW.strokes.length;s++){ const st=DRAW.strokes[s], isCur=(s===DRAW.strokes.length-1), lim=isCur?st.length-4:st.length;   // retrace within ERASE metres of an older point → truncate there
-    for(let i=0;i<lim;i++){ if(Math.hypot(st[i][0]-px,st[i][1]-pz)<DRAW.ERASE){ st.length=i; if(st.length<2) DRAW.strokes.splice(s,1); return; } } }
-  const cur=DRAW.strokes[DRAW.strokes.length-1]; if(!cur){ DRAW.strokes.push([[px,pz]]); return; }
-  const last=cur[cur.length-1]; if(!last||Math.hypot(last[0]-px,last[1]-pz)>=DRAW.STEP) cur.push([px,pz]); }
-function syncDrawBtn(){ const b=document.getElementById('btnDraw'); if(!b) return;
-  b.textContent=DRAW.pen?'✏️ DRAWING…':(DRAW.on?'✏️ PEN UP':'✏️ DRAW'); b.classList.toggle('on',DRAW.pen);
-  const h=document.getElementById('btnHand'); if(h) h.classList.toggle('on',DRAW.hand);
-  const er=document.getElementById('btnErase'); if(er) er.classList.toggle('on',DRAW.erase);
-  const u=document.getElementById('btnUndo'); if(u) u.disabled=(DRAW.undo.length===0);
-  const f=document.getElementById('btnFinish'); if(f) f.style.display=DRAW.on?'inline-block':'none'; }
-function drawPieces(){ const eng=DRAW.eng, made=[]; DRAW.strokes.forEach((st,k)=>{ if(st.length<2) return;
-  made.push({ id:eng+'-userdrawn-'+Date.now().toString(36)+k, order:'first', engines:[eng], complete:true, pts:st.map(p=>[Math.round(p[0]),Math.round(p[1])]), labels:[], source:'User-drawn in-game boundary trace' }); }); return made; }
-function drawTotalKm(){ let m=0; for(const st of DRAW.strokes) for(let i=1;i<st.length;i++) m+=Math.hypot(st[i][0]-st[i-1][0],st[i][1]-st[i-1][1]); return m/1000; }
-function renderDrawReview(){ const cv=document.getElementById('drawReviewCanvas'); if(!cv) return; const c=cv.getContext('2d');
-  const W=Math.max(280,Math.round(cv.clientWidth||320)),H=300,dpr=Math.min(2,devicePixelRatio||1); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); c.setTransform(dpr,0,0,dpr,0,0);
-  c.fillStyle=MAP_LAND; c.fillRect(0,0,W,H); const all=DRAW.strokes.flat(); if(!all.length) return;
-  let minX=1e9,maxX=-1e9,minZ=1e9,maxZ=-1e9; for(const p of all){minX=Math.min(minX,p[0]);maxX=Math.max(maxX,p[0]);minZ=Math.min(minZ,p[1]);maxZ=Math.max(maxZ,p[1]);}
-  const px=Math.max(160,maxX-minX)*.14,pz=Math.max(160,maxZ-minZ)*.14; minX-=px;maxX+=px;minZ-=pz;maxZ+=pz;
-  const scale=Math.min((W-24)/(maxX-minX),(H-24)/(maxZ-minZ)),ox=(W-(maxX-minX)*scale)/2,oy=(H-(maxZ-minZ)*scale)/2, sx=x=>ox+(x-minX)*scale, sy=z=>H-oy-(z-minZ)*scale;
-  c.fillStyle=MAP_WATER; for(const poly of RB.wa){ if(poly.length<3) continue; let a=1e9,b=-1e9,d=1e9,e=-1e9; for(const p of poly){a=Math.min(a,p[0]);b=Math.max(b,p[0]);d=Math.min(d,p[1]);e=Math.max(e,p[1]);} if(b<minX||a>maxX||e<minZ||d>maxZ) continue; c.beginPath();c.moveTo(sx(poly[0][0]),sy(poly[0][1]));for(let i=1;i<poly.length;i++)c.lineTo(sx(poly[i][0]),sy(poly[i][1]));c.closePath();c.fill(); }
-  c.lineCap='round';c.lineJoin='round';
-  for(const road of RB.st){ const pts=road[2]; let a=1e9,b=-1e9,d=1e9,e=-1e9; for(const p of pts){a=Math.min(a,p[0]);b=Math.max(b,p[0]);d=Math.min(d,p[1]);e=Math.max(e,p[1]);} if(b<minX||a>maxX||e<minZ||d>maxZ) continue;
-    c.beginPath();c.moveTo(sx(pts[0][0]),sy(pts[0][1]));for(let i=1;i<pts.length;i++)c.lineTo(sx(pts[i][0]),sy(pts[i][1])); c.strokeStyle='#d3d0c8';c.lineWidth=2.4;c.stroke(); c.strokeStyle='#fff';c.lineWidth=1.2;c.stroke(); }
-  for(const st of DRAW.strokes){ if(st.length<2) continue; c.beginPath();c.moveTo(sx(st[0][0]),sy(st[0][1]));for(let i=1;i<st.length;i++)c.lineTo(sx(st[i][0]),sy(st[i][1])); c.strokeStyle='rgba(255,255,255,.95)';c.lineWidth=6;c.stroke(); c.strokeStyle='#14824b';c.lineWidth=3;c.stroke(); } }
-function openDrawReview(){ const made=drawPieces();
-  document.getElementById('drawReviewStats').textContent = made.length ? (made.length+' segment'+(made.length>1?'s':'')+' · ~'+drawTotalKm().toFixed(2)+' km · Engine '+(DRAW.eng||'').slice(1)) : 'Nothing traced yet — drive with the pen down first.';
-  document.getElementById('drawExport').value = made.length ? JSON.stringify(made,null,1) : '';
-  renderDrawReview(); const o=document.getElementById('drawReview'); o.classList.add('show'); o.setAttribute('aria-hidden','false'); }
-function closeDrawReview(){ const o=document.getElementById('drawReview'); o.classList.remove('show'); o.setAttribute('aria-hidden','true'); }
-function finalizeDraw(){ const eng=DRAW.eng, made=drawPieces(); if(!made.length){ popup('NOTHING TO SAVE'); return; }
-  for(const p of made) RUN_BOUNDARIES.push(p); saveBoundsSnapshot();
-  closeDrawReview(); exitDraw(); popup('✅ BOUNDARY SAVED','green'); radio('✅ Saved '+made.length+' segment'+(made.length>1?'s':'')+' for Engine '+(eng||'').slice(1)+'. Copy the coords to bake it in permanently.'); }
-document.getElementById('btnDraw').addEventListener('click',e=>{ e.preventDefault(); if(!state.running) return;
-  if(!DRAW.on) enterDraw(); else if(DRAW.pen) penUp(); else penDown(); syncDrawBtn(); });
-document.getElementById('btnHand').addEventListener('click',e=>{ e.preventDefault(); if(!state.running) return;   // ✋ LINE tool: drag a straight boundary segment with your finger
-  DRAW.hand=!DRAW.hand;
-  if(DRAW.hand){ DRAW.pen=false; DRAW.erase=false; DRAW.eraseCur=null; if(!DRAW.on){ DRAW.on=true; DRAW.eng=drawEng(); DRAW.strokes=[]; state.target=null; state.onScene=false; } popup('✋ LINE TOOL'); radio('✋ LINE — drag empty map to draw a straight line, or grab a white end-dot to extend/shorten a line you drew.'); }
-  else { DRAW.handStart=null; DRAW.handEnd=null; DRAW.editIdx=null; popup('✋ LINE OFF'); }
-  syncDrawBtn(); });
-document.getElementById('btnErase').addEventListener('click',e=>{ e.preventDefault(); if(!state.running) return;   // 🧽 ERASE tool: drag over a line to rub it out
-  DRAW.erase=!DRAW.erase;
-  if(DRAW.erase){ DRAW.pen=false; DRAW.hand=false; DRAW.handStart=null; DRAW.editIdx=null; if(!DRAW.on){ DRAW.on=true; DRAW.eng=drawEng(); } popup('🧽 ERASER'); radio('🧽 ERASER — drag over any line (including finalized green ones) to rub it out.'); }
-  else { DRAW.eraseCur=null; popup('🧽 ERASER OFF'); }
-  syncDrawBtn(); });
-document.getElementById('btnUndo').addEventListener('click',e=>{ e.preventDefault(); if(!state.running) return; doUndo(); });
-document.getElementById('btnFinish').addEventListener('click',e=>{ e.preventDefault(); if(!DRAW.on) return; DRAW.hand=false; DRAW.erase=false; DRAW.eraseCur=null; DRAW.editIdx=null; penUp(); syncDrawBtn(); openDrawReview(); });
-document.getElementById('btnDrawReviewClose').addEventListener('click',closeDrawReview);
-document.getElementById('btnDrawKeep').addEventListener('click',closeDrawReview);
-document.getElementById('btnDrawCopy').addEventListener('click',()=>{ const t=document.getElementById('drawExport'); if(!t.value) return; t.select(); try{ navigator.clipboard.writeText(t.value).then(()=>{}).catch(()=>{}); }catch(e){} try{ document.execCommand('copy'); }catch(e){} popup('📋 COPIED'); });
-document.getElementById('btnDrawFinalize').addEventListener('click',finalizeDraw);
 // ===== 🚑 RIVAL ENGINES (AI opponents) — race you to the fire =====
 // When a fire is dispatched, FOUR engines respond: the FIRST-DUE engine (whose first-due polygon holds the
 // fire) + the 3 NEAREST firehouses. The player drives their engine; the AI drives the rest, each routing
@@ -4969,7 +4554,7 @@ function updateBoxDrill(dt){
 function boxdStart(companyId,scope){
   if(BOXD.on||DUED.on) return {ok:false,reason:'already-running'};
   if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-active'};        // the exam owns the truck
-  if(DRILL.on||DRAW.on) return {ok:false,reason:'special-mode-active'};
+  if(DRILL.on) return {ok:false,reason:'special-mode-active'};
   if(!state.running) return {ok:false,reason:'not-riding'};
   companyId=companyId||DRIVE.stationId; scope=scope||KNOW_DEF_SCOPE;
   if(!companyId||companyId!==DRIVE.stationId) return {ok:false,reason:'wrong-company'};
@@ -5029,7 +4614,7 @@ function trainMyLocal(companyId,dim){
     const st=stations.find(s=>s.id===companyId);
     if(!st){ popup('🎓 That firehouse is unavailable.'); return {ok:false,reason:'no-company'}; }
     if(QUAL.active||QUAL.pending){ popup('🎓 Finish your Chief Qualification first.'); return {ok:false,reason:'qual-active'}; }
-    if(DRILL.on||DRAW.on){ popup('🎓 Finish your current drill first.'); return {ok:false,reason:'special-mode-active'}; }
+    if(DRILL.on){ popup('🎓 Finish your current drill first.'); return {ok:false,reason:'special-mode-active'}; }
     const uni=knowUniverse(companyId,dim,KNOW_DEF_SCOPE);
     if(!uni||!uni.length){ popup('🎓 No reachable mapped intersections are available for this company yet.'); return {ok:false,reason:'no-universe'}; }
     closeCard();
@@ -5109,7 +4694,7 @@ function knowledgeProofText(lk){ return lk.dims.map(d=>d.mastered+' of '+d.avail
 function duedChoose(companyId){
   if(!stations.some(s=>s.id===companyId)) return {ok:false,reason:'no-company'};
   if(QUAL.active||QUAL.pending){ popup('🎓 Finish your Chief Qualification first.'); return {ok:false,reason:'qual-active'}; }
-  if(BOXD.on||BOXD.pending||DUED.on||DRILL.on||DRAW.on){ popup('🎓 Finish your current training first.'); return {ok:false,reason:'special-mode-active'}; }
+  if(BOXD.on||BOXD.pending||DUED.on||DRILL.on){ popup('🎓 Finish your current training first.'); return {ok:false,reason:'special-mode-active'}; }
   DUED.companyId=companyId; DUED.view='choose';
   const intersections=intersectionUniverse(companyId);
   duedShell('<div class="ddTop"><span class="ddMeta">ENGINE '+engNum(companyId)+' · FIRST DUE</span><button data-dd="close">BACK</button></div>'+
@@ -5122,7 +4707,7 @@ function duedChoose(companyId){
 function duedStart(companyId,scope){
   if(DUED.on||BOXD.on) return {ok:false,reason:'already-running'};
   if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-active'};
-  if(DRILL.on||DRAW.on) return {ok:false,reason:'special-mode-active'};
+  if(DRILL.on) return {ok:false,reason:'special-mode-active'};
   if(!state.running) return {ok:false,reason:'not-riding'};
   if(companyId!==DRIVE.stationId) return {ok:false,reason:'wrong-company'};
   scope=scope||KNOW_DEF_SCOPE;
@@ -5735,7 +5320,7 @@ function dueRankAt(x,z){
 const DUE_STYLE=[null,{t:'1ST IN',c:'#3ddc84'},{t:'2ND IN',c:'#ffd23b'},{t:'3RD IN',c:'#ff9f2e'},{t:'4TH IN',c:'#ff6b4a'}];
 function updateDueChip(dt){
   const el=document.getElementById('dueChip'); if(!el) return;
-  if(!state.running||DRAW.on||INTRO.active||homeEl.classList.contains('show')||boundaryOverlay.classList.contains('show')){ el.classList.remove('on'); return; }   // never over the picker or the first-due map
+  if(!state.running||INTRO.active||homeEl.classList.contains('show')||boundaryOverlay.classList.contains('show')){ el.classList.remove('on'); return; }   // never over the picker or the first-due map
   DUECHIP.t-=dt; if(DUECHIP.flash>0) DUECHIP.flash-=dt;
   if(DUECHIP.t<=0){ DUECHIP.t=0.35;                                          // 60 zone tests + a sort — plenty at ~3x/second
     const r=dueRankAt(truck.x,truck.z), nr=r?r.rank:0;
@@ -5793,7 +5378,7 @@ function spawnRivals(){ clearRivals();
       total:routeLength(path)||1, traveled:0, speed:DIFF.spd[DIFF.level][0]+Math.random()*DIFF.spd[DIFF.level][1], arrived:false, arriveT:0 }); }   // per-engine variation, scaled by difficulty
   renderRivalHUD();
 }
-function updateRivals(dt){ if(!RIVALS.on||!state.target||DRAW.on) return;
+function updateRivals(dt){ if(!RIVALS.on||!state.target) return;
   for(const r of RIVALS.list){ if(r.arrived) continue; let move=r.speed*dt;
     while(move>0 && r.seg<r.path.length-1){ const a=r.path[r.seg],b=r.path[r.seg+1],L=Math.hypot(b.x-a.x,b.z-a.z)||1e-4,rem=L*(1-r.t);
       if(move<rem){ r.t+=move/L; r.traveled+=move; move=0; } else { move-=rem; r.traveled+=rem; r.seg++; r.t=0; } }
@@ -5817,7 +5402,7 @@ function onPlayerArrive(){ if(!RIVALS.on||RIVALS.playerPlaced||!RIVALS.responder
   const place=RIVALS.order.length+1; RIVALS.playerPlace=place;                                        // rivals already on scene + you
   if(place===1) popup('🥇 FIRST IN!','green'); else popup(ordinal(place)+' DUE · Engine '+engNum(RIVALS.order[0])+' beat you','red'); }
 function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) return;
-  const show=RIVALS.on && state.target && RIVALS.responders.length && !DRAW.on;
+  const show=RIVALS.on && state.target && RIVALS.responders.length;
   el.classList.toggle('show',!!show); if(!show){ el.innerHTML=''; return; }
   const F=RIVALS.fire;                                                                            // % of the way to the fire (straight-line) — same measure for you + rivals, a fair race gauge
   const pct=(x,z,d0)=> (F&&d0)?Math.max(0,Math.min(99,Math.round((1-Math.hypot(x-F.x,z-F.z)/d0)*100))):0;
@@ -5839,7 +5424,7 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
 const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0,usedGuide:false,uturns:0};
 function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0; COACH.uturns=0;
   COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; COACH.usedGuide=false; COACH.trail.push([truck.x,truck.z]); }
-function updateCoach(dt){ if(!state.target||!state.running||DRAW.on||DRILL.on) return;
+function updateCoach(dt){ if(!state.target||!state.running||DRILL.on) return;
   if(MAP.guide) COACH.usedGuide=true;                                          // used the blue line at all → run doesn't count on the board
   if(DRIVE.wrongWay&&DRIVE.going) COACH.ww+=dt;
   if(!DRIVE.going&&!DRIVE.parked&&!state.onScene) COACH.stop+=dt;               // sat still mid-run (turnout + douse don't count)
@@ -5920,9 +5505,9 @@ function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCa
   c.fillStyle='#fff'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),5,0,6.283); c.fill(); c.fillStyle='#1e6fd9'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),3.2,0,6.283); c.fill();
   c.font='16px sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('🔥',sx(r.fx),sy(r.fz)); }
 document.getElementById('btnCoachNext').addEventListener('click',()=>{ coachHide(); if(!state.running) return; returnToStation(); newDispatch(); });
-const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw,updateDrill,updateBoxDrill,updateCoach];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
-const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() calls drawMapView (the only view now)
-MAP.on=false; document.body.classList.remove('mapmode');
+const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDrill,updateBoxDrill,updateCoach];             // road-follow + arrive-to-douse + rival engines
+const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() renders the Tilt view
+
 state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
 let radioQueue='', radioShown='', radioT=0, lastIdx=-1;
@@ -5972,7 +5557,7 @@ function launchDispatch(target){                                                
   const bx=state.target.bx!==undefined?state.target.bx:state.target.x, bz=state.target.bz!==undefined?state.target.bz:state.target.z;   // beacon over the building, not the roadway
   state.timeLeft=Math.min(CONFIG.timer.cap,state.timeLeft+add); beaconG.position.set(bx,groundHeight(bx,bz),bz); routeDirty=true;
   assignBox(); radio(state.target.d); popup('🔔 BOX '+state.target.box); spawnRivals(); coachReset(); return true; }
-function newDispatch(){ if(DRAW.on||DRILL.on||BOXD.on||duedPaused()) return;
+function newDispatch(){ if(DRILL.on||BOXD.on||duedPaused()) return;
   if(BOXD.pending&&INTRO.active) return;                     // 🎓 the drill owns the radio while it runs                               // no runs in training/boundary mode
   if(QUAL.pending&&DRIVE.stationId===QUAL.companyId){ QUAL.pending=false; qualLaunch(); return; }       // 🎖 ONE-SHOT exam injection (qual-initiated shift start) — normal flow untouched after this fires
   if(BOXD.pending&&DRIVE.stationId===BOXD.pendCompany){ BOXD.pending=false; BOXD.pendCompany=null;       // 🎓 ONE-SHOT drill injection — TRAIN MY LOCAL rode us out, so train instead of dispatching
@@ -5994,7 +5579,7 @@ const QUAL={ active:false, pending:false, _own:false, companyId:null, due:0, box
 function qualStart(companyId,due,confirmed){
   if((BOXD.on||BOXD.pending||duedPaused())&&confirmed) boxdClear('qual-takeover');                            // exam wins once the player has confirmed                                                             // → {ok:true,mode} | {ok:false,reason}; validates EVERYTHING before touching gameplay state
   if(QUAL.active||QUAL.pending) return {ok:false,reason:'qual-already-active'};
-  if(DRILL.on||DRAW.on||BOXD.on||BOXD.pending||duedPaused()) return {ok:false,reason:'special-mode-active'};            // the exam is EXCLUSIVE — never stacks with drill/training modes
+  if(DRILL.on||BOXD.on||BOXD.pending||duedPaused()) return {ok:false,reason:'special-mode-active'};            // the exam is EXCLUSIVE — never stacks with drill/training modes
   const st=stations.find(s=>s.id===companyId); if(!st) return {ok:false,reason:'no-company'};
   const k=posKey(due); if(!k) return {ok:false,reason:'invalid-due'};
   const e=PROFILE.engines[companyId], track=e&&e.pos&&e.pos[k];
@@ -6495,7 +6080,7 @@ function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); docume
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
   state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; RIVALS.on=true;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=groundHeight(SPAWN.x,SPAWN.z); truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; truck.pitch=0; camTheta=SPAWN.theta;
-  parkAtStation(st); CAMLOOK.yaw=0; CAMLOOK.pitch=0; MAP.free=false; MAP.userRot=0;
+  parkAtStation(st); CAMLOOK.yaw=0; CAMLOOK.pitch=0;
   NAVGEO.active=st.id==='e35';
   { const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; }   // 🎯 difficulty is the player's own setting now — career rank no longer forces it (P3)
   applyDifficultyGates();                                                    // training wheels match the chosen level
@@ -6514,16 +6099,15 @@ updateBest();
 let GT=0, last=performance.now(), acc=0;
 const FPSM={t:0,winT:0,avg:0,min:999,shownMin:999};
 function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=now; if(dt>CONFIG.maxDt) dt=CONFIG.maxDt; GT=now/1000;
-  if(GL.lost && !MAP.on) return;                                         // 3D context gone: don't simulate behind a frozen canvas (the 2D map needs no GL, so it keeps running)
+  if(GL.lost) return;                                         // 3D context gone: don't simulate behind a frozen canvas
   { const rn=performance.now(); if(FPSM.t){ const d=rn-FPSM.t; if(d>0&&d<1000){ const f=1000/d; FPSM.avg=FPSM.avg?FPSM.avg*0.92+f*0.08:f; if(f<FPSM.min)FPSM.min=f; } }
     FPSM.t=rn; if(rn-FPSM.winT>2000){ FPSM.shownMin=FPSM.min; FPSM.min=999; FPSM.winT=rn; } }   // owner perf review: rolling avg + worst frame of the last 2s, shown on the SAVES line
-  if(!MAP.on){ const pr=renderer.getPixelRatio(), tw=Math.round(innerWidth*pr), th=Math.round(innerHeight*pr);   // 3D views: keep the WebGL canvas full-screen (mobile address-bar/viewport changes can leave it short → a gap below the render)
+  { const pr=renderer.getPixelRatio(), tw=Math.round(innerWidth*pr), th=Math.round(innerHeight*pr);   // 3D views: keep the WebGL canvas full-screen (mobile address-bar/viewport changes can leave it short → a gap below the render)
     if(tw>2 && th>2 && (renderer.domElement.width!==tw || renderer.domElement.height!==th)) onResize(); }
   if(state.running&&!duedPaused()){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
   if(BOXD.pending&&!INTRO.active) newDispatch();
-  if(MAP.on){ for(const sp of LBL.pool) sp.visible=false; updateParkedStreetChoices(); drawMapView(dt); }                           // 2D map draws its own labels — park the 3D sprites
-  else if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
+  if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
   else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
