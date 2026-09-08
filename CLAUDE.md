@@ -84,6 +84,16 @@ Engine 35 (East Falls) is the owner's usual company and the one with the most sc
 Prefer an asserted script for bulk edits — every anchor must match exactly once, or abort before
 writing. Two aborts on this repo caught mistakes that would otherwise have shipped.
 
+## Before you publish, check which way the copy goes
+
+v18m was authored **in this public repository**, not in the owner's authoring folder. That
+reverses the project's usual direction, where the authoring folder is the source of truth and
+`gh-pages-deploy/` receives a copy.
+
+If the authoring folder still has the pre-v18m single-file `index.html`, copying it here would
+destroy the whole v18m release. Sync the authoring folder *from* this repo first. Once they
+match, the normal flow resumes.
+
 ## Current state
 
 - **TILT is the only view.** The ground-level Chase view, the 2D Map view, the base-map style

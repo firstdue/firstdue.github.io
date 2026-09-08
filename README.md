@@ -174,6 +174,20 @@ These are repository checks, not gameplay tests. Game releases still need releva
 
 ## Maintenance and publishing
 
+> **⚠️ v18m was authored in the PUBLIC repository, not the authoring folder.**
+> Everything from `index.html` splitting through the rival markers landed directly on
+> `firstdue/firstdue.github.io`. If the authoring folder still holds the pre-v18m monolithic
+> `index.html`, the usual publish step — copying that file into `gh-pages-deploy/` — would
+> **overwrite the entire v18m release**: the `data/`/`vendor/` split, TILT-only views, the tile
+> and camera fixes, and the rival markers.
+>
+> Before any `ship.js` run or manual publish, bring the authoring folder up to date **from this
+> repository**, not the other way round. What changed here: `index.html`, the new `data/` and
+> `vendor/` directories, `.gitattributes`, `.nojekyll`, `sw.js`, `repository-smoke.test.mjs`,
+> `README.md`, `ROADMAP.md`, and a new `CLAUDE.md`. Once the authoring folder matches, normal
+> authoring-folder-is-source-of-truth flow resumes.
+
+
 In the full authoring folder, read `START-HERE.md`, `MEMORY.md`, `CLAUDE.md`, `notes/firetruck-game.md`, then `SHIPLOG.md`. These notes and `ship.js` are not included in the public checkout.
 
 Run `node ship.js --check` before edits and back up `index.html` before substantial changes. Preserve real sourced geography, manual turns, advisory-only guidance, and the TILT camera as the only view. The game is no longer a single file: keep the baked data in `data/` (see `CLAUDE.md`), which is what keeps diffs small enough to review on a phone.
