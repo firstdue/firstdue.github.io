@@ -657,7 +657,6 @@
   <div class="toolTitle"><span>⚙ SETTINGS</span><button class="toolClose" id="btnSettingsClose" aria-label="Close settings">×</button></div>
   <div class="settingsGrid">
   <button class="abtn" id="btnBoundaryMap">🗺️ RUN MAP</button>
-  <button class="abtn" id="btnCam">🎥 CAMERA</button>
   <button class="abtn" id="btnNight">🌙 NIGHT</button>
   <button class="abtn on" id="btnRoute">🧭 ROUTE</button>
   <button class="abtn" id="btnSiren">🚨 SIREN</button>
@@ -2474,7 +2473,7 @@ let best={saves:0,cash:0}; try{ const s=localStorage.getItem('pfd_ef_best'); if(
 /* ============================ 9. INPUT ============================ */
 const keys=Object.create(null);
 addEventListener('keydown',e=>{ if(duedPaused()) return; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault(); keys[e.code]=true;
-  if(e.code==='KeyF') toggleSiren(); if(e.code==='KeyC') toggleCam(); if(e.code==='KeyN') toggleNight(); if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyE') doJump(); });
+  if(e.code==='KeyF') toggleSiren(); if(e.code==='KeyN') toggleNight(); if(e.code==='ShiftLeft'||e.code==='ShiftRight'||e.code==='KeyE') doJump(); });
 addEventListener('keyup',e=>{ keys[e.code]=false; });
 const TCH={ steer:0, gas:false, brake:false, drift:false };
 const AUTO={ active:false, route:null, i:0, dest:null, spd:0 };   // tap-to-drive autopilot (Map Mode); kinematic rail-follower
@@ -2489,18 +2488,20 @@ bindBtn('bGas',()=>TCH.gas=true,()=>TCH.gas=false); bindBtn('bBrake',()=>TCH.bra
   el.addEventListener('pointerdown',e=>{ e.preventDefault(); pid=e.pointerId; setFromX(e.clientX); try{ el.setPointerCapture(pid); }catch(_){}} ,{passive:false});
   el.addEventListener('pointermove',e=>{ if(e.pointerId===pid) setFromX(e.clientX); });
   const end=e=>{ if(e.pointerId===pid){ pid=null; TCH.steer=0; knob.style.left='50%'; } }; el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end); })();
-document.getElementById('btnSiren').addEventListener('click',toggleSiren); document.getElementById('btnCam').addEventListener('click',toggleCam);
+document.getElementById('btnSiren').addEventListener('click',toggleSiren);
 document.getElementById('btnRoute').addEventListener('click',toggleRoute);
 document.getElementById('btnNight').addEventListener('click',toggleNight);
 document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx.muted; document.getElementById('btnMute').textContent=sfx.muted?'🔇 MUTED':'🔊 SOUND'; if(AC){ if(sfx.muted){ sfx.eg.gain.value=0; sfx.sg.gain.value=0; } if(sfx.mg) sfx.mg.gain.value=sfx.muted?0:sfx.musicVol; } });
 function toggleSiren(){ state.siren=!state.siren; document.getElementById('btnSiren').classList.toggle('on',state.siren); }
-function toggleCam(){ state.cam = state.cam===3 ? 2 : 3; const b=document.getElementById('btnCam');   // cycle: TILT <-> MAP (ground-level 3D chase view removed — East-Falls-only + too heavy citywide)
+// TILT is the only view you ride out in (the ground-level 3D chase view went earlier — East-Falls-only
+// and too heavy citywide; the 2D MAP is no longer on the camera button, owner drives in TILT only).
+// MAP survives because DRAW renders its trace into drawMapView, so enterDraw/exitDraw swap the view.
+function setCam(n){ state.cam = n;
   LIVE3D.group.visible = state.cam===3;
   if(state.cam===3 && !FLATCITY.built){ popup('Building map…'); buildFlatCity(); }
   MAP.on = state.cam===2; document.body.classList.toggle('mapmode',MAP.on);
   if(!MAP.on){ AUTO.active=false; }
-  routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1;
-  b.textContent = state.cam===3?'\uD83E\uDDED TILT' : '\uD83D\uDDFA\uFE0F MAP'; }
+  routeMesh.visible=!MAP.on && state.route && MAP.guide && !!routePts && routePts.length>1; }
 const TILTCAM={back:18,h:26,ahead:27};                                     // GPS-nav camera rig — ~30°: tilted enough to see well down the street (user asked; 43° was too top-down, 23° was all horizon)
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
   if(FLATCITY.built){ FLATCITY.tick();                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
@@ -4124,8 +4125,9 @@ function penDown(){ DRAW.pen=true; DRAW.hand=false; DRAW.handStart=null; DRAW.ed
 function penUp(){ DRAW.pen=false; const s=DRAW.strokes[DRAW.strokes.length-1]; if(s&&s.length<2) DRAW.strokes.pop(); }
 function enterDraw(){ DRAW.on=true; DRAW.eng=drawEng(); DRAW.strokes=[]; DRAW.undo=[]; state.target=null; state.onScene=false; state.douse=0;
   const d=document.getElementById('douse'); if(d) d.style.display='none';
+  setCam(2);                                                                   // the trace is drawn by drawMapView, so DRAW brings the 2D map up with it
   penDown(); popup('✏️ DRAW MODE'); radio('✏️ DRAW MODE — runs paused. Drive to trace '+drawEngLabel()+'. Retrace a line to erase it.'); syncDrawBtn(); }
-function exitDraw(){ DRAW.on=false; DRAW.pen=false; DRAW.hand=false; DRAW.handStart=null; DRAW.editIdx=null; DRAW.erase=false; DRAW.eraseCur=null; DRAW.strokes=[]; DRAW.undo=[]; syncDrawBtn(); }
+function exitDraw(){ DRAW.on=false; DRAW.pen=false; DRAW.hand=false; DRAW.handStart=null; DRAW.editIdx=null; DRAW.erase=false; DRAW.eraseCur=null; DRAW.strokes=[]; DRAW.undo=[]; setCam(3); syncDrawBtn(); }
 function updateDraw(dt){ if(!DRAW.on||!DRAW.pen||!DRIVE.going) return; const px=truck.x,pz=truck.z;
   for(let s=0;s<DRAW.strokes.length;s++){ const st=DRAW.strokes[s], isCur=(s===DRAW.strokes.length-1), lim=isCur?st.length-4:st.length;   // retrace within ERASE metres of an older point → truncate there
     for(let i=0;i<lim;i++){ if(Math.hypot(st[i][0]-px,st[i][1]-pz)<DRAW.ERASE){ st.length=i; if(st.length<2) DRAW.strokes.splice(s,1); return; } } }
@@ -5936,7 +5938,7 @@ document.getElementById('btnCoachNext').addEventListener('click',()=>{ coachHide
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDraw,updateDrill,updateBoxDrill,updateCoach];             // 2D nav game: road-follow + arrive-to-douse + rival engines (+ boundary trace)
 const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() calls drawMapView (the only view now)
 MAP.on=false; document.body.classList.remove('mapmode');
-state.cam=3; LIVE3D.group.visible=true; { const b=document.getElementById('btnCam'); if(b) b.textContent='\uD83E\uDDED TILT'; }   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
+state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
 let radioQueue='', radioShown='', radioT=0, lastIdx=-1;
 function radio(m){ radioQueue=m; radioShown=''; radioT=0; }
