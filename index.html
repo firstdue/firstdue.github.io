@@ -177,7 +177,6 @@
   .parkStreetChoice.wrong::after { border-top-color:#bd2926; }
   .parkStreetChoice.wrong.selected { outline:3px solid #ffcf66; outline-offset:2px; }
   .parkStreetChoice:active { transform:translate(-50%,-50%) scale(.96); }
-    background:rgba(20,24,32,.8); color:#fff; font-size:clamp(11px,2.6vw,14px); font-weight:700; padding:7px 14px; border-radius:999px; box-shadow:0 2px 8px rgba(0,0,0,.4); white-space:nowrap; }
   /* turn banner (top) */
   /* 🚑 rival engines panel — the 4 engines responding to the current fire */
   #rivals { position:absolute; z-index:14; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); top:calc(max(8px,env(safe-area-inset-top)) + 44px); bottom:auto;
@@ -214,8 +213,6 @@
     pointer-events:auto; background:rgba(20,24,30,.9); color:#fff; border:2px solid #6e7781; border-radius:999px; padding:11px 15px;
     font-size:clamp(11px,2.8vw,14px); font-weight:800; box-shadow:0 3px 10px rgba(0,0,0,.35); cursor:pointer; font-family:inherit; }
   #btnRecenter:active { transform:scale(.95); }
-  /* boundary DRAW authoring controls */
-    background:rgba(20,110,60,.92); color:#eaffef; font-weight:800; font-size:clamp(9px,2.2vw,11px); letter-spacing:1.5px; padding:5px 11px; border-radius:999px; box-shadow:0 2px 7px rgba(0,0,0,.32); }
   #satAttr { position:absolute; z-index:12; right:max(6px,env(safe-area-inset-right)); bottom:max(4px,env(safe-area-inset-bottom)); display:none; pointer-events:none;
     background:rgba(0,0,0,.5); color:#e9ecef; font-size:9px; font-weight:600; letter-spacing:.2px; padding:2px 6px; border-radius:5px; }
   #satAttr.show { display:block; }
@@ -419,11 +416,6 @@
   #lbClose { width:100%; margin-top:12px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnProfileClose { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#343c49; color:#fff; pointer-events:auto; }
   #btnHyd { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:calc(clamp(90px,20vh,150px) + 122px); z-index:13; display:none; pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#e8a020; color:#fff; font-size:23px; box-shadow:0 3px 10px rgba(0,0,0,.3); font-family:inherit; }
-  /* the fire truck — a DOM marker fixed at the map's focus point, always pointing up */
-    border:3px solid rgba(255,60,40,.85); background:rgba(255,60,40,.1); animation:tkPulse 1s ease-in-out infinite; }
-    box-shadow:0 2px 8px rgba(0,0,0,.45); border:1px solid #a82219; }
-    background:rgba(20,24,32,.92); color:#fff; font-weight:800; font-size:14px; letter-spacing:.3px; padding:7px 14px; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.4); }
-  @keyframes tkPulse { 50% { transform:scale(1.16); } }
   #pullOut { position:absolute; left:50%; bottom:clamp(34px,8vh,72px); transform:translateX(-50%); z-index:14; display:none; gap:14px; }
   #pullOut button { pointer-events:auto; background:#2b6df6; color:#fff; border:none; border-radius:12px; padding:9px 13px;
     font-size:clamp(11px,2.8vw,14px); font-weight:800; box-shadow:0 3px 10px rgba(0,0,0,.3); cursor:pointer; font-family:inherit; white-space:nowrap; }
