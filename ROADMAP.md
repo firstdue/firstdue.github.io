@@ -169,8 +169,20 @@ The repository smoke suite catches packaging and syntax failures. It does not ce
       track pads only where OSM has a railway=level_crossing node).
 - [x] v17s–v17v: rail-bridge clearance floor, Falls Bridge through-truss (owner photo), stone
       abutments (owner Street View). v17w: FPS readout + top-bar declutter.
-- [ ] **Owner FPS numbers** (SAVES line shows avg + 2s-worst dip) → perf pass before any citywide
-      terrain rollout.
+- [x] **Owner FPS numbers → perf pass (v18o).** The owner's v18n ride-out (nine screenshots)
+      showed the citywide flip held 77–91 FPS average but dipped to 4/29/44 — a hitch, not load.
+      Profiled in-browser: the 380m scenery rebuild's `FLATCITY.commit` ran 239–379ms in ONE frame.
+      Three causes, all measured before and after: (1) `navRailCutDepth` scanned all 2,361 rail
+      ways per terrain vertex to find the 2 with cuts — now cached, 126ms → 1ms; (2) the road
+      surface + markings generation (navRoadY subdivision + paint draping, 45–97ms) moved verbatim
+      out of commit into a budgeted `stepLocalCity` phase (`roadGeomStart`/`roadGeomSeg`) — the
+      three meshes' vertex data verified byte-identical to v18n at Center City and South Philly,
+      both visit orders; (3) the per-bridge `J.list.find` is now a Map. Worst rebuild frame is now
+      40–62ms (was 239–379). If the owner still sees dips, the next candidates are staging the
+      water triangulation and bridge-piece generation the same way — commit's remaining cost.
+      A tried-and-reverted dead end, recorded so nobody repeats it: a 32m spatial hash for
+      `drapeRoadPaint` candidates made it SLOWER (48→72ms) — the bbox scan was never the cost,
+      the clipping work per overlapping surface is.
 - [ ] **Queued: markings wiggle/cut-off fix** — dash quads follow raw 24m DEM samples; smooth
       marking height along the street + float higher; land with the perf pass (same code region).
 - [ ] Owner: is the West School House Lane rail crossing really at grade? (OSM says yes — the only

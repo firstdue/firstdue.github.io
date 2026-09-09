@@ -799,7 +799,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18n";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18o";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -893,7 +893,9 @@ function deckY(b,t){const P=b.prof,u=Math.max(0,Math.min(1,t)),i=P?Math.min(P.le
   return y;}
 function navRoadY(x,z,name=null){if(!NAVGEO.active)return 0;const ramp=navRampY(x,z,name);if(ramp!==null)return ramp;const s=navSpan(x,z,name);return (!s||!s.b.bridge)?navTerrain(x,z):deckY(s.b,s.t);}
 function navGroundY(x,z){return NAVGEO.active?navTerrain(x,z):0;}
-function navRailCutDepth(x,z){let best=0;for(const rw of (NAVGEO.rail||[])){const c=rw.cut;if(!c)continue;
+function navRailCutDepth(x,z){let best=0;                                       // ⏱ 2 of 2,361 rail ways carry a cut, but this runs per terrain VERTEX (~3,800/rebuild).
+  if(!NAVGEO._cuts)NAVGEO._cuts=(NAVGEO.rail||[]).filter(rw=>rw.cut);           //    Scanning the full list here cost ~126ms of the ~230ms rebuild hitch (measured, v18n).
+  for(const rw of NAVGEO._cuts){const c=rw.cut;
   const dx=x-c[0],dz=z-c[1],along=Math.abs(dx*c[2]+dz*c[3]),across=Math.abs(-dx*c[3]+dz*c[2]);
   if(along>=c[4]||across>=c[5])continue;
   const fa=Math.min(1,(c[4]-along)/35),fp=Math.min(1,(c[5]-across)/18);best=Math.max(best,c[6]*fa*fp);}return best;}
@@ -3430,6 +3432,12 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
     if(landKind(x,z)!=='wood'||inWater(x,z)||nearRoadEdge(x,z)<6||railNear(x,z,3.5)||navSpan(x,z,null,20)?.b.bridge||grid.has(gk(x,z)))continue;
     if(stations.some(st=>(st.curated||st.id===DRIVE.stationId)&&Math.hypot(x-st.x,z-st.z)<62))continue;
     grid.set(gk(x,z),1);T.push({x,z,s:1.25+rv*.45,forest:true});J.forestCount++;}
+  // 🛣️ Road surface + markings, one street per resume-check. This geometry lived inside commit
+  // until v18o and was 45–97ms there in dense areas (measured) — with terrain live citywide, the
+  // navRoadY subdivision + paint draping is the single biggest rebuild cost, so it is generated
+  // here under the frame budget like everything else; commit just turns the arrays into meshes.
+  if(!J.road)roadGeomStart(J);
+  while(J.ri<J.list.length){if(performance.now()-t0>budgetMs)return false;roadGeomSeg(J,J.list[J.ri++]);}
   return true;
 }
 function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCity(J,1e9)); return J; }   // synchronous (first build only)
@@ -3458,6 +3466,55 @@ function drapeRoadPaint(v,surfaces,lift=0.08){const out=[];
         for(const p of [a,b,c])out.push(p[0],s.base+s.hx*p[0]+s.hz*p[1]+lift,p[1]);}
     }}return out;}
 /* ROAD_PAINT_END */
+// Road surface + markings generation, moved VERBATIM out of FLATCITY.commit (v18o) so stepLocalCity can run
+// it under the frame budget — see the phase at the end of stepLocalCity. State lives on J.road; the mk/my
+// push overrides drape each marking onto the road surface the moment it is pushed, exactly as before.
+function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfaces:[]}; J.road=st; J.ri=0;
+  if(NAVGEO.active){st.rp.push=function(...v){
+    const tri=(a,b,c,depth=0)=>{const ds=[Math.hypot(a[0]-b[0],a[2]-b[2]),Math.hypot(b[0]-c[0],b[2]-c[2]),Math.hypot(c[0]-a[0],c[2]-a[2])],m=Math.max(...ds);
+      if(m>24&&depth<9){let x=a,y=b,z=c;if(ds[1]===m){x=b;y=c;z=a}else if(ds[2]===m){x=c;y=a;z=b}const mid=[(x[0]+y[0])/2,(x[1]+y[1])/2,(x[2]+y[2])/2];tri(x,mid,z,depth+1);tri(mid,y,z,depth+1);return;}
+      const lifted=[];for(const p of [a,b,c]){if(p[3]===undefined)p[3]=navRoadY(p[0],p[2],st.roadName);const y=p[3];lifted.push(p[0],p[1]+y+0.16,p[2]);}Array.prototype.push.apply(this,lifted);
+      const surface=roadPaintSurface(lifted);if(surface)st.paintSurfaces.push(surface);};
+    for(let i=0;i<v.length;i+=9)tri(v.slice(i,i+3),v.slice(i+3,i+6),v.slice(i+6,i+9));return this.length;};
+    for(const arr of [st.mk,st.my])arr.push=function(...v){const projected=drapeRoadPaint(v,st.paintSurfaces);for(let i=0;i<projected.length;i++)Array.prototype.push.call(this,projected[i]);return this.length;};}
+}
+function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOCAL.R*LOCAL.R, cx=J.cx, cz=J.cz;
+  const ROAD_Y=0.06, MARK_Y=0.085;
+  st.roadName=s.name;st.paintSurfaces=[];const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2) return;
+  let dx=s.bx-s.ax, dz=s.bz-s.az; const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
+  const hw=CLASSW[s.cls]/2, nx=-dz*hw, nz=dx*hw, ex=dx*hw, ez=dz*hw;                 // extend by a half-width at each end so bends/junctions fill in
+  const ax=s.ax-ex, az=s.az-ez, bx=s.bx+ex, bz=s.bz+ez;
+  rp.push(ax+nx,ROAD_Y,az+nz, bx+nx,ROAD_Y,bz+nz, bx-nx,ROAD_Y,bz-nz,
+          ax+nx,ROAD_Y,az+nz, bx-nx,ROAD_Y,bz-nz, ax-nx,ROAD_Y,az-nz);
+  const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));
+  const jA=!!eA&&eA.n>=3, jB=!!eB&&eB.n>=3;                                            // does either end meet a junction?
+  const EV=(J.crossMap&&J.crossMap.get(s))||[];
+  const xw=EV.filter(e=>e.both).map(e=>[e.t-(e.hw+4),e.t+(e.hw+4)]);                   // lane/centre dashes break where another street actually crosses
+  if(s.cls<=2 && l>14 && mk.length<240000){
+    const dash=3.4, gap=4.6, hwm=s.cls<=1?0.30:0.26;
+    const m0=jA?eA.hw+4.5:2, m1=jB?eB.hw+4.5:2;                                        // dashes STOP short of a junction, scaled to the CROSSING street's width
+    const oneway=!!s.ow;                                                               // twin lane dividers ONLY on one-ways (twin dashes on two-way Ridge read as 3 lanes — user caught it)
+    const lanes = [0];                                                                 // ONE dash row per roadway, period — Broad St's stacked carriageways turned twin rows into dash soup
+    const arr = oneway ? mk : my;                                                      // two-way centre line is YELLOW like a real US road; one-way lane lines stay white
+    for(const lo of lanes){ const lx=-dz*lo, lz=dx*lo;
+      for(let t=m0; t<l-m1; t+=dash+gap){ const t2=Math.min(l-m1,t+dash); if(t2-t<1.2) break;
+        const md=(t+t2)/2; let inX=false; for(const w of xw){ if(md>w[0]&&md<w[1]){inX=true;break;} } if(inX) continue;
+        const p0x=s.ax+dx*t+lx, p0z=s.az+dz*t+lz, p1x=s.ax+dx*t2+lx, p1z=s.az+dz*t2+lz, mxn=-dz*hwm, mzn=dx*hwm;
+        arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn,
+                p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); } } }
+  if(s.cls<=2 && l>18 && mk.length<240000){                                            // 🚸 zebra crosswalks — endpoint junctions AND every mid-segment crossing (what makes an intersection read as an intersection)
+    const zeb=(cxw,czw,fx2,fz2)=>{ const bl=1.3, nxu=-fz2, nzu=fx2;                    // bars elongated ALONG travel, arrayed across the road
+      for(let o=-hw*0.82; o<=hw*0.82; o+=1.15){
+        const bx=cxw+nxu*o, bz=czw+nzu*o, ax2=fx2*bl, az2=fz2*bl, sx2=nxu*0.28, sz2=nzu*0.28;
+        mk.push(bx-ax2+sx2,MARK_Y,bz-az2+sz2, bx+ax2+sx2,MARK_Y,bz+az2+sz2, bx+ax2-sx2,MARK_Y,bz+az2-sz2,
+                bx-ax2+sx2,MARK_Y,bz-az2+sz2, bx+ax2-sx2,MARK_Y,bz+az2-sz2, bx-ax2-sx2,MARK_Y,bz-az2-sz2); } };
+    const placed=[]; const ok=tt=>{ for(const p2 of placed) if(Math.abs(p2-tt)<9) return false; placed.push(tt); return true; };   // Philly side streets come every ~50m — without spacing the zebras overlapped into zigzag soup on Broad St
+    if(jA){ const t0=((eA?eA.hw:hw)+2.2); if(ok(t0)) zeb(s.ax+dx*t0, s.az+dz*t0, dx, dz); }
+    if(jB){ const t1=l-((eB?eB.hw:hw)+2.2); if(ok(t1)) zeb(s.ax+dx*t1, s.az+dz*t1, dx, dz); }
+    for(const ev of EV){ if(mk.length>=240000||placed.length>=12) break;               // both approaches of every crossing/T get a zebra, spaced out
+      for(const sgn of [-1,1]){ const tt=ev.t+sgn*(ev.hw+2.2); if(tt<3||tt>l-3) continue;
+        if(ok(tt)) zeb(s.ax+dx*tt, s.az+dz*tt, dx, dz); } } }
+}
 // Refresh the block WITHOUT a frame hitch: generation runs a few ms per frame while the old scenery stays up,
 // and the meshes are swapped in one go when it finishes. (A full synchronous rebuild cost ~20-90ms = a visible stutter.)
 FLATCITY.tick=function(){ if(!FLATCITY.job) return;
@@ -3473,7 +3530,8 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   FLATCITY.parts=[];
   const B=J.B, T=J.T, S=J.S;
   if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[],roadGirder=[],roadGuard=[],guardPost=[];
-    for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=J.list.find(s=>s.name===b.name);if(!street)continue;const hw=CLASSW[street.cls]/2;let along=0;
+    const stByName=new Map();for(const s of J.list)if(s.name&&!stByName.has(s.name))stByName.set(s.name,s);   // first match, exactly what the per-bridge find() did — 818 finds × the segment list was ~10ms
+    for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=stByName.get(b.name);if(!street)continue;const hw=CLASSW[street.cls]/2;let along=0;
       for(let i=1;i<b.p.length;i++){const a=b.p[i-1],q=b.p[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz);const segStart=along;along+=l;
         if(!l)continue;const ang=Math.atan2(dx,dz),ux=dx/l,uz=dz/l,BL=b.length||1;
         const x=(a[0]+q[0])/2,z=(a[1]+q[1])/2;if(Math.hypot(x-J.cx,z-J.cz)>LOCAL.R+l)continue;
@@ -3592,50 +3650,9 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   }
   // 🛣️ ROAD SURFACE — the live tiles render streets nearly white, so they vanish against the sidewalks. Lay the
   // REAL street geometry over them as dark quads (one merged mesh, 2 tris per segment) so the roadway reads first.
-  if(J.list && J.list.length){ const R2=LOCAL.R*LOCAL.R, cx=J.cx, cz=J.cz, rp=[], mk=[], my=[];
-    let roadName=null,paintSurfaces=[];
-    if(NAVGEO.active){rp.push=function(...v){
-      const tri=(a,b,c,depth=0)=>{const ds=[Math.hypot(a[0]-b[0],a[2]-b[2]),Math.hypot(b[0]-c[0],b[2]-c[2]),Math.hypot(c[0]-a[0],c[2]-a[2])],m=Math.max(...ds);
-        if(m>24&&depth<9){let x=a,y=b,z=c;if(ds[1]===m){x=b;y=c;z=a}else if(ds[2]===m){x=c;y=a;z=b}const mid=[(x[0]+y[0])/2,(x[1]+y[1])/2,(x[2]+y[2])/2];tri(x,mid,z,depth+1);tri(mid,y,z,depth+1);return;}
-        const lifted=[];for(const p of [a,b,c]){if(p[3]===undefined)p[3]=navRoadY(p[0],p[2],roadName);const y=p[3];lifted.push(p[0],p[1]+y+0.16,p[2]);}Array.prototype.push.apply(this,lifted);
-        const surface=roadPaintSurface(lifted);if(surface)paintSurfaces.push(surface);};
-      for(let i=0;i<v.length;i+=9)tri(v.slice(i,i+3),v.slice(i+3,i+6),v.slice(i+6,i+9));return this.length;};
-      for(const arr of [mk,my])arr.push=function(...v){const projected=drapeRoadPaint(v,paintSurfaces);for(let i=0;i<projected.length;i++)Array.prototype.push.call(this,projected[i]);return this.length;};}
-    const ROAD_Y=0.06, MARK_Y=0.085;
-    for(const s of J.list){ roadName=s.name;paintSurfaces=[];const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2) continue;
-      let dx=s.bx-s.ax, dz=s.bz-s.az; const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
-      const hw=CLASSW[s.cls]/2, nx=-dz*hw, nz=dx*hw, ex=dx*hw, ez=dz*hw;                 // extend by a half-width at each end so bends/junctions fill in
-      const ax=s.ax-ex, az=s.az-ez, bx=s.bx+ex, bz=s.bz+ez;
-      rp.push(ax+nx,ROAD_Y,az+nz, bx+nx,ROAD_Y,bz+nz, bx-nx,ROAD_Y,bz-nz,
-              ax+nx,ROAD_Y,az+nz, bx-nx,ROAD_Y,bz-nz, ax-nx,ROAD_Y,az-nz);
-      const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));
-      const jA=!!eA&&eA.n>=3, jB=!!eB&&eB.n>=3;                                            // does either end meet a junction?
-      const EV=(J.crossMap&&J.crossMap.get(s))||[];
-      const xw=EV.filter(e=>e.both).map(e=>[e.t-(e.hw+4),e.t+(e.hw+4)]);                   // lane/centre dashes break where another street actually crosses
-      if(s.cls<=2 && l>14 && mk.length<240000){
-        const dash=3.4, gap=4.6, hwm=s.cls<=1?0.30:0.26;
-        const m0=jA?eA.hw+4.5:2, m1=jB?eB.hw+4.5:2;                                        // dashes STOP short of a junction, scaled to the CROSSING street's width
-        const oneway=!!s.ow;                                                               // twin lane dividers ONLY on one-ways (twin dashes on two-way Ridge read as 3 lanes — user caught it)
-        const lanes = [0];                                                                 // ONE dash row per roadway, period — Broad St's stacked carriageways turned twin rows into dash soup
-        const arr = oneway ? mk : my;                                                      // two-way centre line is YELLOW like a real US road; one-way lane lines stay white
-        for(const lo of lanes){ const lx=-dz*lo, lz=dx*lo;
-          for(let t=m0; t<l-m1; t+=dash+gap){ const t2=Math.min(l-m1,t+dash); if(t2-t<1.2) break;
-            const md=(t+t2)/2; let inX=false; for(const w of xw){ if(md>w[0]&&md<w[1]){inX=true;break;} } if(inX) continue;
-            const p0x=s.ax+dx*t+lx, p0z=s.az+dz*t+lz, p1x=s.ax+dx*t2+lx, p1z=s.az+dz*t2+lz, mxn=-dz*hwm, mzn=dx*hwm;
-            arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn,
-                    p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); } } }
-      if(s.cls<=2 && l>18 && mk.length<240000){                                            // 🚸 zebra crosswalks — endpoint junctions AND every mid-segment crossing (what makes an intersection read as an intersection)
-        const zeb=(cxw,czw,fx2,fz2)=>{ const bl=1.3, nxu=-fz2, nzu=fx2;                    // bars elongated ALONG travel, arrayed across the road
-          for(let o=-hw*0.82; o<=hw*0.82; o+=1.15){
-            const bx=cxw+nxu*o, bz=czw+nzu*o, ax2=fx2*bl, az2=fz2*bl, sx2=nxu*0.28, sz2=nzu*0.28;
-            mk.push(bx-ax2+sx2,MARK_Y,bz-az2+sz2, bx+ax2+sx2,MARK_Y,bz+az2+sz2, bx+ax2-sx2,MARK_Y,bz+az2-sz2,
-                    bx-ax2+sx2,MARK_Y,bz-az2+sz2, bx+ax2-sx2,MARK_Y,bz+az2-sz2, bx-ax2-sx2,MARK_Y,bz-az2-sz2); } };
-        const placed=[]; const ok=tt=>{ for(const p2 of placed) if(Math.abs(p2-tt)<9) return false; placed.push(tt); return true; };   // Philly side streets come every ~50m — without spacing the zebras overlapped into zigzag soup on Broad St
-        if(jA){ const t0=((eA?eA.hw:hw)+2.2); if(ok(t0)) zeb(s.ax+dx*t0, s.az+dz*t0, dx, dz); }
-        if(jB){ const t1=l-((eB?eB.hw:hw)+2.2); if(ok(t1)) zeb(s.ax+dx*t1, s.az+dz*t1, dx, dz); }
-        for(const ev of EV){ if(mk.length>=240000||placed.length>=12) break;               // both approaches of every crossing/T get a zebra, spaced out
-          for(const sgn of [-1,1]){ const tt=ev.t+sgn*(ev.hw+2.2); if(tt<3||tt>l-3) continue;
-            if(ok(tt)) zeb(s.ax+dx*tt, s.az+dz*tt, dx, dz); } } } }
+  // The geometry itself comes from roadGeomSeg, run under stepLocalCity's frame budget (v18o): the arrays arrive
+  // finished on J.road and this section only turns them into the three merged meshes.
+  if(J.road){ const {rp,mk,my}=J.road;
     if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));
       const rd=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:J.immersive?0x697582:0x8896a8})); rd.renderOrder=1; FLATCITY.group.add(rd); FLATCITY.parts.push(rd); }
     if(mk.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(mk,3));
