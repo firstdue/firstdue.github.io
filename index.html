@@ -799,7 +799,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18o";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18p";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -5506,6 +5506,12 @@ function updateCoach(dt){ if(!state.target||!state.running||DRILL.on) return;
   if(state.onScene&&!COACH.arriveT) COACH.arriveT=GT;
   COACH.acc+=dt; const m=Math.hypot(truck.x-COACH.lx,truck.z-COACH.lz);        // breadcrumb: every ~15m, or ~1s while crawling
   if(m>=15||(COACH.acc>=1&&m>=2)){ COACH.trail.push([truck.x,truck.z]); COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; } }
+/* ⚠️ segDistPt was deleted with the 2D map view (v18m) while coachPolyDist still called it — the exact
+   transitive-reference failure CLAUDE.md warns about. The throw only fired when a run came in >8% over
+   the optimal route (coachCapture's divergence scan), so every straight-line test run passed while real
+   wandering drives died in completeDispatch BEFORE saves++/FIRE OUT: douse bar gone, box still live,
+   player stranded at the scene (owner report, citywide v18n/v18o). Restored verbatim from pre-removal. */
+function segDistPt(px,pz,ax,az,bx,bz){ const dx=bx-ax,dz=bz-az,L2=dx*dx+dz*dz; let t=L2?((px-ax)*dx+(pz-az)*dz)/L2:0; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(ax+dx*t),pz-(az+dz*t)); }
 function coachPolyDist(x,z,poly){ let bd=1e18; for(let i=1;i<poly.length;i++){ const d=segDistPt(x,z,poly[i-1].x,poly[i-1].z,poly[i].x,poly[i].z); if(d<bd)bd=d; } return bd; }
 function coachCapture(){ const t=state.target; if(!t||COACH.trail.length<2) return null;   // no trail → nothing honest to say
   { const l=COACH.trail[COACH.trail.length-1]; if(Math.hypot(truck.x-l[0],truck.z-l[1])>1) COACH.trail.push([truck.x,truck.z]); }
@@ -5579,7 +5585,9 @@ function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCa
   const s0=r.trail[0];
   c.fillStyle='#fff'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),5,0,6.283); c.fill(); c.fillStyle='#1e6fd9'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),3.2,0,6.283); c.fill();
   c.font='16px sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('🔥',sx(r.fx),sy(r.fz)); }
-document.getElementById('btnCoachNext').addEventListener('click',()=>{ coachHide(); if(!state.running) return; returnToStation(); newDispatch(); });
+document.getElementById('btnCoachNext').addEventListener('click',()=>{ coachHide(); if(!state.running) return;
+  try{ returnToStation(); newDispatch(); }                                     // same stranding guard as completeDispatch's timeout — NEXT RUN must always hand over a next run
+  catch(err){ radio('⚠️ NEXT RUN ERROR — '+((err&&err.message)||err)+'. Screenshot this line.'); } });
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDrill,updateBoxDrill,updateCoach];             // road-follow + arrive-to-douse + rival engines
 const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() renders the Tilt view
 
@@ -5757,7 +5765,14 @@ function completeDispatch(){ const t=state.target; const _rv=coachCapture(); if(
   popup('🔥 FIRE OUT · '+state.saves+(state.saves===1?' SAVE':' SAVES'),'green'); radio('🔥 OUT at '+t.name+'! '+t.f); const fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta);
   for(let i=0;i<Math.min(60,water.n);i++) emit(water,truck.x+fx*3,2.4,truck.z+fz*3,Math.cos(i/60*6.28)*6+Math.random()*3,6+Math.random()*7,Math.sin(i/60*6.28)*6+Math.random()*3,0.9+Math.random()*0.5);
   state.target=null; state.onScene=false; state.douse=0; clearRivals();
-  setTimeout(()=>{ if(!state.running) return; if(_rv) showCoach(_rv); else { returnToStation(); newDispatch(); } },1500); }   // senior-man review first; NEXT RUN returns to quarters + the next box
+  setTimeout(()=>{ if(!state.running) return;                                  // senior-man review first; NEXT RUN returns to quarters + the next box
+    /* ⚠️ This callback is the ONLY road back to quarters, and an uncaught throw in it strands the player
+       at the scene with no card, no new box and no error on screen (owner report, v18n/v18o — FIRE OUT
+       shows, then nothing). Never let it die silently: name the error on the radio and force the handoff. */
+    try{ if(_rv) showCoach(_rv); else { returnToStation(); newDispatch(); } }
+    catch(err){ radio('⚠️ POST-RUN ERROR — '+((err&&err.message)||err)+' — forcing return to quarters. Screenshot this line.');
+      try{ coachHide(); returnToStation(); newDispatch(); }
+      catch(e2){ radio('⚠️ RETURN FAILED TOO — '+((e2&&e2.message)||e2)); } } },1500); }
 /* 🏚️ STATION HOUSE — a low-poly firehouse for the ACTIVE engine, in the tilt world (modelled on the user's
    Engine 2 reference: brick facade, dark curved parapet band, name lettering, bay order left→right =
    AMBULANCE · LADDER · ENGINE; houses without a ladder company get two bays, ambulance + engine).

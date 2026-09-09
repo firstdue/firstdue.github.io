@@ -130,6 +130,20 @@ The repository smoke suite catches packaging and syntax failures. It does not ce
 
 ### Next up
 
+- [x] **Stuck at the scene — box never cleared (v18p).** Owner report: arrive, douse, then no
+      return to quarters; the box stayed live with rivals racing. Root cause: the v18m view
+      removal deleted `segDistPt` while `coachPolyDist` still called it — the throw only fired
+      when a run came in >8% over the optimal route (coachCapture's divergence scan), so
+      straight-line test drives always passed while real wandering drives died inside
+      `completeDispatch` BEFORE `saves++`/FIRE OUT, every frame. Citywide play (v18n) made
+      over-route runs the norm, which is why it surfaced now. Restored verbatim from the
+      pre-removal tree; audited every other function that commit deleted — `segDistPt` was the
+      only live orphan. Reproduced both ways in-browser: v18o fails with the owner's exact
+      symptom on a wandering arrival, v18p completes it (save, FIRE OUT, coach card, no errors).
+      Also hardened the two post-run handoffs (completeDispatch's timeout, NEXT RUN): a throw
+      there now names itself on the radio and forces the return to quarters instead of
+      stranding the player silently.
+
 - [x] **Rival trucks instead of markers.** The existing six-object pool, 520m culling, path position,
       `navRoadY` height, path-segment heading and arrival state are preserved. The simple orange/navy
       trucks stay distinct from the detailed red-and-white player truck; a billboard plaque keeps the
