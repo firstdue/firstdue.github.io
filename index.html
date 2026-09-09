@@ -799,7 +799,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18m";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18n";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2475,9 +2475,14 @@ function updateTiltMap(dt){                                                    /
     const cxp=camera.position.x, cyp=camera.position.y, czp=camera.position.z;        // the chase pose we just built
     const tAng=Math.atan2(czp-truck.z, cxp-truck.x), tR=Math.hypot(cxp-truck.x,czp-truck.z);
     let e=introProgress(); e=e<.5?4*e*e*e:1-Math.pow(-2*e+2,3)/2;                     // ease both ends
-    const ang=tAng+Math.PI*2*(1-e), r=tR+(1-e)*24, h=12+e*(cyp-12);                   // low enough to read the facade, rising to the chase height at the end
+    /* Both heights are RELATIVE TO THE GROUND UNDER THE RIG. They used to be absolute (12 and 3.0),
+       which was right only while the world was flat: with terrain live, 40 of the 60 houses stand above
+       12 m and the shift opened with the camera buried in the hill (Engine 37, at 130.6 m, by 118 m).
+       Engine 35 at 10.7 m was the near-miss that kept this hidden. */
+    const g0=navGroundY(truck.x,truck.z), hLow=g0+12;
+    const ang=tAng+Math.PI*2*(1-e), r=tR+(1-e)*24, h=hLow+e*(cyp-hLow);                 // low enough to read the facade, rising to the chase height at the end
     camera.position.set(truck.x+Math.cos(ang)*r, h, truck.z+Math.sin(ang)*r);
-    camera.lookAt(truck.x, 3.0, truck.z);
+    camera.lookAt(truck.x, truck.y+3.0, truck.z);
   }
   if(STHOUSE.group){ const q=STHOUSE.group.position, a=STHOUSE.group.rotation.y;
     const hw=(STHOUSE.halfW||20)+3, hd=(STHOUSE.depth||16)/2+3;
@@ -2676,7 +2681,7 @@ function setDriveSpeed(v){ DRIVE.speed=Math.max(6,Math.min(70,v)); popup(Math.ro
 document.getElementById('btnZoomIn').addEventListener('click',e=>{ e.preventDefault(); setDriveSpeed(DRIVE.speed+6); });    // ＋ = faster
 document.getElementById('btnZoomOut').addEventListener('click',e=>{ e.preventDefault(); setDriveSpeed(DRIVE.speed-6); });   // － = slower  (zoom is now pinch)
 /* BOUNDARIES retired (v16d) — real PFD first-due zones cover the whole city; the hand-tracing trainer is gone. */
-document.getElementById('btnRivals').addEventListener('click',e=>{ e.preventDefault(); RIVALS.on=!RIVALS.on; e.currentTarget.classList.toggle('on',RIVALS.on);   // 🚑 rival engines on/off
+document.getElementById('btnRivals').addEventListener('click',e=>{ e.preventDefault(); setRivals(!RIVALS.on);   // 🚑 rival engines on/off
   if(RIVALS.on){ if(state.target&&state.running) spawnRivals(); popup('🚑 RIVAL ENGINES ON'); } else { clearRivals(); popup('RIVAL ENGINES OFF'); } });
 const DUE_LABELS=['🚒 DUE: ALL','🚒 DUE: 1ST','🚒 DUE: 2ND','🚒 DUE: 3RD','🚒 DUE: 4TH'];
 /* 🚒 THE single due setter — the Settings button and Career's NEXT TRAINING both go through here, so
@@ -2708,7 +2713,7 @@ function rerunCurrentBox(){
   state.onScene=false; state.douse=0;
   DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false;
   DRIVE.wrongWay=false; DRIVE._wwLatch=false; DRIVE._twinFrom=null;
-  if(tgt){ state.target=tgt; routeDirty=true; RIVALS.on=true; clearRivals(); spawnRivals();   // same fire, everyone starts over
+  if(tgt){ state.target=tgt; routeDirty=true; setRivals(true); clearRivals(); spawnRivals();   // same fire, everyone starts over
     radio('🔁 RUN RESTARTED — '+tgt.d); popup('🔁 BACK IN QUARTERS · SAME BOX'); }
   else newDispatch();
 }
@@ -3283,7 +3288,11 @@ const FLATCITY={ group:new THREE.Group(), built:false }; FLATCITY.group.visible=
 // so the same corner always grows the same building/tree (no popping when the block is rebuilt).
 const LOCAL={ R:760, step:17, maxB:1400, maxT:420, maxS:1100 };
 // First visual sample: Engine 35 only. These remain illustrative procedural buildings.
-const STREETSCAPE={companyId:'e35',facade:null};
+/* The immersive streetscape (facades, street-aligned buildings, richer palettes, three-lobe trees,
+   road contrast) ran at Engine 35 only while it was being proven out. `all` opens it citywide;
+   `companyId` stays as the single-company fallback so the treatment can be narrowed again from one
+   place if a location turns out to need work. */
+const STREETSCAPE={all:true,companyId:'e35',facade:null};
 function streetscapeFacade(){
   if(STREETSCAPE.facade) return STREETSCAPE.facade;
   const c=document.createElement('canvas'); c.width=256; c.height=256; const g=c.getContext('2d');
@@ -3337,7 +3346,7 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
       if(Math.hypot(o.ax-q[0],o.az-q[1])<3||Math.hypot(o.bx-q[0],o.bz-q[1])<3) continue;             // shares an endpoint — the first pass already counted it
       const ohw=CLASSW[o.cls]/2;
       if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; break; } } } }
-  return {cx,cz,list,ends,ek,immersive:DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),i:0,B:[],T:[],S:[],grid:new Map()};
+  return {cx,cz,list,ends,ek,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),i:0,B:[],T:[],S:[],grid:new Map()};
 }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
@@ -3821,6 +3830,11 @@ function renderDrillHUD(){
     '<span class="dTag">FOUND '+DRILL.done+'</span>';
 }
 const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, playerDue:0 };
+/* 🚑 The ONLY writer of RIVALS.on. The flag and the button's lit state are one fact, so they move
+   together — three call sites outside the toggle change it (rerun, missed due, shift start) and any
+   one of them left to write the flag alone desyncs the button: it then reads the opposite of the
+   truth and the next tap does the opposite of what it says. */
+function setRivals(on){ RIVALS.on=!!on; const b=document.getElementById('btnRivals'); if(b) b.classList.toggle('on',RIVALS.on); return RIVALS.on; }
 /* 🎯 DIFFICULTY — how fast the other companies run. The player's own truck does 15 u/s by default and can be
    pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
 const DIFF={ level:1, names:['TRAINING','STANDARD','PRO','EXPERT'],  // gameplay DIFFICULTY — a FREE player choice, fully independent of career rank (RANKS) since P3
@@ -5434,7 +5448,10 @@ function updateRivals(dt){ if(!RIVALS.on||!state.target) return;
   renderRivalHUD();
 }
 function missedDue(){ if(state.over) return;
-  DRIVE.going=false; RIVALS.on=false; profileRun(coachCapture(),false);       // 🧑‍🚒 the loss still goes on your record
+  DRIVE.going=false; setRivals(false); renderRivalHUD(); profileRun(coachCapture(),false);       // 🧑‍🚒 the loss still goes on your record
+  // ^ updateRivals returns straight after this call and every later frame early-returns on !RIVALS.on,
+  //   so nothing else would repaint the strip: it froze mid-race, showing live percentages for a race
+  //   that just ended. The game-over card already names who beat you in.
   const beat=RIVALS.order.map(id=>'Engine '+engNum(id)).join(', ');
   radio('❌ BOX LOST — you were '+ordinal(RIVALS.playerDue)+' due and '+beat+' got there first.');
   gameOver('❌ BEATEN IN', 'You were '+ordinal(RIVALS.playerDue)+' due on Box '+((state.target&&state.target.box)||'—')+
@@ -6119,10 +6136,13 @@ function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); docume
   if(!(QUAL.pending&&QUAL._own&&st&&st.id===QUAL.companyId)) qualClear('shift-change');                  // 🎖 any shift change abandons an exam — EXCEPT the qual-initiated startShift itself (_own)
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
-  state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; RIVALS.on=true;
+  state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; setRivals(true);
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=groundHeight(SPAWN.x,SPAWN.z); truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; truck.pitch=0; camTheta=SPAWN.theta;
   parkAtStation(st); CAMLOOK.yaw=0; CAMLOOK.pitch=0;
-  NAVGEO.active=st.id==='e35';
+  NAVGEO.active=true;   // terrain, bridges, decks and rail citywide. The baked data was always citywide
+                        // (818 bridges, 2,361 rail ways, 589 water polygons, a 512x512 terrain grid that
+                        // contains all 60 houses); only this gate was holding it at Engine 35 pending the
+                        // owner's FPS numbers, which came back healthy.
   { const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; }   // 🎯 difficulty is the player's own setting now — career rank no longer forces it (P3)
   applyDifficultyGates();                                                    // training wheels match the chosen level
   buildStationHouse(st);                                                     // BEFORE startIntro — it sets st._front, which is what tells the intro where the bay mouth is
