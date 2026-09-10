@@ -86,11 +86,11 @@ writing. Two aborts on this repo caught mistakes that would otherwise have shipp
 
 ## Before you publish, check which way the copy goes
 
-v18m–v18r were authored **in this public repository**, not in the owner's authoring folder. The
-folder was synced to v18m on September 8, 2026, then v18n–v18r landed here on September 9–10 — so
+v18m–v18s were authored **in this public repository**, not in the owner's authoring folder. The
+folder was synced to v18m on September 8, 2026, then v18n–v18s landed here on September 9–10 — so
 **the folder is behind again and this repo is the source of truth until it is re-synced**
 (`index.html`, `ROADMAP.md`, `README.md`, `CLAUDE.md`; `data/` and `vendor/` are unchanged since
-v18m). Never let a PC ship overwrite v18r with the folder's v18m.
+v18m). Never let a PC ship overwrite v18s with the folder's v18m.
 
 The rule that outlasts the reconciliation: never copy an older monolithic `index.html` over the
 split one. The pre-split build is kept as `v18j-pre-v18m-cloud-sync.html` in the authoring root —
@@ -98,12 +98,15 @@ untracked, and it must never enter `gh-pages-deploy/`, git, or publishing.
 
 ## Current state
 
-- **The build is v18r; the whole city is live.** `NAVGEO.active` is always true and
+- **The build is v18s; the whole city is live.** `NAVGEO.active` is always true and
   `STREETSCAPE.all:true` opens the immersive streetscape everywhere (`companyId:'e35'` remains as
   the single-company fallback). Road surface + markings are generated under `stepLocalCity`'s
   frame budget (`roadGeomStart`/`roadGeomSeg`, state on `J.road`); `FLATCITY.commit` only turns
   the finished arrays into meshes. Do not move that work back into commit — it was the 240–380ms
-  rebuild hitch (ROADMAP has the numbers).
+  rebuild hitch (ROADMAP has the numbers). Markings no longer sit on the road mesh's triangle
+  planes: `roadPaintProfile` gives each street a smoothed height + cross-slope profile with a
+  local, capped float (v18s). It is clamped to a band over the mesh, so paint is never buried and
+  never hangs in the air — keep both ends of that clamp if you touch it.
 - **Flat-world assumptions are the active bug class.** v18n's one-line citywide flip exposed
   three in two days (segDistPt stranding, node-sampled guide ribbon, ground+12 intro). Anything
   that samples height at sparse points, assumes absolute heights, or was only ever tested at

@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18r";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3477,41 +3477,83 @@ function roadPaintSurface(v){const a=v.slice(0,3),b=v.slice(3,6),c=v.slice(6,9),
   if(Math.abs(det)<1e-9)return null;
   const hx=((b[1]-a[1])*ez-(c[1]-a[1])*dz)/det,hz=(dx*(c[1]-a[1])-ex*(b[1]-a[1]))/det;
   return {p:[a,b,c],sign:Math.sign(det),hx,hz,base:a[1]-hx*a[0]-hz*a[2],bb:[Math.min(a[0],b[0],c[0]),Math.min(a[2],b[2],c[2]),Math.max(a[0],b[0],c[0]),Math.max(a[2],b[2],c[2])]};}
-function drapeRoadPaint(v,surfaces,lift=0.08){const out=[];
-  for(let i=0;i<v.length;i+=9){const original=[[v[i],v[i+2]],[v[i+3],v[i+5]],[v[i+6],v[i+8]]],xs=original.map(p=>p[0]),zs=original.map(p=>p[1]),bb=[Math.min(...xs),Math.min(...zs),Math.max(...xs),Math.max(...zs)];
-    for(const s of surfaces){if(bb[0]>s.bb[2]||bb[2]<s.bb[0]||bb[1]>s.bb[3]||bb[3]<s.bb[1])continue;
-      let inside=true;for(let e=0;e<3&&inside;e++){const a=s.p[e],b=s.p[(e+1)%3];for(const p of original)if(s.sign*((b[0]-a[0])*(p[1]-a[2])-(b[2]-a[2])*(p[0]-a[0]))< -1e-8){inside=false;break;}}
-      if(inside){for(const p of original)out.push(p[0],s.base+s.hx*p[0]+s.hz*p[1]+lift,p[1]);break;}
-      let poly=original;
-      // Clip to each actual road triangle. Every emitted paint face shares its road's plane,
-      // including where a dash straddles a terrain crease; vertex-only sampling is insufficient.
-      for(let e=0;e<3&&poly.length;e++){const a=s.p[e],b=s.p[(e+1)%3],dist=p=>s.sign*((b[0]-a[0])*(p[1]-a[2])-(b[2]-a[2])*(p[0]-a[0])),next=[];
-        let p=poly[poly.length-1],pd=dist(p);for(const q of poly){const qd=dist(q),pin=pd>=-1e-8,qin=qd>=-1e-8;
-          if(pin!==qin){const t=pd/(pd-qd);next.push([p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t]);}if(qin)next.push(q);p=q;pd=qd;}poly=next;}
-      for(let k=1;k<poly.length-1;k++){const a=poly[0],b=poly[k],c=poly[k+1];if(Math.abs((b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]))<1e-8)continue;
-        for(const p of [a,b,c])out.push(p[0],s.base+s.hx*p[0]+s.hz*p[1]+lift,p[1]);}
-    }}return out;}
+// Height of the finished road MESH under one point, i.e. the plane of whichever road triangle
+// contains it (null when the point is off the roadway). Same arithmetic the clipping draper used.
+function roadPaintPlaneY(x,z,surfaces){for(const s of surfaces){if(x<s.bb[0]||x>s.bb[2]||z<s.bb[1]||z>s.bb[3])continue;
+    let inside=true;for(let e=0;e<3;e++){const a=s.p[e],b=s.p[(e+1)%3];if(s.sign*((b[0]-a[0])*(z-a[2])-(b[2]-a[2])*(x-a[0]))< -1e-8){inside=false;break;}}
+    if(inside)return s.base+s.hx*x+s.hz*z;}
+  return null;}
+// v18s — markings ride a SMOOTHED profile along the street instead of the raw road mesh.
+// The mesh's own vertices are ~24m DEM samples, so lane dashes projected onto its triangle planes
+// inherited every sample-to-sample kink (each 3.4m dash tilted differently: the "wiggle"), and an
+// 8cm float let a crest's triangle edge occlude the dash behind it (the "cut-off").
+//
+// The profile keeps what the projection got right and drops what it got wrong:
+//  • centreline height and cross-slope are both read off the mesh and smoothed ALONG the street
+//    only — cross-slope stays per-station, so paint on a hillside street still lies with the crown
+//    instead of being floated clear of it;
+//  • a smooth curve can only clear a jagged mesh by riding above its peaks, so the shortfall
+//    against the mesh is measured and added back as a LOCAL float. Mesh maxima sit on mesh
+//    vertices, so every road triangle corner is checked directly (its height is already known — no
+//    lookup); 4m stations catch the rest along the centre and both 0.86*hw shoulders, which is
+//    where a zebra's outermost bars land. Dilating the shortfall before smoothing keeps the
+//    smoothed float above each station's own shortfall;
+//  • the float is capped at 35cm, and the finished height is then clamped into a band 0-40cm
+//    above the mesh. Past that the mesh is not noisy, it is genuinely kinked — a bridge abutment
+//    inside a segment — and smoothing straight through it would hold that street's paint a metre
+//    off the asphalt on one side of the kink and bury it on the other. Inside the band the paint
+//    is the smooth curve; at a real kink it follows the mesh. It is never buried anywhere.
+function roadPaintProfile(surfaces,ax,az,dx,dz,span,hw,name){   // ax/az/span describe the roadway quad as built: the half-width extension at each end included
+  const n=Math.max(2,Math.ceil(span/4)), ds=span/n, off=hw*0.86, ux=-dz, uz=dx;
+  const at=(t,o)=>roadPaintPlaneY(ax+dx*t+ux*o, az+dz*t+uz*o, surfaces);
+  const mid=new Array(n+1), lo=new Array(n+1), hi=new Array(n+1), grd=new Array(n+1);
+  for(let i=0;i<=n;i++){const t=ds*i;
+    let c=at(t,0); if(c===null)c=navRoadY(ax+dx*t,az+dz*t,name);
+    const a=at(t,-off), b=at(t,off);
+    mid[i]=c; lo[i]=a; hi[i]=b;
+    grd[i]=(a===null||b===null)?0:(b-a)/(2*off);}                                  // metres of rise per metre of offset, i.e. the road crown/cross-slope
+  const smooth=(arr,passes)=>{let v=arr; for(let k=0;k<passes;k++){const nx=v.slice();
+      for(let i=1;i<n;i++)nx[i]=(v[i-1]+2*v[i]+v[i+1])/4; v=nx;} return v;};
+  const smC=smooth(mid,4), smG=smooth(grd,4);
+  const bare=(i,o)=>smC[i]+smG[i]*o;                                               // the smoothed surface at a station, before any float
+  const res=new Array(n+1).fill(0), note=(i,d)=>{if(d>res[i])res[i]=Math.min(0.35,d);};
+  for(let i=0;i<=n;i++)for(const [o,m] of [[0,mid[i]],[-off,lo[i]],[off,hi[i]]])
+    if(m!==null)note(i,m-bare(i,o));
+  for(const s of surfaces)for(const v of s.p){
+    const px=v[0]-ax, pz=v[2]-az, t=px*dx+pz*dz, o=px*ux+pz*uz;
+    const i=Math.max(0,Math.min(n,Math.round(t/ds))); note(i,v[1]-bare(i,o));}
+  const dil=res.map((_,i)=>{let m=0;for(let k=Math.max(0,i-2);k<=Math.min(n,i+2);k++)if(res[k]>m)m=res[k];return m;});
+  return {ax,az,dx,dz,ux,uz,ds,n,smC,smG,smL:smooth(dil,2),surf:surfaces};}
+function roadPaintY(P,x,z){const px=x-P.ax, pz=z-P.az, t=px*P.dx+pz*P.dz, o=px*P.ux+pz*P.uz;
+  const u=t/P.ds, i=u<=0?0:(u>=P.n?P.n-1:Math.floor(u)), f=u<=0?0:(u>=P.n?1:u-i), lerp=A=>A[i]+(A[i+1]-A[i])*f;
+  const y=lerp(P.smC)+lerp(P.smG)*o+lerp(P.smL), m=roadPaintPlaneY(x,z,P.surf);
+  if(m===null)return y+0.12;
+  return (y<m?m:(y>m+0.4?m+0.4:y))+0.12;}                                          // band, not a plane: 12-52cm off the asphalt, so a sag the smoothing bridges cannot leave paint hanging in the air either
 /* ROAD_PAINT_END */
 // Road surface + markings generation, moved VERBATIM out of FLATCITY.commit (v18o) so stepLocalCity can run
 // it under the frame budget — see the phase at the end of stepLocalCity. State lives on J.road; the mk/my
-// push overrides drape each marking onto the road surface the moment it is pushed, exactly as before.
-function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfaces:[]}; J.road=st; J.ri=0;
+// push overrides place each marking on the street's smoothed height profile the moment it is pushed.
+function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfaces:[],profile:null}; J.road=st; J.ri=0;
   if(NAVGEO.active){st.rp.push=function(...v){
     const tri=(a,b,c,depth=0)=>{const ds=[Math.hypot(a[0]-b[0],a[2]-b[2]),Math.hypot(b[0]-c[0],b[2]-c[2]),Math.hypot(c[0]-a[0],c[2]-a[2])],m=Math.max(...ds);
       if(m>24&&depth<9){let x=a,y=b,z=c;if(ds[1]===m){x=b;y=c;z=a}else if(ds[2]===m){x=c;y=a;z=b}const mid=[(x[0]+y[0])/2,(x[1]+y[1])/2,(x[2]+y[2])/2];tri(x,mid,z,depth+1);tri(mid,y,z,depth+1);return;}
       const lifted=[];for(const p of [a,b,c]){if(p[3]===undefined)p[3]=navRoadY(p[0],p[2],st.roadName);const y=p[3];lifted.push(p[0],p[1]+y+0.16,p[2]);}Array.prototype.push.apply(this,lifted);
       const surface=roadPaintSurface(lifted);if(surface)st.paintSurfaces.push(surface);};
     for(let i=0;i<v.length;i+=9)tri(v.slice(i,i+3),v.slice(i+3,i+6),v.slice(i+6,i+9));return this.length;};
-    for(const arr of [st.mk,st.my])arr.push=function(...v){const projected=drapeRoadPaint(v,st.paintSurfaces);for(let i=0;i<projected.length;i++)Array.prototype.push.call(this,projected[i]);return this.length;};}
+    for(const arr of [st.mk,st.my])arr.push=function(...v){const P=st.profile;
+      if(!P)return Array.prototype.push.apply(this,v);
+      for(let i=0;i<v.length;i+=3){const x=v[i],z=v[i+2];Array.prototype.push.call(this,x,roadPaintY(P,x,z),z);}
+      return this.length;};}
 }
 function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOCAL.R*LOCAL.R, cx=J.cx, cz=J.cz;
   const ROAD_Y=0.06, MARK_Y=0.085;
-  st.roadName=s.name;st.paintSurfaces=[];const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2) return;
+  st.roadName=s.name;st.paintSurfaces=[];st.profile=null;const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2) return;
   let dx=s.bx-s.ax, dz=s.bz-s.az; const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
   const hw=CLASSW[s.cls]/2, nx=-dz*hw, nz=dx*hw, ex=dx*hw, ez=dz*hw;                 // extend by a half-width at each end so bends/junctions fill in
   const ax=s.ax-ex, az=s.az-ez, bx=s.bx+ex, bz=s.bz+ez;
   rp.push(ax+nx,ROAD_Y,az+nz, bx+nx,ROAD_Y,bz+nz, bx-nx,ROAD_Y,bz-nz,
           ax+nx,ROAD_Y,az+nz, bx-nx,ROAD_Y,bz-nz, ax-nx,ROAD_Y,az-nz);
+  if(NAVGEO.active) st.profile=roadPaintProfile(st.paintSurfaces,ax,az,dx,dz,l+2*hw,hw,s.name);   // the roadway is on the page now, so the paint has a mesh to measure against
   const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));
   const jA=!!eA&&eA.n>=3, jB=!!eB&&eB.n>=3;                                            // does either end meet a junction?
   const EV=(J.crossMap&&J.crossMap.get(s))||[];
