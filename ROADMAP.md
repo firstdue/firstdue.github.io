@@ -90,6 +90,42 @@ New Local Knowledge work (including D4–D7) waits until after this graphics pha
 - [ ] Reviewed community hydrant distribution with clear provenance, following the local accounts plan.
 - [ ] Co-op multiplayer after these foundations: players use their own firehouses, with fair due rotation and shared-box scoring. The local `MULTIPLAYER-PLAN.md` is a design, not a shipped feature.
 
+## Prior art — First In Navigation (noted September 10, 2026)
+
+Someone else shipped an app for the same underlying need: **First In Navigation**
+(<https://firstinnavigation.com>, iOS/Android/desktop, App Store id 6751251373 — a 2025-era id, so
+it is new). It is a map-and-quiz utility "made by, and for first responders" to memorize streets
+and routing: you **draw your own response area**, it generates random calls inside that border and
+quizzes you on the route. Three modes — Fire and law enforcement route you station → call, EMS
+routes call → hospital. Saved maps upload to a shared database searchable by map name, location or
+coworker name. (Details are from search summaries; the app's own site and the App Store listing are
+both blocked by the sandbox egress proxy, so nobody here has read the listings first-hand. Anyone
+evaluating this seriously should open them on a phone.)
+
+**This changed no plan and required no change to the game.** It is recorded so the next reader does
+not rediscover it and panic.
+
+What it means, concretely:
+
+- **The core loop overlaps: random call inside a first-due area, do you know the way.** They also
+  ship the one thing this game deliberately dropped — user-drawn boundaries — where this game uses
+  real `PFD_ZONES` polygons.
+- **The products are not the same thing.** Theirs is a quiz over a map. This is a driving simulator
+  with sourced OSM roads, USGS terrain, bridges, rail, landcover and landmarks, manual turns,
+  rivals racing the box, and the Local Knowledge recall track alongside it. That gap is not closed
+  by adding a quiz mode, and chasing their feature list would make this worse, not better.
+- **Where they are genuinely ahead, and it is worth being honest about it:** they work anywhere
+  (this game's data is baked for Philadelphia), they are on the app stores, their shared map
+  database gets more useful as more crews upload to it, and EMS/police modes widen their audience
+  well past engine companies. Nationwide coverage is the expensive one to match — see the data
+  pipeline, not the game code.
+- **Naming.** The game is *Philly Fire Dispatch*, which collides with neither. "First Due" appears
+  only as this repository's GitHub org and Pages host. That is fine as-is. The name to be careful
+  about is not First In Navigation but **First Due** (Locality Media, <https://www.firstdue.com>),
+  an established fire-department software vendor — so do not brand the *product* "First Due" if it
+  ever goes to an app store or takes money. Renaming the repo is not required for that; renaming
+  the product would be.
+
 ## Release requirements
 
 - Preserve a self-contained game with no required build step or external script CDN.
