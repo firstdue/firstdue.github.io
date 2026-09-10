@@ -86,11 +86,21 @@ writing. Two aborts on this repo caught mistakes that would otherwise have shipp
 
 ## Before you publish, check which way the copy goes
 
-v18m–v18s were authored **in this public repository**, not in the owner's authoring folder. The
-folder was synced to v18m on September 8, 2026, then v18n–v18s landed here on September 9–10 — so
-**the folder is behind again and this repo is the source of truth until it is re-synced**
-(`index.html`, `ROADMAP.md`, `README.md`, `CLAUDE.md`; `data/` and `vendor/` are unchanged since
-v18m). Never let a PC ship overwrite v18s with the folder's v18m.
+v18m–v18s were authored **in this public repository**, not in the owner's authoring folder.
+**The folder was reconciled to v18s on September 10, 2026, and the two sides now match** — the
+first sync since the split. Nothing was pending upstream: the folder held no unpublished work,
+verified by blob hash rather than by timestamps.
+
+A correction to what this file said before: the folder was at **v18n**, not v18m. Its `index.html`
+was byte-identical to the published v18n blob `327e6ec` once CRLF-normalised (679,961 → 673,799
+bytes, exactly 6,162 CRLFs), and its `data/`, `vendor/`, `sw.js`, `.gitattributes`, `.nojekyll`
+and `repository-smoke.test.mjs` were already byte-identical to the deploy checkout. The refresh
+moved three files — `index.html`, `README.md`, `ROADMAP.md` — plus the same three into the
+folder's standalone `artifact/` copy, which carries its own full sibling set and is a real
+runnable copy rather than a loose HTML file.
+
+If the folder ever falls behind again, the copy still goes **repo → folder**, never the other way
+while this repository is ahead.
 
 The rule that outlasts the reconciliation: never copy an older monolithic `index.html` over the
 split one. The pre-split build is kept as `v18j-pre-v18m-cloud-sync.html` in the authoring root —
@@ -131,24 +141,34 @@ untracked, and it must never enter `gh-pages-deploy/`, git, or publishing.
 
 ## If you are working from the owner's authoring folder
 
-`START-HERE.md`, `MEMORY.md`, `SHIPLOG.md`, `ship.js` and the authoring folder's own `CLAUDE.md`
-are **not in this repository**. All were reviewed and brought up to date on September 8, 2026:
+`START-HERE.md`, `MEMORY.md`, `SHIPLOG.md`, `AGENTS.md`, `ship.js`, `tests/` and the authoring
+folder's own `CLAUDE.md` are **not in this repository** — and several share a filename with a file
+here while being a different document, so never overwrite one with the other in either direction.
+
+On September 10, 2026 the owner rewrote `START-HERE.md`, `MEMORY.md` and the authoring `CLAUDE.md`
+to record the v18s reconciliation; the paragraphs that called the folder stale or named v18m are
+gone from them. Do not re-add a warning that the folder is behind without first checking that it
+actually is.
+
+They were reviewed and brought up to date once before, on September 8, 2026:
 `START-HERE.md` and `ship.js` first, then `MEMORY.md` and the authoring `CLAUDE.md`, whose
 publishing sections had said a release copies `index.html` alone — it now copies the complete
 split site. `SHIPLOG.md` was deliberately left alone: its single-file references sit inside
 historical release entries, which should keep describing the layout as it was at the time.
 
-The text `START-HERE.md` now carries, kept here so it can be re-applied if that file is ever lost:
+`START-HERE.md`'s v18s handoff section was written in the folder and has never been read from
+here, so it is not quoted. What it needs to keep saying, if that file is ever lost and has to be
+rebuilt from this side:
 
-> **v18m (September 2026) was authored in the public repo, not here.** `firstdue/firstdue.github.io`
-> is the source of truth until this folder is synced from it. `index.html` is no longer one file:
-> game code (~670KB) plus `data/*.js` (RB, AB, ADDR, LANDCOVER, NAVGEO, LMKS) and
-> `vendor/three.147.min.js`, loaded as classic `<script src>` before the game script. Do **not**
-> copy an older monolithic `index.html` into `gh-pages-deploy/` — it silently destroys the split,
-> the TILT-only views and the rival truck meshes. Sync this folder from the public repo first:
-> `index.html`, `data/`, `vendor/`, `.gitattributes`, `.nojekyll`, `sw.js`,
-> `repository-smoke.test.mjs`, `README.md`, `ROADMAP.md`, `CLAUDE.md`. The game must be served
-> over http(s); `file://` no longer works. Read the repo's `CLAUDE.md` before editing.
+> `index.html` is no longer one file: game code (~670KB) plus `data/*.js` (RB, AB, ADDR,
+> LANDCOVER, NAVGEO, LMKS) and `vendor/three.147.min.js`, loaded as classic `<script src>` before
+> the game script. Do **not** copy an older monolithic `index.html` into `gh-pages-deploy/` — it
+> silently destroys the split, the TILT-only views and the rival truck meshes. A full sync from
+> the public repo is `index.html`, `data/`, `vendor/`, `.gitattributes`, `.nojekyll`, `sw.js`,
+> `manifest.json`, the five icon PNGs, `repository-smoke.test.mjs`, `README.md` and `ROADMAP.md`
+> — the repo's `CLAUDE.md` is a different document from the authoring folder's and does not
+> replace it. The game must be served over http(s); `file://` no longer works. Read the repo's
+> `CLAUDE.md` before editing.
 
 ## House rules
 
