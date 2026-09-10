@@ -1,12 +1,33 @@
 # Philly Fire Dispatch — Local
 
-**Current: PUBLIC = LOCAL = v18m (September 8, 2026).** Repository and view cleanup. The baked data
-and three.js moved out of `index.html` into `data/` and `vendor/` so the file can be opened, diffed and
-edited on a phone (10.1MB → ~670KB); TILT is now the only camera; the 2D Map view, in-game boundary
-drawing and the retired `MAP.bounds` trainer are gone; rival engines are drawn in the world as pooled
-simple trucks with readable number plaques. See "Repository layout" and `CLAUDE.md` before editing.
+**Current: PUBLIC = v18r (September 10, 2026).** The whole city now gets the Engine 35 treatment:
+terrain, bridges, rail and the immersive streetscape are live everywhere, the 380m scenery-rebuild
+hitch is fixed (~240–380ms → ~30–64ms worst frame), and three latent flat-world bugs the citywide
+flip exposed are repaired (stuck-at-the-scene, broken guide ribbon on hills, aerial intro shot).
+Losing a race now offers RETRY THIS BOX / NEXT CALL instead of dumping you at the station picker.
+**The authoring folder is BEHIND again — v18n–v18r were repo-authored; re-sync it before working
+there.** See "Repository layout" and `CLAUDE.md` before editing.
 
 ## Release history
+
+**v18n–v18r (September 9–10, 2026, authored in the public repo).** Citywide rollout and its
+fallout, one owner playtest per build:
+- **v18n** — `NAVGEO.active` and the immersive streetscape opened citywide (the data was already
+  citywide; two flags gated it at E35); intro camera made terrain-relative; RIVALS button synced
+  with the flag via `setRivals()`, the only writer.
+- **v18o** — the 380m scenery rebuild's `FLATCITY.commit` ran 239–379ms in one frame (owner FPS
+  dips 4/29/44). Cached the 2-of-2,361 rail-cut scan (126ms → 1ms), moved road surface + markings
+  into a budgeted `stepLocalCity` phase (byte-identical vertex output verified), mapped the
+  per-bridge name lookup. Worst rebuild frame now 30–64ms.
+- **v18p** — restored `segDistPt`, deleted with the 2D map view while `coachPolyDist` still called
+  it: any run >8% over the optimal route died before FIRE OUT, stranding the player at the scene.
+  Post-run handoffs now name any error on the radio and force the return to quarters.
+- **v18q** — guide ribbon draped over terrain every ~10m (was buried up to 3.4m on Manayunk
+  grades); intro sweep back at facade level (~2.6m, was 12m aerial) with a per-frame ground clamp
+  for ridge houses.
+- **v18r** — BEATEN IN card: 🔄 RETRY THIS BOX (same box/due/difficulty, from the curb),
+  🚨 NEXT CALL (same company), CHANGE STATION demoted to a text button. Loss recorded once before
+  the card opens; double-tap latched; retried runs record only at their own result.
 
 **v18l (September 7, 2026).** Owner playtest feedback on the interchange:
 highway rules on ramps — once you're on a ramp, the only card shown is where that ramp leads
@@ -96,8 +117,8 @@ A phone-friendly Philadelphia fire-engine navigation game. Choose a real company
 
 Project handoff snapshot, September 7, 2026:
 
-- **Published: v18m**, matching the local build — the repository split, TILT-only views and rival
-  markers described above, on top of the v18j–v18l Ridge/City interchange work.
+- **Published: v18r.** The authoring folder still holds v18m — v18n–v18r were authored here, so
+  this repository is the source of truth until the folder is re-synced.
 - The build tag in the HUD (top left, next to SAVES) is the fastest way to tell whether a phone has
   picked up a deploy or is serving a cached page.
 - Intersection Recall is the active TRAIN MY LOCAL drill: a named street intersection with no
@@ -174,11 +195,12 @@ These are repository checks, not gameplay tests. Game releases still need releva
 
 ## Maintenance and publishing
 
-> **Note: v18m was authored in the PUBLIC repository, not the authoring folder** — the reverse of
-> this project's usual direction. The authoring folder has since been synced from this repository
-> (September 8, 2026): both hold v18m, all split files match, `ship.js` understands the new layout,
-> and the pre-split build is kept as `v18j-pre-v18m-cloud-sync.html` in the authoring root, untracked
-> and never to be published. Normal authoring-folder-is-source-of-truth flow has resumed.
+> **Note: v18m–v18r were authored in the PUBLIC repository, not the authoring folder.** The folder
+> was synced to v18m on September 8, 2026, then v18n–v18r landed here on September 9–10 — so the
+> folder is behind again and THIS REPOSITORY is the source of truth until it is re-synced
+> (`index.html`, `ROADMAP.md`, `README.md`, `CLAUDE.md`; `data/` and `vendor/` are unchanged since
+> v18m). The pre-split build is kept as `v18j-pre-v18m-cloud-sync.html` in the authoring root,
+> untracked and never to be published.
 >
 > The rule that outlasts this note: `index.html` is no longer a single file. Never copy an older
 > monolithic `index.html` over it — that silently destroys the `data/`/`vendor/` split and every

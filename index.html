@@ -477,6 +477,15 @@
   .btn { margin-top:14px; width:100%; cursor:pointer; background:#e63946; color:#fff; border:none; border-radius:12px; padding:14px;
     font-size:clamp(15px,3.6vw,18px); font-weight:900; font-family:"Arial Black",sans-serif; letter-spacing:1px; box-shadow:0 0 18px rgba(230,57,70,.5); touch-action:manipulation; }
   .btn:active { transform:scale(.97); }
+  /* BEATEN IN card: retry keeps the red primary style; NEXT CALL is a blue secondary; CHANGE STATION
+     drops to a small text button so losing a race no longer funnels straight back to the station picker.
+     Spacing tightened (10px vs 14px) so three actions + the local fact still fit a small phone. */
+  #over .btn { margin-top:10px; }
+  #over #finalFact { margin-top:6px; }
+  .btnSecondary { background:#2e6db8; box-shadow:0 0 18px rgba(70,140,255,.45); }
+  .btnText { margin-top:8px; width:100%; cursor:pointer; background:none; border:none; color:#9fb3d9; text-decoration:underline;
+    font-family:"Arial Black",sans-serif; font-weight:900; letter-spacing:1px; font-size:clamp(12px,3vw,14px); padding:8px; touch-action:manipulation; }
+  .btnText:active { transform:scale(.97); }
   .divHead { margin:18px 0 2px; padding:7px 12px; border-radius:8px; text-align:center; color:#0c1020; background:linear-gradient(180deg,#8fc0ff,#5c9bf0);
     font-family:"Arial Black",sans-serif; font-weight:900; letter-spacing:1.2px; font-size:clamp(13px,3vw,16px); box-shadow:0 2px 8px rgba(0,0,0,.35); }
   .divHead:first-child { margin-top:4px; }
@@ -759,7 +768,9 @@
   <h1>⏰ SHIFT OVER</h1><div class="big" id="finalCash">0 SAVES</div>
   <div class="sub" id="finalStats">0 dispatches completed</div><div class="best" id="finalBest"></div>
   <div class="sub" id="finalFact" style="color:#8fd;"></div>
-  <button class="btn" id="restartBtn">🚒 CHOOSE STATION</button>
+  <button class="btn" id="retryBoxBtn">🔄 RETRY THIS BOX</button>
+  <button class="btn btnSecondary" id="nextCallBtn">🚨 NEXT CALL</button>
+  <button class="btnText" id="restartBtn">CHANGE STATION</button>
 </div></div>
 
 <script src="vendor/three.147.min.js"></script>
@@ -799,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18q";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18r";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2722,7 +2733,7 @@ function rerunCurrentBox(){
   state.onScene=false; state.douse=0;
   DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false;
   DRIVE.wrongWay=false; DRIVE._wwLatch=false; DRIVE._twinFrom=null;
-  if(tgt){ state.target=tgt; routeDirty=true; setRivals(true); clearRivals(); spawnRivals();   // same fire, everyone starts over
+  if(tgt){ state.target=tgt; routeDirty=true; setRivals(true); clearRivals(); spawnRivals(); coachReset();   // same fire, everyone starts over — and a fresh coach trail, or the retried run's review still carries the lost run's driving (newDispatch resets it; this path never did)
     radio('🔁 RUN RESTARTED — '+tgt.d); popup('🔁 BACK IN QUARTERS · SAME BOX'); }
   else newDispatch();
 }
@@ -5951,7 +5962,10 @@ function gameOver(title,why){ boxdClear('game-over'); qualClear('game-over'); st
   document.getElementById('finalStats').textContent= why || (state.saves+' dispatches completed on the riverfront');
   if(QUAL._last&&!QUAL._last.shown){ QUAL._last.shown=true;                     // 🎖 beaten-in during the exam → verdict on the game-over card (coach card never shows)
     document.getElementById('finalStats').textContent+=' · 🎖 CHIEF QUALIFICATION NOT PASSED — it remains ready, no progress lost.'; } document.getElementById('finalBest').textContent=best.saves>0?('BEST: '+best.saves+(best.saves===1?' save':' saves')):'';
-  document.getElementById('finalFact').textContent='Local fact: '+LMK[(Math.random()*LMK.length)|0].f; document.getElementById('over').classList.add('show'); }
+  document.getElementById('finalFact').textContent='Local fact: '+LMK[(Math.random()*LMK.length)|0].f;
+  if(typeof OVER_BUSY!=='undefined') OVER_BUSY=false;                                       // re-arm the card's double-tap latch
+  { const r=document.getElementById('retryBoxBtn'); if(r) r.style.display=state.target?'':'none'; }   // no box to retry (defensive — every live gameOver path today is a beaten-in with a target)
+  document.getElementById('over').classList.add('show'); }
 function resetRun(){ state.cash=0; state.saves=0; state.timeLeft=CONFIG.timer.start; state.over=false; state.target=null; state.combo=1;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=0; truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; state.running=true; newDispatch(); }
 /* -- Round B2 (+POST-B2): HOME → PLAYING → SHIFT OVER → HOME; picking a station starts the shift immediately -- */
@@ -6200,6 +6214,18 @@ function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); docume
   setTruckEngine(engNum(st.id));
   state.running=true; state.timeLeft=CONFIG.timer.start;
   radio('Dispatch to '+st.companies[0]+', '+st.address+': shift started. Stand by…'); setTimeout(newDispatch,900); }
+/* BEATEN IN card actions. The loss was already recorded ONCE in missedDue (profileRun → career/board)
+   BEFORE gameOver opened this card — none of these buttons touch the record. A retried or next run only
+   records when it reaches its own result, through the normal completion/loss paths.
+   OVER_BUSY latches on the first tap so a double-tap cannot start two runs; gameOver() re-arms it. */
+let OVER_BUSY=false;
+function overResume(){ if(OVER_BUSY) return false; OVER_BUSY=true;
+  document.getElementById('over').classList.remove('show');
+  state.over=false; state.running=true; return true; }
+document.getElementById('retryBoxBtn').addEventListener('click',()=>{ if(!overResume()) return; rerunCurrentBox(); });   // same box, same due, same difficulty, from the curb — rerunCurrentBox is the one run-restarter
+document.getElementById('nextCallBtn').addEventListener('click',()=>{ if(!overResume()) return;
+  state.target=null; state.onScene=false; state.douse=0; setRivals(true); clearRivals();   // missedDue turned rivals off; a fresh call needs them back on (startShift normally does this)
+  returnToStation(); newDispatch(); });
 document.getElementById('restartBtn').addEventListener('click',goHome);
 updateBest();
 
