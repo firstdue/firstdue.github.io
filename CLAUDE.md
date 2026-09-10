@@ -103,8 +103,24 @@ If the folder ever falls behind again, the copy still goes **repo → folder**, 
 while this repository is ahead.
 
 The rule that outlasts the reconciliation: never copy an older monolithic `index.html` over the
-split one. The pre-split build is kept as `v18j-pre-v18m-cloud-sync.html` in the authoring root —
-untracked, and it must never enter `gh-pages-deploy/`, git, or publishing.
+split one. **Two** pre-split monoliths are kept in the authoring folder, both untracked, and
+neither must ever enter `gh-pages-deploy/`, git, or publishing:
+
+| file | build | size | notes |
+|---|---|---|---|
+| `v18j-pre-v18m-cloud-sync.html` | v18j | — | authoring root; the sanctioned pre-split backup |
+| `artifact/philly-fire-dispatch-v2-v12z-PRE-v18m-DO-NOT-PUBLISH.html` | v12z, Aug 17 2026 | 11,806,648 B | zero external `<script src>`, every dataset inline, **one line of 7,681,487 characters** |
+
+That 7.6M-character line is the exact hazard the split was done to remove — the unbreakable line
+that makes a mobile client run out of memory rendering its diff. The v12z file was called
+`philly-fire-dispatch-v2.html` until September 10, 2026 and was renamed because "v2" reads as
+*newer* than v18s to anyone without the history, which is the most dangerous thing an 11.8MB
+monolith can be called.
+
+The plain name `philly-fire-dispatch-v2.html` is deliberately left free: a dormant publish flow in
+the authoring notes names it as a file to *create* from `artifact/index.html`, not as a reference
+to the archive. Do not repoint those to the renamed file — it would turn them into "copy
+index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
