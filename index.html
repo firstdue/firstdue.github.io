@@ -799,7 +799,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18p";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18q";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2481,9 +2481,16 @@ function updateTiltMap(dt){                                                    /
        which was right only while the world was flat: with terrain live, 40 of the 60 houses stand above
        12 m and the shift opened with the camera buried in the hill (Engine 37, at 130.6 m, by 118 m).
        Engine 35 at 10.7 m was the near-miss that kept this hidden. */
-    const g0=navGroundY(truck.x,truck.z), hLow=g0+12;
-    const ang=tAng+Math.PI*2*(1-e), r=tR+(1-e)*24, h=hLow+e*(cyp-hLow);                 // low enough to read the facade, rising to the chase height at the end
-    camera.position.set(truck.x+Math.cos(ang)*r, h, truck.z+Math.sin(ang)*r);
+    /* The v18n terrain fix set this to ground+12 — matching the old ABSOLUTE 12 — but East Falls sits at
+       ~10.7m, so the loved pre-terrain opening was really ~2.6m above the street, reading the facade.
+       Ground+12 citywide framed every house from the air instead ("looks over the street" — owner, v18p).
+       Restore the 2.6m facade-level sweep; the per-frame ground clamp below keeps it out of the hillside
+       on sloped houses, where rig-relative height alone would bury the uphill half of the orbit. */
+    const g0=navGroundY(truck.x,truck.z), hLow=g0+2.6;
+    const ang=tAng+Math.PI*2*(1-e), r=tR+(1-e)*24; let h=hLow+e*(cyp-hLow);             // low enough to read the facade, rising to the chase height at the end
+    const cgx=truck.x+Math.cos(ang)*r, cgz=truck.z+Math.sin(ang)*r;
+    const gC=navGroundY(cgx,cgz); if(h<gC+2.2) h=gC+2.2;
+    camera.position.set(cgx, h, cgz);
     camera.lookAt(truck.x, truck.y+3.0, truck.z);
   }
   if(STHOUSE.group){ const q=STHOUSE.group.position, a=STHOUSE.group.rotation.y;
@@ -2804,7 +2811,15 @@ function updateMinimap(dt){ if(!FLAGS.minimap||!MINI.ctx) return;
 let routePts=null, routeDirty=false, routeTimer=0;
 function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geometry, oldE=routeEdgeFlat.geometry;
   if(!routePts||routePts.length<2){ routeMesh.visible=false; routeMeshFlat.visible=false; routeEdgeFlat.visible=false; routeMesh.geometry=new THREE.BufferGeometry(); routeMeshFlat.geometry=new THREE.BufferGeometry(); routeEdgeFlat.geometry=new THREE.BufferGeometry(); old.dispose(); oldF.dispose(); oldE.dispose(); return; }
-  const pts=routePts.filter((p,i)=>!i||Math.hypot(p.x-routePts[i-1].x,p.z-routePts[i-1].z)>.2),pos=[],posF=[],posE=[],idx=[],hw=.72,hwF=1.55,hwE=2.25;   // wider ribbon on the flat map + a slightly wider border pass
+  const pts0=routePts.filter((p,i)=>!i||Math.hypot(p.x-routePts[i-1].x,p.z-routePts[i-1].z)>.2),pos=[],posF=[],posE=[],idx=[],hw=.72,hwF=1.55,hwE=2.25;   // wider ribbon on the flat map + a slightly wider border pass
+  /* ⚠️ Height must be sampled BETWEEN the graph nodes too. Nodes sit a whole block apart, and a straight
+     3D span between them cuts under the road's own terrain-draped crest on a hill — the ribbon then shows
+     only where it pokes back out, reading as broken chunks (owner report, Roxborough v18p; flat ground and
+     East Falls' mild slope had hidden it). Subdivide to ~10m like the road surface itself. */
+  const pts=[]; for(let i=0;i<pts0.length;i++){ const p=pts0[i];
+    if(i&&NAVGEO.active){ const q=pts0[i-1],d=Math.hypot(p.x-q.x,p.z-q.z),n=Math.min(40,Math.ceil(d/10));
+      for(let k=1;k<n;k++) pts.push({x:q.x+(p.x-q.x)*k/n,z:q.z+(p.z-q.z)*k/n}); }
+    pts.push(p); }
   for(let i=0;i<pts.length;i++){ const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
     let routeName=null,best=Infinity;if(NAVGEO.active)for(const s of segNear(p.x,p.z)){const sx=s.bx-s.ax,sz=s.bz-s.az,sl=Math.hypot(sx,sz)||1,score=closestSeg(p.x,p.z,s).d+20*(1-Math.abs((sx*dx+sz*dz)/(sl*l)));if(score<best){best=score;routeName=s.name;}}
     const navY=navRoadY(p.x,p.z,routeName);

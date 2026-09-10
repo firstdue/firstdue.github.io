@@ -130,6 +130,18 @@ The repository smoke suite catches packaging and syntax failures. It does not ce
 
 ### Next up
 
+- [x] **Guide ribbon broken up on hills + intro shot too high (v18q).** Two more citywide-terrain
+      exposures, owner screenshots from Roxborough/Manayunk. (1) `setRouteGeom` sampled height
+      only at graph nodes — a block apart — so on a grade the straight span between them cut under
+      the road's draped crest and the blue ribbon showed only where it re-emerged. Measured on
+      Green Lane's 34.7m drop: buried up to 3.4m (p95 2.16m); now subdivided to ~10m samples like
+      the road surface itself → worst 0.36m. (2) The v18n intro-camera fix used ground+12 —
+      matching the old ABSOLUTE 12 — but East Falls sits at ~10.7m, so the loved pre-terrain
+      opening was really ~2.6m above the street reading the facade; ground+12 framed every house
+      from the air. Restored the 2.6m sweep with a per-frame clamp to the ground under the CAMERA
+      (+2.2m), which keeps the uphill half of the orbit out of the hillside at sloped houses —
+      measured at E39: opens 3.4m above street, min clearance 2.2m (clamp engaging).
+
 - [x] **Stuck at the scene — box never cleared (v18p).** Owner report: arrive, douse, then no
       return to quarters; the box stayed live with rivals racing. Root cause: the v18m view
       removal deleted `segDistPt` while `coachPolyDist` still called it — the throw only fired
