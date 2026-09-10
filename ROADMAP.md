@@ -130,6 +130,18 @@ The repository smoke suite catches packaging and syntax failures. It does not ce
 
 ### Next up
 
+- [x] **BEATEN IN card: retry / next call (v18r).** Losing a race offered only CHOOSE STATION.
+      Now: 🔄 RETRY THIS BOX (primary — same box, due, difficulty, from the curb, via the existing
+      `rerunCurrentBox`, which also gained the `coachReset()` it always lacked so a retried run's
+      review no longer carries the lost run's trail), 🚨 NEXT CALL (secondary — `setRivals(true)`
+      then `returnToStation`+`newDispatch`; missedDue turns rivals off and newDispatch alone never
+      turns them back on), CHANGE STATION (small text button, unchanged `goHome`). The loss is
+      recorded exactly once in `missedDue` before the card opens; none of the buttons touch the
+      record; `OVER_BUSY` latches double-taps. Qual losses already count their attempt before the
+      card, so RETRY replays as a normal run — same semantics as the settings RERUN. Verified
+      in-browser with organic losses at E39: counters, same-box restart, retried-win recorded
+      once, double-taps, and card fit at 390/360/1280 widths.
+
 - [x] **Guide ribbon broken up on hills + intro shot too high (v18q).** Two more citywide-terrain
       exposures, owner screenshots from Roxborough/Manayunk. (1) `setRouteGeom` sampled height
       only at graph nodes — a block apart — so on a grade the straight span between them cut under

@@ -86,10 +86,11 @@ writing. Two aborts on this repo caught mistakes that would otherwise have shipp
 
 ## Before you publish, check which way the copy goes
 
-v18m was authored **in this public repository**, not in the owner's authoring folder — the reverse
-of the project's usual direction. That has since been reconciled: the authoring folder was synced
-from this repo on September 8, 2026, both are at v18m, and `ship.js` handles the split layout. The
-normal authoring-folder-is-source-of-truth flow has resumed.
+v18m–v18r were authored **in this public repository**, not in the owner's authoring folder. The
+folder was synced to v18m on September 8, 2026, then v18n–v18r landed here on September 9–10 — so
+**the folder is behind again and this repo is the source of truth until it is re-synced**
+(`index.html`, `ROADMAP.md`, `README.md`, `CLAUDE.md`; `data/` and `vendor/` are unchanged since
+v18m). Never let a PC ship overwrite v18r with the folder's v18m.
 
 The rule that outlasts the reconciliation: never copy an older monolithic `index.html` over the
 split one. The pre-split build is kept as `v18j-pre-v18m-cloud-sync.html` in the authoring root —
@@ -97,6 +98,21 @@ untracked, and it must never enter `gh-pages-deploy/`, git, or publishing.
 
 ## Current state
 
+- **The build is v18r; the whole city is live.** `NAVGEO.active` is always true and
+  `STREETSCAPE.all:true` opens the immersive streetscape everywhere (`companyId:'e35'` remains as
+  the single-company fallback). Road surface + markings are generated under `stepLocalCity`'s
+  frame budget (`roadGeomStart`/`roadGeomSeg`, state on `J.road`); `FLATCITY.commit` only turns
+  the finished arrays into meshes. Do not move that work back into commit — it was the 240–380ms
+  rebuild hitch (ROADMAP has the numbers).
+- **Flat-world assumptions are the active bug class.** v18n's one-line citywide flip exposed
+  three in two days (segDistPt stranding, node-sampled guide ribbon, ground+12 intro). Anything
+  that samples height at sparse points, assumes absolute heights, or was only ever tested at
+  East Falls is suspect. The owner finds these by riding; the SAVES-line build tag plus their
+  location has been enough to root-cause every one.
+- **Losing a race no longer ends the session.** The BEATEN IN card offers RETRY THIS BOX
+  (`rerunCurrentBox`), NEXT CALL, and a demoted CHANGE STATION text button. The loss is recorded
+  once in `missedDue` BEFORE the card opens; `OVER_BUSY` latches double-taps; `setRivals()` stays
+  the only writer of `RIVALS.on`.
 - **TILT is the only view.** The ground-level Chase view, the 2D Map view, the base-map style
   button, the camera toggle and in-game boundary drawing are all removed. Do not restore them
   without asking; each removal was deliberate and is recorded in `ROADMAP.md`.
