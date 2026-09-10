@@ -91,13 +91,16 @@ v18m–v18s were authored **in this public repository**, not in the owner's auth
 first sync since the split. Nothing was pending upstream: the folder held no unpublished work,
 verified by blob hash rather than by timestamps.
 
-A correction to what this file said before: the folder was at **v18n**, not v18m. Its `index.html`
-was byte-identical to the published v18n blob `327e6ec` once CRLF-normalised (679,961 → 673,799
-bytes, exactly 6,162 CRLFs), and its `data/`, `vendor/`, `sw.js`, `.gitattributes`, `.nojekyll`
-and `repository-smoke.test.mjs` were already byte-identical to the deploy checkout. The refresh
-moved three files — `index.html`, `README.md`, `ROADMAP.md` — plus the same three into the
-folder's standalone `artifact/` copy, which carries its own full sibling set and is a real
-runnable copy rather than a loose HTML file.
+A correction to what this file said before: the folder was at **v18n**, not v18m. Its
+`index.html` was byte-identical to the published v18n blob `327e6ec` once CRLF-normalised
+(679,961 → 673,799 bytes, exactly 6,162 CRLFs), and its `data/`, `vendor/`, `sw.js`,
+`.gitattributes`, `.nojekyll` and `repository-smoke.test.mjs` were already byte-identical to the
+deploy checkout. The refresh moved three files into the folder — `index.html`, `README.md`,
+`ROADMAP.md`. The folder's standalone `artifact/` copy — a real runnable copy with its own full
+sibling set, not a loose HTML file — took `index.html` plus the five PWA files (`manifest.json`
+and four icons) that had never been there; its `data/`, `vendor/` and `sw.js` were already
+byte-identical too, so only the HTML needed swapping. `artifact/` holds no docs at all, so do
+not go looking there for `README.md` or `ROADMAP.md`.
 
 If the folder ever falls behind again, the copy still goes **repo → folder**, never the other way
 while this repository is ahead.
