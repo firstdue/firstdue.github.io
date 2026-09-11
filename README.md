@@ -29,6 +29,14 @@ fallout, one owner playtest per build:
   🚨 NEXT CALL (same company), CHANGE STATION demoted to a text button. Loss recorded once before
   the card opens; double-tap latched; retried runs record only at their own result.
 
+**Highway phase 1 (September 11, 2026, authored, not yet published).** The Schuylkill Expressway
+(I-76) and the Roosevelt Expressway (US 1) exist in the game for the first time, from the City Avenue
+interchange to Spring Garden and from I-76 to Wissahickon Ave, with their ramps: divided carriageways
+sized from the OSM lane count, lane lines, a median barrier, real viaduct heights over Kelly Drive and
+the river, and a road graph that joins a freeway to the street network only where OpenStreetMap says a
+ramp meets a street — never where one road merely passes over another. No U-turns on a freeway; calls
+are never placed on one.
+
 **v18l (September 7, 2026).** Owner playtest feedback on the interchange:
 highway rules on ramps — once you're on a ramp, the only card shown is where that ramp leads
 (committed gantry choice, planned route, or the ramp's own continuation); cross streets passing

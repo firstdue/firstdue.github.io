@@ -864,7 +864,8 @@ const railGrid=new Map();
 for(const rw of (NAVGEO.rail||[])){if(rw.tunnel)continue;for(let i=1;i<rw.p.length;i++){const a=rw.p[i-1],q=rw.p[i];
   for(let x=Math.floor((Math.min(a[0],q[0])-20)/NAVCELL);x<=Math.floor((Math.max(a[0],q[0])+20)/NAVCELL);x++)for(let z=Math.floor((Math.min(a[1],q[1])-20)/NAVCELL);z<=Math.floor((Math.max(a[1],q[1])+20)/NAVCELL);z++){const k=x+':'+z;if(!railGrid.has(k))railGrid.set(k,[]);railGrid.get(k).push([a,q]);}}}
 function railNear(x,z,r=5){if(r>20)r=20;for(const s of railGrid.get(Math.floor(x/NAVCELL)+':'+Math.floor(z/NAVCELL))||[]){const a=s[0],q=s[1],dx=q[0]-a[0],dz=q[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));if(Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)<r)return true;}return false;}
-function navSpan(x,z,name=null,r=12){let best=null,dist=r;for(const s of navBridgeGrid.get(Math.floor(x/NAVCELL)+':'+Math.floor(z/NAVCELL))||[]){if(name!==null&&s.b.name!==name)continue;
+function navSpan(x,z,name=null,r=12,hx,hz){let best=null,dist=r;for(const s of navBridgeGrid.get(Math.floor(x/NAVCELL)+':'+Math.floor(z/NAVCELL))||[]){if(name!==null&&s.b.name!==name)continue;
+  if(hx!==undefined&&Math.abs((s.q[0]-s.a[0])*hx+(s.q[1]-s.a[1])*hz)<0.6*s.l*Math.hypot(hx,hz))continue;   // with a heading, only a span running the same way counts — a ramp passing UNDER a ramp bridge (or a road under a freeway viaduct with the same empty name) must not be lifted onto it
   const dx=s.q[0]-s.a[0],dz=s.q[1]-s.a[1],t=Math.max(0,Math.min(1,((x-s.a[0])*dx+(z-s.a[1])*dz)/(s.l*s.l||1))),d=Math.hypot(x-s.a[0]-dx*t,z-s.a[1]-dz*t);
   if(d<dist){dist=d;best={b:s.b,t:(s.along+t*s.l)/(s.b.length||1),d};}}return best;}
 // Deck PROFILE with a clearance floor. The abutment-to-abutment line is still the base estimate, but a road bridge
@@ -902,7 +903,7 @@ function deckY(b,t){const P=b.prof,u=Math.max(0,Math.min(1,t)),i=P?Math.min(P.le
   if(!b.name){const p=bridgePointAt(b,u),ramp=navRampY(p[0],p[1],'');if(ramp!==null)y=Math.max(y,ramp);}                   // unnamed decks ride the ramp profile
   else if(b.name==='City Avenue'){const p=bridgePointAt(b,u),lift=cityLiftY(p[0],p[1]);if(lift!==null)y=Math.max(y,lift);} // bridgePointAt only when a floor could apply — this runs per car per frame
   return y;}
-function navRoadY(x,z,name=null){if(!NAVGEO.active)return 0;const ramp=navRampY(x,z,name);if(ramp!==null)return ramp;const s=navSpan(x,z,name);return (!s||!s.b.bridge)?navTerrain(x,z):deckY(s.b,s.t);}
+function navRoadY(x,z,name=null,dx,dz){if(!NAVGEO.active)return 0;const ramp=navRampY(x,z,name);if(ramp!==null)return ramp;const s=navSpan(x,z,name,12,dx,dz);return (!s||!s.b.bridge)?navTerrain(x,z):deckY(s.b,s.t);}   // dx,dz optional: direction of travel
 function navGroundY(x,z){return NAVGEO.active?navTerrain(x,z):0;}
 function navRailCutDepth(x,z){let best=0;                                       // ⏱ 2 of 2,361 rail ways carry a cut, but this runs per terrain VERTEX (~3,800/rebuild).
   if(!NAVGEO._cuts)NAVGEO._cuts=(NAVGEO.rail||[]).filter(rw=>rw.cut);           //    Scanning the full list here cost ~126ms of the ~230ms rebuild hitch (measured, v18n).
@@ -927,6 +928,16 @@ function groundHeight(x,z){ return FLAGS.elevation?height(x,z):0; }
 
 /* ============================ 2. DATA (real OSM map) ============================ */
 const CLASSW=[20,16,13,9,8];
+// 🛣️ FREEWAYS. A street record may carry hw (1 = one carriageway of a divided freeway, 2 = freeway ramp) and ln
+// (that carriageway's lane count); every ordinary street has neither and keeps the class table above. Width comes
+// from the lanes: 3.6m lanes, a 1.2m left (median-side) shoulder and a 2.4m right shoulder on a carriageway; ramps
+// are lanes + 1.2m each side, never narrower than the 8m class-4 ramp. ONE place, so the pavement mesh, road paint,
+// name band, curb confinement, kerb snapping and junction trims all agree on where the asphalt ends.
+const HWY_LANE=3.6;
+function hwyHalf(s){ const n=s.ln||(s.hw===1?2:1); return s.hw===1 ? (n*HWY_LANE+3.6)/2 : Math.max(CLASSW[4],n*HWY_LANE+2.4)/2; }
+function segHalf(s){ return s.hw ? hwyHalf(s) : CLASSW[s.cls]*0.5; }
+function hwyLanes(s){ const n=s.ln||(s.hw===1?2:1), h=hwyHalf(s), left=s.hw===1?-h+1.2:-n*HWY_LANE/2; return {n,left,right:left+n*HWY_LANE}; }   // lane-block edges from the centreline, right-of-travel positive
+function hwyLaneOff(s){ const L=hwyLanes(s), k=L.n%2?(L.n-1)/2:L.n/2; return L.left+(k+0.5)*HWY_LANE; }                                  // the lane a rig rides: the middle lane, or centre-right of an even count
 // Apple-Maps 2D palette: primary arterials get a pale-gold fill+casing, everything else white with a soft warm-grey casing.
 const RD_FILL=['#fbe4a8','#ffffff','#ffffff','#ffffff','#ffffff'];       // per street class (0=primary … 4=unclassified)
 const RD_CASE=['#eccd7d','#d8d3c7','#dbd6ca','#ddd8cc','#dfdace'];       // casing colors, matched to each fill
@@ -1004,12 +1015,19 @@ const SEGCELL=64, segGrid=new Map();
 function segPut(s){ const steps=Math.max(1,Math.ceil(Math.hypot(s.bx-s.ax,s.bz-s.az)/SEGCELL));
   for(let i=0;i<=steps;i++){ const t=i/steps,x=s.ax+(s.bx-s.ax)*t,z=s.az+(s.bz-s.az)*t;
     const k=Math.floor(x/SEGCELL)+':'+Math.floor(z/SEGCELL); let a=segGrid.get(k); if(!a){a=[];segGrid.set(k,a);} a.push(s); } }
-for(const [name,cls,pts,ow] of RB.st){ for(let i=1;i<pts.length;i++) segPut({ax:pts[i-1][0],az:pts[i-1][1],bx:pts[i][0],bz:pts[i][1],name,cls,ow:ow||0}); }   // ow: baked one-way flag (v12o) — markings use it
+for(const [name,cls,pts,ow,hw,ln] of RB.st){ for(let i=1;i<pts.length;i++) segPut({ax:pts[i-1][0],az:pts[i-1][1],bx:pts[i][0],bz:pts[i][1],name,cls,ow:ow||0,hw:hw||0,ln:ln||0}); }   // ow: baked one-way flag (v12o) — markings use it
 function segNear(x,z){ const o=[],gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCELL);
   for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=segGrid.get(a+':'+b); if(l) o.push(...l); } return o; }
 function closestSeg(x,z,s){ const dx=s.bx-s.ax,dz=s.bz-s.az,L=dx*dx+dz*dz||1; let t=((x-s.ax)*dx+(z-s.az)*dz)/L; t=Math.max(0,Math.min(1,t));
   const cx=s.ax+dx*t,cz=s.az+dz*t; return {cx,cz,d:Math.hypot(x-cx,z-cz)}; }
-function streetName(x,z){ let bn='—',bd=22; for(const s of segNear(x,z)){ if(!s.name) continue; const c=closestSeg(x,z,s); const e=c.d-CLASSW[s.cls]/2; if(e<bd){ bd=e; bn=s.name; } } return bn; }
+function streetName(x,z){ let bn='—',bd=22; for(const s of segNear(x,z)){ if(!s.name) continue; const c=closestSeg(x,z,s); const e=c.d-segHalf(s); if(e<bd){ bd=e; bn=s.name; } } return bn; }
+function roadSegAt(x,z,dx,dz){ let best=null,bs=Infinity;                       // the road under a point, judged by distance AND heading — (dx,dz) is the direction of travel, so a ramp beside
+  for(const s of segNear(x,z)){ const sx=s.bx-s.ax,sz=s.bz-s.az,sl=Math.hypot(sx,sz)||1,hl=Math.hypot(dx,dz)||1;   // a carriageway, or a road passing over another, resolves to the one actually being driven
+    const score=closestSeg(x,z,s).d+20*(1-Math.abs((sx*dx+sz*dz)/(sl*hl))); if(score<bs){bs=score;best=s;} } return best; }
+function hwySegForSpan(b,J){ const i=(b.p.length/2)|0, m=b.p[i], q=b.p[i?i-1:1]; if(!q||Math.hypot(m[0]-J.cx,m[1]-J.cz)>LOCAL.R+200) return null;   // an UNNAMED bridge record gets a deck only when a
+  const dx=m[0]-q[0], dz=m[1]-q[1], dl=Math.hypot(dx,dz)||1; let best=null,bd=6;                                                                   // freeway ramp rides it: the nearest unnamed freeway segment
+  for(const s of segNear(m[0],m[1])){ if(s.name||!s.hw) continue; const sx=s.bx-s.ax,sz=s.bz-s.az,sl=Math.hypot(sx,sz)||1; if(Math.abs((sx*dx+sz*dz)/(sl*dl))<0.8) continue;   // aligned with the span (the older
+    const d=closestSeg(m[0],m[1],s).d; if(d<bd){bd=d;best=s;} } return best; }                                                                       // unnamed spans, e.g. the Ridge connector, are unchanged)
 // Official Philadelphia Streets Department hundred-block lookup, baked into AB for offline play.
 const BLOCK={cell:180,grid:new Map(),nameId:new Map(AB.n.map((n,i)=>[n,i])),last:{x:1e9,z:1e9,name:'',value:0}};
 function canonStreet(n){ return (n||'').toUpperCase().replace(/&/g,' AND ').replace(/[^A-Z0-9 ]/g,' ').replace(/\bNORTH\b/g,'N').replace(/\bSOUTH\b/g,'S').replace(/\bEAST\b/g,'E').replace(/\bWEST\b/g,'W').replace(/\bSAINT\b/g,'ST').replace(/\bAVENUE\b/g,'AVE').replace(/\bSTREET\b/g,'ST').replace(/\bROAD\b/g,'RD').replace(/\bDRIVE\b/g,'DR').replace(/\bBOULEVARD\b/g,'BLVD').replace(/\bLANE\b/g,'LN').replace(/\bPLACE\b/g,'PL').replace(/\bCOURT\b/g,'CT').replace(/\bCIRCLE\b/g,'CIR').replace(/\bTERRACE\b/g,'TER').replace(/\bPARKWAY\b/g,'PKWY').replace(/\bHIGHWAY\b/g,'HWY').replace(/\bTRAIL\b/g,'TRL').replace(/\s+/g,' ').trim(); }
@@ -1032,7 +1050,7 @@ function rampDestName(){
   while(pa&&pb&&g++<12&&walked<450){ const named=pb.adj.find(e2=>e2.to!==pa&&e2.name); if(named) return named.name;
     const nx=straightest(pa,pb); if(!nx) break; walked+=Math.hypot(nx.x-pb.x,nx.z-pb.z); pa=pb; pb=nx; }
   return null; }
-function onAsphalt(x,z){ for(const s of segNear(x,z)){ const c=closestSeg(x,z,s); if(c.d<CLASSW[s.cls]/2+1) return true; } return false; }
+function onAsphalt(x,z){ for(const s of segNear(x,z)){ const c=closestSeg(x,z,s); if(c.d<segHalf(s)+1) return true; } return false; }
 // Put every dispatch pin on the street its radio call actually names. Half the landmarks were hand-placed on the
 // wrong block (W.B. Saul said "Henry Ave" but sat 486m away on Valley Ave; Dobson Mills said "Ridge Ave" but sat on
 // Winona), so the marker sent you somewhere the call never mentioned. Data-driven: match the street named in the
@@ -1059,17 +1077,17 @@ function onAsphalt(x,z){ for(const s of segNear(x,z)){ const c=closestSeg(x,z,s)
       if(streetName(tx,tz)===want){ px=tx; pz=tz; break; } }
     L.x=px; L.z=pz; } })();
 // --- hard-curb confinement (Post-C): keep the truck on the drivable asphalt band; COLLISION only, never steers the car ---
-function driveHalf(cls){ return CLASSW[cls]/2 + ARC.curbPad; }          // "tuned wide" = painted asphalt half-width + a curb margin
+function driveHalf(s){ return segHalf(s) + ARC.curbPad; }          // "tuned wide" = painted asphalt half-width + a curb margin
 function segNearWide(x,z){ const gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCELL);   // expanding search for the rare off-road gap (parks/woods) so confine always finds a road
   for(let r=2;r<=14;r++){ const o=[]; for(let a=gx-r;a<=gx+r;a++)for(let b=gz-r;b<=gz+r;b++){ const l=segGrid.get(a+':'+b); if(l) o.push(...l); } if(o.length) return o; } return []; }
 function confine(x,z){ if(onBridge(x,z)) return null;                    // bridge decks are drivable
   let segs=segNear(x,z); if(!segs.length) segs=segNearWide(x,z);         // no road within a cell? widen so you can't free-roam the open gaps
   let bestE=1e18,cx=0,cz=0,half=0;
-  for(const s of segs){ const c=closestSeg(x,z,s),h=driveHalf(s.cls),e=c.d-h; if(e<bestE){ bestE=e; cx=c.cx; cz=c.cz; half=h; } }
+  for(const s of segs){ const c=closestSeg(x,z,s),h=driveHalf(s),e=c.d-h; if(e<bestE){ bestE=e; cx=c.cx; cz=c.cz; half=h; } }
   if(bestE<=0||bestE===1e18) return null;                               // already on the band (union of segment bands → rounded intersections for free)
   const dx=x-cx,dz=z-cz,d=Math.hypot(dx,dz)||1e-6,ux=dx/d,uz=dz/d; return { x:cx+ux*half, z:cz+uz*half, nx:ux, nz:uz }; }
 function nearestAsphalt(x,z){ let bd=1e18,bx=x,bz=z;                     // closest reachable on-band point — used so a set-back call is still reachable from the street
-  for(const s of segNear(x,z)){ const c=closestSeg(x,z,s),h=driveHalf(s.cls),dx=x-c.cx,dz=z-c.cz,d=Math.hypot(dx,dz)||1e-6,k=Math.min(d,h),px=c.cx+dx/d*k,pz=c.cz+dz/d*k,e=Math.hypot(x-px,z-pz); if(e<bd){ bd=e; bx=px; bz=pz; } }
+  for(const s of segNear(x,z)){ const c=closestSeg(x,z,s),h=driveHalf(s),dx=x-c.cx,dz=z-c.cz,d=Math.hypot(dx,dz)||1e-6,k=Math.min(d,h),px=c.cx+dx/d*k,pz=c.cz+dz/d*k,e=Math.hypot(x-px,z-pz); if(e<bd){ bd=e; bx=px; bz=pz; } }
   return { x:bx, z:bz, d:bd }; }
 
 function bbox(p){ let a=1e18,b=1e18,c=-1e18,d=-1e18; for(const q of p){ a=Math.min(a,q[0]);b=Math.min(b,q[1]);c=Math.max(c,q[0]);d=Math.max(d,q[1]); } return [a,b,c,d]; }
@@ -1672,8 +1690,8 @@ const HYDRANTS=[[3116,5869,1],[2713,6285,1],[2568,5932,1],[4547,6184,1],[2850,62
 (function snapHydrants(){                                                                  // OSM hydrant points are noisy — some sit IN the roadway (user saw one mid-lane on Ridge). Snap those to the kerb.
   for(let pass=0; pass<3; pass++){ let moved=0;                                            // multi-pass: at a corner, escaping one street can land inside the wider cross street
     for(const h of HYDRANTS){ let best=null,worst=1e18;
-      for(const sg of segNear(h[0],h[1])){ const c=closestSeg(h[0],h[1],sg); const e=c.d-CLASSW[sg.cls]/2; if(e<worst){worst=e;best={c,sg};} }   // deepest violation, not nearest centreline
-      if(!best || worst>=0.8) continue; const rh=CLASSW[best.sg.cls]/2, c=best.c;
+      for(const sg of segNear(h[0],h[1])){ const c=closestSeg(h[0],h[1],sg); const e=c.d-segHalf(sg); if(e<worst){worst=e;best={c,sg};} }   // deepest violation, not nearest centreline
+      if(!best || worst>=0.8) continue; const rh=segHalf(best.sg), c=best.c;
       let nx=h[0]-c.cx, nz=h[1]-c.cz, nl=Math.hypot(nx,nz);
       if(nl<0.3){ nx=-(best.sg.bz-best.sg.az); nz=best.sg.bx-best.sg.ax; nl=Math.hypot(nx,nz)||1; }   // on the centreline: pick a side from the seg normal
       h[0]=Math.round(c.cx+nx/nl*(rh+1.7)); h[1]=Math.round(c.cz+nz/nl*(rh+1.7)); moved++; }
@@ -1763,8 +1781,14 @@ boundaryEngine.addEventListener('change',()=>{BOUNDARY_UI.engine=boundaryEngine.
 
 /* ---- routing graph for the GPS route line ONLY (A* on OSM streets; never constrains the car) ---- */
 const gnodes=new Map();
-function gnode(x,z){ const k=x+','+z; let n=gnodes.get(k); if(!n){ n={x,z,adj:[]}; gnodes.set(k,n); } return n; }
-for(const [name,cls,pts] of RB.st){ for(const p of pts) gnode(p[0],p[1]); }   // every street vertex is a node
+function gnode(x,z,ns){ const k=ns?x+','+z+','+ns:x+','+z; let n=gnodes.get(k); if(!n){ n={x,z,adj:[]}; gnodes.set(k,n); } return n; }
+// 🛣️ CONTROLLED ACCESS. A freeway carriageway or ramp meets a non-freeway road ONLY where the OSM source shares a
+// node (baked as RB.hj). Everywhere else its vertices stay in their own namespace: a viaduct vertex that rounds to
+// the same metre as the vertex of the street it passes over (Roosevelt Expressway over Kelly Drive) must not fuse
+// into a turn that does not exist on the ground. HWONLY = those namespaced vertices; junction nodes are shared.
+const HJ=new Set((RB.hj||[]).map(p=>p[0]+','+p[1])), HWONLY=new Set();
+function gnodeFor(x,z,hw){ if(!hw||(hw===2&&HJ.has(x+','+z))) return gnode(x,z); const n=gnode(x,z,'h'); HWONLY.add(n); return n; }   // only RAMPS reach the street network (every shared node in the corridor belongs to a motorway_link); a carriageway vertex at a junction's coordinate is the road passing beneath it
+for(const r of RB.st){ for(const p of r[2]) gnodeFor(p[0],p[1],r[4]); }   // every street vertex is a node
 // Node the network: DP collapses a straight road into ONE long endpoint-to-endpoint edge, dropping the mid-road
 // vertices where cross streets meet it. So we SPLIT each segment at every nearby cross-street node — otherwise A*
 // must detour to a road's far END to switch streets (the 3-5x-detour bug that broke routing on the bigger map).
@@ -1796,7 +1820,7 @@ function gradeSeparatedCrossing(A,B,X,Z){
   ((A.nm===q.a&&B.nm===q.b)||(A.nm===q.b&&B.nm===q.a)) && Math.hypot(X-q.x,Z-q.z)<=q.r); }
 (function crossings(){ const CS=64, cells=new Map(), all=[];
   for(let si=0; si<RB.st.length; si++){ const nm=RB.st[si][0], pts=RB.st[si][2];
-    for(let i=1;i<pts.length;i++){ const s={si,i,nm, ax:pts[i-1][0],az:pts[i-1][1], bx:pts[i][0],bz:pts[i][1]}; all.push(s);
+    for(let i=1;i<pts.length;i++){ const s={si,i,nm, hw:RB.st[si][4]||0, ax:pts[i-1][0],az:pts[i-1][1], bx:pts[i][0],bz:pts[i][1]}; all.push(s);
       const x0=Math.min(s.ax,s.bx),x1=Math.max(s.ax,s.bx),z0=Math.min(s.az,s.bz),z1=Math.max(s.az,s.bz);
       for(let a=Math.floor(x0/CS);a<=Math.floor(x1/CS);a++)for(let b=Math.floor(z0/CS);b<=Math.floor(z1/CS);b++){
         const k=a+':'+b; let L=cells.get(k); if(!L){L=[];cells.set(k,L);} L.push(s); } } }
@@ -1804,7 +1828,8 @@ function gradeSeparatedCrossing(A,B,X,Z){
   const seen=new Set();
   for(const L of cells.values()) for(let p=0;p<L.length;p++) for(let q=p+1;q<L.length;q++){
     const A=L[p], B=L[q];
-    if(A.si===B.si || (A.nm && A.nm===B.nm)) continue;                       // same road → already chained
+    if(A.si===B.si || (A.nm && A.nm===B.nm)) continue;
+    if(A.hw||B.hw) continue;                                                    // 🛣️ controlled access: a freeway/ramp crosses other roads only on structures — its junctions are its own shared vertices                       // same road → already chained
     const key=(A.si<B.si||(A.si===B.si&&A.i<B.i)) ? A.si+'_'+A.i+'|'+B.si+'_'+B.i : B.si+'_'+B.i+'|'+A.si+'_'+A.i;
     if(seen.has(key)) continue; seen.add(key);
     const r1x=A.bx-A.ax,r1z=A.bz-A.az, r2x=B.bx-B.ax,r2z=B.bz-B.az, d=r1x*r2z-r1z*r2x;
@@ -1816,23 +1841,24 @@ function gradeSeparatedCrossing(A,B,X,Z){
 (function buildGraph(){ const GS=48, gi=new Map();
   for(const n of gnodes.values()){ const k=Math.floor(n.x/GS)+':'+Math.floor(n.z/GS); let a=gi.get(k); if(!a){a=[];gi.set(k,a);} a.push(n); }
   const near=(x,z,out)=>{ const gx=Math.floor(x/GS),gz=Math.floor(z/GS); for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=gi.get(a+':'+b); if(l) for(const n of l) out.add(n); } };
-  const edge=(a,b,nm,ow)=>{ if(a===b) return; const w=Math.hypot(a.x-b.x,a.z-b.z); const sw = w<3 ? 0 : ow;   // ignore one-way only on sub-3m stubs (noding artifacts — and the 3m weld now eats those anyway). Was <8m,
+  const edge=(a,b,nm,ow,hw)=>{ if(a===b) return; const w=Math.hypot(a.x-b.x,a.z-b.z); const sw = w<3 ? 0 : ow;   // ignore one-way only on sub-3m stubs (noding artifacts — and the 3m weld now eats those anyway). Was <8m,
                                                                                                               // which stripped the flags off REAL 4-8m one-way ramp fragments: at the City Ave interchange that opened a
                                                                                                               // legal crossover from the northbound roadway into Ramp H (to Kelly Dr) that doesn't exist on the ground (owner)
-    a.adj.push({to:b,w,name:nm,wrong: sw===-1});   // one-way flag on the edge: travelling a->b is wrong-way when the legal direction is the reverse
-    b.adj.push({to:a,w,name:nm,wrong: sw===1}); };  // and b->a is wrong-way when the legal direction is forward (a->b)
+    a.adj.push({to:b,w,name:nm,wrong: sw===-1,hw:hw||0});   // one-way flag on the edge: travelling a->b is wrong-way when the legal direction is the reverse
+    b.adj.push({to:a,w,name:nm,wrong: sw===1,hw:hw||0}); };   // hw: 1 freeway carriageway, 2 freeway ramp, 0 street  // and b->a is wrong-way when the legal direction is forward (a->b)
   const TH=4.5;
-  for(let si=0; si<RB.st.length; si++){ const pts=RB.st[si][2], snm=RB.st[si][0], sow=RB.st[si][3]||0;
+  for(let si=0; si<RB.st.length; si++){ const pts=RB.st[si][2], snm=RB.st[si][0], sow=RB.st[si][3]||0, shw=RB.st[si][4]||0;
     for(let i=1;i<pts.length;i++){ const ax=pts[i-1][0],az=pts[i-1][1],bx=pts[i][0],bz=pts[i][1];
-    const a=gnode(ax,az), b=gnode(bx,bz), dx=bx-ax,dz=bz-az, L2=dx*dx+dz*dz;
-    if(L2<1){ edge(a,b,snm,sow); continue; }
+    const a=gnodeFor(ax,az,shw), b=gnodeFor(bx,bz,shw), dx=bx-ax,dz=bz-az, L2=dx*dx+dz*dz;
+    if(L2<1){ edge(a,b,snm,sow,shw); continue; }
     const cand=new Set(), steps=Math.max(1,Math.ceil(Math.sqrt(L2)/40));
     for(let s=0;s<=steps;s++) near(ax+dx*s/steps, az+dz*s/steps, cand);
     const chain=[{n:a,t:0},{n:b,t:1}];
     const segL=Math.sqrt(L2), sdx=dx/(segL||1), sdz=dz/(segL||1);
     const sSpan=spanFor((ax+bx)/2,(az+bz)/2,snm||null,sdx,sdz,6), sLayer=sSpan?(sSpan.b.layer||0):0;
     for(const n of cand){ if(n===a||n===b) continue; const tt=((n.x-ax)*dx+(n.z-az)*dz)/L2; if(tt<=0.002||tt>=0.998) continue;
-      const px=ax+dx*tt, pz=az+dz*tt; if(Math.hypot(n.x-px,n.z-pz)>=TH) continue;                     // a cross-street node sitting on this segment…
+      const px=ax+dx*tt, pz=az+dz*tt; if(Math.hypot(n.x-px,n.z-pz)>=TH) continue;
+      if((shw?1:0)!==(HWONLY.has(n)?1:0) && !(shw!==1 && !HWONLY.has(n) && HJ.has(n.x+','+n.z))) continue;   // 🛣️ freeway vs street vertex = grade separation, never a junction — unless the bake says the OSM ways share that node (its vertex simplified out of a ramp's or street's run); a CARRIAGEWAY passing a ramp's street junction (I-76 under City Ave) is still stacked                     // a cross-street node sitting on this segment…
       { let veto=false;                                                                               // …unless the node belongs to a span at a DIFFERENT level (viaduct over a covered ramp:
         for(const s of navBridgeGrid.get(Math.floor(n.x/NAVCELL)+':'+Math.floor(n.z/NAVCELL))||[]){   // welding them opened turns that don't exist on the ground — City Ave interchange, owner report)
           const qx=s.q[0]-s.a[0],qz=s.q[1]-s.a[1],qt=Math.max(0,Math.min(1,((n.x-s.a[0])*qx+(n.z-s.a[1])*qz)/(s.l*s.l||1)));
@@ -1842,7 +1868,7 @@ function gradeSeparatedCrossing(A,B,X,Z){
     const xc=XCUT.get(si+':'+i);                                                                      // + true crossings with other roads (shared node → the turn exists)
     if(xc) for(const c of xc) chain.push({n:gnode(c.X,c.Z), t:c.t});
     chain.sort((p,q)=>p.t-q.t);
-    for(let k=1;k<chain.length;k++) edge(chain[k-1].n, chain[k].n, snm, sow); } } })();
+    for(let k=1;k<chain.length;k++) edge(chain[k-1].n, chain[k].n, snm, sow, shw); } } })();
 // WELD NEAR-DUPLICATE NODES. The bake rounds coordinates to whole metres and the crossing pass adds its own nodes,
 // so an intersection often ends up as two or three nodes 0.7–1.4m apart with edges criss-crossing between them.
 // A street then has no continuation edge at the junction (its far half hangs off the twin), which made the truck
@@ -1857,12 +1883,13 @@ function gradeSeparatedCrossing(A,B,X,Z){
     const gx=Math.floor(n.x/CS), gz=Math.floor(n.z/CS);
     for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=grid.get(a+':'+b); if(!l) continue;
       for(const m of l){ if(m===n||rep.has(m)||isRep.has(m)) continue;
+        if(HWONLY.has(m)!==HWONLY.has(n)) continue;                                   // 🛣️ freeway-only vertex vs street vertex: stacked, not a junction
         if(Math.hypot(m.x-n.x,m.z-n.z)<=R){ rep.set(m,n); let c=kids.get(n); if(!c){c=[];kids.set(n,c);} c.push(m); } } } }
   if(!rep.size) return;
   const find=n=>rep.get(n)||n;
   for(const r of isRep){ const seen=new Map();
     const take=src=>{ for(const e of src.adj){ const t=find(e.to); if(t===r) continue;
-      const prev=seen.get(t); if(!prev||(e.name&&!prev.name)) seen.set(t,{to:t,w:Math.hypot(t.x-r.x,t.z-r.z),name:e.name,wrong:e.wrong}); } };   // keep the one-way flag through welding
+      const prev=seen.get(t); if(!prev||(e.name&&!prev.name)) seen.set(t,{to:t,w:Math.hypot(t.x-r.x,t.z-r.z),name:e.name,wrong:e.wrong,hw:e.hw||0}); } };   // keep the one-way flag through welding
     take(r); const c=kids.get(r); if(c) for(const m of c) take(m);
     r.adj=[...seen.values()]; }
   for(const [k,n] of [...gnodes]) if(rep.has(n)) gnodes.delete(k); })();
@@ -1885,7 +1912,7 @@ function gradeSeparatedCrossing(A,B,X,Z){
         if(n.adj.some(e=>e.to===m)) continue;                                          // already joined
         const ux=dx/dist, uz=dz/dist;
         let nm=null, back=null;
-        for(const e of n.adj){ if(!e.name) continue; const bk=sameNameEdge(n,e.name,ux,uz,-1); if(!bk) continue;   // street arrives at n from behind the gap
+        for(const e of n.adj){ if(!e.name||e.hw) continue; const bk=sameNameEdge(n,e.name,ux,uz,-1); if(!bk) continue;   // never from a freeway (its only 'gaps' are the twin carriageways); street arrives at n from behind the gap
           const carries=m.adj.some(x=>x.name===e.name);                                  // the far side is the same street…
           if(!carries) continue;
           if(!sameNameEdge(m,e.name,ux,uz,1) && dist>16) continue;                        // …and either continues straight on, or the gap is short enough that direction can't be judged
@@ -1895,9 +1922,15 @@ function gradeSeparatedCrossing(A,B,X,Z){
         let wNM=false, wMN=false;
         if(rev){ if(back.wrong===false && rev.wrong===true) { wNM=true; wMN=false; }    // flow runs n→back, i.e. against the gap
           else if(back.wrong===true && rev.wrong===false){ wNM=false; wMN=true; } }     // flow runs back→n, i.e. along the gap
-        n.adj.push({to:m,w:dist,name:nm,wrong:wNM}); m.adj.push({to:n,w:dist,name:nm,wrong:wMN}); added.push(dist);
+        n.adj.push({to:m,w:dist,name:nm,wrong:wNM,hw:back.hw||0}); m.adj.push({to:n,w:dist,name:nm,wrong:wMN,hw:back.hw||0}); added.push(dist);
       } } }
   window.__bridged=added.length; })();
+// ⛔ CORRIDOR ENDS. The freeway fetch stops at its bbox and at the city line: a carriageway or ramp whose
+// last vertex meets no other road is unfinished pavement, not a destination. Listed here so the scenery
+// closes it with a striped barrier and the drive stops short of it with a message (ux,uz points outward).
+const HWY_ENDS=new Map();
+for(const n of gnodes.values()){ if(n.adj.length!==1||!n.adj[0].hw) continue; const e=n.adj[0],dx=n.x-e.to.x,dz=n.z-e.to.z,l=Math.hypot(dx,dz)||1;
+  HWY_ENDS.set(n.x+','+n.z,{x:n.x,z:n.z,ux:dx/l,uz:dz/l,name:e.name,hw:e.hw}); }
 const NCELL=90, ngrid=new Map();
 for(const n of gnodes.values()){ const k=Math.floor(n.x/NCELL)+':'+Math.floor(n.z/NCELL); let a=ngrid.get(k); if(!a){a=[];ngrid.set(k,a);} a.push(n); }
 function nearestNode(x,z){ let best=null,bd=1e18; const gx=Math.floor(x/NCELL),gz=Math.floor(z/NCELL);
@@ -2117,7 +2150,7 @@ function updateStreetLabels(dt){
     sp.material.opacity=op; } }
 const buildData=[], treeData=[];
 // nearest-road-edge distance; used to keep buildings out of the roadway (any road, incl. crossings)
-function nearRoadEdge(x,z){ let best=1e9; for(const s of segNear(x,z)){ const e=closestSeg(x,z,s).d-CLASSW[s.cls]/2; if(e<best) best=e; } return best; }
+function nearRoadEdge(x,z){ let best=1e9; for(const s of segNear(x,z)){ const e=closestSeg(x,z,s).d-segHalf(s); if(e<best) best=e; } return best; }
 function footprintClearsRoad(cx,cz,w,d){ const hw=w/2,hd=d/2;   // every corner + center must be off the asphalt
   return [[0,0],[hw,hd],[-hw,hd],[hw,-hd],[-hw,-hd]].every(o=>nearRoadEdge(cx+o[0],cz+o[1])>0.5); }
 function genCityData(){ if(buildData.length) return; const rng=mulberry(19129),   // idempotent: procedural building/tree data, reused by both the Chase city and the flat tilt-map city
@@ -2226,7 +2259,7 @@ const __beforeProps=new Set(scene.children);
   const zc={ 'EAST FALLS · 19129':0xb0654a, 'WISSAHICKON':0x5a8a52, 'MANAYUNK · 19127':0x8e6ab0 };
   // The landmark POINT has to sit near the kerb (it's the arrival target, 12m radius) — but the building must not be
   // built in the roadway. Push the box out perpendicular until it clears the asphalt plus its own footprint.
-  const clearsAll=(px,pz)=>{ for(const s of segNear(px,pz)){ if(closestSeg(px,pz,s).d < CLASSW[s.cls]/2+7) return false; } return true; };
+  const clearsAll=(px,pz)=>{ for(const s of segNear(px,pz)){ if(closestSeg(px,pz,s).d < segHalf(s)+7) return false; } return true; };
   for(const L of LMK){ const c=zc[L.zone]||0x9a7a62;
     let bx=L.x, bz=L.z;
     if(!clearsAll(bx,bz)){                                                               // spiral out for the nearest spot clear of EVERY road (pushing off one street can land on another)
@@ -2446,7 +2479,7 @@ function updateTiltMap(dt){                                                    /
   if(FLATCITY.built){ FLATCITY.tick();                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
     if(!FLATCITY.job && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.requestRebuild(truck.x,truck.z); }
   const driveEdge=DRIVE.fromN?.adj.find(e=>e.to===DRIVE.toN);                 // an unnamed ramp must match only an unnamed bridge; null used to match nearby City Ave and lift the truck onto its deck
-  const navY=navRoadY(truck.x,truck.z,driveEdge?.name??'');
+  const navY=navRoadY(truck.x,truck.z,driveEdge?.name??'',driveEdge?DRIVE.toN.x-DRIVE.fromN.x:undefined,driveEdge?DRIVE.toN.z-DRIVE.fromN.z:undefined);   // + heading: a ramp under a ramp bridge keeps its own level
   { const T=VIS.trail,last=T[T.length-1];                                     // record the driven path for the corner-rounding midpoint
     if(last&&Math.hypot(truck.x-last.x,truck.z-last.z)>15) T.length=0;        // a jump (respawn, carriageway slide) restarts the trail
     if(!last||Math.hypot(truck.x-last.x,truck.z-last.z)>0.4) T.push({x:truck.x,z:truck.z});
@@ -2458,8 +2491,8 @@ function updateTiltMap(dt){                                                    /
   truckG.rotation.set(0,truck.theta,0);                                       // no pitch/roll on flat ground
   { let tgt=0;                                                                // 🚚 lane offset: the graph rides the street CENTRELINE, so the truck straddled the yellow line — shift the VISUAL into the right-hand lane like a real nav app (DRIVE/route/logic untouched)
     if(!DRIVE.parked && !INTRO.active){ let bhw=0,bd=1e9;
-      for(const sg of segNear(truck.x,truck.z)){ const c=closestSeg(truck.x,truck.z,sg); if(c.d<bd){bd=c.d;bhw=CLASSW[sg.cls]/2;} }
-      if(bhw) tgt=Math.max(1.6,Math.min(3.0,bhw*0.5)); }
+      let bs=null; for(const sg of segNear(truck.x,truck.z)){ const c=closestSeg(truck.x,truck.z,sg); if(c.d<bd){bd=c.d;bhw=segHalf(sg);bs=sg;} }
+      if(bs&&bs.hw) tgt=hwyLaneOff(bs); else if(bhw) tgt=Math.max(1.6,Math.min(3.0,bhw*0.5)); }   // freeway: sit in a real lane centre from the baked lane count
     MAP.laneOff=(MAP.laneOff||0)+(tgt-(MAP.laneOff||0))*Math.min(1,dt*3);     // ease so junction width changes and parking don't pop
     const lfx=-Math.sin(truck.theta), lfz=-Math.cos(truck.theta);             // right of travel = (-fz, fx)
     truckG.position.x=vx-lfz*MAP.laneOff; truckG.position.z=vz+lfx*MAP.laneOff; }
@@ -2832,10 +2865,10 @@ function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geomet
       for(let k=1;k<n;k++) pts.push({x:q.x+(p.x-q.x)*k/n,z:q.z+(p.z-q.z)*k/n}); }
     pts.push(p); }
   for(let i=0;i<pts.length;i++){ const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
-    let routeName=null,best=Infinity;if(NAVGEO.active)for(const s of segNear(p.x,p.z)){const sx=s.bx-s.ax,sz=s.bz-s.az,sl=Math.hypot(sx,sz)||1,score=closestSeg(p.x,p.z,s).d+20*(1-Math.abs((sx*dx+sz*dz)/(sl*l)));if(score<best){best=score;routeName=s.name;}}
-    const navY=navRoadY(p.x,p.z,routeName);
+    const rs=NAVGEO.active?roadSegAt(p.x,p.z,dx,dz):null, routeName=rs?rs.name:null;   // the road this stretch of route rides — by distance and heading, so it lands on the right deck at a crossing
+    const navY=navRoadY(p.x,p.z,routeName,dx,dz);
     pos.push(p.x+nx*hw,navY+0.42,p.z+nz*hw, p.x-nx*hw,navY+0.42,p.z-nz*hw);
-    const LN=2.4;                                                                          // shift the flat ribbon into the right-hand lane so it runs under the lane-offset truck (nx,nz is already right-of-travel)
+    const LN=(rs&&rs.hw)?hwyLaneOff(rs):2.4;                                              // shift the flat ribbon into the right-hand lane (a freeway lane centre under the lane-offset truck) so it runs under the lane-offset truck (nx,nz is already right-of-travel)
     posF.push(p.x+nx*(LN+hwF),navY+0.52,p.z+nz*(LN+hwF), p.x+nx*(LN-hwF),navY+0.52,p.z+nz*(LN-hwF));
     posE.push(p.x+nx*(LN+hwE),navY+0.46,p.z+nz*(LN+hwE), p.x+nx*(LN-hwE),navY+0.46,p.z+nz*(LN-hwE));
     if(i){ const k=i*2; idx.push(k-2,k-1,k,k-1,k+1,k); } }
@@ -3047,7 +3080,7 @@ function sameStreetOn(a,b){ if(!b) return null;
   for(const e of b.adj){ if(e.to===a) continue;
     if(e.wrong&&!curWrong) continue;                                            // divided arterial: the same-named continuation on the OPPOSITE carriageway is wrong-way — never follow it (this was the Henry Ave false WRONG-WAY)
     const dx=e.to.x-b.x,dz=e.to.z-b.z,l=Math.hypot(dx,dz)||1, dot=(hx*dx+hz*dz)/(hl*l);
-    let nm=e.name||streetName((b.x+e.to.x)/2,(b.z+e.to.z)/2);
+    let nm=e.name||(e.hw?'':streetName((b.x+e.to.x)/2,(b.z+e.to.z)/2));   // a freeway ramp never borrows the carriageway's name from the band: an exit that leaves straighter than the bend would read as the same street and take the truck off the freeway
     if(l<3){ const nx=straightest(b,e.to); if(nx) nm=edgeName(e.to,nx)||nm; }   // 1m fragment → judge by what lies beyond it
     if(nm===cur&&dot>sd){ sd=dot; same=e.to; } }
   return (same&&sd>0.1) ? same : null; }                                     // must actually continue FORWARD — divided roads have a same-named branch heading back (Ridge Ave at Lincoln Dr flipped the truck via the opposite carriageway)
@@ -3106,7 +3139,9 @@ function updateDrive(dt){ if(!state.running){ return; }
         if(idx>=0){ next=P[idx]; DRIVE.plan=P.slice(idx+1); DRIVE.atChoice=false; if(!DRIVE.plan.length) DRIVE.plan=null; }
         else if(Math.hypot(P[0].x-b.x,P[0].z-b.z)>80) DRIVE.plan=null; }                                                            // left the plan (U-turn, other tap) — drop it, never yank the truck back
       if(!next) next=roadContinuation(a,b);                                                  // same street, or the only possible forward road
-      if(!next){ const choices=b.adj.filter(e=>e.to!==a); DRIVE.t=1; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=choices.length>0; break; } // a sharp reversing continuation still waits for confirmation; a dead end simply stops
+      if(!next){ const choices=b.adj.filter(e=>e.to!==a), end=HWY_ENDS.get(b.x+','+b.z);
+        DRIVE.t=end?Math.max(0,1-7/seg):1; DRIVE.going=false; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=choices.length>0;   // ⛔ a corridor end: stop 7m short of the barrier
+        if(end) popup('⛔ ROAD CLOSED — THE MAPPED '+(end.hw===1?'EXPRESSWAY':'RAMP')+' ENDS HERE · U-TURN TO GO BACK'); break; } // a sharp reversing continuation still waits for confirmation; a dead end simply stops
       DRIVE.fromN=b; DRIVE.toN=next; DRIVE.t=0; DRIVE.atChoice=false; } }
   { const e=(DRIVE.going&&DRIVE.fromN&&DRIVE.toN)?DRIVE.fromN.adj.find(x=>x.to===DRIVE.toN):null; DRIVE.wrongWay=!!(e&&e.wrong);
     // 🛣️ DIVIDED ROAD SELF-CORRECT: on S Broad / Henry the two directions are separate one-way ways, so
@@ -3114,7 +3149,7 @@ function updateDrive(dt){ if(!state.running){ return; }
     // they chose (go south on Broad) is perfectly legal, just on the other carriageway. Slide across.
     // A genuine one-way has no legal twin, so the deliberate wrong-way drive from v15d is untouched.
     const nearFire=state.target && Math.hypot(truck.x-state.target.x,truck.z-state.target.z)<70;
-    if(DRIVE.wrongWay && DRIVE.fromN!==DRIVE._twinFrom && !nearFire){        // never teleport across a median right at the job — it can throw you out of the arrival radius
+    if(DRIVE.wrongWay && !(e&&e.hw) && DRIVE.fromN!==DRIVE._twinFrom && !nearFire){                 // never slide across a freeway barrier        // never teleport across a median right at the job — it can throw you out of the arrival radius
       DRIVE._twinFrom=DRIVE.fromN;                                            // try once per edge, never in a loop
       const nm=edgeName(DRIVE.fromN,DRIVE.toN);
       const c=carriagewayToward(nm, DRIVE.toN.x-DRIVE.fromN.x, DRIVE.toN.z-DRIVE.fromN.z, truck.x, truck.z);
@@ -3161,6 +3196,7 @@ function slideToCarriageway(c){
 }
 function uTurn(){ if(DRIVE.parked) return; if(!DIFF.uturn[DIFF.level]){ popup('↩ NO U-TURNS ON '+DIFF.names[DIFF.level]); return; }
   const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return;
+  { const ce=a.adj.find(e=>e.to===b); if(ce&&ce.hw&&!(!DRIVE.going&&HWY_ENDS.has(b.x+','+b.z))){ popup(ce.hw===1?'↩ NO U-TURN ON THE EXPRESSWAY — TAKE AN EXIT':'↩ NO U-TURN ON A RAMP'); return; } }   // a freeway has a barrier, not a median to cross; the "opposite carriageway" hop must never fire here
   if(state.target&&!state.onScene) COACH.uturns++;                            // 🧮 scored: a U-turn mid-run costs Clean Driving points
   if(uTurnEdgeIsWrong(a,b)){
     const t=Math.max(0,Math.min(1,DRIVE.t||0)), px=a.x+(b.x-a.x)*t, pz=a.z+(b.z-a.z)*t;
@@ -3195,7 +3231,7 @@ function parkAtStation(st){ DRIVE.parked=true; DRIVE.going=false; DRIVE.pending=
   DRIVE.stPerp={x:px, z:pz}; DRIVE.stOff=off;                                                   // unit normal toward the firehouse side + the curb offset (the intro pulls the truck up along this)
   truck.x=ax+px*off; truck.z=az+pz*off; truck.theta=Math.atan2(px,pz);                          // forward(-sinθ,-cosθ) = -normal → nose toward the street
   truck.vx=0; truck.vz=0; }
-function onNamedStreet(x,z,name){ for(const s of segNear(x,z)){ if(s.name===name && closestSeg(x,z,s).d<CLASSW[s.cls]/2+4) return true; } return false; }
+function onNamedStreet(x,z,name){ for(const s of segNear(x,z)){ if(s.name===name && closestSeg(x,z,s).d<segHalf(s)+4) return true; } return false; }
 /* Nearest graph edge under a point, on street `nm`, running roughly along (hx,hz). Legality is NOT filtered
    here — the caller decides. Used to start driving from where the truck actually IS. */
 function edgeUnderTruckToward(px,pz,nm,hx,hz){
@@ -3366,15 +3402,15 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
   const list=[...segs].filter(s=>s.cls<=4);                                     // cls4 = OSM 'unclassified' = real minor public streets (Conshohocken Ave 4000 blk) — they're drivable, so draw them; true alleys/service ways never reach the bake
   list.sort((p,q)=>((p.ax-cx)**2+(p.az-cz)**2)-((q.ax-cx)**2+(q.az-cz)**2));   // nearest streets first so the caps fill the view around the truck
   const ends=new Map(), ek=(x,z)=>(Math.round(x/2))+','+(Math.round(z/2));     // junction map: how many segments share the endpoint + the widest street's half-width there
-  for(const s of list){ const hwv=CLASSW[s.cls]/2;
+  for(const s of list){ const hwv=segHalf(s);
     for(const k of [ek(s.ax,s.az),ek(s.bx,s.bz)]){ const e=ends.get(k); if(e){ e.n++; if(hwv>e.hw)e.hw=hwv; } else ends.set(k,{n:1,hw:hwv}); } }
   for(const s of list){ for(const q of [[s.ax,s.az],[s.bx,s.bz]]){ const e=ends.get(ek(q[0],q[1]));   // T-junctions: the side street's endpoint touches the through street MID-segment, so no endpoint is shared — probe for it (the missed case let sidewalks bar across Ridge at every T)
     if(!e||e.n>=3) continue;
     for(const o of segNear(q[0],q[1])){ if(o===s||o.name===s.name) continue;
       if(Math.hypot(o.ax-q[0],o.az-q[1])<3||Math.hypot(o.bx-q[0],o.bz-q[1])<3) continue;             // shares an endpoint — the first pass already counted it
-      const ohw=CLASSW[o.cls]/2;
+      const ohw=segHalf(o);
       if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; break; } } } }
-  return {cx,cz,list,ends,ek,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),i:0,B:[],T:[],S:[],grid:new Map()};
+  return {cx,cz,list,ends,ek,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hwBar:[],hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
 }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
@@ -3382,11 +3418,11 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
     if(B.length>=LOCAL.maxB && T.length>=LOCAL.maxT && S.length>=LOCAL.maxS) break;
     if(performance.now()-t0>budgetMs) return false;                                        // out of time — resume next frame
     const s=J.list[J.i++];
-    const rh=CLASSW[s.cls]/2; let dx=s.bx-s.ax, dz=s.bz-s.az; const sl=Math.hypot(dx,dz)||1; dx/=sl; dz/=sl; const nx=-dz,nz=dx;
+    const rh=segHalf(s); let dx=s.bx-s.ax, dz=s.bz-s.az; const sl=Math.hypot(dx,dz)||1; dx/=sl; dz/=sl; const nx=-dz,nz=dx;
     let EV=J.crossMap.get(s);                                                              // ⚠️ crossings happen MID-segment on both streets (no shared vertex — same trap as the v10a routing bug, but for scenery). True intersection events drive slab cuts, dash gaps, and crosswalks.
     if(!EV){ EV=[]; J.crossMap.set(s,EV); const cand=new Set();
-      for(let t=0;t<=sl;t+=90){ for(const o of segNear(s.ax+dx*t, s.az+dz*t)) if(o!==s&&o.name!==s.name&&o.cls<=4) cand.add(o); }   // cls4 streets are drawn as roads now, so their crossings cut slabs/zebras like any other
-      for(const o of cand){ const odx=o.bx-o.ax, odz=o.bz-o.az, ohw=CLASSW[o.cls]/2;
+      for(let t=0;t<=sl;t+=90){ for(const o of segNear(s.ax+dx*t, s.az+dz*t)) if(o!==s&&o.name!==s.name&&o.cls<=4&&!o.hw) cand.add(o); }   // cls4 streets are drawn as roads now, so their crossings cut slabs/zebras like any other
+      for(const o of cand){ const odx=o.bx-o.ax, odz=o.bz-o.az, ohw=segHalf(o);
         const det=odx*dz-dx*odz;
         let hit=false;
         if(Math.abs(det)>1e-6){ const rx=o.ax-s.ax, rz=o.az-s.az;
@@ -3401,7 +3437,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
       for(let i=EV.length-1;i>0;i--){ if(Math.abs(EV[i].t-EV[i-1].t)<3){                    // a chain split AT the crossing shows up as two Ts from opposite sides — merge to one X
           const m=EV[i-1]; m.t=(m.t+EV[i].t)/2; m.hw=Math.max(m.hw,EV[i].hw);
           if(EV[i].both||m.both||EV[i].side!==m.side){ m.both=true; m.side=0; } EV.splice(i,1); } } }
-    if(!s.name) continue;                                                                  // unnamed = ramps/connectors: road surface only — no sidewalks, trees or buildings on an on-ramp (owner, City Ave interchange)
+    if(!s.name||s.hw) continue;                                                            // freeways likewise; unnamed = ramps/connectors: road surface only — no sidewalks, trees or buildings on an on-ramp (owner, City Ave interchange)
     if(sl>=6 && S.length<LOCAL.maxS){                                                      // 🛣️ kerb / sidewalk slab down each side of this street
       const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2;
       if((mx-cx)**2+(mz-cz)**2<=R2){ const walk=s.cls<=1?4.2:3.2, ang=Math.atan2(dx,dz);
@@ -3414,7 +3450,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
               for(const o of segNear(qx,qz)){ if(o===s||o.name!==s.name) continue;
                 const odx=o.bx-o.ax, odz=o.bz-o.az, ol=Math.hypot(odx,odz)||1;
                 if(Math.abs((odx*dx+odz*dz)/ol)<0.8) continue;
-                if(closestSeg(qx,qz,o).d<CLASSW[o.cls]/2+4){ isMed=true; break; } } }
+                if(closestSeg(qx,qz,o).d<segHalf(o)+4){ isMed=true; break; } } }
             let a0=T0; const outs=[];                                                      // subtract a window around every crossing/T-mouth on this side — the mid-segment case the endpoint trim can never see
             for(const ev of EV){ if(!(ev.both||ev.side===side)) continue;
               const w0=ev.t-(ev.hw+walk+0.6), w1=ev.t+(ev.hw+walk+0.6);
@@ -3508,7 +3544,7 @@ function roadPaintProfile(surfaces,ax,az,dx,dz,span,hw,name){   // ax/az/span de
   const at=(t,o)=>roadPaintPlaneY(ax+dx*t+ux*o, az+dz*t+uz*o, surfaces);
   const mid=new Array(n+1), lo=new Array(n+1), hi=new Array(n+1), grd=new Array(n+1);
   for(let i=0;i<=n;i++){const t=ds*i;
-    let c=at(t,0); if(c===null)c=navRoadY(ax+dx*t,az+dz*t,name);
+    let c=at(t,0); if(c===null)c=navRoadY(ax+dx*t,az+dz*t,name,dx,dz);
     const a=at(t,-off), b=at(t,off);
     mid[i]=c; lo[i]=a; hi[i]=b;
     grd[i]=(a===null||b===null)?0:(b-a)/(2*off);}                                  // metres of rise per metre of offset, i.e. the road crown/cross-slope
@@ -3537,7 +3573,7 @@ function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfac
   if(NAVGEO.active){st.rp.push=function(...v){
     const tri=(a,b,c,depth=0)=>{const ds=[Math.hypot(a[0]-b[0],a[2]-b[2]),Math.hypot(b[0]-c[0],b[2]-c[2]),Math.hypot(c[0]-a[0],c[2]-a[2])],m=Math.max(...ds);
       if(m>24&&depth<9){let x=a,y=b,z=c;if(ds[1]===m){x=b;y=c;z=a}else if(ds[2]===m){x=c;y=a;z=b}const mid=[(x[0]+y[0])/2,(x[1]+y[1])/2,(x[2]+y[2])/2];tri(x,mid,z,depth+1);tri(mid,y,z,depth+1);return;}
-      const lifted=[];for(const p of [a,b,c]){if(p[3]===undefined)p[3]=navRoadY(p[0],p[2],st.roadName);const y=p[3];lifted.push(p[0],p[1]+y+0.16,p[2]);}Array.prototype.push.apply(this,lifted);
+      const lifted=[];for(const p of [a,b,c]){if(p[3]===undefined)p[3]=navRoadY(p[0],p[2],st.roadName,st.roadDx,st.roadDz);const y=p[3];lifted.push(p[0],p[1]+y+0.16,p[2]);}Array.prototype.push.apply(this,lifted);
       const surface=roadPaintSurface(lifted);if(surface)st.paintSurfaces.push(surface);};
     for(let i=0;i<v.length;i+=9)tri(v.slice(i,i+3),v.slice(i+3,i+6),v.slice(i+6,i+9));return this.length;};
     for(const arr of [st.mk,st.my])arr.push=function(...v){const P=st.profile;
@@ -3547,9 +3583,9 @@ function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfac
 }
 function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOCAL.R*LOCAL.R, cx=J.cx, cz=J.cz;
   const ROAD_Y=0.06, MARK_Y=0.085;
-  st.roadName=s.name;st.paintSurfaces=[];st.profile=null;const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2) return;
+  st.roadName=s.name;st.roadDx=s.bx-s.ax;st.roadDz=s.bz-s.az;st.paintSurfaces=[];st.profile=null;const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2) return;
   let dx=s.bx-s.ax, dz=s.bz-s.az; const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
-  const hw=CLASSW[s.cls]/2, nx=-dz*hw, nz=dx*hw, ex=dx*hw, ez=dz*hw;                 // extend by a half-width at each end so bends/junctions fill in
+  const hw=segHalf(s), nx=-dz*hw, nz=dx*hw, ex=dx*hw, ez=dz*hw;                 // extend by a half-width at each end so bends/junctions fill in
   const ax=s.ax-ex, az=s.az-ez, bx=s.bx+ex, bz=s.bz+ez;
   rp.push(ax+nx,ROAD_Y,az+nz, bx+nx,ROAD_Y,bz+nz, bx-nx,ROAD_Y,bz-nz,
           ax+nx,ROAD_Y,az+nz, bx-nx,ROAD_Y,bz-nz, ax-nx,ROAD_Y,az-nz);
@@ -3558,7 +3594,22 @@ function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOC
   const jA=!!eA&&eA.n>=3, jB=!!eB&&eB.n>=3;                                            // does either end meet a junction?
   const EV=(J.crossMap&&J.crossMap.get(s))||[];
   const xw=EV.filter(e=>e.both).map(e=>[e.t-(e.hw+4),e.t+(e.hw+4)]);                   // lane/centre dashes break where another street actually crosses
-  if(s.cls<=2 && l>14 && mk.length<240000){
+  if(s.hw && l>4 && mk.length<240000){                                                  // 🛣️ FREEWAY PAINT from the baked lane count: solid yellow on the median side, solid white on the shoulder side,
+    const H=hwyLanes(s), m0=jA?eA.hw+2:0.5, m1=jB?eB.hw+2:0.5, t1=l-m1;                 // white dashes between lanes, no crosswalks. Offsets are from the carriageway centreline, right-of-travel positive.
+    const quad=(arr,t,t2,o,hwm)=>{ const p0x=s.ax+dx*t-dz*o, p0z=s.az+dz*t+dx*o, p1x=s.ax+dx*t2-dz*o, p1z=s.az+dz*t2+dx*o, mxn=-dz*hwm, mzn=dx*hwm;
+      arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); };
+    for(let t=m0;t<t1;t+=8){ const t2=Math.min(t1,t+8); if(t2-t<0.6) break; quad(my,t,t2,H.left,0.16); quad(mk,t,t2,H.right,0.16); }   // edge lines in ≤8m pieces so they drape the profile
+    for(let k=1;k<H.n;k++){ const o=H.left+k*HWY_LANE; for(let t=m0+1;t<t1;t+=8){ const t2=Math.min(t1,t+3.4); if(t2-t<1.2) break; quad(mk,t,t2,o,0.16); } }
+    if(s.hw===1 && J.hwBar){ const o=-(hw+0.35), b0=jA?eA.hw+2.5:0, b1=jB?eB.hw+2.5:0, ang=Math.atan2(dx,dz);   // 🧱 median barrier along the left edge of every carriageway (a Jersey wall; the twin carriageway carries its own)
+      for(let t=b0;t<l-b1;t+=10){ const t2=Math.min(l-b1,t+10), pl=t2-t; if(pl<1.5) break;
+        const x0=s.ax+dx*t-dz*o, z0=s.az+dz*t+dx*o, x1=s.ax+dx*t2-dz*o, z1=s.az+dz*t2+dx*o, y0=navRoadY(x0,z0,s.name,dx,dz), y1=navRoadY(x1,z1,s.name,dx,dz);
+        J.hwBar.push({x:(x0+x1)/2,y:(y0+y1)/2+0.42,z:(z0+z1)/2,w:0.5,h:0.84,l:pl*1.04,ang,pitch:-Math.atan2(y1-y0,pl)}); } }
+    if(J.hwClose) for(const [ex2,ez2,sgn] of [[s.ax,s.az,-1],[s.bx,s.bz,1]]){ const E=HWY_ENDS.get(ex2+','+ez2); if(!E) continue;   // ⛔ unfinished end of the corridor: an orange/white striped barrier across the whole pavement, 1.2m in from the edge
+      const px=ex2-dx*sgn*1.2, pz=ez2-dz*sgn*1.2, y=navRoadY(px,pz,s.name,dx,dz), ang=Math.atan2(dx,dz);
+      let k=0; for(let o=-hw+0.6;o<hw;o+=1.2,k++) J.hwClose[k%2].push({x:px-dz*o,y:y+0.55,z:pz+dx*o,w:1.2,h:1.1,l:0.5,ang,pitch:0});
+      J.hwClose[0].push({x:px,y:y+1.25,z:pz,w:hw*2,h:0.3,l:0.5,ang,pitch:0}); }
+  }
+  if(!s.hw && s.cls<=2 && l>14 && mk.length<240000){
     const dash=3.4, gap=4.6, hwm=s.cls<=1?0.30:0.26;
     const m0=jA?eA.hw+4.5:2, m1=jB?eB.hw+4.5:2;                                        // dashes STOP short of a junction, scaled to the CROSSING street's width
     const oneway=!!s.ow;                                                               // twin lane dividers ONLY on one-ways (twin dashes on two-way Ridge read as 3 lanes — user caught it)
@@ -3570,7 +3621,7 @@ function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOC
         const p0x=s.ax+dx*t+lx, p0z=s.az+dz*t+lz, p1x=s.ax+dx*t2+lx, p1z=s.az+dz*t2+lz, mxn=-dz*hwm, mzn=dx*hwm;
         arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn,
                 p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); } } }
-  if(s.cls<=2 && l>18 && mk.length<240000){                                            // 🚸 zebra crosswalks — endpoint junctions AND every mid-segment crossing (what makes an intersection read as an intersection)
+  if(!s.hw && s.cls<=2 && l>18 && mk.length<240000){                                    // 🚸 zebra crosswalks — endpoint junctions AND every mid-segment crossing (what makes an intersection read as an intersection)
     const zeb=(cxw,czw,fx2,fz2)=>{ const bl=1.3, nxu=-fz2, nzu=fx2;                    // bars elongated ALONG travel, arrayed across the road
       for(let o=-hw*0.82; o<=hw*0.82; o+=1.15){
         const bx=cxw+nxu*o, bz=czw+nzu*o, ax2=fx2*bl, az2=fz2*bl, sx2=nxu*0.28, sz2=nzu*0.28;
@@ -3599,7 +3650,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   const B=J.B, T=J.T, S=J.S;
   if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[],roadGirder=[],roadGuard=[],guardPost=[];
     const stByName=new Map();for(const s of J.list)if(s.name&&!stByName.has(s.name))stByName.set(s.name,s);   // first match, exactly what the per-bridge find() did — 818 finds × the segment list was ~10ms
-    for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=stByName.get(b.name);if(!street)continue;const hw=CLASSW[street.cls]/2;let along=0;
+    for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=b.name?stByName.get(b.name):hwySegForSpan(b,J);if(!street)continue;const hw=segHalf(street);let along=0;
       for(let i=1;i<b.p.length;i++){const a=b.p[i-1],q=b.p[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz);const segStart=along;along+=l;
         if(!l)continue;const ang=Math.atan2(dx,dz),ux=dx/l,uz=dz/l,BL=b.length||1;
         const x=(a[0]+q[0])/2,z=(a[1]+q[1])/2;if(Math.hypot(x-J.cx,z-J.cz)>LOCAL.R+l)continue;
@@ -3631,7 +3682,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     // concrete barrier on the left, metal guardrail on the right and spaced center supports.
     // The final loop rises to meet City Ave; both City structures remain above the earlier section.
     if(J.immersive&&Math.hypot(J.cx+1000,J.cz-80)<LOCAL.R+450){const rp=RAMP_GRADE.p,hw=4.35;
-      const overNamedRoad=(x,z)=>{for(const s of segNear(x,z)){if(!s.name)continue;const c=closestSeg(x,z,s);if(c.d<CLASSW[s.cls]/2+1)return true;}return false;};   // plain onAsphalt would always hit the ramp's own unnamed street
+      const overNamedRoad=(x,z)=>{for(const s of segNear(x,z)){if(!s.name)continue;const c=closestSeg(x,z,s);if(c.d<segHalf(s)+1)return true;}return false;};   // plain onAsphalt would always hit the ramp's own unnamed street
       for(let i=1;i<rp.length;i++){const a=rp[i-1],q=rp[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz);if(!l)continue;const ux=dx/l,uz=dz/l,ang=Math.atan2(dx,dz),n=Math.max(1,Math.ceil(l/16)),pl=l/n;
         for(let k=0;k<n;k++){const t0=k/n,t1=(k+1)/n,tm=(t0+t1)/2,px=a[0]+dx*tm,pz=a[1]+dz*tm;if(Math.hypot(px-J.cx,pz-J.cz)>LOCAL.R)continue;const y0=a[2]+(q[2]-a[2])*t0,y1=a[2]+(q[2]-a[2])*t1,py=(y0+y1)/2,pp=-Math.atan2(y1-y0,pl),ll=pl*1.07;
           deck.push({x:px,y:py-0.5,z:pz,w:hw*2+0.8,h:0.9,l:ll,ang,pitch:pp});
@@ -3741,6 +3792,13 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     if(mp2.length){ const gm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xc8dcb0}),mp2.length);   // 🌿 grass median between divided-road carriageways
       mp2.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
       gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
+  if(J.hwBar&&J.hwBar.length){ const hb=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xb9b6ad}),J.hwBar.length);   // 🧱 freeway median barriers (concrete)
+    J.hwBar.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
+    hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }
+  if(J.hwClose) for(const [list,color] of [[J.hwClose[0],0xe8862c],[J.hwClose[1],0xf2f2ec]]){ if(!list.length) continue;   // ⛔ corridor-end barriers (orange / white stripes)
+    const hc=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+    list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hc.setMatrixAt(i,dummy.matrix); });
+    hc.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hc); FLATCITY.parts.push(hc); }
   const wallPal=J.immersive?[0xc8997f,0xdac7ad,0xb88773,0xd0c9be,0xc7ad93,0xe2d8c5,0xbeb5a6]:[0xeceae4,0xe3e1da,0xe8e6df,0xdfe1e4,0xe9e7e0,0xdcdad2,0xe2e4e7], roofPal=J.immersive?[0x69717a,0x7e807e,0x626d78,0x8d8980]:[0xc4c1b8,0xcbc8bf,0xb8bbc1,0xcfccc3,0xbdc0c5];
   if(B.length){ const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:J.immersive?streetscapeFacade():null})),B.length);
     const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),B.length);
@@ -5373,7 +5431,7 @@ authInit();
 function playerAddHydrant(){ if(!state.running||DRIVE.going) return;
   let best=null,bd=1e18; for(const sg of segNear(truck.x,truck.z)){ const c=closestSeg(truck.x,truck.z,sg); if(c.d<bd){bd=c.d;best={c,sg};} }
   if(!best){ popup('🧯 NO STREET HERE'); return; }
-  const rh=CLASSW[best.sg.cls]/2, c=best.c; let nx=truck.x-c.cx, nz=truck.z-c.cz, nl=Math.hypot(nx,nz);   // same kerb-snap math as snapHydrants
+  const rh=segHalf(best.sg), c=best.c; let nx=truck.x-c.cx, nz=truck.z-c.cz, nl=Math.hypot(nx,nz);   // same kerb-snap math as snapHydrants
   if(nl<0.3){ nx=-(best.sg.bz-best.sg.az); nz=best.sg.bx-best.sg.ax; nl=Math.hypot(nx,nz)||1; }
   const hx=Math.round(c.cx+nx/nl*(rh+1.7)), hz=Math.round(c.cz+nz/nl*(rh+1.7));
   for(const h of hydrantsNear(hx,hz,25)) if(Math.hypot(h[0]-hx,h[1]-hz)<18){ popup('🧯 ALREADY A HYDRANT HERE'); return; }
@@ -5516,7 +5574,8 @@ function updateRivalTrucks(){
       g.userData.label.material.map=rivalNumberTex(r.num,r.arrived); g.userData.label.material.needsUpdate=true; g.userData.state=key; }
     const si=Math.max(0,Math.min(r.seg,r.path.length-2)), a=r.path[si], b=r.path[si+1], dx=b.x-a.x, dz=b.z-a.z;
     if(Math.hypot(dx,dz)>0.01) g.rotation.y=Math.atan2(-dx,-dz);                    // path heading; nose points down -Z like truckG
-    g.position.set(r.x,navRoadY(r.x,r.z)+0.08,r.z); g.visible=true; }
+    { const rs=roadSegAt(r.x,r.z,dx,dz); g.position.set(r.x,navRoadY(r.x,r.z,rs?rs.name:null,dx,dz)+0.08,r.z); }   // the road the rival is actually on (by heading): name + direction keep it off a deck stacked above it
+    g.visible=true; }
   for(let i=n;i<RVM.pool.length;i++) RVM.pool[i].visible=false; }
 function updateRivals(dt){ if(!RIVALS.on||!state.target) return;
   for(const r of RIVALS.list){ if(r.arrived) continue; let move=r.speed*dt;
@@ -5667,11 +5726,11 @@ function popup(txt,cls){ const p=document.getElementById('popup'); p.textContent
 const ADDRESS_INCIDENTS=['Dwelling fire','Kitchen fire','Smoke in a dwelling','Electrical fire','Shed fire','Alarm sounding','Gas leak outside','Trash fire'];
 let lastAddress='', addressCursor=(Math.random()*ADDR.a.length)|0;
 function addressRoadEdge(x,z,street){ const cn=canonStreet(street),gx=Math.floor(x/NCELL),gz=Math.floor(z/NCELL),seen=new Set(); let best=null,bd=1e18;
-  for(let r=0;r<=4;r++){ for(let a=gx-r;a<=gx+r;a++)for(let b=gz-r;b<=gz+r;b++){ const list=ngrid.get(a+':'+b); if(!list) continue; for(const n of list) for(const e of n.adj){ const key=(n.x<e.to.x||n.x===e.to.x&&n.z<e.to.z)?n.x+','+n.z+'|'+e.to.x+','+e.to.z:e.to.x+','+e.to.z+'|'+n.x+','+n.z; if(seen.has(key))continue;seen.add(key);
+  for(let r=0;r<=4;r++){ for(let a=gx-r;a<=gx+r;a++)for(let b=gz-r;b<=gz+r;b++){ const list=ngrid.get(a+':'+b); if(!list) continue; for(const n of list) for(const e of n.adj){ if(e.hw) continue; const key=(n.x<e.to.x||n.x===e.to.x&&n.z<e.to.z)?n.x+','+n.z+'|'+e.to.x+','+e.to.z:e.to.x+','+e.to.z+'|'+n.x+','+n.z; if(seen.has(key))continue;seen.add(key);
       const nm=e.name||streetName((n.x+e.to.x)/2,(n.z+e.to.z)/2); if(canonStreet(nm)!==cn)continue; const q=closestSeg(x,z,{ax:n.x,az:n.z,bx:e.to.x,bz:e.to.z}); if(q.d<bd){const dx=e.to.x-n.x,dz=e.to.z-n.z,L=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-n.x)*dx+(z-n.z)*dz)/L));bd=q.d;best={a:n,b:e.to,t,cx:q.cx,cz:q.cz};} } } if(best&&r>=2)break; }
   return best&&bd<120?best:null; }
 function crossStreetFrom(a,b,d,street){ const cn=canonStreet(street); let guard=0; while(a&&b&&guard++<100){ const names=[];
-    for(const e of b.adj){ if(e.to===a)continue; const nm=e.name||streetName((b.x+e.to.x)/2,(b.z+e.to.z)/2); if(!nm||canonStreet(nm)===cn||names.some(q=>canonStreet(q)===canonStreet(nm)))continue; names.push(nm); }
+    for(const e of b.adj){ if(e.to===a||e.hw)continue; const nm=e.name||streetName((b.x+e.to.x)/2,(b.z+e.to.z)/2); if(!nm||canonStreet(nm)===cn||names.some(q=>canonStreet(q)===canonStreet(nm)))continue; names.push(nm); }
     if(names.length)return {name:names[0],d}; const nx=sameStreetOn(a,b); if(!nx)break; d+=Math.hypot(nx.x-b.x,nx.z-b.z); a=b;b=nx; } return null; }
 function addressCrossStreets(x,z,street,edge){ const e=edge||addressRoadEdge(x,z,street); if(!e)return []; const L=Math.hypot(e.b.x-e.a.x,e.b.z-e.a.z)||1;
   const left=crossStreetFrom(e.b,e.a,e.t*L,street),right=crossStreetFrom(e.a,e.b,(1-e.t)*L,street); return [left,right].filter(Boolean); }

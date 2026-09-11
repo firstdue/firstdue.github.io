@@ -5,6 +5,45 @@ authoring folder was reconciled to v18s on September 10 (see CLAUDE.md "Before y
 v18m–v18s were authored in the public repository rather than the authoring folder; read that
 CLAUDE.md section before any ship.
 
+- [x] **US 1 / I-76 highway support, phase 1 (September 11, 2026 — authored here, NOT published,
+  BUILD not bumped).** The Schuylkill Expressway and the Roosevelt Expressway did not exist in the
+  game: the citywide OSM extract omitted `highway=motorway` entirely. A corridor fetch
+  (`data/motorway-i76-us1.json`, bbox 39.980,-75.245 → 40.030,-75.160, Overpass 2026-09-11) is
+  merged by both bakes. Data: street records may now carry a highway kind and lane count
+  (`[name,cls,pts,ow,hw,ln]`, hw 1 = carriageway, 2 = ramp); `RB.hj` lists the 25 OSM nodes a
+  ramp shares with a street; NAVGEO gained 47 bridge/covered records — including the City Avenue
+  bridge ways that were never in the NAVGEO source because trunk ways only come from the corridor
+  fetch. Game: lane-based carriageway width in one place (`segHalf`), freeway paint (dashed lane
+  lines from the baked lane count, yellow median edge, white shoulder edge, no crosswalks), a
+  concrete median barrier along each carriageway, heading-aware `navRoadY` so a road under a
+  viaduct keeps its own level, and controlled-access graph rules — a freeway joins the street
+  network only at `RB.hj`, never by a line crossing (its crossings are all structures), never
+  carriageway-to-carriageway (the gap healer used to stitch the twins diagonally), no U-turn or
+  median slide on a freeway, no calls on a freeway, rivals placed on the road they are actually on.
+  Verified in the real game: Ridge Ave → City Ave → I-76 eastbound → Montgomery Dr exit with no
+  stops; Roosevelt viaduct 6.1 m over Kelly Drive; the Ridge/City interchange numbers unchanged
+  (5.46 / 5.30). `tests/highway-corridor.test.mjs` guards the graph headlessly.
+- [x] **Highway phase 1.5 — stabilisation (September 11, 2026, unpublished).** The whole Node suite is
+  green (28/28): the three `road-paint.test.mjs` cases now pin the v18s smoothed-profile draper, and
+  `tests/highway-corridor.test.mjs` loads the entire game script headlessly (DOM/three stubs) to cover
+  stacked roads, heading-aware `navRoadY`, rival placement, ramp connections (planned drive onto I-76
+  and off at Montgomery Dr with no stop, the Ridge gantry routes), no U-turn / no median slide on a
+  freeway, and the corridor ends. Those ends (14 — the fetch bbox and the city line) are now closed:
+  an orange/white striped barrier across the pavement, the truck stops 7 m short with "ROAD CLOSED —
+  THE MAPPED EXPRESSWAY ENDS HERE", and a U-turn is allowed only there. Emulated 375×812 viewport held
+  85–102 FPS around the City Ave ramps on this PC; **a real-phone FPS check by the owner is still
+  owed** (the ramp cluster at City Ave and the Roosevelt/Ridge interchange are the places to look).
+  Checkpoint: branch `highway-phase1` in `gh-pages-deploy/` (not pushed, `main` untouched).
+- [ ] **Highway phase 2a — structure:** one shared median barrier per divided pair instead of one per
+  carriageway, guardrails on the outer edges, retaining walls and a genuine cut for depressed sections
+  (Roosevelt under Wissahickon Ave shows ~2 m clearance because the 57×73 m DEM cannot resolve it),
+  better terrain clearance under viaducts, deck furniture for unnamed ramp bridges.
+- [ ] **Highway phase 2b — identity:** exit signs with numbers, route shields (I-76, US 1), overhead
+  gantries at the gores, lighting masts, recognisable interchange details (the Twin Bridges, the
+  City Ave stack).
+- [ ] **Highway phase 2c — expansion, only once the corridor stays stable:** extend the fetch bbox
+  east past Broad St and south past Spring Garden, then Penrose/Platt and Roosevelt Boulevard, using
+  the same supplemental-fetch + `hj` pipeline (no one-off fixes).
 - [x] v18l owner-playtest fixes: highway rules on ramps (only the ramp's destination card shows —
   no Kelly Dr / Ridge Ave / Lincoln Dr cards mid-ramp; wrong-way ramps never get a card), plus
   smooth cornering (look-ahead aim; visible truck and chase camera ride a rounded path midpoint,
