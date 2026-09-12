@@ -910,7 +910,7 @@ function deckY(b,t){const P=b.prof,u=Math.max(0,Math.min(1,t)),i=P?Math.min(P.le
 // the named freeway and its unnamed ramps AND the terrain mesh beneath them in step, so the truck, guide
 // ribbon, rivals and pavement move together; a named surface street crossing above keeps the raw terrain,
 // so its bridge deck (profiled from the raw DEM at load) is untouched. name null = any cut (terrain vertices).
-const ROAD_CUTS=[{name:'Roosevelt Expressway',p:[[1829,-587],[1700,-547],[1585,-491]],halfW:18,fadeW:2,depth:3.2,fade:40,
+const ROAD_CUTS=[{name:'Roosevelt Expressway',p:[[1829,-587],[1700,-547],[1585,-491]],halfW:18,fadeW:2,depth:3.2,fade:60,
   source:'Roosevelt Expressway beneath Wissahickon Ave — OSM tags the avenue as a layer-2 bridge over the motorway; the ~2m visual clearance was measured in-game (Sep 2026). Depth is a visual estimate, not survey data.'}];
 for(const c of ROAD_CUTS){ c.len=0; c.cum=[0]; for(let i=1;i<c.p.length;i++){ c.len+=Math.hypot(c.p[i][0]-c.p[i-1][0],c.p[i][1]-c.p[i-1][1]); c.cum.push(c.len); }
   let a=1e9,b=1e9,d=-1e9,e=-1e9; for(const q of c.p){ a=Math.min(a,q[0]); b=Math.min(b,q[1]); d=Math.max(d,q[0]); e=Math.max(e,q[1]); } const m=c.halfW+2; c.bb=[a-m,b-m,d+m,e+m]; }
