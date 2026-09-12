@@ -903,7 +903,21 @@ function deckY(b,t){const P=b.prof,u=Math.max(0,Math.min(1,t)),i=P?Math.min(P.le
   if(!b.name){const p=bridgePointAt(b,u),ramp=navRampY(p[0],p[1],'');if(ramp!==null)y=Math.max(y,ramp);}                   // unnamed decks ride the ramp profile
   else if(b.name==='City Avenue'){const p=bridgePointAt(b,u),lift=cityLiftY(p[0],p[1]);if(lift!==null)y=Math.max(y,lift);} // bridgePointAt only when a floor could apply — this runs per car per frame
   return y;}
-function navRoadY(x,z,name=null,dx,dz){if(!NAVGEO.active)return 0;const ramp=navRampY(x,z,name);if(ramp!==null)return ramp;const s=navSpan(x,z,name,12,dx,dz);return (!s||!s.b.bridge)?navTerrain(x,z):deckY(s.b,s.t);}   // dx,dz optional: direction of travel
+// ⛏️ ROAD CUTS (phase 2a). A depressed freeway section the 57×73m DEM cannot resolve: the Roosevelt Expressway
+// passes UNDER Wissahickon Avenue in a cut, but the terrain grid holds both at the same height, so the 38m
+// deck (floored at ground+5.2 but capped by its own 15% approach grades) cleared the roadway by ~2m. A cut is
+// a world-space polyline (re-bake-durable, like RAMP_GRADE) with a half-width, depth and end fade. It lowers
+// the named freeway and its unnamed ramps AND the terrain mesh beneath them in step, so the truck, guide
+// ribbon, rivals and pavement move together; a named surface street crossing above keeps the raw terrain,
+// so its bridge deck (profiled from the raw DEM at load) is untouched. name null = any cut (terrain vertices).
+const ROAD_CUTS=[{name:'Roosevelt Expressway',p:[[1829,-587],[1700,-547],[1585,-491]],halfW:18,fadeW:2,depth:3.2,fade:40,
+  source:'Roosevelt Expressway beneath Wissahickon Ave — OSM tags the avenue as a layer-2 bridge over the motorway; the ~2m visual clearance was measured in-game (Sep 2026). Depth is a visual estimate, not survey data.'}];
+for(const c of ROAD_CUTS){ c.len=0; c.cum=[0]; for(let i=1;i<c.p.length;i++){ c.len+=Math.hypot(c.p[i][0]-c.p[i-1][0],c.p[i][1]-c.p[i-1][1]); c.cum.push(c.len); }
+  let a=1e9,b=1e9,d=-1e9,e=-1e9; for(const q of c.p){ a=Math.min(a,q[0]); b=Math.min(b,q[1]); d=Math.max(d,q[0]); e=Math.max(e,q[1]); } const m=c.halfW+2; c.bb=[a-m,b-m,d+m,e+m]; }
+function navRoadCutDepth(x,z,name){ let best=0; for(const c of ROAD_CUTS){ if(x<c.bb[0]||x>c.bb[2]||z<c.bb[1]||z>c.bb[3]) continue; if(name!==null&&name!==undefined&&name!==''&&name!==c.name) continue;
+    for(let i=1;i<c.p.length;i++){ const a=c.p[i-1],b=c.p[i],dx=b[0]-a[0],dz=b[1]-a[1],L=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/L)),across=Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t);
+      if(across>=c.halfW) continue; const along=c.cum[i-1]+Math.sqrt(L)*t, fe=Math.max(0,Math.min(1,along/c.fade,(c.len-along)/c.fade)), fp=Math.min(1,(c.halfW-across)/c.fadeW); best=Math.max(best,c.depth*fe*fp); } } return best; }
+function navRoadY(x,z,name=null,dx,dz){if(!NAVGEO.active)return 0;const ramp=navRampY(x,z,name);if(ramp!==null)return ramp;const s=navSpan(x,z,name,12,dx,dz);return (!s||!s.b.bridge)?navTerrain(x,z)-navRoadCutDepth(x,z,name):deckY(s.b,s.t);}   // dx,dz optional: direction of travel
 function navGroundY(x,z){return NAVGEO.active?navTerrain(x,z):0;}
 function navRailCutDepth(x,z){let best=0;                                       // ⏱ 2 of 2,361 rail ways carry a cut, but this runs per terrain VERTEX (~3,800/rebuild).
   if(!NAVGEO._cuts)NAVGEO._cuts=(NAVGEO.rail||[]).filter(rw=>rw.cut);           //    Scanning the full list here cost ~126ms of the ~230ms rebuild hitch (measured, v18n).
@@ -3410,7 +3424,7 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
       if(Math.hypot(o.ax-q[0],o.az-q[1])<3||Math.hypot(o.bx-q[0],o.bz-q[1])<3) continue;             // shares an endpoint — the first pass already counted it
       const ohw=segHalf(o);
       if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; break; } } } }
-  return {cx,cz,list,ends,ek,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hwBar:[],hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
+  return {cx,cz,list,ends,ek,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
 }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
@@ -3581,6 +3595,67 @@ function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfac
       for(let i=0;i<v.length;i+=3){const x=v[i],z=v[i+2];Array.prototype.push.call(this,x,roadPaintY(P,x,z),z);}
       return this.length;};}
 }
+// 🏗️ FREEWAY STRUCTURE (phase 2a). Decided per 10m station from the road graph's own geometry and NAVGEO
+// heights, emitted as instanced boxes in FLATCITY.commit — nothing is built per frame.
+//  • ONE shared median between paired carriageways: the twin is the same freeway's opposite-heading carriageway
+//    that the station projects INSIDE (never past its end, so the pair dissolves where the roadways diverge), at
+//    a compatible height (a stacked or crossing road never pairs) — and the pairing must be mutual. Only the
+//    carriageway heading into a fixed half-plane draws, so a pair is treated exactly once. Barrier for a tight median, grass for a wide one, nothing
+//    for an interchange infield or the open air between twin bridge decks. A ramp threading the median (a
+//    left exit) leaves it open.
+//  • Guardrails on exposed edges only: where the ground falls away beside the shoulder. Never on a bridge span
+//    (the deck has its parapet), never across a junction, a crossing, a corridor-end barrier, and never where
+//    another freeway roadway runs alongside (a merge or diverge lane) — that opening stays open.
+//  • Retaining walls where the ground stands above the roadway (a cut or a hillside), outside the shoulder,
+//    same exclusions; the median side of a paired carriageway never gets one.
+const HWS={step:10, medBar:6, medGrass:25, guardDrop:0.5, wallRise:1.2, wallMax:7};
+function hwyTwinAt(s,px,pz,ux,uz){ let best=null;
+  for(const o of segNear(px,pz)){ if(o===s||o.hw!==1||o.name!==s.name) continue; const ox=o.bx-o.ax,oz=o.bz-o.az,ol=Math.hypot(ox,oz)||1; if((ox*ux+oz*uz)/ol>-0.85) continue;
+    const L=ox*ox+oz*oz||1,t=((px-o.ax)*ox+(pz-o.az)*oz)/L; if(t<0.02||t>0.98) continue;
+    const cx=o.ax+ox*t,cz=o.az+oz*t,d=Math.hypot(px-cx,pz-cz); if(d>40||(best&&d>=best.d)) continue; best={o,cx,cz,d}; }
+  return best; }
+function hwyRoadBeside(s,px,pz,ux,uz,reach,kind){ for(const o of segNear(px,pz)){ if(o===s||!o.hw||(kind&&o.hw!==kind)) continue; const ox=o.bx-o.ax,oz=o.bz-o.az,ol=Math.hypot(ox,oz)||1;
+    if(Math.abs((ox*ux+oz*uz)/ol)<0.7) continue; if(closestSeg(px,pz,o).d<reach) return o; } return null; }
+function hwyInsidePavement(s,x,z){ for(const o of segNear(x,z)){ if(o===s||!o.hw) continue; if(closestSeg(x,z,o).d<segHalf(o)+0.8) return true; } return false; }   // the point lies on another freeway roadway's pavement
+function hwyStructure(J,s,dx,dz,l,hw,jA,eA,jB,eB,EV){ const out=J.hws; if(!out||l<3) return;
+  const own=(ux,uz)=>ux*0.9397+uz*0.342>0;                                                                  // pair ownership: the carriageway heading into a fixed half-plane draws (boundary rotated off the axes so an exact 0 never lands both twins on it); a true tie falls back to position
+  const name=s.name, tA=jA?eA.hw+3:0, tB=jB?eB.hw+3:0, endA=HWY_ENDS.has(s.ax+','+s.az), endB=HWY_ENDS.has(s.bx+','+s.bz);
+  const N=Math.max(1,Math.round(l/HWS.step)), ds=l/N, st=[];
+  const at=(t,o)=>{ const x=s.ax+dx*t-dz*o, z=s.az+dz*t+dx*o; return {x,z,y:navRoadY(x,z,name,dx,dz)}; };
+  for(let k=0;k<=N;k++){ const t=ds*k, c=at(t,0), onSpan=!!(navSpan(c.x,c.z,name,6,dx,dz)?.b.bridge), inJ=t<tA||t>l-tB||(endA&&t<3)||(endB&&t>l-3);
+    const S={t,c,onSpan,inJ,ev:{'-1':false,'1':false},twin:null,med:null,guard:{},wall:{}};
+    for(const ev of EV) for(const side of [-1,1]) if((ev.both||ev.side===side)&&Math.abs(ev.t-t)<ev.hw+3) S.ev[side]=true;
+    if(s.hw===1){ const tw=hwyTwinAt(s,c.x,c.z,dx,dz), back=tw&&hwyTwinAt(tw.o,tw.cx,tw.cz,-dx,-dz);   // mutual: the twin's own nearest opposite carriageway must be THIS one (a split roadway beside a weave never gets a second wall)
+      if(tw&&back&&closestSeg(back.cx,back.cz,s).d<2.5){ const yo=navRoadY(tw.cx,tw.cz,name,-dx,-dz); if(Math.abs(yo-c.y)<2.0){ S.twin=tw;
+        const mine=own(dx,dz), theirs=own(tw.o.bx-tw.o.ax,tw.o.bz-tw.o.az); S.own=(mine&&!theirs)||(mine===theirs&&(c.x*0.37+c.z)<(tw.cx*0.37+tw.cz));
+      const gap=tw.d-hw-segHalf(tw.o), mx=(c.x+tw.cx)/2, mz=(c.z+tw.cz)/2, y=(c.y+yo)/2;
+      if(!hwyRoadBeside(null,mx,mz,dx,dz,3.5,2)){ if(onSpan){ if(gap<=3) S.med={x:mx,z:mz,y,kind:'bar'}; }
+        else if(gap<=HWS.medBar) S.med={x:mx,z:mz,y,kind:'bar'}; else if(gap<=HWS.medGrass) S.med={x:mx,z:mz,y,kind:'grass',w:Math.max(2,gap-1)}; } } } }
+    for(const side of [-1,1]){ if(onSpan||inJ||S.ev[side]||(side<0&&S.twin)) continue;                         // left side of a paired carriageway is the median's business
+      const e=at(t,side*(hw+0.45)), g=at(t,side*(hw+3.5)), ground=navGroundY(g.x,g.z)-navRoadCutDepth(g.x,g.z,null);
+      if(hwyRoadBeside(s,g.x,g.z,dx,dz,4.5)||hwyInsidePavement(s,e.x,e.z)||hwyInsidePavement(s,g.x,g.z)) continue;   // another freeway roadway alongside or under this edge (a merge/diverge lane, a gore): keep the opening open
+      if(e.y-ground>HWS.guardDrop) S.guard[side]=e; else if(ground-e.y>HWS.wallRise) S.wall[side]={p:at(t,side*(hw+1.5)),h:Math.min(HWS.wallMax,ground-e.y)+0.5}; }
+    st.push(S); }
+  const piece=(list,a,b,ya,yb,w,h,yOff)=>{ const ddx=b.x-a.x,ddz=b.z-a.z,pl=Math.hypot(ddx,ddz); if(pl<0.8) return;
+    list.push({x:(a.x+b.x)/2,y:(ya+yb)/2+yOff,z:(a.z+b.z)/2,w,h,l:pl*1.04,ang:Math.atan2(ddx,ddz),pitch:-Math.atan2(yb-ya,pl)}); };
+  for(let k=0;k<N;k++){ const A=st[k],B=st[k+1];
+    if(A.own&&B.own&&A.med&&B.med&&A.med.kind===B.med.kind&&!(endA&&k===0)&&!(endB&&k===N-1)){
+      if(A.med.kind==='bar') piece(out.med,A.med,B.med,A.med.y,B.med.y,0.6,0.9,0.45); else piece(out.grass,A.med,B.med,A.med.y,B.med.y,Math.min(A.med.w,B.med.w),0.14,0.07); }
+    for(const side of [-1,1]){ const ga=A.guard[side],gb=B.guard[side]; if(ga&&gb){ piece(out.guard,ga,gb,ga.y,gb.y,0.14,0.3,0.72); out.post.push({x:ga.x,y:ga.y+0.36,z:ga.z,w:0.12,h:0.72,l:0.12,ang:Math.atan2(dx,dz),pitch:0}); }
+      const wa=A.wall[side],wb=B.wall[side]; if(wa&&wb) piece(out.wall,wa.p,wb.p,wa.p.y-0.5+wa.h/2,wb.p.y-0.5+wb.h/2,0.45,Math.max(wa.h,wb.h),0); } } }
+// 🌉 Bridge supports (phase 2a): piers every ~28m along a span where the deck stands clear of the ground and
+// no road runs beneath the pier's footprint (the span's own roadway excepted), and an abutment where each end
+// of the span first lifts off the ground. Sizes follow the deck width; nothing is placed per segment.
+function hwySupports(b,J,hw,piers){ const BL=b.length||1; if(BL<12) return;
+  const pt=d=>bridgePointAt(b,d/BL), dirAt=d=>{ const p=pt(Math.max(0,d-2)),q=pt(Math.min(BL,d+2)); return Math.atan2(q[0]-p[0],q[1]-p[1]); };
+  const alignedOwn=(o,d)=>{ if(b.name) return o.name===b.name; if(o.hw!==2||o.name) return false; const p=pt(Math.max(0,d-3)),q=pt(Math.min(BL,d+3)),ux=q[0]-p[0],uz=q[1]-p[1],ox=o.bx-o.ax,oz=o.bz-o.az; return Math.abs((ux*ox+uz*oz)/((Math.hypot(ux,uz)||1)*(Math.hypot(ox,oz)||1)))>0.8; };
+  const overRoad=(x,z,d)=>{ for(const o of segNear(x,z)){ if(alignedOwn(o,d)) continue; if(closestSeg(x,z,o).d<segHalf(o)+1.2) return true; } return false; };
+  const W=Math.min(hw*1.1,7.5);
+  for(let d=14;d<BL-8;d+=28){ const p=pt(d),x=p[0],z=p[1]; if(Math.hypot(x-J.cx,z-J.cz)>LOCAL.R) continue;
+    const y=deckY(b,d/BL),ground=navGroundY(x,z),h=y-ground-0.9; if(h<2.5||overRoad(x,z,d)) continue;
+    piers.push({x,y:ground+h/2,z,w:W,h,l:2.2,ang:dirAt(d),pitch:0}); }
+  for(const [from,dir] of [[0,1],[BL,-1]]){ for(let d=from+dir*4;d>0&&d<BL&&Math.abs(d-from)<=45;d+=dir*5){ const p=pt(d),y=deckY(b,d/BL),ground=navGroundY(p[0],p[1]),lift=y-ground;
+      if(lift<1.0) continue; if(Math.hypot(p[0]-J.cx,p[1]-J.cz)<=LOCAL.R&&!overRoad(p[0],p[1],d)) piers.push({x:p[0],y:ground+(lift+0.6)/2-0.4,z:p[1],w:hw*2+1.6,h:lift+0.6,l:3.2,ang:dirAt(d),pitch:0}); break; } } }
 function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOCAL.R*LOCAL.R, cx=J.cx, cz=J.cz;
   const ROAD_Y=0.06, MARK_Y=0.085;
   st.roadName=s.name;st.roadDx=s.bx-s.ax;st.roadDz=s.bz-s.az;st.paintSurfaces=[];st.profile=null;const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2) return;
@@ -3600,10 +3675,7 @@ function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOC
       arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); };
     for(let t=m0;t<t1;t+=8){ const t2=Math.min(t1,t+8); if(t2-t<0.6) break; quad(my,t,t2,H.left,0.16); quad(mk,t,t2,H.right,0.16); }   // edge lines in ≤8m pieces so they drape the profile
     for(let k=1;k<H.n;k++){ const o=H.left+k*HWY_LANE; for(let t=m0+1;t<t1;t+=8){ const t2=Math.min(t1,t+3.4); if(t2-t<1.2) break; quad(mk,t,t2,o,0.16); } }
-    if(s.hw===1 && J.hwBar){ const o=-(hw+0.35), b0=jA?eA.hw+2.5:0, b1=jB?eB.hw+2.5:0, ang=Math.atan2(dx,dz);   // 🧱 median barrier along the left edge of every carriageway (a Jersey wall; the twin carriageway carries its own)
-      for(let t=b0;t<l-b1;t+=10){ const t2=Math.min(l-b1,t+10), pl=t2-t; if(pl<1.5) break;
-        const x0=s.ax+dx*t-dz*o, z0=s.az+dz*t+dx*o, x1=s.ax+dx*t2-dz*o, z1=s.az+dz*t2+dx*o, y0=navRoadY(x0,z0,s.name,dx,dz), y1=navRoadY(x1,z1,s.name,dx,dz);
-        J.hwBar.push({x:(x0+x1)/2,y:(y0+y1)/2+0.42,z:(z0+z1)/2,w:0.5,h:0.84,l:pl*1.04,ang,pitch:-Math.atan2(y1-y0,pl)}); } }
+    hwyStructure(J,s,dx,dz,l,hw,jA,eA,jB,eB,EV);                                                 // 🏗️ shared median / guardrails / retaining walls (phase 2a)
     if(J.hwClose) for(const [ex2,ez2,sgn] of [[s.ax,s.az,-1],[s.bx,s.bz,1]]){ const E=HWY_ENDS.get(ex2+','+ez2); if(!E) continue;   // ⛔ unfinished end of the corridor: an orange/white striped barrier across the whole pavement, 1.2m in from the edge
       const px=ex2-dx*sgn*1.2, pz=ez2-dz*sgn*1.2, y=navRoadY(px,pz,s.name,dx,dz), ang=Math.atan2(dx,dz);
       let k=0; for(let o=-hw+0.6;o<hw;o+=1.2,k++) J.hwClose[k%2].push({x:px-dz*o,y:y+0.55,z:pz+dx*o,w:1.2,h:1.1,l:0.5,ang,pitch:0});
@@ -3655,8 +3727,6 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         if(!l)continue;const ang=Math.atan2(dx,dz),ux=dx/l,uz=dz/l,BL=b.length||1;
         const x=(a[0]+q[0])/2,z=(a[1]+q[1])/2;if(Math.hypot(x-J.cx,z-J.cz)>LOCAL.R+l)continue;
         const y=(deckY(b,segStart/BL)+deckY(b,along/BL))/2,pitch=-Math.atan2(deckY(b,along/BL)-deckY(b,segStart/BL),l);   // segment-level (truss, pier)
-        { const ground=navGroundY(x,z),height=y-ground-0.9;
-          if(height>5&&l>22)piers.push({x,y:ground+height/2,z,w:hw*1.1,h:height,l:2.5,ang,pitch:0}); }
         const nSub=Math.max(1,Math.ceil(l/20));                                               // deck + furniture in ≤20m pieces so the clearance hump in the profile actually shows
         for(let k=0;k<nSub;k++){const s0=l*k/nSub,s1=l*(k+1)/nSub,pl=s1-s0,px=a[0]+ux*(s0+s1)/2,pz=a[1]+uz*(s0+s1)/2;
           if(Math.hypot(px-J.cx,pz-J.cz)>LOCAL.R)continue;
@@ -3677,7 +3747,8 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             for(const side of [-1,1])truss.push({x:px-uz*(hw+1.1)*side,y:yD+H/2,z:pz+ux*(hw+1.1)*side,w:0.32,h:H,l:0.32,ang,pitch:0});   // posts
             truss.push({x:px,y:yD+H-0.25,z:pz,w:(hw+1.1)*2,h:0.3,l:0.4,ang,pitch:0});   // overhead cross-beam
             if(s+panel<l){const dl=Math.hypot(panel,H-1.2),dp=Math.atan2(H-1.2,panel)*(k%2?1:-1);
-              for(const side of [-1,1])truss.push({x:px+ux*panel/2-uz*(hw+1.1)*side,y:yD+H/2,z:pz+uz*panel/2+ux*(hw+1.1)*side,w:0.16,h:0.16,l:dl,ang,pitch:pitch-dp});}}}}}
+              for(const side of [-1,1])truss.push({x:px+ux*panel/2-uz*(hw+1.1)*side,y:yD+H/2,z:pz+uz*panel/2+ux*(hw+1.1)*side,w:0.16,h:0.16,l:dl,ang,pitch:pitch-dp});}}}}
+      hwySupports(b,J,hw,piers);}
     // Photo-matched Ridge-to-City viaduct: a continuous mid-level deck over Kelly Drive, with
     // concrete barrier on the left, metal guardrail on the right and spaced center supports.
     // The final loop rises to meet City Ave; both City structures remain above the earlier section.
@@ -3749,8 +3820,11 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   }
   if(NAVGEO.active){
     const p=[],gx=NAVGEO.terrain,step=gx.dx,stepZ=gx.dz,r=LOCAL.R+60,x0=gx.minX+Math.floor((J.cx-r-gx.minX)/step)*step,z0=gx.minZ+Math.floor((J.cz-r-gx.minZ)/stepZ)*stepZ;
-    const vertex=(x,z)=>p.push(x,navGroundY(x,z)-0.6-navRailCutDepth(x,z),z);
-    for(let x=x0;x<J.cx+r;x+=step)for(let z=z0;z<J.cz+r;z+=stepZ){vertex(x,z);vertex(x,z+stepZ);vertex(x+step,z+stepZ);vertex(x,z);vertex(x+step,z+stepZ);vertex(x+step,z);}
+    const vertex=(x,z)=>p.push(x,navGroundY(x,z)-0.6-navRailCutDepth(x,z)-navRoadCutDepth(x,z,null),z);
+    const cell=(x,z,sx,sz)=>{vertex(x,z);vertex(x,z+sz);vertex(x+sx,z+sz);vertex(x,z);vertex(x+sx,z+sz);vertex(x+sx,z);};
+    const cutCell=(x,z)=>ROAD_CUTS.some(c=>x+step>c.bb[0]&&x<c.bb[2]&&z+stepZ>c.bb[1]&&z<c.bb[3]);   // ⛏️ a DEM cell a road cut touches is split 8×8 so the trench has a shape; the cell's outer edges are still
+    for(let x=x0;x<J.cx+r;x+=step)for(let z=z0;z<J.cz+r;z+=stepZ){                                     //    linear DEM samples with zero cut depth, so they meet the coarse neighbours without a crack
+      if(cutCell(x,z)){const N=8,sx=step/N,sz=stepZ/N;for(let i=0;i<N;i++)for(let j=0;j<N;j++)cell(x+sx*i,z+sz*j,sx,sz);} else cell(x,z,step,stepZ); }
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();
     const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0xc5c9ad}));FLATCITY.group.add(m);FLATCITY.parts.push(m);
   }
@@ -3792,8 +3866,9 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     if(mp2.length){ const gm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xc8dcb0}),mp2.length);   // 🌿 grass median between divided-road carriageways
       mp2.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
       gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
-  if(J.hwBar&&J.hwBar.length){ const hb=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xb9b6ad}),J.hwBar.length);   // 🧱 freeway median barriers (concrete)
-    J.hwBar.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
+  if(J.hws) for(const [list,color] of [[J.hws.med,0xb9b6ad],[J.hws.grass,0xc8dcb0],[J.hws.guard,0xaeb7b5],[J.hws.post,0x7a7d80],[J.hws.wall,0x8f8b82]]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail / posts / retaining wall
+    const hb=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+    list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
     hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }
   if(J.hwClose) for(const [list,color] of [[J.hwClose[0],0xe8862c],[J.hwClose[1],0xf2f2ec]]){ if(!list.length) continue;   // ⛔ corridor-end barriers (orange / white stripes)
     const hc=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);

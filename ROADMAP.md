@@ -33,11 +33,23 @@ CLAUDE.md section before any ship.
   THE MAPPED EXPRESSWAY ENDS HERE", and a U-turn is allowed only there. Emulated 375×812 viewport held
   85–102 FPS around the City Ave ramps on this PC; **a real-phone FPS check by the owner is still
   owed** (the ramp cluster at City Ave and the Roosevelt/Ridge interchange are the places to look).
-  Checkpoint: branch `highway-phase1` in `gh-pages-deploy/` (not pushed, `main` untouched).
-- [ ] **Highway phase 2a — structure:** one shared median barrier per divided pair instead of one per
-  carriageway, guardrails on the outer edges, retaining walls and a genuine cut for depressed sections
-  (Roosevelt under Wissahickon Ave shows ~2 m clearance because the 57×73 m DEM cannot resolve it),
-  better terrain clearance under viaducts, deck furniture for unnamed ramp bridges.
+  Checkpoint branch `highway-phase1` was then fast-forwarded into `main` and published as **v18t**
+  (`3b5b33a`, sw cache `local-shell-v4`) for the owner's phone test.
+- [x] **Highway phase 2a — structure (September 12, 2026, branch `highway-phase2a-structure` in
+  `gh-pages-deploy/`, NOT merged/pushed/published, BUILD still v18t).** `hwyStructure` decides per 10 m
+  station: ONE shared median between mutually-paired carriageways (same freeway, opposite heading, station
+  projects inside the twin, heights within 2 m; only the carriageway heading into a fixed half-plane draws;
+  barrier ≤6 m gap, grass ≤25 m, nothing in an interchange infield or between twin bridge decks; a ramp
+  threading the median leaves it open), guardrails only on exposed edges (ground falls ≥0.5 m beside the
+  shoulder) and never on a span, across a junction/crossing/closure, or where another freeway roadway runs
+  alongside, retaining walls where the ground stands ≥1.2 m above the roadway. `hwySupports` plants piers
+  every ~28 m under a span where nothing drives beneath and an abutment where each end lifts off.
+  `ROAD_CUTS` (a world-space polyline, like RAMP_GRADE) lowers the Roosevelt Expressway 3.2 m through the
+  Wissahickon Ave crossing and refines only the DEM cells it touches 8×8, so the deck (profiled from the raw
+  DEM) is unchanged at 59.71 and clearance is 5.3 m — the one deliberate elevation change of this phase.
+  32 Node tests (4 new: shared median / openings / cut / closures) pass; browser-verified at all ten spots,
+  desktop + 375×812. Headless scenery build cost +15–25 % (e.g. I-76 mid 83→103 ms, Kelly 354→420 ms);
+  emulated-mobile HUD read 78–96 FPS (phase 1: 85–102) — a real-phone check is still owed.
 - [ ] **Highway phase 2b — identity:** exit signs with numbers, route shields (I-76, US 1), overhead
   gantries at the gores, lighting masts, recognisable interchange details (the Twin Bridges, the
   City Ave stack).
