@@ -2077,6 +2077,305 @@ const RAMP_SIGNS=[
     // each card carries a destination point: tapping it routes the whole way there (legal A*) so the truck rides the interchange without stopping at the split
     source:'Overhead gantry "TO 76 / 1 City Ave" + "Lincoln Drive" — Google Street View Apr 2025, owner photo Sep 7 2026' }, // "TO 76/1 City Ave ↓ · Lincoln Drive ↗ (no trucks)"
 ];
+/* ============================ HIGHWAY IDENTITY (phase 2b) ============================
+   Guide signs, route shields, gantries, gore markers, trailblazers and shoulder lighting for the completed
+   I-76 / US 1 corridor. Everything here is SCENERY: it reads the road graph and NAVGEO heights, it never
+   writes them, and it adds no collision. Definitions are road-relative (a junction node + a distance back
+   along the carriageway) so a re-bake that moves a vertex by a metre cannot detach a sign from its road.
+   Content rules: every line of text traces to an OSM tag on the corridor fetch (junction:ref on the gore
+   node, destination / destination:ref / destination:lanes / turn:lanes on the way) or to an owner photo —
+   `src` says which. Distances ("1/2 MILE"), mile markers and painted route shields have no source for this
+   corridor and are omitted. Exits at a corridor-end closure (342 Girard Ave, Broad St) get no sign.        */
+const HWY_SIGNS=[
+  // ---- I-76 EASTBOUND (toward Central Philadelphia; z increasing) ---------------------------------------------
+  { id:'i76w-340a-post', road:'Schuylkill Expressway', dir:'W', at:[-784,525], back:60, mount:'post',
+    panels:[{ exit:'340A', dest:['Lincoln Dr','Kelly Dr'], arrow:'exit' }],
+    src:'OSM node 360984042 junction:ref=340A; link 1480965255 destination=Lincoln Drive;Kelly Drive (the WESTBOUND gore — the graph heading proves it; the eastbound 340A gore, node 360984511, lies outside the city)' },
+  { id:'i76w-340a-gore', road:'Schuylkill Expressway', dir:'W', at:[-784,525], mount:'gore', exit:'340A',
+    src:'OSM node 360984042 junction:ref=340A' },
+  { id:'i76e-340b-gantry', road:'Schuylkill Expressway', dir:'E', at:[-711,587], back:36, mount:'gantry',
+    panels:[{ shields:[['I','76']], card:'EAST', dest:['Central Philadelphia'], arrow:'down', lanes:[2,3] },
+            { exit:'340B', shields:[['US','1']], card:'NORTH', dest:['Roosevelt Blvd','Northeast Phila'], arrow:'down', exitOnly:true, lanes:[4] }],
+    src:'OSM way 1341689668 lanes=4 turn:lanes=merge_to_right|||slight_right destination:lanes=none|Central Philadelphia|Central Philadelphia|Roosevelt Boulevard;Northeast Philadelphia destination:ref:lanes=|||US 1 North; node 109748703 junction:ref=340B' },
+  { id:'i76e-340b-gore', road:'Schuylkill Expressway', dir:'E', at:[-711,587], mount:'gore', exit:'340B',
+    src:'OSM node 109748703 junction:ref=340B' },
+  { id:'i76e-reassure-a', road:'Schuylkill Expressway', dir:'E', at:[-249,982], ahead:140, mount:'shield',
+    panels:[{ shields:[['I','76']], card:'EAST' }],
+    src:'carriageway destination:ref=I 76 East on OSM links 50072839, 1480965252, 43128463 (merge ends at way 448887934 ||merge_to_left)' },
+  { id:'i76e-341-advance', road:'Schuylkill Expressway', dir:'E', at:[-1229,2634], back:330, mount:'post',
+    panels:[{ exit:'341', dest:['Montgomery Dr','Martin Luther King Jr Dr','West Fairmount Park'] }],
+    src:'OSM node 109781521 junction:ref=341; link 1480965260 destination=Martin Luther King Jr Drive;Montgomery Drive;West Fairmount Park;Mann Music Center (distance line omitted — not sourced)' },
+  { id:'i76e-341-gantry', road:'Schuylkill Expressway', dir:'E', at:[-1229,2634], back:34, mount:'gantry',
+    panels:[{ shields:[['I','76']], card:'EAST', dest:['Central Philadelphia'], arrow:'down', lanes:[1,2,3] },
+            { exit:'341', dest:['Montgomery Dr','Martin Luther King Jr Dr'], arrow:'down', exitOnly:true, lanes:[4] }],
+    src:'OSM way 30953183 lanes=4 turn:lanes=|||slight_right destination:lanes=|||West Fairmount Park;Mann Music Center;Montgomery Drive;Martin Luther King Jr Drive; through destination from the corridor\'s I 76 East links (Central Philadelphia)' },
+  { id:'i76e-341-gore', road:'Schuylkill Expressway', dir:'E', at:[-1229,2634], mount:'gore', exit:'341',
+    src:'OSM node 109781521 junction:ref=341' },
+  { id:'i76e-reassure-b', road:'Schuylkill Expressway', dir:'E', at:[-1320,3337], ahead:90, mount:'shield',
+    panels:[{ shields:[['I','76']], card:'EAST' }],
+    src:'OSM way 1020861796 turn:lanes=none|none|none|merge_to_left (Montgomery Dr entrance merge); links 49916232/12113021 destination:ref=I 76 East' },
+  // ---- I-76 WESTBOUND (toward Valley Forge; z decreasing) ------------------------------------------------------
+  { id:'i76w-reassure', road:'Schuylkill Expressway', dir:'W', at:[-1158,2557], ahead:110, mount:'shield',
+    panels:[{ shields:[['I','76']], card:'WEST' }],
+    src:'OSM links 12113368, 1480965259 destination:ref=I 76 West (Montgomery Dr entrance)' },
+  { id:'i76w-341-advance', road:'Schuylkill Expressway', dir:'W', at:[-1341,3200], back:330, mount:'post',
+    panels:[{ exit:'341', dest:['Montgomery Dr','West Fairmount Park','Mann Music Center'] }],
+    src:'OSM node 109786935 junction:ref=341; link 1481203922 destination=West Fairmount Park;Mann Music Center destination:street=Montgomery Drive;West River Drive;Martin Luther King Jr. Drive' },
+  { id:'i76w-341-gantry', road:'Schuylkill Expressway', dir:'W', at:[-1341,3200], back:34, mount:'gantry',
+    panels:[{ shields:[['I','76']], card:'WEST', dest:['Valley Forge'], arrow:'down', lanes:[1,2,3] },
+            { exit:'341', dest:['Montgomery Dr','West Fairmount Park'], arrow:'down', exitOnly:true, lanes:[4] }],
+    src:'OSM way 914996067 lanes=4 turn:lanes=none|none|none|slight_right destination:lanes=none|none|none|Montgomery Drive;Martin Luther King Jr. Drive;West Fairmount Park;Mann Music Center; through destination from way 1506369746 / the I 76 West links (Valley Forge)' },
+  { id:'i76w-341-gore', road:'Schuylkill Expressway', dir:'W', at:[-1341,3200], mount:'gore', exit:'341',
+    src:'OSM node 109786935 junction:ref=341' },
+  { id:'i76w-339-post', road:'Schuylkill Expressway', dir:'W', at:[-180,1177], back:70, mount:'post',
+    panels:[{ exit:'339', shields:[['US','1']], card:'SOUTH', dest:['City Ave'], arrow:'exit' }],
+    src:'OSM node 4458599076 junction:ref=339; link 1480965258 destination=City Avenue destination:ref=US 1 South (lane assignment not tagged → roadside sign)' },
+  { id:'i76w-339-gore', road:'Schuylkill Expressway', dir:'W', at:[-180,1177], mount:'gore', exit:'339',
+    src:'OSM node 4458599076 junction:ref=339' },
+  { id:'i76w-340b-post', road:'Schuylkill Expressway', dir:'W', at:[-174,1051], back:60, mount:'post',
+    panels:[{ exit:'340B', shields:[['US','1']], card:'NORTH', dest:['Roosevelt Blvd'], arrow:'exit' }],
+    src:'OSM node 109748955 junction:ref=340B; link 1480965256 destination=Roosevelt Boulevard destination:ref=US 1 North' },
+  { id:'i76w-340b-gore', road:'Schuylkill Expressway', dir:'W', at:[-174,1051], mount:'gore', exit:'340B',
+    src:'OSM node 109748955 junction:ref=340B' },
+  // (no sign for the second westbound 339 gore at -1324,210: the carriageway ends there at the city line and its ramp to City Avenue lies outside the bake — that is a corridor-end closure, not a playable exit)
+  // ---- US 1 SOUTHBOUND (Roosevelt Expressway toward I-76; x decreasing) ---------------------------------------
+  { id:'us1s-fox-gantry', road:'Roosevelt Expressway', dir:'S', at:[1361,-340], back:34, mount:'gantry',
+    panels:[{ shields:[['US','1']], card:'SOUTH', to:[['I','76']], arrow:'down', lanes:[1] },
+            { dest:['Fox St','Henry Ave'], arrow:'exit', lanes:[2] }],
+    src:'OSM way 684781038 lanes=2 turn:lanes=none|through;slight_right destination:lanes=none|none;Fox Street;Henry Avenue; node 4459719454; US 1 South → I 76 from link 12113056 destination:ref:to=I 76' },
+  { id:'us1s-fox-gore', road:'Roosevelt Expressway', dir:'S', at:[1361,-340], mount:'gore',
+    src:'OSM node 4459719454 highway=motorway_junction noref=yes' },
+  { id:'us1s-ridge-gantry', road:'Roosevelt Expressway', dir:'S', at:[413,338], back:34, mount:'gantry',
+    panels:[{ shields:[['I','76']], card:'EAST', dest:['Central Philadelphia'], arrow:'down', lanes:[1] },
+            { shields:[['I','76']], card:'WEST', dest:['Valley Forge'], arrow:'down', lanes:[2] },
+            { dest:['Ridge Ave','Kelly Dr'], arrow:'exit', lanes:[3] }],
+    src:'OSM ways 684826237 / 1480623109 lanes=3 turn:lanes=none|none|through;slight_right destination:lanes=Central Phila|Valley Forge|none;Ridge Avenue;Kelly Drive; node 4459719351' },
+  { id:'us1s-ridge-gore', road:'Roosevelt Expressway', dir:'S', at:[413,338], mount:'gore',
+    src:'OSM node 4459719351 highway=motorway_junction noref=yes' },
+  { id:'us1s-split-gantry', road:'Roosevelt Expressway', dir:'S', at:[-103,675], back:60, mount:'gantry',
+    panels:[{ shields:[['I','76']], card:'EAST', dest:['Central Philadelphia'], arrow:'split' },
+            { shields:[['I','76'],['US','1']], card:'WEST', dest:['Valley Forge'], arrow:'split' }],
+    src:'OSM node 536317422; links 50072839 destination=Central Philadelphia destination:ref=I 76 East and 1481203908 destination=Valley Forge destination:ref=I 76 West;US 1 South (no lane tags → panels take the side their ramp leaves on)' },
+  { id:'us1s-reassure', road:'Roosevelt Expressway', dir:'S', at:[2072,-634], ahead:150, mount:'shield',
+    panels:[{ shields:[['US','1']], card:'SOUTH' }],
+    src:'OSM links 43226678, 449006348, 1358354148 destination=Roosevelt Expressway destination:ref=US 1 South (Wissahickon Ave entrances)' },
+  // ---- US 1 NORTHBOUND (toward Roosevelt Boulevard; x increasing) ---------------------------------------------
+  { id:'us1n-reassure-a', road:'Roosevelt Expressway', dir:'N', at:[-71,700], ahead:330, mount:'shield',
+    panels:[{ shields:[['US','1']], card:'NORTH' }],
+    src:'OSM links 43128471, 60133226 destination=Roosevelt Boulevard destination:ref=US 1 North (twin-bridge merge)' },
+  { id:'us1n-wiss-s-gantry', road:'Roosevelt Expressway', dir:'N', at:[1236,-223], back:34, mount:'gantry',
+    panels:[{ shields:[['US','1']], card:'NORTH', dest:['Roosevelt Blvd'], arrow:'down', lanes:[1,2] },
+            { dest:['Wissahickon Ave South','Hunting Park Ave'], arrow:'exit', lanes:[3] }],
+    src:'OSM way 684781034 lanes=3 turn:lanes=||through;slight_right destination:lanes=||none;Wissahickon Avenue South;Hunting Park Avenue; node 109777795; through destination from the US 1 North links (Roosevelt Boulevard)' },
+  { id:'us1n-wiss-s-gore', road:'Roosevelt Expressway', dir:'N', at:[1236,-223], mount:'gore',
+    src:'OSM node 109777795 highway=motorway_junction noref=yes' },
+  { id:'us1n-reassure-b', road:'Roosevelt Expressway', dir:'N', at:[1589,-487], ahead:110, mount:'shield',
+    panels:[{ shields:[['US','1']], card:'NORTH' }],
+    src:'OSM link 12110416 destination:ref=US 1 North (W Abbottsford Ave entrance merge)' },
+  { id:'us1n-wiss-n-post', road:'Roosevelt Expressway', dir:'N', at:[1932,-601], back:70, mount:'post',
+    panels:[{ dest:['Wissahickon Ave North','Germantown Ave'], arrow:'exit' }],
+    src:'OSM node 110268536; link 449006353 destination=Wissahickon Avenue North;Germantown Avenue (mainline lanes not tagged → roadside sign)' },
+  { id:'us1n-wiss-n-gore', road:'Roosevelt Expressway', dir:'N', at:[1932,-601], mount:'gore',
+    src:'OSM node 110268536 highway=motorway_junction noref=yes' },
+  // ---- Entrances: trailblazers on the surface streets ---------------------------------------------------------
+  { id:'cityave-ne-76e', road:'City Avenue', at:[-1530,441], back:28, mount:'post',
+    panels:[{ shields:[['I','76'],['US','1']], card:'EAST NORTH', dest:['Central Phila','Roosevelt Expy'], arrow:'exit' }],
+    src:'OSM node 4458600440; link 12109954 destination=Central Phila;Roosevelt Expressway destination:ref=I 76 East;US 1 North' },
+  { id:'cityave-ne-76w', road:'City Avenue', at:[-1350,327], back:28, mount:'post',
+    panels:[{ shields:[['I','76']], card:'WEST', dest:['Valley Forge'], arrow:'exit' }],
+    src:'OSM node 4458600494; link 1480965246 destination=Valley Forge destination:ref=I 76 West' },
+  { id:'cityave-sw-76', road:'City Avenue', at:[-1262,203], back:28, mount:'post',
+    panels:[{ shields:[['I','76'],['US','1']], card:'EAST NORTH', dest:['Central Phila','Roosevelt Blvd'], arrow:'exit' },
+            { shields:[['I','76']], card:'WEST', dest:['Valley Forge'], arrow:'exit2' }],
+    src:'OSM node 4458600583; links 12112627 destination=Central Philadelphia;Roosevelt Boulevard destination:ref=I 76 East;US 1 North and 32151874 destination=Valley Forge destination:ref=I 76 West' },
+  { id:'ridge-onramp-gantry', road:'Ridge Avenue', at:[-687,135], toward:[-720,161], back:26, mount:'gantry', halfRoad:true,
+    panels:[{ shields:[['I','76'],['US','1']], dest:['City Ave'], arrow:'down' },
+            { dest:['Lincoln Drive'], arrow:'right' }],
+    src:'Owner photo, Ridge Ave NW-bound on-ramp gantry "TO 76 / 1 City Ave" + "Lincoln Drive" (Google Street View Apr 2025, owner Sep 7 2026) — the same source as RAMP_SIGNS' },
+  { id:'fox-us1s', road:'Fox Street', at:[1189,-216], back:26, mount:'post',
+    panels:[{ shields:[['US','1']], card:'SOUTH', to:[['I','76']], arrow:'exit' }],
+    src:'OSM link 12113056 destination:ref=US 1 South;PA 1 South destination:ref:to=I 76' },
+  { id:'abbottsford-us1s', road:'West Abbottsford Avenue', at:[1832,-716], back:26, mount:'post',
+    panels:[{ shields:[['US','1']], card:'SOUTH', dest:['Roosevelt Expy'], arrow:'exit' }],
+    src:'OSM links 1358354148 / 449006348 destination=Roosevelt Expressway destination:ref=US 1 South (the ramp mouth sits on West Abbottsford Avenue in the bake)' },
+  { id:'abbottsford-us1n', road:'West Abbottsford Avenue', at:[1512,-411], back:26, mount:'post',
+    panels:[{ shields:[['US','1']], card:'NORTH', arrow:'exit' }],
+    src:'OSM link 12110416 destination:ref=US 1 North (PA 611 line omitted — outside the corridor)' },
+];
+// Shoulder lighting: masts along the freeway and its ramps inside these circles, every ~45m, on the right
+// shoulder (on a span: on the parapet line). Pools of light are additive decals on the pavement — no dynamic
+// lights at all, so the cost is a handful of instanced boxes and one merged transparent mesh.
+const HWY_LIGHTS=[
+  { id:'city-ave', at:[-1300,280], r:320 }, { id:'ridge-ramp', at:[60,520], r:240 }, { id:'twin-bridges', at:[-150,660], r:260 },
+  { id:'us1-split', at:[-660,600], r:220 }, { id:'montgomery', at:[-1250,2720], r:300 }, { id:'fox', at:[1330,-300], r:220 },
+  { id:'wissahickon', at:[1700,-547], r:260 } ];
+const HWY_ID_SPEC={ gantryH:8.4, panelW:6.2, panelH:2.4, postH:4.6, postPanelW:3.4, postPanelH:2.1, goreW:1.5, goreH:1.25, shieldW:1.1, shieldH:1.55, lampH:9.6, lampEvery:45 };
+function hwyGnode(x,z){ return gnodes.get(x+','+z+',h')||gnodes.get(x+','+z)||null; }
+// Walk along the named carriageway from a node: back (against travel) or ahead (with travel). Returns the point,
+// the unit heading OF TRAVEL and the segment under it, or null when the walk leaves the road.
+let HWY_REV=null;                                                               // incoming edges per node, built once on first use (a mainline edge can be 280m long — a cell window missed it)
+function hwyRev(){ if(HWY_REV) return HWY_REV; HWY_REV=new Map(); for(const n of gnodes.values()) for(const e of n.adj){ let l=HWY_REV.get(e.to); if(!l){ l=[]; HWY_REV.set(e.to,l); } l.push({from:n,e}); } return HWY_REV; }
+function hwyWalk(node,road,dist,ahead,hwKind,hint){
+  const same=e=>(road?e.name===road:!e.name)&&(hwKind===undefined?true:(e.hw||0)===hwKind);
+  const pick=(cands)=>{ if(!cands.length) return null; if(!hint||cands.length===1) return cands[0]; let best=null,bd=-2; for(const c of cands){ const l=Math.hypot(c.fx,c.fz)||1, d=(c.fx*hint[0]+c.fz*hint[1])/l; if(d>bd){bd=d;best=c;} } return best; };
+  const back=n=>{ const c=[]; for(const r of hwyRev().get(n)||[]) if(!r.e.wrong&&same(r.e)) c.push({to:r.from,fx:n.x-r.from.x,fz:n.z-r.from.z}); return pick(c); };
+  const fwd=n=>{ const c=[]; for(const e of n.adj) if(!e.wrong&&same(e)) c.push({to:e.to,fx:e.to.x-n.x,fz:e.to.z-n.z}); return pick(c); };
+  let n=node,left=dist,guard=0;
+  while(guard++<60){ const step=ahead?fwd(n):back(n); if(!step) return null; const L=Math.hypot(step.fx,step.fz)||1, dx=step.fx/L, dz=step.fz/L;
+    if(left<=L){ const t=left/L, x=ahead?n.x+step.fx*t:n.x-step.fx*t, z=ahead?n.z+step.fz*t:n.z-step.fz*t; return {x,z,dx,dz,node:n}; }
+    left-=L; n=step.to; hint=[dx,dz]; }
+  return null; }
+function hwySegUnder(x,z,dx,dz,road){ let best=null,bd=9; for(const s of segNear(x,z)){ if(road?s.name!==road:s.name) continue; const sx=s.bx-s.ax,sz=s.bz-s.az,sl=Math.hypot(sx,sz)||1; if(Math.abs((sx*dx+sz*dz)/sl)<0.6) continue; const d=closestSeg(x,z,s).d; if(d<bd){bd=d;best=s;} } return best; }
+function hwyOnOtherPavement(x,z,road){ for(const o of segNear(x,z)){ if(road&&o.name===road) continue; if(closestSeg(x,z,o).d<segHalf(o)+0.6) return o; } return null; }   // any other drawn pavement, named or not (a slip lane at City Ave)
+function hwyDeckOverhead(x,z,y,road){ for(const s of navBridgeGrid.get(Math.floor(x/NAVCELL)+':'+Math.floor(z/NAVCELL))||[]){ if(!s.b.bridge||s.b.name===road) continue;
+    const dx=s.q[0]-s.a[0],dz=s.q[1]-s.a[1],t=Math.max(0,Math.min(1,((x-s.a[0])*dx+(z-s.a[1])*dz)/(s.l*s.l||1))),d=Math.hypot(x-s.a[0]-dx*t,z-s.a[1]-dz*t); if(d>14) continue;
+    const dy=deckY(s.b,(s.along+t*s.l)/(s.b.length||1))-y; if(dy>1.2&&dy<11) return true; } return false; }
+function hwyNearJunction(x,z,skip,r){ for(const l of [ngrid.get(Math.floor(x/NCELL)+':'+Math.floor(z/NCELL))||[]]) for(const n of l){ if(n===skip) continue; if(n.adj.length>=3&&Math.hypot(n.x-x,n.z-z)<r) return n; } return null; }
+function hwyNearEnd(x,z,r){ for(const e of HWY_ENDS.values()) if(Math.hypot(e.x-x,e.z-z)<r) return true; return false; }
+// Resolve every definition to a world placement (cached: the graph is static). A placement carries the point,
+// the unit heading of travel, the road half-width, the post/beam layout and the exit side; `skipped` says why
+// a definition produced nothing, so a test can insist the list is empty.
+let HWY_PLACED=null;
+function hwyRampNode(node,road){ let n=node; for(let g=0,walked=0;g<6&&walked<90;g++){ if(n.adj.some(e=>!e.wrong&&e.hw===2&&!e.name)) return n;   // the node the ramp really leaves from: the OSM junction node, or the
+    const nx=n.adj.find(e=>!e.wrong&&e.hw===1&&e.name===road); if(!nx) return node; walked+=nx.w; n=nx.to; } return node; }              // next carriageway vertex when the bake's noding moved the split (US 1 at Wissahickon Ave N: 30m on)
+function hwySignPlacements(){ if(!NAVGEO.active) return {placed:[],skipped:[]};                                          // before startShift there is no terrain: place nothing and cache nothing
+  if(HWY_PLACED) return HWY_PLACED; const out=[], skipped=[];
+  for(const d of HWY_SIGNS){ let node=hwyGnode(d.at[0],d.at[1]); if(!node){ skipped.push(d.id+': no node at '+d.at); continue; }
+    const hwKind=d.road==='Schuylkill Expressway'||d.road==='Roosevelt Expressway'?1:undefined;
+    if(hwKind===1&&d.ahead===undefined) node=hwyRampNode(node,d.road);
+    if(d.mount==='gore'){ const cont=node.adj.filter(e=>!e.wrong&&e.name===d.road&&e.hw===1), ramps=node.adj.filter(e=>!e.wrong&&e.hw===2&&!e.name);
+      const arr=hwyWalk(node,d.road,1,false,1); if(!cont.length||!ramps.length||!arr){ skipped.push(d.id+': not a gore (carriageway '+cont.length+', ramps '+ramps.length+')'); continue; }
+      const m=cont[0], r=ramps[0], ml=Math.hypot(m.to.x-node.x,m.to.z-node.z)||1, rl=Math.hypot(r.to.x-node.x,r.to.z-node.z)||1;
+      const mx=(m.to.x-node.x)/ml, mz=(m.to.z-node.z)/ml, rx=(r.to.x-node.x)/rl, rz=(r.to.z-node.z)/rl, side=(rx*(-mz)+rz*mx)>0?'right':'left';   // right of travel = (-dz, dx)
+      // the nose: walk the ramp itself until its pavement has parted from the carriageway's, then step to the ramp's inner edge
+      let nose=null, bx=mx+rx, bz=mz+rz; { const bl=Math.hypot(bx,bz)||1; bx/=bl; bz/=bl; }
+      { let pa=node, pb=r.to, walked=0; for(let g=0;g<40&&!nose&&walked<320;g++){ const ex=pb.x-pa.x, ez=pb.z-pa.z, L=Math.hypot(ex,ez)||1;
+          for(let t=0;t<=L&&!nose;t+=3){ const x=pa.x+ex*t/L, z=pa.z+ez*t/L; let ms=null,md=60; for(const o of segNear(x,z)){ if(o.hw!==1||o.name!==d.road) continue; const dd=closestSeg(x,z,o).d; if(dd<md){md=dd;ms=o;} }
+            const rs=hwySegUnder(x,z,ex/L,ez/L,''); const need=(ms?segHalf(ms):0)+(rs?segHalf(rs):4)+2.4;                       // a 2.4m nose between the two pavements
+            if(ms&&md>=need){ const c=closestSeg(x,z,ms), gx=c.cx-x, gz=c.cz-z, gl=Math.hypot(gx,gz)||1, inset=(rs?segHalf(rs):4)+1.2; nose={x:x+gx/gl*inset,z:z+gz/gl*inset,t:walked+t}; bx=gx/gl; bz=gz/gl; } }
+          walked+=L; const nx=pb.adj.find(e=>e.to!==pa&&!e.wrong&&e.hw===2&&!e.name); if(!nx) break; pa=pb; pb=nx.to; } }
+      if(!nose){ skipped.push(d.id+': the ramp never parts from the carriageway'); continue; }
+      const y=navRoadY(nose.x,nose.z,d.road,mx,mz);
+      const fx=(mx+rx), fz=(mz+rz), fl=Math.hypot(fx,fz)||1;                                                        // delineators trail the nose along the split
+      const delin=[]; for(let k=1;k<=3;k++){ const q={x:nose.x+fx/fl*8*k,z:nose.z+fz/fl*8*k}; let onPav=false; for(const o of segNear(q.x,q.z)){ if(closestSeg(q.x,q.z,o).d<segHalf(o)+0.2){ onPav=true; break; } } if(onPav) break; delin.push(q); }   // never on a pavement (US 1 S at Fox: the ramp bends onto W Abbottsford Ave)
+      out.push({id:d.id,def:d,mount:'gore',x:nose.x,z:nose.z,y,dx:mx,dz:mz,side,exit:d.exit||null,bx,bz,noseT:nose.t,posts:[{x:nose.x,z:nose.z}],delin});
+      continue; }
+    const dist=d.ahead!==undefined?d.ahead:d.back; let placed=null, reason='';
+    let hint=null; { const r=d.toward?{to:{x:d.toward[0],z:d.toward[1]}}:node.adj.find(e=>!e.wrong&&(e.hw===2||(!e.name&&hwKind===undefined))); if(r) hint=[r.to.x-node.x,r.to.z-node.z]; }   // the approach runs the way the ramp leaves
+    for(let extra=0; extra<=120 && !placed; extra+=15){
+      const w=hwyWalk(node,d.road,dist+extra,d.ahead!==undefined,hwKind,hint); if(!w){ reason='walk left the road'; break; }
+      const seg=hwySegUnder(w.x,w.z,w.dx,w.dz,d.road); if(!seg){ reason='no segment under the point'; continue; }
+      const hw=segHalf(seg), c0=closestSeg(w.x,w.z,seg), y=navRoadY(c0.cx,c0.cz,d.road,w.dx,w.dz); let rx=-(seg.bz-seg.az), rz=seg.bx-seg.ax; { const l=Math.hypot(rx,rz)||1; rx/=l; rz/=l; if(rx*(-w.dz)+rz*w.dx<0){ rx=-rx; rz=-rz; } }   // the drawn segment's own right-hand normal, and the sign point on its centreline
+      const onSpan=!!(navSpan(w.x,w.z,d.road,8,w.dx,w.dz)?.b.bridge);
+      const postOff=onSpan?hw+0.95:(d.mount==='gantry'?hw+2.3:hw+2.2), px=c0.cx+rx*postOff, pz=c0.cz+rz*postOff;   // outside the shoulder, the guardrail (hw+0.45) and a retaining wall (hw+1.5); on a span, on the deck's edge outside the parapet
+      if(hwyOnOtherPavement(px,pz,d.road)){ reason='post on another roadway'; continue; }
+      { let twin=false; for(const o of segNear(px,pz)){ if(o===seg||o.name!==d.road||!o.hw) continue;                                       // the road's OWN other pavement: the opposite carriageway (twin bridges: the decks nearly
+          if((o.ax===seg.ax&&o.az===seg.az)||(o.ax===seg.bx&&o.az===seg.bz)||(o.bx===seg.ax&&o.bz===seg.az)||(o.bx===seg.bx&&o.bz===seg.bz)) continue;   // touch) or a parallel lane group — never the segment's own continuation
+          if(closestSeg(px,pz,o).d<segHalf(o)+0.3){ twin=true; break; } } if(twin){ reason='post on its own road, other pavement'; continue; } }
+      if(hwyNearEnd(w.x,w.z,30)){ reason='at a corridor-end closure'; continue; }
+      if(hwyNearJunction(w.x,w.z,node,12)){ reason='inside a junction'; continue; }
+      if(d.mount==='gantry'&&(onSpan||hwyDeckOverhead(w.x,w.z,y,d.road))){ reason='gantry on a span / under a deck'; continue; }
+      if(d.mount!=='gantry'&&hwyDeckOverhead(w.x,w.z,y+0.5,d.road)&&hwyDeckOverhead(w.x,w.z,y,d.road)){ /* a post sign fits under a high deck; only a gantry needs the sky */ }
+      let side='right', exitSide='right';
+      { const ramps=node.adj.filter(e=>!e.wrong&&(e.hw===2||(!e.name&&hwKind===undefined)));   // which side does the ramp at `at` leave on? judged against the ROAD's heading at the gore (an advance sign 300m back sits on a bend)
+        const thru=node.adj.find(e=>!e.wrong&&e!==ramps[0]&&(d.road?e.name===d.road:true)); const hx=thru?thru.to.x-node.x:w.dx, hz=thru?thru.to.z-node.z:w.dz, hl=Math.hypot(hx,hz)||1;
+        if(ramps.length){ const r=ramps[0], rl=Math.hypot(r.to.x-node.x,r.to.z-node.z)||1, cx=(r.to.x-node.x)/rl, cz=(r.to.z-node.z)/rl; exitSide=(cx*(-hz/hl)+cz*(hx/hl))>0?'right':'left'; } }
+      if(d.side) side=d.side; else if(d.mount==='post'&&exitSide==='left'){ const lx=c0.cx-rx*postOff, lz=c0.cz-rz*postOff;   // a left exit's sign stands on the left when the median has room for a post
+        let blocked=false; for(const o of segNear(lx,lz)){ if(o===seg||!o.hw) continue; if(closestSeg(lx,lz,o).d<segHalf(o)+0.6){ blocked=true; break; } } if(!blocked) side='left'; }
+      placed={id:d.id,def:d,mount:d.mount,x:c0.cx,z:c0.cz,y,dx:w.dx,dz:w.dz,rx,rz,hw,seg,onSpan,side,exitSide,extra,
+        posts:d.mount==='gantry'?[{x:px,z:pz}]:[{x:c0.cx+rx*(side==='left'?-postOff:postOff),z:c0.cz+rz*(side==='left'?-postOff:postOff)}],
+        lanes:seg.hw?hwyLanes(seg):null}; }
+    if(!placed&&d.mount==='gantry'&&!d.halfRoad){ HWY_SIGNS.push(Object.assign({},d,{id:d.id+'-post',mount:'post',fallbackOf:d.id})); skipped.push(d.id+': '+(reason||'no clear spot within 120m')+' -> retried as a roadside post'); continue; }
+    if(placed) out.push(placed); else skipped.push(d.id+': '+(reason||'no clear spot within 120m'));
+  }
+  HWY_PLACED={placed:out,skipped}; return HWY_PLACED; }
+// Sign faces: one canvas texture per distinct content (cached for the life of the page — a re-build of the
+// scenery reuses it). 160 px per metre keeps 0.5m letters crisp on a phone; mipmaps + anisotropy for distance.
+const HWY_SIGN_TEX=new Map();
+const HWY_GREEN='#1d6a3e', HWY_GREEN_EDGE='#f4f7f2', HWY_YELLOW='#f0c53a', HWY_INK='#101418';
+function hwyDrawShield(c,sys,num,x,y,w,h){ c.save(); c.lineJoin='round';
+  if(sys==='I'){ c.beginPath(); c.moveTo(x+w*0.5,y); c.quadraticCurveTo(x+w*0.82,y+h*0.02,x+w,y+h*0.12); c.quadraticCurveTo(x+w*0.98,y+h*0.6,x+w*0.5,y+h); c.quadraticCurveTo(x+w*0.02,y+h*0.6,x,y+h*0.12); c.quadraticCurveTo(x+w*0.18,y+h*0.02,x+w*0.5,y); c.closePath();
+    c.fillStyle='#003f87'; c.fill(); c.lineWidth=h*0.05; c.strokeStyle='#ffffff'; c.stroke();
+    c.save(); c.clip(); c.fillStyle='#c8102e'; c.fillRect(x,y,w,h*0.3); c.restore(); c.strokeStyle='#ffffff'; c.lineWidth=h*0.03; c.beginPath(); c.moveTo(x,y+h*0.3); c.lineTo(x+w,y+h*0.3); c.stroke();
+    c.fillStyle='#ffffff'; c.textAlign='center'; c.textBaseline='middle'; c.font='700 '+Math.round(h*0.42)+'px Arial,Helvetica,sans-serif'; c.fillText(num,x+w*0.5,y+h*0.62); }
+  else { c.beginPath(); c.moveTo(x+w*0.06,y); c.lineTo(x+w*0.94,y); c.quadraticCurveTo(x+w,y,x+w,y+h*0.1); c.lineTo(x+w*0.96,y+h*0.55); c.quadraticCurveTo(x+w*0.9,y+h*0.92,x+w*0.5,y+h); c.quadraticCurveTo(x+w*0.1,y+h*0.92,x+w*0.04,y+h*0.55); c.lineTo(x,y+h*0.1); c.quadraticCurveTo(x,y,x+w*0.06,y); c.closePath();
+    c.fillStyle='#ffffff'; c.fill(); c.lineWidth=h*0.05; c.strokeStyle=HWY_INK; c.stroke();
+    c.fillStyle=HWY_INK; c.textAlign='center'; c.textBaseline='middle'; c.font='700 '+Math.round(h*0.5)+'px Arial,Helvetica,sans-serif'; c.fillText(num,x+w*0.5,y+h*0.5); }
+  c.restore(); }
+function hwyDrawArrow(c,kind,x,y,s,ink){ c.save(); c.strokeStyle=ink; c.fillStyle=ink; c.lineWidth=s*0.16; c.lineCap='round'; c.lineJoin='round';
+  const ang={up:-Math.PI/2,down:Math.PI/2,exit:-Math.PI/4,exit2:-Math.PI/4,right:-Math.PI/4,left:-3*Math.PI/4,split:-Math.PI/2}[kind]||-Math.PI/2;
+  const hx=Math.cos(ang), hz=Math.sin(ang); c.beginPath(); c.moveTo(x-hx*s*0.45,y-hz*s*0.45); c.lineTo(x+hx*s*0.25,y+hz*s*0.25); c.stroke();
+  c.beginPath(); c.moveTo(x+hx*s*0.5,y+hz*s*0.5); c.lineTo(x+hx*s*0.15-hz*s*0.22,y+hz*s*0.15+hx*s*0.22); c.lineTo(x+hx*s*0.15+hz*s*0.22,y+hz*s*0.15-hx*s*0.22); c.closePath(); c.fill(); c.restore(); }
+function hwySignFace(kind,panel,opts){ const key=kind+'|'+JSON.stringify(panel)+'|'+JSON.stringify(opts||{}); const hit=HWY_SIGN_TEX.get(key); if(hit) return hit;
+  const S=160, W=Math.round((opts.w||HWY_ID_SPEC.panelW)*S), H=Math.round((opts.h||HWY_ID_SPEC.panelH)*S);
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const c=cv.getContext('2d'); c.textBaseline='middle';
+  const green=kind!=='shield', ink=green?'#ffffff':HWY_INK;
+  c.fillStyle=green?HWY_GREEN:'#3b4046'; c.fillRect(0,0,W,H); c.lineWidth=S*0.06; c.strokeStyle=green?HWY_GREEN_EDGE:'#c9ced4'; c.strokeRect(S*0.06,S*0.06,W-S*0.12,H-S*0.12);
+  let top=S*0.18, bottom=H-S*0.18, arrowRight=false;
+  if(panel.exit&&kind!=='gore'){ const tw=S*(1.15+0.42*String(panel.exit).length), th=S*0.42; c.fillStyle=HWY_GREEN; c.fillRect(W-tw-S*0.2,S*0.02,tw,th); c.strokeStyle=HWY_GREEN_EDGE; c.lineWidth=S*0.04; c.strokeRect(W-tw-S*0.2,S*0.02,tw,th);
+    c.fillStyle='#ffffff'; c.font='700 '+Math.round(S*0.3)+'px Arial,Helvetica,sans-serif'; c.textAlign='center'; c.fillText('EXIT '+panel.exit,W-tw/2-S*0.2,S*0.02+th/2); top=Math.max(top,S*0.5); }
+  if(panel.exitOnly){ const yh=S*0.6; c.fillStyle=HWY_YELLOW; c.fillRect(S*0.1,H-yh-S*0.1,W-S*0.2,yh); c.fillStyle=HWY_INK; c.font='700 '+Math.round(S*0.34)+'px Arial,Helvetica,sans-serif'; c.textAlign='center'; c.fillText('EXIT ONLY',W/2-S*0.5,H-yh/2-S*0.1); hwyDrawArrow(c,'down',W/2+S*1.6,H-yh/2-S*0.1,S*0.42,HWY_INK); bottom=H-yh-S*0.2; }
+  if(kind==='gore'){ c.fillStyle='#ffffff'; c.textAlign='center'; c.font='700 '+Math.round(S*0.36)+'px Arial,Helvetica,sans-serif'; c.fillText('EXIT'+(panel.exit?' '+panel.exit:''),W/2,H*0.32); hwyDrawArrow(c,panel.side==='left'?'left':'exit',W/2,H*0.7,S*0.5,'#ffffff'); }
+  else { let x=S*0.28; const shields=panel.shields||[], to=panel.to||[];
+    if(shields.length){ const sh=Math.min(bottom-top,S*1.3), sw=sh*0.8; for(const [sys,num] of shields){ hwyDrawShield(c,sys,num,x,top+(bottom-top-sh)/2-(panel.dest?S*0.05:0),sw,sh); x+=sw+S*0.16; }
+      if(panel.card){ c.fillStyle=ink; c.font='700 '+Math.round(S*0.3)+'px Arial,Helvetica,sans-serif'; c.textAlign='left'; const cards=panel.card.split(' '); cards.forEach((cd,i)=>c.fillText(cd,x,top+S*0.22+i*S*0.34)); x+=S*(0.28*Math.max(...cards.map(t=>t.length))+0.3); }
+      if(to.length){ c.fillStyle=ink; c.font='700 '+Math.round(S*0.26)+'px Arial,Helvetica,sans-serif'; c.textAlign='left'; c.fillText('TO',x,top+(bottom-top)/2); x+=S*0.55; for(const [sys,num] of to){ hwyDrawShield(c,sys,num,x,top+(bottom-top-sh)/2,sw,sh); x+=sw+S*0.16; } } }
+    const dest=panel.dest||[]; if(dest.length){ const lh=Math.min(S*0.62,(bottom-top)/dest.length), fs=Math.round(lh*0.66); c.fillStyle=ink; c.textAlign='left'; c.font='700 '+fs+'px Arial,Helvetica,sans-serif';
+      const avail=W-x-S*(panel.arrow&&panel.arrow!=='down'?1.1:0.3); dest.forEach((t,i)=>{ let f=fs; while(f>S*0.22&&c.measureText(t).width>avail){ f-=4; c.font='700 '+f+'px Arial,Helvetica,sans-serif'; } c.fillText(t,x,top+lh*(i+0.5)); c.font='700 '+fs+'px Arial,Helvetica,sans-serif'; }); }
+    if(panel.arrow&&panel.arrow!=='down'){ const k=panel.arrow==='right'||panel.arrow==='left'?panel.arrow:(panel.arrow==='exit2'?(opts.side2==='left'?'left':'exit'):(opts.side==='left'?'left':panel.arrow)); hwyDrawArrow(c,k,W-S*0.55,(top+bottom)/2,S*0.62,ink); }
+    else if(panel.arrow==='down'&&!panel.exitOnly){ hwyDrawArrow(c,'down',W-S*0.55,bottom-S*0.35,S*0.5,ink); } }
+  const tex=new THREE.CanvasTexture(cv); tex.anisotropy=4; tex.minFilter=THREE.LinearMipmapLinearFilter; tex.magFilter=THREE.LinearFilter; tex.generateMipmaps=true;
+  const face={tex,w:W/S,h:H/S}; HWY_SIGN_TEX.set(key,face); return face; }
+// Build the identity scenery for one local build: sign panels (textured planes, front face toward the traffic),
+// grey backing plates, posts, cantilever gantry beams, gore markers, delineators, light masts and light pools.
+function hwyIdentityBuild(J,boxes,dummy){ const R=LOCAL.R, P=hwySignPlacements(), stats={signs:0,panels:0,gantries:0,posts:0,gores:0,delineators:0,masts:0,pools:0,textures:HWY_SIGN_TEX.size,dynamicLights:0};
+  const grey=[], beam=[], yellow=[], mast=[], lamp=[], pool=[];
+  const panelMesh=(face,cx,cy,cz,dx,dz,tilt)=>{ const g=new THREE.PlaneGeometry(face.w,face.h); const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:face.tex,side:THREE.FrontSide}));
+    m.position.set(cx,cy,cz); m.rotation.y=Math.atan2(-dx,-dz); m.renderOrder=4; FLATCITY.group.add(m); FLATCITY.parts.push(m);   // front (+z) faces AGAINST travel: the approaching driver reads it, never mirrored
+    grey.push({x:cx+dx*0.07,y:cy,z:cz+dz*0.07,w:face.w+0.06,h:face.h+0.06,l:0.08,ang:Math.atan2(dx,dz),pitch:0}); stats.panels++; };   // plate sits down-travel of the face, never between it and the driver
+  for(const p of P.placed){ if(Math.hypot(p.x-J.cx,p.z-J.cz)>R) continue; stats.signs++; const d=p.def, ang=Math.atan2(p.dx,p.dz);
+    if(p.mount==='gore'){ const face=hwySignFace('gore',{exit:p.exit,side:p.side},{w:HWY_ID_SPEC.goreW,h:HWY_ID_SPEC.goreH}); const y=p.y;
+      grey.push({x:p.x,y:y+0.7,z:p.z,w:0.12,h:1.4,l:0.12,ang,pitch:0}); panelMesh(face,p.x,y+1.4+face.h/2,p.z,p.dx,p.dz); stats.gores++;
+      for(const q of p.delin){ yellow.push({x:q.x,y:navRoadY(q.x,q.z,d.road,p.dx,p.dz)+0.55,z:q.z,w:0.1,h:1.1,l:0.1,ang,pitch:0}); stats.delineators++; }
+      continue; }
+    const post=p.posts[0], py=navRoadY(post.x,post.z,d.road,p.dx,p.dz);
+    if(p.mount==='gantry'){ const H=HWY_ID_SPEC.gantryH, span=p.hw*2+1.7+0.6, half=d.halfRoad?p.hw:0;   // cantilever: one mast on the right shoulder, the arm reaches across the carriageway
+      grey.push({x:post.x,y:py+H/2+0.2,z:post.z,w:0.55,h:H+0.4,l:0.55,ang,pitch:0});
+      beam.push({x:post.x-p.rx*(span/2-0.3),y:p.y+H,z:post.z-p.rz*(span/2-0.3),w:span,h:0.5,l:0.5,ang,pitch:0}); stats.gantries++;
+      const panels=d.panels||[]; const offs=panels.map((pn,i)=>{ if(pn.lanes&&p.lanes){ const cs=pn.lanes.map(k=>p.lanes.left+(k-0.5)*HWY_LANE); return cs.reduce((a,b)=>a+b,0)/cs.length; } if(d.halfRoad) return half*0.5+(i-(panels.length-1)/2)*3.4; return (i-(panels.length-1)/2)*(HWY_ID_SPEC.panelW+0.4); });
+      panels.forEach((pn,i)=>{ const w=pn.lanes&&pn.lanes.length>1?Math.min(HWY_ID_SPEC.panelW*1.35,pn.lanes.length*HWY_LANE-0.3):HWY_ID_SPEC.panelW*(pn.lanes?0.9:1);
+        const side=pn.arrow==='split'?(i===0?(p.exitSide==='left'?'right':'left'):p.exitSide):p.exitSide;
+        const face=hwySignFace('guide',Object.assign({},pn,pn.arrow==='split'?{arrow:side==='left'?'left':'exit'}:{}),{w,h:HWY_ID_SPEC.panelH,side:p.exitSide,side2:'left'});
+        panelMesh(face,p.x+p.rx*offs[i],p.y+H-0.3-face.h/2,p.z+p.rz*offs[i],p.dx,p.dz); });
+      continue; }
+    if(p.mount==='shield'){ const pn=d.panels[0], face=hwySignFace('shield',pn,{w:HWY_ID_SPEC.shieldW,h:HWY_ID_SPEC.shieldH});
+      grey.push({x:post.x,y:py+1.1,z:post.z,w:0.1,h:2.2,l:0.1,ang,pitch:0}); panelMesh(face,post.x,py+2.2+face.h/2,post.z,p.dx,p.dz); stats.posts++; continue; }
+    // roadside post: panels stacked above 2.3m
+    const panels=d.panels||[]; let yTop=py+HWY_ID_SPEC.postH; grey.push({x:post.x,y:py+HWY_ID_SPEC.postH/2,z:post.z,w:0.16,h:HWY_ID_SPEC.postH,l:0.16,ang,pitch:0}); stats.posts++;
+    panels.forEach((pn,i)=>{ const q=pn.arrow==='split'?Object.assign({},pn,{arrow:(i===0?(p.exitSide==='left'?'right':'left'):(p.exitSide==='left'?'left':'right'))}):pn;
+      const face=hwySignFace('guide',q,{w:HWY_ID_SPEC.postPanelW,h:HWY_ID_SPEC.postPanelH,side:p.exitSide,side2:p.side2||'left'}); const cy=yTop-face.h/2-i*(face.h+0.15); panelMesh(face,post.x,cy,post.z,p.dx,p.dz); }); }
+  // lighting: masts on the right shoulder every ~45m inside the lit areas, additive pools of light on the pavement
+  const poolTex=(()=>{ if(HWY_SIGN_TEX.get('pool')) return HWY_SIGN_TEX.get('pool'); const cv=document.createElement('canvas'); cv.width=cv.height=128; const c=cv.getContext('2d'); const g=c.createRadialGradient(64,64,4,64,64,62); g.addColorStop(0,'rgba(255,214,150,0.55)'); g.addColorStop(0.6,'rgba(255,200,120,0.18)'); g.addColorStop(1,'rgba(255,190,110,0)'); c.fillStyle=g; c.fillRect(0,0,128,128); const t=new THREE.CanvasTexture(cv); HWY_SIGN_TEX.set('pool',{tex:t,w:1,h:1}); return HWY_SIGN_TEX.get('pool'); })();
+  const segs=new Set(); for(const l of segGrid.values()) for(const s of l) if(s.hw) segs.add(s);
+  for(const s of segs){ const mx=(s.ax+s.bx)/2,mz=(s.az+s.bz)/2; if(Math.hypot(mx-J.cx,mz-J.cz)>R) continue; const area=HWY_LIGHTS.find(a=>Math.hypot(mx-a.at[0],mz-a.at[1])<a.r); if(!area) continue;
+    const dx=s.bx-s.ax,dz=s.bz-s.az,l=Math.hypot(dx,dz)||1,ux=dx/l,uz=dz/l,rx=-uz,rz=ux,hw=segHalf(s);
+    const phase=((Math.round(s.ax)*7+Math.round(s.az)*13)%HWY_ID_SPEC.lampEvery+HWY_ID_SPEC.lampEvery)%HWY_ID_SPEC.lampEvery;
+    for(let t=HWY_ID_SPEC.lampEvery-phase;t<l-4;t+=HWY_ID_SPEC.lampEvery){ const cx=s.ax+ux*t, cz=s.az+uz*t; if(Math.hypot(cx-area.at[0],cz-area.at[1])>area.r) continue;
+      const onSpan=!!(navSpan(cx,cz,s.name,8,dx,dz)?.b.bridge), off=onSpan?hw+0.45:hw+2.4, px=cx+rx*off, pz=cz+rz*off;
+      if(!onSpan&&hwyOnOtherPavement(px,pz,s.name||'')) continue; if(hwyNearEnd(px,pz,20)) continue; if(hwyNearJunction(cx,cz,null,10)) continue;
+      const y=navRoadY(cx,cz,s.name,dx,dz), ang=Math.atan2(dx,dz), H=HWY_ID_SPEC.lampH;
+      mast.push({x:px,y:y+H/2,z:pz,w:0.24,h:H,l:0.24,ang,pitch:0}); mast.push({x:px-rx*1.3,y:y+H-0.15,z:pz-rz*1.3,w:2.6,h:0.18,l:0.18,ang,pitch:0});
+      lamp.push({x:px-rx*2.5,y:y+H-0.35,z:pz-rz*2.5,w:0.9,h:0.22,l:0.4,ang,pitch:0}); stats.masts++;
+      const lx=cx-rx*(off-3.2), lz=cz-rz*(off-3.2), ly=navRoadY(lx,lz,s.name,dx,dz)+0.35, wr=9, wl=13;   // pool centred a little into the roadway
+      pool.push(lx+rx*wr-ux*wl,ly,lz+rz*wr-uz*wl, 0,0, lx+rx*wr+ux*wl,ly,lz+rz*wr+uz*wl, 1,0, lx-rx*wr+ux*wl,ly,lz-rz*wr+uz*wl, 1,1, lx+rx*wr-ux*wl,ly,lz+rz*wr-uz*wl, 0,0, lx-rx*wr+ux*wl,ly,lz-rz*wr+uz*wl, 1,1, lx-rx*wr-ux*wl,ly,lz-rz*wr-uz*wl, 0,1); stats.pools++; } }
+  for(const [list,color,basic] of [[grey,0x5f646a],[beam,0x6d7278],[yellow,0xf2c94c],[mast,0x6c7076],[lamp,0xfff1c8,true]]){ if(!list.length) continue;
+    const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),basic?new THREE.MeshBasicMaterial({color}):new THREE.MeshLambertMaterial({color}),list.length);
+    list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); m.setMatrixAt(i,dummy.matrix); });
+    m.instanceMatrix.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
+  if(pool.length){ const g=new THREE.BufferGeometry(); const pos=[],uv=[]; for(let i=0;i<pool.length;i+=5){ pos.push(pool[i],pool[i+1],pool[i+2]); uv.push(pool[i+3],pool[i+4]); }
+    g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+    const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:poolTex.tex,transparent:true,opacity:0.5,depthWrite:false,blending:THREE.AdditiveBlending})); m.renderOrder=3; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
+  stats.textures=HWY_SIGN_TEX.size; J.hwyIdentity=stats; return stats; }
 function updateStreetLabels(dt){
   if(!FLAGS.streetLabels || !state.running){ for(const sp of LBL.pool) sp.visible=false; return; }
   const spd=Math.max(8,DRIVE.speed||15);                                              // look further ahead the faster you drive, so a name still has time to read
@@ -3882,6 +4181,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     const hb=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
     hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }
+  hwyIdentityBuild(J,null,dummy);                                                                        // 🪧 highway identity (phase 2b): guide signs, gantries, gore markers, trailblazers, shoulder lighting
   if(J.hwClose) for(const [list,color] of [[J.hwClose[0],0xe8862c],[J.hwClose[1],0xf2f2ec]]){ if(!list.length) continue;   // ⛔ corridor-end barriers (orange / white stripes)
     const hc=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hc.setMatrixAt(i,dummy.matrix); });

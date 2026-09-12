@@ -50,15 +50,24 @@ CLAUDE.md section before any ship.
   32 Node tests (4 new: shared median / openings / cut / closures) pass; browser-verified at all ten spots,
   desktop + 375×812. Headless scenery build cost +15–25 % (e.g. I-76 mid 83→103 ms, Kelly 354→420 ms);
   emulated-mobile HUD read 78–96 FPS (phase 1: 85–102) — a real-phone check is still owed.
-- [ ] **Ship the continuation + street-card fixes** (branch `fix-continuation-one-way-on`, unmerged): a node
+- [x] **Shipped as v18v (September 12, 2026, `main` `77f7138`, sw cache v6)** — the continuation + street-card fixes: a node
   whose only physical branch is legal rolls (West Coulter → Stokley), a merge into a through road rolls
   (Krewstown Rd → Walley Ave), street-choice cards appear at 175 m / solid at 146 m with up to six on screen,
   and every wrong-way street keeps its red card. Owner phone reports on v18u. Hairpins, wrong-way-only
   branches, T junctions (incl. onto one-ways — the wrong-way option stays) and dead ends unchanged. Owner's
   call whether it goes out on its own or rides along with 2b.
-- [ ] **Highway phase 2b — identity:** exit signs with numbers, route shields (I-76, US 1), overhead
-  gantries at the gores, lighting masts, recognisable interchange details (the Twin Bridges, the
-  City Ave stack).
+- [x] **Highway phase 2b — identity (September 12, 2026; branch `highway-phase2b-identity` from v18v
+  `77f7138`, unpublished, BUILD still v18v).** `HWY_SIGNS` holds 37 road-relative sign definitions, every
+  line sourced to an OSM tag or the owner's Ridge Ave photo (`src`): I-76 exits 339 / 340A / 340B / 341
+  with gore signs and lane-assignment gantries (EXIT ONLY panels), US 1 gantries at Fox St, Ridge Ave and
+  Wissahickon Ave S, reassurance shields, City Ave / Fox St / W Abbottsford trailblazers. Mile markers,
+  painted shields, advance distances and the closure-side exits are omitted as unverifiable.
+  `hwySignPlacements` resolves them once per session (gore noses walked along the ramp, posts outside every
+  pavement and off junctions / closures / spans, gantry fallback to a post): 35 of 37 place. `hwyIdentityBuild`
+  draws shared canvas faces (≤39 textures), grey plates, cantilever gantries (5.7 m clearance), delineators
+  and shoulder lighting from seven `HWY_LIGHTS` areas with no dynamic lights. Scenery build +2–3 %,
+  identity build 2–6 ms; 46 Node tests (8 new, graph counts asserted unchanged); browser-verified at twelve
+  spots, desktop + 375×812. Not phone-tested.
 - [ ] **Highway phase 2c — expansion, only once the corridor stays stable:** extend the fetch bbox
   east past Broad St and south past Spring Garden, then Penrose/Platt and Roosevelt Boulevard, using
   the same supplemental-fetch + `hj` pipeline (no one-off fixes).
