@@ -35,8 +35,8 @@ CLAUDE.md section before any ship.
   owed** (the ramp cluster at City Ave and the Roosevelt/Ridge interchange are the places to look).
   Checkpoint branch `highway-phase1` was then fast-forwarded into `main` and published as **v18t**
   (`3b5b33a`, sw cache `local-shell-v4`) for the owner's phone test.
-- [x] **Highway phase 2a — structure (September 12, 2026, branch `highway-phase2a-structure` in
-  `gh-pages-deploy/`, NOT merged/pushed/published, BUILD still v18t).** `hwyStructure` decides per 10 m
+- [x] **Highway phase 2a — structure (September 12, 2026; published the same day as v18u, `main` `f531bf2`,
+  sw cache v5).** `hwyStructure` decides per 10 m
   station: ONE shared median between mutually-paired carriageways (same freeway, opposite heading, station
   projects inside the twin, heights within 2 m; only the carriageway heading into a fixed half-plane draws;
   barrier ≤6 m gap, grass ≤25 m, nothing in an interchange infield or between twin bridge decks; a ramp
@@ -50,6 +50,10 @@ CLAUDE.md section before any ship.
   32 Node tests (4 new: shared median / openings / cut / closures) pass; browser-verified at all ten spots,
   desktop + 375×812. Headless scenery build cost +15–25 % (e.g. I-76 mid 83→103 ms, Kelly 354→420 ms);
   emulated-mobile HUD read 78–96 FPS (phase 1: 85–102) — a real-phone check is still owed.
+- [ ] **Ship the continuation fix** (branch `fix-continuation-one-way-on`, unmerged): a node whose only
+  physical branch is legal now rolls instead of asking left/right (West Coulter Street bending into Stokley
+  Street, owner phone report on v18u). Heals 777 sites citywide; hairpins, wrong-way-only branches, T
+  junctions and dead ends unchanged. Owner's call whether it goes out on its own or rides along with 2b.
 - [ ] **Highway phase 2b — identity:** exit signs with numbers, route shields (I-76, US 1), overhead
   gantries at the gores, lighting masts, recognisable interchange details (the Twin Bridges, the
   City Ave stack).

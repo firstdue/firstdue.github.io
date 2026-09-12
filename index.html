@@ -3121,8 +3121,16 @@ function roadContinuation(a,b){ if(!b) return null;
   const cnt=new Map(); for(const e of choices){ if(e.name) cnt.set(e.name,(cnt.get(e.name)||0)+1); }   // count LEGAL directions only: a ramp merging onto a one-way carriageway (Kelly Dr) meets ONE
   const through=e=> e.name && cnt.get(e.name)>=2;                                                    // drivable Kelly, not a T — the old count included the wrong-way twin and stopped at every merge
   if(choices.length===1){ const c=choices[0], s=branchForwardness(a,b,c.to);
-    const sameName=c.name && edgeName(a,b)===c.name;                           // our OWN road, narrowly missed by sameStreetOn (a sharp same-street bend)
-    if(sameName && fwd.length===1) return s>-0.25?c.to:null;                   // keep flowing around the bend of our own road
+    // 🚦 ONE WAY ON = NOTHING TO CHOOSE. When this node has a single physical branch and it is legal, LEFT and
+    // RIGHT would both take it, so stopping to ask is pure friction: keep flowing. This covers our own road's
+    // sharp bend (what the sameName test used to catch) AND a plain name change — West Coulter Street bends
+    // into Stokley Street in the 3000 block with no cross street at all, and the truck stopped there asking
+    // left or right (owner, phone, v18u). A near-reversal still stops: that is a hairpin or a noding artifact,
+    // where swinging the rig round without a command would be worse than waiting (388 such sites citywide).
+    // A REAL junction is untouched — it has two or more branches, so 'through' and the angle rules below still
+    // decide it, and a lone branch that is WRONG-WAY is not in choices, so the truck still stops rather than
+    // driving up a one-way street.
+    if(fwd.length===1) return s>-0.25?c.to:null;
     if(through(c)) return null;                                                // T-ing onto a through road (an arterial) — stop and ask left/right
     if(!c.name && !(a.adj.find(e=>e.to===b)||{}).name) return c.to;            // an unnamed connector with ONE legal way on: a ramp's hairpin loop is still the only road — follow it (interchange chains stopped at every bend — owner). Raw edge names: the band fallback would borrow a neighbour's name
     return s>0.5?c.to:null; }                                                  // a name-change / turn onto another street: auto-roll ONLY if near-straight; a real turn (e.g. Fountain St → Henry Ave at 66°) stops to ask
