@@ -50,10 +50,12 @@ CLAUDE.md section before any ship.
   32 Node tests (4 new: shared median / openings / cut / closures) pass; browser-verified at all ten spots,
   desktop + 375×812. Headless scenery build cost +15–25 % (e.g. I-76 mid 83→103 ms, Kelly 354→420 ms);
   emulated-mobile HUD read 78–96 FPS (phase 1: 85–102) — a real-phone check is still owed.
-- [ ] **Ship the continuation fix** (branch `fix-continuation-one-way-on`, unmerged): a node whose only
-  physical branch is legal now rolls instead of asking left/right (West Coulter Street bending into Stokley
-  Street, owner phone report on v18u). Heals 777 sites citywide; hairpins, wrong-way-only branches, T
-  junctions and dead ends unchanged. Owner's call whether it goes out on its own or rides along with 2b.
+- [ ] **Ship the continuation + street-card fixes** (branch `fix-continuation-one-way-on`, unmerged): a node
+  whose only physical branch is legal rolls (West Coulter → Stokley), a merge into a through road rolls
+  (Krewstown Rd → Walley Ave), street-choice cards appear at 175 m / solid at 146 m with up to six on screen,
+  and every wrong-way street keeps its red card. Owner phone reports on v18u. Hairpins, wrong-way-only
+  branches, T junctions (incl. onto one-ways — the wrong-way option stays) and dead ends unchanged. Owner's
+  call whether it goes out on its own or rides along with 2b.
 - [ ] **Highway phase 2b — identity:** exit signs with numbers, route shields (I-76, US 1), overhead
   gantries at the gores, lighting masts, recognisable interchange details (the Twin Bridges, the
   City Ave stack).

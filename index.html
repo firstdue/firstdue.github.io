@@ -2044,7 +2044,7 @@ __b3d.push(function(){ // decks + rails at fixed deck height (do NOT conform to 
   if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(rn,3));
     scene.add(new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x3d6b52,side:THREE.DoubleSide}))); } });
 /* ---- floating street-name callout labels (Apple-Maps style; the cross street fades in as you approach it) ---- */
-const LBL={ pool:[], cache:{}, cap:6, showCap:2, rNear:55, rFar:130, float:1.4, H:1.35, acc:0, pastFade:20, refDist:55, maxGrow:1.9 };   // six pooled sprites, but at most two Chase street-choice cards on screen (small, subtle labels; grow keeps distant names legible)
+const LBL={ pool:[], cache:{}, cap:16, showCap:6, rNear:55, rFar:130, float:1.4, H:1.35, acc:0, pastFade:20, refDist:55, maxGrow:1.9 };   // sixteen pooled candidates: the look-ahead walk stops when it has filled them, and on Ridge through East Falls ten were used up ~350 m out, so Calumet St only surfaced 31 m before it, up to six street-choice cards on screen — far ones are faded and small, so on a dense stretch like Ridge through East Falls the sixth is a hint, not clutter (was two: a 4-way's two hundred blocks filled both slots, so the NEXT junction's card only appeared once you had passed this one — owner: "streets don't come up until I'm almost past them")
 function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 // Map-style abbreviation for the 3D callouts only (display text; the sprite still stores the full name for logic)
 const LBL_ABBR=[[/\bStreet\b/g,'St'],[/\bAvenue\b/g,'Ave'],[/\bLane\b/g,'Ln'],[/\bDrive\b/g,'Dr'],[/\bRoad\b/g,'Rd'],[/\bBoulevard\b/g,'Blvd'],[/\bPlace\b/g,'Pl'],[/\bCourt\b/g,'Ct'],[/\bTerrace\b/g,'Ter'],[/\bParkway\b/g,'Pkwy'],[/\bHighway\b/g,'Hwy'],[/\bCircle\b/g,'Cir'],[/\bSquare\b/g,'Sq'],[/\bExtension\b/g,'Ext'],[/\bMemorial\b/g,'Mem']];
@@ -2080,7 +2080,7 @@ const RAMP_SIGNS=[
 function updateStreetLabels(dt){
   if(!FLAGS.streetLabels || !state.running){ for(const sp of LBL.pool) sp.visible=false; return; }
   const spd=Math.max(8,DRIVE.speed||15);                                              // look further ahead the faster you drive, so a name still has time to read
-  LBL._far=Math.min(320, 70+spd*4.5); LBL._near=Math.min(LBL._far*0.72, 55+spd*3);   // solid well before the junction — you need time to decide
+  LBL._far=Math.min(340, 100+spd*5); LBL._near=Math.min(LBL._far*0.72, 70+spd*3);   // solid well before the junction — you need time to tap a card and take that street (owner, phone: was 70+4.5v / 55+3v — at 15 m/s that read as "almost past it")
   LBL.acc-=dt;
   if(LBL.acc<=0){ LBL.acc=0.12;                                                     // ~8x/sec: label ONLY the cross streets at junctions actually ahead on your road —
     const cand=[], seen={}, cur=streetName(truck.x,truck.z), curKey=canonStreet((DRIVE.parked&&DRIVE.faces)||cur); // a street you can't turn onto (parallel, unconnected) must never get a callout.
@@ -2099,7 +2099,7 @@ function updateStreetLabels(dt){
           if(named){ dest=named.name; break; }
           const nx=straightest(pa2,pb2); if(!nx) break;
           walked+=Math.hypot(nx.x-pb2.x,nx.z-pb2.z); pa2=pb2; pb2=nx; }
-        if(dest&&dest!==guess){ nm=dest; ramp=true; }                              // leads somewhere else → "RAMP TO <street>" card (City Ave ramps at Ridge were invisible: no name, no band, NO SIGN)
+        if(dest&&(dest!==guess||e.hw===2)){ nm=dest; ramp=true; }                    // leads somewhere else → "RAMP TO <street>" card (City Ave ramps at Ridge were invisible: no name, no band, NO SIGN). A freeway ramp is a ramp even when it already sits in its freeway's band — otherwise the wrong-way twin ramp at Ridge surfaced as a red 'Roosevelt Expressway 4100' street card
         else nm=guess; }                                                           // plain stub → keep the band name as before
       if(ramp&&e.wrong) return;                                                    // derived ramps follow the same rule as gantry ones: a wrong-way ramp gets no card
       if(!nm||nm==='—') return;
@@ -2136,7 +2136,9 @@ function updateStreetLabels(dt){
       if(branches.length>1) for(const e of branches){ addBranch(b,e,null,a); if(cand.length>=LBL.cap) break; } // every visible driving sign stores its exact junction + branch
       const nx=keepStreet(a,b); if(!nx) break; a=b; b=nx; }                                 // preview the same path the truck will actually take
     { const legal=new Set(); if(!DRIVE.parked&&curKey&&cur!=='—') legal.add(curKey);             // the street under the truck is legally present by definition — its divided-twin/opposite-
-      for(const c of cand) if(!c.wrong) legal.add(canonStreet(c.name));   // carriageway red cards are noise. And a red card is noise when the SAME street also has a legal card here (two-way road with
+                                                                                                   // carriageway red cards are noise, so those go. Every OTHER wrong-way street keeps its red card even when
+                                                                                                   // the same street has a legal card in another block (a one-way cross street: right is legal, left is red) —
+                                                                                                   // the owner wants to SEE and be able to take the wrong way deliberately; the same street+block is still one card (the legal one wins)
       for(let i=cand.length-1;i>=0;i--) if(cand[i].wrong&&legal.has(canonStreet(cand[i].name))) cand.splice(i,1); }   // one-way ramp fragments, or a divided twin in the next block) — red survives only for streets with no legal entry
     if(!DRIVE.parked&&DRIVE.fromN&&DRIVE.toN){ const de=DRIVE.fromN.adj.find(e=>e.to===DRIVE.toN);   // 🛣️ highway rules ON a ramp (owner): you're committed — no cross-street callouts (Kelly Dr under
       if(de&&!de.name){ const dn=canonStreet(rampDestName()||'');                                    // the deck), no cards for other ramps (Ridge, Lincoln). Only the sign for where THIS ramp
@@ -3135,7 +3137,9 @@ function roadContinuation(a,b){ if(!b) return null;
     if(!c.name && !(a.adj.find(e=>e.to===b)||{}).name) return c.to;            // an unnamed connector with ONE legal way on: a ramp's hairpin loop is still the only road — follow it (interchange chains stopped at every bend — owner). Raw edge names: the band fallback would borrow a neighbour's name
     return s>0.5?c.to:null; }                                                  // a name-change / turn onto another street: auto-roll ONLY if near-straight; a real turn (e.g. Fountain St → Henry Ave at 66°) stops to ask
   if(choices.length>1){ const scored=choices.map(e=>({e,s:branchForwardness(a,b,e.to)})).sort((p,q)=>q.s-p.s);
-    if(through(scored[0].e)) return null;                                      // straightest option is a turn onto a through road — stop and ask
+    if(through(scored[0].e)){                                                  // straightest option is a turn onto a through road — stop and ask…
+      const back=Math.max(...scored.filter(o=>o!==scored[0]&&o.e.name===scored[0].e.name).map(o=>o.s));   // …unless that road's OTHER direction lies behind us. Then this is not a crossing but a MERGE: our street simply
+      if(back>-0.25) return null; }                                              // carries on under a new name (Krewstown Rd → Walley Ave, W Ruscomb St → Windrim Ave) and LEFT/RIGHT would offer a reversal. The angle rules below still decide; a real T (Gates St → Henry Ave, both ways open) still stops (owner, phone, v18u)
     if(scored[0].s>0.55 && (scored[0].s-scored[1].s)>0.3) return scored[0].e.to;     // a clear straight-through name change (e.g. an interchange) — keep rolling
     if(scored[0].s>0.85 && scored[1].s<0.7) return scored[0].e.to;             // dead-ahead continuation with only a peel-off connector beside it (interchange chains stopped 'every few feet' — owner) — roll; a real Y-split (both near-straight) still stops
     if(!scored[0].e.name && !scored[1].e.name && scored[0].s>0.7 && scored[1].s>0.7){   // two unnamed near-straight branches that REJOIN within a few hops = parallel lanes of one ramp, not a fork — roll (the Ridge on-ramp mouth)
