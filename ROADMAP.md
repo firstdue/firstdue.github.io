@@ -67,7 +67,12 @@ CLAUDE.md section before any ship.
   draws shared canvas faces (≤39 textures), grey plates, cantilever gantries (5.7 m clearance), delineators
   and shoulder lighting from seven `HWY_LIGHTS` areas with no dynamic lights. Scenery build +2–3 %,
   identity build 2–6 ms; 46 Node tests (8 new, graph counts asserted unchanged); browser-verified at twelve
-  spots, desktop + 375×812. Not phone-tested.
+  spots, desktop + 375×812. Not phone-tested. **Addendum (same day, owner request):** approximate I-76
+  mileposts — `HWY_MILES` pins mile = 339.66 + s/1609.344 along the EB carriageway from the only offset range the
+  mileage-based exit numbers allow (±0.1 mi); HUD reads `I-76 EAST · MILE 340.6 · APPROX` (the tenth just
+  passed), `US 1 NORTH` on US 1; MILE plates every 0.1 mi on both shoulders; freeway cards read the signed
+  route / the sourced exit sign instead of a fabricated hundred block. Real mileposts replace this the day a
+  source exists.
 - [ ] **Highway phase 2c — expansion, only once the corridor stays stable:** extend the fetch bbox
   east past Broad St and south past Spring Garden, then Penrose/Platt and Roosevelt Boulevard, using
   the same supplemental-fetch + `hj` pipeline (no one-off fixes).

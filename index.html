@@ -1053,7 +1053,8 @@ function hundredBlock(x,z,name){ const ni=BLOCK.nameId.get(canonStreet(name)), g
     if(f[0]===ni&&fd<best){best=fd;value=f[1];} if(fd<fallback){fallback=fd;fallbackValue=f[1];} } }
   if(value&&best<450*450) return value; return fallback<28*28?fallbackValue:0; }
 function currentHundredBlock(x,z,name){ const q=BLOCK.last; if(q.name!==name||Math.hypot(x-q.x,z-q.z)>12){ q.x=x;q.z=z;q.name=name;q.value=hundredBlock(x,z,name); } return q.value; }
-function blockLine(v){ return v==='RAMP' ? 'RAMP TO' : (v ? v+' BLOCK' : 'BLOCK —'); }   // 'RAMP' marker: an unnamed connector labeled by the street it leads to
+function blockLine(v){ if(typeof v==='string'&&v!=='RAMP'&&v) return v;   // a freeway line ('I-76 EAST · MILE 340.6 · APPROX', 'US 1 NORTH') is already the whole caption
+  return v==='RAMP' ? 'RAMP TO' : (v ? v+' BLOCK' : 'BLOCK —'); }   // 'RAMP' marker: an unnamed connector labeled by the street it leads to
 // The street the ramp under the truck actually leads to: the queued gantry turn's label, then the
 // planned route's first named edge, then the straightest chain's first named street (same walk the
 // RAMP TO cards use). Null when the chain never reaches a name.
@@ -2209,7 +2210,39 @@ const HWY_LIGHTS=[
   { id:'city-ave', at:[-1300,280], r:320 }, { id:'ridge-ramp', at:[60,520], r:240 }, { id:'twin-bridges', at:[-150,660], r:260 },
   { id:'us1-split', at:[-660,600], r:220 }, { id:'montgomery', at:[-1250,2720], r:300 }, { id:'fox', at:[1330,-300], r:220 },
   { id:'wissahickon', at:[1700,-547], r:260 } ];
-const HWY_ID_SPEC={ gantryH:8.4, panelW:6.2, panelH:2.4, postH:4.6, postPanelW:3.4, postPanelH:2.1, goreW:1.5, goreH:1.25, shieldW:1.1, shieldH:1.55, lampH:9.6, lampEvery:45 };
+const HWY_ID_SPEC={ gantryH:8.4, panelW:6.2, panelH:2.4, postH:4.6, postPanelW:3.4, postPanelH:2.1, goreW:1.5, goreH:1.25, shieldW:1.1, shieldH:1.55, lampH:9.6, lampEvery:45, mileW:0.3, mileH:0.75, mileStep:0.1 };
+// APPROXIMATE MILEPOSTS (I-76 only; the owner asked for them knowing OSM has no milestone nodes on this corridor).
+// Mileage runs eastward along the baked EB carriageway from the City Ave city-line end: mile = m0 + s / 1609.344.
+// m0 is pinned by Pennsylvania's mileage-based exit numbers — each interchange must lie inside its exit's mile:
+// City Ave (339) at s≈55 m, US 1 (340B, midpoint of its two gores) at s≈1086, Montgomery Dr (341, ramp junctions)
+// at s≈3672, and the westbound 340A gore (s≈642) may not sit below mile 340. Feasible m0 339.60–339.72; the
+// midpoint 339.66 is used, so any reading is within about ±0.1 mile. tests/highway-identity.test.mjs re-derives this.
+const HWY_MILES={ road:'Schuylkill Expressway', ref:'I-76', start:[-1377,282], m0:339.66, last:{x:1e9,z:1e9,v:null} };
+let HWY_MILE_LINE=null;
+function hwyMileLine(){ if(HWY_MILE_LINE) return HWY_MILE_LINE; const R=HWY_MILES.road, line=[], eb=n=>n.adj.filter(e=>!e.wrong&&e.hw===1&&e.name===R&&e.to.z>n.z);   // I-76 EB is z-increasing everywhere in the bake
+  let n=hwyGnode(HWY_MILES.start[0],HWY_MILES.start[1]); if(!n) return HWY_MILE_LINE=line; let s=0, px=0, pz=0; const seen=new Set([n]); line.push({x:n.x,z:n.z,s:0});
+  for(let i=0;i<400;i++){ const es=eb(n).filter(e=>!seen.has(e.to)); if(!es.length) break;
+    if(es.length>1&&(px||pz)) es.sort((a,b)=>{ const al=Math.hypot(a.to.x-n.x,a.to.z-n.z)||1, bl=Math.hypot(b.to.x-n.x,b.to.z-n.z)||1; return ((b.to.x-n.x)*px+(b.to.z-n.z)*pz)/bl-((a.to.x-n.x)*px+(a.to.z-n.z)*pz)/al; });   // a lane split: keep straightest
+    const e=es[0], l=Math.hypot(e.to.x-n.x,e.to.z-n.z)||1; px=(e.to.x-n.x)/l; pz=(e.to.z-n.z)/l; s+=l; n=e.to; seen.add(n); line.push({x:n.x,z:n.z,s}); }
+  return HWY_MILE_LINE=line; }
+function hwyMileAt(x,z,maxD=45){ const L=hwyMileLine(); let best=null;                                        // {mile,s,d,dx,dz} at the nearest point of the reference line, or null away from I-76
+  for(let i=1;i<L.length;i++){ const a=L[i-1], b=L[i], c=closestSeg(x,z,{ax:a.x,az:a.z,bx:b.x,bz:b.z}); if(best&&c.d>=best.d) continue; const l=(b.s-a.s)||1; best={d:c.d,s:a.s+Math.hypot(c.cx-a.x,c.cz-a.z),dx:(b.x-a.x)/l,dz:(b.z-a.z)/l}; }
+  if(!best||best.d>maxD) return null; best.mile=HWY_MILES.m0+best.s/1609.344; return best; }
+function hwyMilePoint(s){ const L=hwyMileLine(); for(let i=1;i<L.length;i++){ if(L[i].s>=s){ const a=L[i-1], b=L[i], l=(b.s-a.s)||1, t=(s-a.s)/l; return {x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t,dx:(b.x-a.x)/l,dz:(b.z-a.z)/l}; } } return null; }
+let HWY_EXIT_CARDS=null;
+function hwyExitCard(node){ if(!HWY_EXIT_CARDS){ HWY_EXIT_CARDS=new Map();                                     // gore node -> {name, block} from the sign definitions (the gantry / post that serves that gore)
+    for(const gd of HWY_SIGNS){ if(gd.mount!=='gore') continue; const n0=hwyGnode(gd.at[0],gd.at[1]); if(!n0) continue; const n=hwyRampNode(n0,gd.road);
+      const sib=HWY_SIGNS.filter(d=>d!==gd&&d.mount!=='gore'&&d.road===gd.road&&d.at[0]===gd.at[0]&&d.at[1]===gd.at[1]&&d.panels);
+      let pn=null; for(const d of sib) for(const p of d.panels){ if(gd.exit&&p.exit===gd.exit) pn=p; else if(!gd.exit&&!pn&&p.arrow!=='down'&&(p.dest||[]).length) pn=p; } if(!pn) for(const d of sib) for(const p of d.panels){ if((p.dest||[]).length&&p.arrow!=='down') pn=p; }
+      if(!pn) continue; const parts=[]; if(pn.shields&&pn.card){ const cards=pn.card.split(' '); pn.shields.forEach((s,i)=>parts.push((s[0]==='I'?'I-':'US ')+s[1]+(cards[i]?' '+cards[i]:''))); } parts.push(...(pn.dest||[]));
+      HWY_EXIT_CARDS.set(n,{name:parts.join(' · '),block:gd.exit?'EXIT '+gd.exit:'EXIT'}); } }
+  return HWY_EXIT_CARDS.get(node)||null; }
+function hwyRouteLabel(e,from){ if(!e||e.hw!==1||!from) return null; const dx=e.to.x-from.x, dz=e.to.z-from.z;    // signed route + cardinal from the graph heading (I-76 EAST is +z, US 1 NORTH is +x in the bake)
+  if(e.name==='Schuylkill Expressway') return 'I-76 '+(dz>0?'EAST':'WEST'); if(e.name==='Roosevelt Expressway') return 'US 1 '+(dx>0?'NORTH':'SOUTH'); return 'EXPRESSWAY'; }
+function hwyHudBlock(e,from,x,z){ const route=hwyRouteLabel(e,from); if(!route) return null; if(e.name!==HWY_MILES.road) return route;   // the freeway's HUD line: the last APPROXIMATE milepost passed, instead of a hundred block it never had
+  const q=HWY_MILES.last; if(Math.hypot(x-q.x,z-q.z)>3||q.v===null){ q.x=x; q.z=z; const m=hwyMileAt(x,z); q.v=m?m.mile:null; } if(q.v===null) return route;
+  const east=(e.to.z-from.z)>0, tenth=east?Math.floor(q.v*10+1e-6)/10:Math.ceil(q.v*10-1e-6)/10;             // eastbound the miles rise (floor = the one just passed); westbound they fall (ceil)
+  return route+' · MILE '+tenth.toFixed(1)+' · APPROX'; }
 function hwyGnode(x,z){ return gnodes.get(x+','+z+',h')||gnodes.get(x+','+z)||null; }
 // Walk along the named carriageway from a node: back (against travel) or ahead (with travel). Returns the point,
 // the unit heading OF TRAVEL and the segment under it, or null when the walk leaves the road.
@@ -2315,7 +2348,11 @@ function hwySignFace(kind,panel,opts){ const key=kind+'|'+JSON.stringify(panel)+
   if(panel.exit&&kind!=='gore'){ const tw=S*(1.15+0.42*String(panel.exit).length), th=S*0.42; c.fillStyle=HWY_GREEN; c.fillRect(W-tw-S*0.2,S*0.02,tw,th); c.strokeStyle=HWY_GREEN_EDGE; c.lineWidth=S*0.04; c.strokeRect(W-tw-S*0.2,S*0.02,tw,th);
     c.fillStyle='#ffffff'; c.font='700 '+Math.round(S*0.3)+'px Arial,Helvetica,sans-serif'; c.textAlign='center'; c.fillText('EXIT '+panel.exit,W-tw/2-S*0.2,S*0.02+th/2); top=Math.max(top,S*0.5); }
   if(panel.exitOnly){ const yh=S*0.6; c.fillStyle=HWY_YELLOW; c.fillRect(S*0.1,H-yh-S*0.1,W-S*0.2,yh); c.fillStyle=HWY_INK; c.font='700 '+Math.round(S*0.34)+'px Arial,Helvetica,sans-serif'; c.textAlign='center'; c.fillText('EXIT ONLY',W/2-S*0.5,H-yh/2-S*0.1); hwyDrawArrow(c,'down',W/2+S*1.6,H-yh/2-S*0.1,S*0.42,HWY_INK); bottom=H-yh-S*0.2; }
-  if(kind==='gore'){ c.fillStyle='#ffffff'; c.textAlign='center'; c.font='700 '+Math.round(S*0.36)+'px Arial,Helvetica,sans-serif'; c.fillText('EXIT'+(panel.exit?' '+panel.exit:''),W/2,H*0.32); hwyDrawArrow(c,panel.side==='left'?'left':'exit',W/2,H*0.7,S*0.5,'#ffffff'); }
+  if(kind==='mile'){ const [whole,tenth]=String(panel.mile).split('.'); c.fillStyle='#ffffff'; c.textAlign='center';   // PA-style green reference marker: MILE / 340 / .6
+    c.font='700 '+Math.round(S*0.14)+'px Arial,Helvetica,sans-serif'; c.fillText('MILE',W/2,H*0.17);
+    c.font='700 '+Math.round(S*0.2)+'px Arial,Helvetica,sans-serif'; c.fillText(whole,W/2,H*0.47);
+    c.font='700 '+Math.round(S*0.26)+'px Arial,Helvetica,sans-serif'; c.fillText('.'+(tenth||'0'),W/2,H*0.79); }
+  else if(kind==='gore'){ c.fillStyle='#ffffff'; c.textAlign='center'; c.font='700 '+Math.round(S*0.36)+'px Arial,Helvetica,sans-serif'; c.fillText('EXIT'+(panel.exit?' '+panel.exit:''),W/2,H*0.32); hwyDrawArrow(c,panel.side==='left'?'left':'exit',W/2,H*0.7,S*0.5,'#ffffff'); }
   else { let x=S*0.28; const shields=panel.shields||[], to=panel.to||[];
     if(shields.length){ const sh=Math.min(bottom-top,S*1.3), sw=sh*0.8; for(const [sys,num] of shields){ hwyDrawShield(c,sys,num,x,top+(bottom-top-sh)/2-(panel.dest?S*0.05:0),sw,sh); x+=sw+S*0.16; }
       if(panel.card){ c.fillStyle=ink; c.font='700 '+Math.round(S*0.3)+'px Arial,Helvetica,sans-serif'; c.textAlign='left'; const cards=panel.card.split(' '); cards.forEach((cd,i)=>c.fillText(cd,x,top+S*0.22+i*S*0.34)); x+=S*(0.28*Math.max(...cards.map(t=>t.length))+0.3); }
@@ -2328,7 +2365,7 @@ function hwySignFace(kind,panel,opts){ const key=kind+'|'+JSON.stringify(panel)+
   const face={tex,w:W/S,h:H/S}; HWY_SIGN_TEX.set(key,face); return face; }
 // Build the identity scenery for one local build: sign panels (textured planes, front face toward the traffic),
 // grey backing plates, posts, cantilever gantry beams, gore markers, delineators, light masts and light pools.
-function hwyIdentityBuild(J,boxes,dummy){ const R=LOCAL.R, P=hwySignPlacements(), stats={signs:0,panels:0,gantries:0,posts:0,gores:0,delineators:0,masts:0,pools:0,textures:HWY_SIGN_TEX.size,dynamicLights:0};
+function hwyIdentityBuild(J,boxes,dummy){ const R=LOCAL.R, P=hwySignPlacements(), stats={signs:0,panels:0,gantries:0,posts:0,gores:0,delineators:0,mileposts:0,masts:0,pools:0,textures:HWY_SIGN_TEX.size,dynamicLights:0};
   const grey=[], beam=[], yellow=[], mast=[], lamp=[], pool=[];
   const panelMesh=(face,cx,cy,cz,dx,dz,tilt)=>{ const g=new THREE.PlaneGeometry(face.w,face.h); const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:face.tex,side:THREE.FrontSide}));
     m.position.set(cx,cy,cz); m.rotation.y=Math.atan2(-dx,-dz); m.renderOrder=4; FLATCITY.group.add(m); FLATCITY.parts.push(m);   // front (+z) faces AGAINST travel: the approaching driver reads it, never mirrored
@@ -2354,6 +2391,18 @@ function hwyIdentityBuild(J,boxes,dummy){ const R=LOCAL.R, P=hwySignPlacements()
     const panels=d.panels||[]; let yTop=py+HWY_ID_SPEC.postH; grey.push({x:post.x,y:py+HWY_ID_SPEC.postH/2,z:post.z,w:0.16,h:HWY_ID_SPEC.postH,l:0.16,ang,pitch:0}); stats.posts++;
     panels.forEach((pn,i)=>{ const q=pn.arrow==='split'?Object.assign({},pn,{arrow:(i===0?(p.exitSide==='left'?'right':'left'):(p.exitSide==='left'?'left':'right'))}):pn;
       const face=hwySignFace('guide',q,{w:HWY_ID_SPEC.postPanelW,h:HWY_ID_SPEC.postPanelH,side:p.exitSide,side2:p.side2||'left'}); const cy=yTop-face.h/2-i*(face.h+0.15); panelMesh(face,post.x,cy,post.z,p.dx,p.dz); }); }
+  // approximate mileposts: every 0.1 mile along the I-76 reference line, one plate on the right shoulder of EACH carriageway
+  { const L=hwyMileLine(); if(L.length>1){ const MI=1609.344, total=L[L.length-1].s, road=HWY_MILES.road;
+      const plant=(cx,cz,tx,tz,seg,mile)=>{ const c0=closestSeg(cx,cz,seg), hw=segHalf(seg); let nx=-(seg.bz-seg.az), nz=seg.bx-seg.ax; { const l=Math.hypot(nx,nz)||1; nx/=l; nz/=l; if(nx*(-tz)+nz*tx<0){ nx=-nx; nz=-nz; } }   // right of travel = (-dz, dx)
+        const onSpan=!!(navSpan(c0.cx,c0.cz,road,8,tx,tz)?.b.bridge), off=onSpan?hw+0.95:hw+2.2, px=c0.cx+nx*off, pz=c0.cz+nz*off;
+        if(hwyOnOtherPavement(px,pz,road)||hwyNearEnd(px,pz,20)||hwyNearJunction(c0.cx,c0.cz,null,10)) return;
+        for(const o of segNear(px,pz)){ if(o===seg||o.name!==road||!o.hw) continue; if((o.ax===seg.ax&&o.az===seg.az)||(o.ax===seg.bx&&o.az===seg.bz)||(o.bx===seg.ax&&o.bz===seg.az)||(o.bx===seg.bx&&o.bz===seg.bz)) continue; if(closestSeg(px,pz,o).d<segHalf(o)+0.3) return; }
+        const y=navRoadY(px,pz,road,tx,tz), face=hwySignFace('mile',{mile:mile.toFixed(1)},{w:HWY_ID_SPEC.mileW,h:HWY_ID_SPEC.mileH});
+        grey.push({x:px,y:y+0.65,z:pz,w:0.08,h:1.3,l:0.08,ang:Math.atan2(tx,tz),pitch:0}); panelMesh(face,px,y+1.3+face.h/2,pz,tx,tz); stats.mileposts++; };
+      for(let k=Math.ceil(HWY_MILES.m0*10-1e-6);k<=Math.floor((HWY_MILES.m0+total/MI)*10+1e-6);k++){ const mile=k/10, p=hwyMilePoint((mile-HWY_MILES.m0)*MI); if(!p||Math.hypot(p.x-J.cx,p.z-J.cz)>R) continue;
+        const es=hwySegUnder(p.x,p.z,p.dx,p.dz,road); if(es&&es.hw===1) plant(p.x,p.z,p.dx,p.dz,es,mile);                                        // eastbound carriageway
+        let ws=null, wd=60; for(const o of segNear(p.x,p.z)){ if(o.hw!==1||o.name!==road) continue; const ox=o.bx-o.ax, oz=o.bz-o.az, ol=Math.hypot(ox,oz)||1; if((ox*p.dx+oz*p.dz)/ol>-0.3) continue; const d=closestSeg(p.x,p.z,o).d; if(d<wd){ wd=d; ws=o; } }
+        if(ws){ let tx=ws.bx-ws.ax, tz=ws.bz-ws.az; const l=Math.hypot(tx,tz)||1; tx/=l; tz/=l; if(tx*p.dx+tz*p.dz>0){ tx=-tx; tz=-tz; } plant(p.x,p.z,tx,tz,ws,mile); } } } }   // westbound: the opposite carriageway beside it
   // lighting: masts on the right shoulder every ~45m inside the lit areas, additive pools of light on the pavement
   const poolTex=(()=>{ if(HWY_SIGN_TEX.get('pool')) return HWY_SIGN_TEX.get('pool'); const cv=document.createElement('canvas'); cv.width=cv.height=128; const c=cv.getContext('2d'); const g=c.createRadialGradient(64,64,4,64,64,62); g.addColorStop(0,'rgba(255,214,150,0.55)'); g.addColorStop(0.6,'rgba(255,200,120,0.18)'); g.addColorStop(1,'rgba(255,190,110,0)'); c.fillStyle=g; c.fillRect(0,0,128,128); const t=new THREE.CanvasTexture(cv); HWY_SIGN_TEX.set('pool',{tex:t,w:1,h:1}); return HWY_SIGN_TEX.get('pool'); })();
   const segs=new Set(); for(const l of segGrid.values()) for(const s of l) if(s.hw) segs.add(s);
@@ -2391,10 +2440,11 @@ function updateStreetLabels(dt){
         sg.signs.forEach((sn,i)=>{ const label=sn.label||sn, key='SIGN|'+label; if(seen[key]!==undefined) return; seen[key]=cand.length;
           cand.push({name:label,block:'RAMP',x:lx,z:lz,pick,wrong:!!e.wrong,sameRoadTurn:false,sign:true,stack:i,dest:sn.dest||null}); });   // each card selects the ramp AND plans the legal route to its destination
         return; }
-      let nm=e.name, ramp=false;
+      let nm=e.name, ramp=false, exitBlock=null;
+      if(!nm&&e.hw===2){ const ex=hwyExitCard(node); if(ex){ nm=ex.name; ramp=true; exitBlock=ex.block; } }   // 🪧 a freeway exit reads its real sign: 'EXIT 340B / US 1 NORTH · Roosevelt Blvd' (sourced in HWY_SIGNS)
       if(!nm){ const guess=streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);        // unnamed edge: a noding stub of the street whose band it sits in — OR a ramp/connector chain.
         let dest=null,pa2=node,pb2=e.to,walked=Math.hypot(e.to.x-node.x,e.to.z-node.z),g=0;   // walk the chain to the first REALLY-named street: that's where the ramp factually leads
-        while(g++<12&&walked<450){ const named=pb2.adj.find(e2=>e2.to!==pa2&&e2.name);
+        while(g++<(e.hw===2?60:12)&&walked<(e.hw===2?1500:450)){ const named=pb2.adj.find(e2=>e2.to!==pa2&&e2.name);   // a freeway ramp can run 1 km before it meets a named road (I-76 EB → US 1 N): walk it out, or the card degrades to a fake same-road block
           if(named){ dest=named.name; break; }
           const nx=straightest(pa2,pb2); if(!nx) break;
           walked+=Math.hypot(nx.x-pb2.x,nx.z-pb2.z); pa2=pb2; pb2=nx; }
@@ -2406,7 +2456,7 @@ function updateStreetLabels(dt){
       if(sameRoadTurn&&(!from||keepStreet(from,node)===e.to))return;
       const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1;
       const off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));             // at the house keep the sign close to the corner, inside the Chase frame
-      const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=ramp?'RAMP':hundredBlock(lx,lz,nm),key=canonStreet(nm)+'|'+block;
+      const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=ramp?(exitBlock||'RAMP'):(e.hw===1?hwyRouteLabel(e,node):hundredBlock(lx,lz,nm)),key=canonStreet(nm)+'|'+block;   // a carriageway card reads 'I-76 EAST', never a fabricated block
       const pick=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null);
       const prev=seen[key];                                                       // one card per street+block: a two-way road's split one-way ramps (Falls Bridge south end) were doubling it
       if(prev!==undefined){                                                       // with a red twin. If both a legal and a wrong-way branch exist, the LEGAL one is the card;
@@ -3095,7 +3145,8 @@ document.getElementById('btnDrill').addEventListener('click',e=>{ e.preventDefau
 let hurryShown=false;
 function updateHUD(dt){
   const rp=[truck.x,truck.z];   // the street/block pill reads at the truck
-  const curStreet=streetName(rp[0],rp[1]),curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
+  const curStreet=streetName(rp[0],rp[1]); let curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
+  { const e=DRIVE.fromN&&DRIVE.toN?DRIVE.fromN.adj.find(a=>a.to===DRIVE.toN):null; const hb=hwyHudBlock(e,DRIVE.fromN,rp[0],rp[1]); if(hb) curBlock=hb; }   // 🛣️ freeway: 'I-76 EAST · MILE 340.6 · APPROX'
   elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+(FPSM.avg?' · '+(FPSM.avg|0)+' FPS · dip '+((FPSM.shownMin===999?FPSM.avg:FPSM.shownMin)|0):'')+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
   { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = '📻 DISPATCH » '; }   // boundary/training mode is not a live call
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
