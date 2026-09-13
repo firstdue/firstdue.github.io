@@ -56,8 +56,8 @@ CLAUDE.md section before any ship.
   and every wrong-way street keeps its red card. Owner phone reports on v18u. Hairpins, wrong-way-only
   branches, T junctions (incl. onto one-ways — the wrong-way option stays) and dead ends unchanged. Owner's
   call whether it goes out on its own or rides along with 2b.
-- [x] **Highway phase 2b — identity (September 12, 2026; branch `highway-phase2b-identity` from v18v
-  `77f7138`, unpublished, BUILD still v18v).** `HWY_SIGNS` holds 37 road-relative sign definitions, every
+- [x] **Highway phase 2b — identity (September 12, 2026; published the same day as v18w, `main` `68bf724`,
+  tag `v18w`, sw cache v7).** `HWY_SIGNS` holds 37 road-relative sign definitions, every
   line sourced to an OSM tag or the owner's Ridge Ave photo (`src`): I-76 exits 339 / 340A / 340B / 341
   with gore signs and lane-assignment gantries (EXIT ONLY panels), US 1 gantries at Fox St, Ridge Ave and
   Wissahickon Ave S, reassurance shields, City Ave / Fox St / W Abbottsford trailblazers. Mile markers,
