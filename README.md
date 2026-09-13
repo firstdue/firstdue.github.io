@@ -1,6 +1,6 @@
 # Philly Fire Dispatch — Local
 
-**Current: PUBLIC = v19a (September 13, 2026).** Interstate 76 and the US 1 Roosevelt Expressway are
+**Current: PUBLIC = v19b (September 13, 2026).** Interstate 76 and the US 1 Roosevelt Expressway are
 drivable, with their ramps, interchanges and bridges. They carry real lane-count widths, medians,
 guardrails and piers, and now their own identity: green guide signs and exit gantries whose wording
 comes from OpenStreetMap tags, gore markers at the splits, I-76 and US 1 route shields, shoulder
@@ -42,6 +42,13 @@ folder and published here, one owner phone test per build:
 owner-supplied photos: Lincoln Drive's stone railway arch, Kelly Drive's retaining wall, green City
 Avenue girders, guardrails, wooded shoulders, and richer Engine 35 facades. It does not change the
 road graph, navigation heights, routing, or street geometry.
+
+**v19b (September 13, 2026) — interchange ramp detail.** The ramps at City Avenue / Lincoln Drive / Kelly
+Drive carried no lane markings at all, which is why they read as bare grey slabs. A ramp is a one-way
+carriageway, so it now has a yellow line on the left and a white line on the right, and where it runs on the
+ground it gets a paved shoulder and a graded earth slope out to the terrain instead of ending abruptly in mid
+air. Where the ramp is up on its deck the existing parapets still do that job. Scenery only — the road graph,
+road heights and every marking on a named street are unchanged.
 
 **v19a (September 13, 2026) — corridor guide visibility.** Around the City Avenue / Lincoln Drive / Kelly
 Drive interchange the blue advisory guide now measures itself against the rendered pavement instead of the
@@ -178,13 +185,14 @@ A phone-friendly Philadelphia fire-engine navigation game. Choose a real company
 
 Project handoff snapshot, September 13, 2026:
 
-- **Published: v19a. PUBLIC = LOCAL** — the owner's authoring folder and this repository match.
+- **Published: v19b. PUBLIC = LOCAL** — the owner's authoring folder and this repository match.
   v18t–v18w were authored in the folder and published here: the I-76 / US 1 freeway corridor and
   its graph and elevation (v18t), structure (v18u), driving fixes (v18v), and identity — sourced
   signs, gantries, gore markers, shoulder lighting and real mileposts (v18w). v18x then adds
   the City / Lincoln / Kelly scenery pass and Engine 35 facade detail; v18y the corridor pass 2
   (viaduct arcade, Lincoln barriers and median, gore chevrons, gantries, lighting), v18z the street-choice
-  card fixes, and v19a the corridor guide-visibility fix; service-worker cache v11.
+  card fixes, v19a the corridor guide-visibility fix, and v19b the interchange ramp paint and shoulder;
+  service-worker cache v12.
 - The build tag in the HUD (top left, next to SAVES) is the fastest way to tell whether a phone has
   picked up a deploy or is serving a cached page.
 - Intersection Recall is the active TRAIN MY LOCAL drill: a named street intersection with no

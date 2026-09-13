@@ -135,7 +135,13 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19a (September 13, 2026), corridor guide visibility.** Near the City Ave / Lincoln Dr / Kelly Dr
+- **The build is v19b (September 13, 2026), interchange ramp detail.** `RAMP_DETAIL` gives the unnamed ramps
+  inside the City Ave / Lincoln Dr / Kelly Dr bbox a yellow-left / white-right edge line and a paved shoulder plus
+  graded embankment where they run on grade. Scenery only. **Both guards matter:** the edge line is probed along
+  its whole piece at its own offset, and the shoulder band across its full width including the inner seam — a
+  midpoint-or-outer-edge check bleeds onto Ridge Ave and Kelly Dr. Ramp paint is bbox-limited on purpose; citywide
+  would touch every unnamed cls-4 connector and needs its own look pass. Service-worker cache v12.
+- **v19a (September 13, 2026), corridor guide visibility.** Near the City Ave / Lincoln Dr / Kelly Dr
   interchange the guide is held above the RENDERED road triangles (an index rebuilt with the scenery), not just the
   sampled `navRoadY`, and subdivides to 5 m there; a height difference is only accepted for the same exact road
   name, so the unnamed ramp still passes under City Ave. Crosswalks are skipped at bridge and unnamed-ramp

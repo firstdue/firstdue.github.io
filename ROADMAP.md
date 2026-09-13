@@ -1,8 +1,13 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 13, 2026. **v19a is public and matches the authoring build** — commit
-`71a25c4`, service-worker cache `local-shell-v11`. The authoritative graphics handoff and source
+Planning snapshot: September 13, 2026. **v19b is public and matches the authoring build** — commit
+`46b9b56`, service-worker cache `local-shell-v12`. The authoritative graphics handoff and source
 references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+
+- [x] **v19b interchange ramp detail (September 13, 2026):** from a render study of Google Maps' Immersive
+  Navigation cues, of which the owner picked two — ramp lane paint (a yellow-left / white-right edge line; ramps
+  had no markings at all) and a paved shoulder with a graded embankment. The contact shadow and a global haze were
+  rejected. Scenery only, limited to the interchange; citywide ramp paint still needs its own look pass.
 
 - [x] **v19a corridor guide visibility (September 13, 2026):** from 23 owner in-game phone screenshots of the
   City Ave / Lincoln Dr / Kelly Dr ramp — the advisory guide is measured against the rendered pavement so it stops
