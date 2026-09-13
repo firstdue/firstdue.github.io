@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3754,6 +3754,36 @@ const LOCAL={ R:760, step:17, maxB:1400, maxT:420, maxS:1100 };
    `companyId` stays as the single-company fallback so the treatment can be narrowed again from one
    place if a location turns out to need work. */
 const STREETSCAPE={all:true,companyId:'e35',facade:null};
+// Local visual review: illustrative architecture, not surveyed building footprints.
+const STREET_DETAIL={companyId:'e35',enabled:true,facades:[]};
+function streetDetailFacade(kind){
+  if(STREET_DETAIL.facades[kind])return STREET_DETAIL.facades[kind];
+  const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d');
+  const stone=kind===2, shop=kind===3;
+  g.fillStyle=stone?'#ded9cc':kind===1?'#c9ad97':'#d3b9a5';g.fillRect(0,0,256,256);
+  const course=stone?20:8,brick=stone?48:24;
+  g.strokeStyle=stone?'#b6b1a6':'#b69983';g.lineWidth=1;
+  for(let y=0;y<256;y+=course){g.beginPath();g.moveTo(0,y);g.lineTo(256,y);g.stroke();
+    for(let x=((y/course)%2)*brick/2;x<256;x+=brick){g.beginPath();g.moveTo(x,y);g.lineTo(x,y+course);g.stroke();}}
+  // Dark plinth and layered cornice give depth without extra meshes or lights.
+  g.fillStyle='#756c62';g.fillRect(0,244,256,12);g.fillRect(0,9,256,5);
+  g.fillStyle='#eee4d2';g.fillRect(0,3,256,6);g.fillRect(0,177,256,5);
+  const cols=kind===1?[27,105,183]:[34,158],ww=kind===1?44:64;
+  for(const y of [29,105])for(const x of cols){
+    g.fillStyle='#9b8c7d';g.fillRect(x-4,y-4,ww+8,60);
+    g.fillStyle='#293b46';g.fillRect(x,y,ww,51);
+    g.fillStyle='#66828d';g.fillRect(x+4,y+4,ww/2-6,21);
+    g.fillStyle='#425d6c';g.fillRect(x+ww/2+2,y+4,ww/2-6,43);
+    g.fillStyle='#d8d1c0';g.fillRect(x+ww/2-1,y,3,51);g.fillRect(x,y+25,ww,3);
+    g.fillStyle='#eee6d5';g.fillRect(x-6,y+51,ww+12,5);
+  }
+  g.fillStyle='#443e38';g.fillRect(109,194,38,50);g.fillStyle='#74909a';g.fillRect(115,201,26,18);
+  for(const x of [25,173]){g.fillStyle='#334954';g.fillRect(x,197,58,39);g.fillStyle='#7d969a';g.fillRect(x+4,201,22,30);}
+  if(shop){g.fillStyle='#46645d';g.fillRect(15,184,226,12);g.fillStyle='#d2c6a9';
+    for(let x=18;x<240;x+=24)g.fillRect(x,184,10,12);} // unbranded awnings; no invented businesses
+  const tex=new THREE.CanvasTexture(c);tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  STREET_DETAIL.facades[kind]=tex;return tex;
+}
 function streetscapeFacade(){
   if(STREETSCAPE.facade) return STREETSCAPE.facade;
   const c=document.createElement('canvas'); c.width=256; c.height=256; const g=c.getContext('2d');
@@ -3807,7 +3837,7 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
       if(Math.hypot(o.ax-q[0],o.az-q[1])<3||Math.hypot(o.bx-q[0],o.bz-q[1])<3) continue;             // shares an endpoint — the first pass already counted it
       const ohw=segHalf(o);
       if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; break; } } } }
-  return {cx,cz,list,ends,ek,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
+  return {cx,cz,list,ends,ek,detail:STREET_DETAIL.enabled&&DRIVE.stationId===STREET_DETAIL.companyId,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
 }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
@@ -3875,6 +3905,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
         const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=rh+3.2+reach;
         const bx=Math.round(px+nx*off*side), bz=Math.round(pz+nz*off*side), k=gk(bx,bz);
         if(grid.has(k)||inWater(bx,bz)||landBlocksBuilding(bx,bz,reach)||railNear(bx,bz,reach+4)||navSpan(bx,bz,null,reach+22)?.b.bridge) continue;
+        if(CORRIDOR_PHOTO.enabled&&s.name==='Lincoln Drive'&&pz>-780&&pz<-330)continue; // owner photo sequence: wooded shoulders before Gypsy Lane, no generated houses
         if(nearRoadEdge(bx,bz)<reach*(J.immersive?1.04:0.8)) continue;                     // rotated sample clears every roadway by its full bounding radius
         let clear=true; for(const st of stations){ if((st.curated||st.id===DRIVE.stationId)&&Math.hypot(bx-st.x,bz-st.z)<62){ clear=false; break; } }   // keep the curated + ACTIVE firehouse forecourts open (the station house mesh stands there now)
         if(clear && STHOUSE.group){ const q=STHOUSE.group.position, r2=(STHOUSE.halfW||20)+14;   // explicit footprint around the built station
@@ -3891,6 +3922,12 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
     if(landKind(x,z)!=='wood'||inWater(x,z)||nearRoadEdge(x,z)<6||railNear(x,z,3.5)||navSpan(x,z,null,20)?.b.bridge||grid.has(gk(x,z)))continue;
     if(stations.some(st=>(st.curated||st.id===DRIVE.stationId)&&Math.hypot(x-st.x,z-st.z)<62))continue;
     grid.set(gk(x,z),1);T.push({x,z,s:1.25+rv*.45,forest:true});J.forestCount++;}
+  if(!J.photoTrees&&CORRIDOR_PHOTO.enabled){J.photoTrees=true;let added=0;
+    for(const s of J.list){if(s.name!=='Lincoln Drive'||!photoCorridorRoad(s))continue;const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz)||1;
+      for(let t=8;t<L&&added<100;t+=20)for(const side of [-1,1]){const off=segHalf(s)+12,x=Math.round(s.ax+dx*t/L-dz/L*off*side),z=Math.round(s.az+dz*t/L+dx/L*off*side);
+        if(added>=100||z<-780||z>-330||(x-cx)**2+(z-cz)**2>R2||grid.has(gk(x,z))||inWater(x,z)||landKind(x,z)==='open'||nearRoadEdge(x,z)<7||railNear(x,z,6))continue;
+        grid.set(gk(x,z),1);T.push({x,z,s:1.3+hash2(x,z)*.35,forest:true});added++;}}
+  }
   // 🛣️ Road surface + markings, one street per resume-check. This geometry lived inside commit
   // until v18o and was 45–97ms there in dense areas (measured) — with terrain live citywide, the
   // navRoadY subdivision + paint draping is the single biggest rebuild cost, so it is generated
@@ -3900,6 +3937,55 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   return true;
 }
 function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCity(J,1e9)); return J; }   // synchronous (first build only)
+// Owner reference sequence: firetruck pictures/Lincoln Dr and City ave, Sep 10/12 2026.
+// Scenery coordinates follow the baked roads/rail. Heights and member sizes are visual estimates.
+const CORRIDOR_PHOTO={enabled:true,arch:{x:-1150,z:-291,ux:0.9397,uz:0.342,half:19},
+  src:'Screenshot_2026-09-10-15-51-52-60 (stone arch); 2026-09-12-20-43-03-03 (Kelly wall); 2026-09-10-15-48-09-73 (green steel); 2026-09-10-15-52-27-22 (wooded Lincoln)'};
+function photoStoneTexture(){if(CORRIDOR_PHOTO.stone)return CORRIDOR_PHOTO.stone;
+  const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d');g.fillStyle='#625d50';g.fillRect(0,0,256,256);
+  for(let row=0;row<8;row++)for(let col=-1;col<6;col++){const x=col*52+(row%2)*26,y=row*32,v=Math.floor(hash2(row+7,col+11)*30)+135;g.fillStyle=`rgb(${v},${v-5},${v-21})`;g.fillRect(x+1,y+1,50,30);g.fillStyle='rgba(255,255,235,.15)';g.fillRect(x+2,y+2,48,2);}
+  const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(.16,.16);tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());CORRIDOR_PHOTO.stone=tex;return tex;}
+function photoRailFloor(x,z){if(!CORRIDOR_PHOTO.enabled)return -Infinity;const a=CORRIDOR_PHOTO.arch,d=Math.hypot(x-a.x,z-a.z);return d<65?24-Math.max(0,d-25)*0.15:-Infinity;}
+function photoCorridorRoad(s){return CORRIDOR_PHOTO.enabled&&((s.name==='Lincoln Drive'&&s.az>-800&&s.bz>-800&&s.az<-190&&s.bz<-190)||(s.name==='Kelly Drive'&&s.ax<-850&&s.bx<-850&&s.az<200&&s.bz<200));}
+function photoCorridorBuild(J,dummy){
+  if(!CORRIDOR_PHOTO.enabled||!NAVGEO.active||Math.hypot(J.cx+1110,J.cz+150)>LOCAL.R+750)return;
+  const steel=[],posts=[],walls=[],caps=[];const seen=new Set();
+  // Guardrails only at exposed outer edges. Probe the full piece to leave every junction open.
+  for(const s of J.list){if(!photoCorridorRoad(s))continue;const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz);if(L<3)continue;
+    const ux=dx/L,uz=dz/L,ang=Math.atan2(dx,dz),hw=segHalf(s),N=Math.ceil(L/6),pl=L/N;
+    for(let i=0;i<N;i++)for(const side of [-1,1]){const t=(i+.5)/N,cx=s.ax+dx*t,cz=s.az+dz*t,off=hw+1.1,x=cx-uz*off*side,z=cz+ux*off*side;
+      if(Math.hypot(x-J.cx,z-J.cz)>LOCAL.R)continue;const key=Math.round(x/3)+':'+Math.round(z/3);if(seen.has(key))continue;
+      if([-0.5,0,0.5].some(k=>nearRoadEdge(x+ux*pl*k,z+uz*pl*k)<0.65))continue;
+      const y0=navRoadY(cx-ux*pl/2,cz-uz*pl/2,s.name),y1=navRoadY(cx+ux*pl/2,cz+uz*pl/2,s.name),y=(y0+y1)/2,pitch=-Math.atan2(y1-y0,pl);
+      if(navSpan(cx,cz,s.name,3)?.b.bridge)continue;seen.add(key);
+      // Kelly southbound wall is on the inland/east side of the western curved carriageway.
+      const retaining=s.name==='Kelly Drive'&&cx<-1170&&cz>-190&&cz<5&&x>cx;
+      if(retaining){const h=4.6;walls.push({x,z,y:y+h/2,w:.55,h,l:pl*1.02,ang,pitch});caps.push({x,z,y:y+h+.10,w:.72,h:.20,l:pl*1.02,ang,pitch});}
+      else{steel.push({x,z,y:y+.78,w:.18,h:.28,l:pl*1.02,ang,pitch});posts.push({x,z,y:y+.4,w:.14,h:.9,l:.16,ang,pitch:0});}
+    }
+  }
+  // The stone arch follows the Norristown Line crossing; one shared opening clears both
+  // drawn Lincoln carriageways. Rail scenery alone gets the crown floor, never navRoadY.
+  const a=CORRIDOR_PHOTO.arch;
+  if(Math.hypot(J.cx-a.x,J.cz-a.z)<LOCAL.R){
+    const g=navRoadY(a.x,a.z,'Lincoln Drive'),H=22.8,span=24,shape=new THREE.Shape();
+    shape.moveTo(-span,g-2);shape.lineTo(-span,H);shape.lineTo(span,H);shape.lineTo(span,g-2);shape.lineTo(a.half,g-2);shape.lineTo(a.half,g+3.5);
+    for(let i=0;i<=32;i++){const t=i*Math.PI/32;shape.lineTo(a.half*Math.cos(t),g+3.5+6.2*Math.sin(t));}
+    shape.lineTo(-a.half,g-2);shape.lineTo(-span,g-2);
+    const geo=new THREE.ExtrudeGeometry(shape,{depth:8,bevelEnabled:false,steps:1});geo.translate(0,0,-4);
+    const mesh=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:0xffffff,map:photoStoneTexture()}));mesh.position.set(a.x,0,a.z);mesh.rotation.y=-Math.atan2(a.uz,a.ux);mesh.name='photo-lincoln-stone-arch';FLATCITY.group.add(mesh);FLATCITY.parts.push(mesh);
+    // Voussoirs outline the masonry opening on both faces; each block follows the ellipse.
+    const stones=new THREE.InstancedMesh(new THREE.BoxGeometry(1.6,.65,.22),new THREE.MeshLambertMaterial({color:0xffffff}),48),col=new THREE.Color();let si=0;
+    for(const side of [-1,1])for(let i=0;i<24;i++){const t=(i+.5)*Math.PI/24,u=(a.half+.4)*Math.cos(t),y=g+3.5+6.6*Math.sin(t);
+      dummy.position.set(a.x+a.ux*u-a.uz*4.12*side,y,a.z+a.uz*u+a.ux*4.12*side);dummy.rotation.set(0,-Math.atan2(a.uz,a.ux),Math.atan2(-6.6*Math.cos(t),a.half*Math.sin(t)),'YXZ');dummy.scale.set(1,1,1);dummy.updateMatrix();
+      stones.setMatrixAt(si,dummy.matrix);stones.setColorAt(si++,col.setHex(i%3?0xb2a68b:0x978c73));}
+    stones.instanceMatrix.needsUpdate=true;stones.name='photo-arch-stones';FLATCITY.group.add(stones);FLATCITY.parts.push(stones);
+  }
+  for(const [list,color,name] of [[steel,0xa8b4b0,'guardrails'],[posts,0x747c76,'posts'],[walls,0xb7b0a0,'kelly-wall'],[caps,0xd1c8b4,'wall-caps']]){if(!list.length)continue;
+    const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);m.name='photo-'+name;
+    list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);
+  }
+}
 function buildFlatCity(){ if(FLATCITY.built) return; FLATCITY.built=true;
   const gw=(WB.maxX-WB.minX)+1600, gd=(WB.maxZ-WB.minZ)+1600, gcx=(WB.minX+WB.maxX)/2, gcz=(WB.minZ+WB.maxZ)/2;   // base ground under everything so the horizon isn't empty past the live tiles
   const grd=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),new THREE.MeshBasicMaterial({color:0xe7e3d8})); grd.rotation.x=-Math.PI/2; grd.position.set(gcx,-0.06,gcz); grd.renderOrder=-1; FLATCITY.group.add(grd);
@@ -4100,6 +4186,7 @@ FLATCITY.requestRebuild=function(cx,cz){ if(FLATCITY.job) return;               
 FLATCITY.rebuild=function(cx,cz){ FLATCITY.job=null; FLATCITY.cx=cx; FLATCITY.cz=cz; FLATCITY.commit(genLocalCity(cx,cz)); };
 FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Color();
   FLATCITY.companyId=DRIVE.stationId; FLATCITY.immersive=J.immersive;
+  FLATCITY.detail=!!J.detail;
   for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); o.geometry.dispose(); o.material.dispose(); }
   FLATCITY.parts=[];
   const B=J.B, T=J.T, S=J.S;
@@ -4115,7 +4202,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
           if(Math.hypot(px-J.cx,pz-J.cz)>LOCAL.R)continue;
           const y0=deckY(b,(segStart+s0)/BL),y1=deckY(b,(segStart+s1)/BL),py=(y0+y1)/2,pp=-Math.atan2(y1-y0,pl);
           deck.push({x:px,y:py-0.5,z:pz,w:hw*2+2,h:0.9,l:pl,ang,pitch:pp});
-          if(b.name==='City Avenue'&&Math.hypot(px+1166,pz-123)<150)for(const side of [-0.66,0,0.66])roadGirder.push({x:px-uz*hw*side,y:py-1.02,z:pz+ux*hw*side,w:0.34,h:1.15,l:pl,ang,pitch:pp}); // photo-matched dark steel beams beneath City Ave at the ramp interchange (world-coord test, not way ids — survives re-bakes; the next City Ave span sits 190m+ away)
+          if(b.name==='City Avenue'&&Math.hypot(px+1166,pz-123)<150)for(const side of [-0.66,0,0.66])roadGirder.push({x:px-uz*hw*side,y:py-1.02,z:pz+ux*hw*side,w:0.34,h:1.15,l:pl,ang,pitch:pp}); // owner photos: green steel below the concrete deck
           for(const side of [-1,1]){const ox=-uz*side,oz=ux*side;                            // 🌉 bridge furniture per side (owner Street View: solid concrete parapets, not thin bars):
             para.push({x:px+ox*(hw+0.55),y:py+0.5,z:pz+oz*(hw+0.55),w:0.32,h:1.0,l:pl,ang,pitch:pp});      // solid parapet wall, deck to +1.0m
             rails.push({x:px+ox*(hw+0.55),y:py+1.08,z:pz+oz*(hw+0.55),w:0.46,h:0.16,l:pl,ang,pitch:pp});   // coping cap with a slight overhang
@@ -4177,7 +4264,8 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             // bridge is above ground by definition — floor the deck at local ground + 6m so spans
             // clear the streets they cross (estimate, like all deck heights here).
             const g0=navGroundY(px-ux*pl/2,pz-uz*pl/2)+6,g1=navGroundY(px+ux*pl/2,pz+uz*pl/2)+6;
-            if(y0<g0)y0=g0;if(y1<g1)y1=g1;}
+            if(y0<g0)y0=g0;if(y1<g1)y1=g1;
+            if(rw.id===42705851||rw.id===98619777){y0=Math.max(y0,photoRailFloor(px-ux*pl/2,pz-uz*pl/2));y1=Math.max(y1,photoRailFloor(px+ux*pl/2,pz+uz*pl/2));}}
           else{y0=navTerrain(px-ux*pl/2,pz-uz*pl/2)-navRailCutDepth(px-ux*pl/2,pz-uz*pl/2);y1=navTerrain(px+ux*pl/2,pz+uz*pl/2)-navRailCutDepth(px+ux*pl/2,pz+uz*pl/2);}
           const y=(y0+y1)/2,pitch=-Math.atan2(y1-y0,pl),pll=pl*1.06;
           if(rw.bridge){rDeck.push({x:px,y:y-0.6,z:pz,w:5.2,h:1.2,l:pll,ang,pitch});
@@ -4198,7 +4286,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
               rCutWall.push({x:wx,y:y+h/2,z:wz,w:0.42,h,l:pll,ang,pitch:0});}
           }
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
-    for(const [list,color] of [[deck,0x828b8c],[rails,0xd0cdc4],[piers,0x91958b],[truss,0xdcded9],[para,0xbdbab1],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,0x4f5961],[roadGuard,0xaeb7b5],[guardPost,0x7a7d80]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+    for(const [list,color] of [[deck,0x828b8c],[rails,0xd0cdc4],[piers,0x91958b],[truss,0xdcded9],[para,0xbdbab1],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961],[roadGuard,0xaeb7b5],[guardPost,0x7a7d80]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
       list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
   }
   if(NAVGEO.active){
@@ -4254,12 +4342,16 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
     hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }
   hwyIdentityBuild(J,null,dummy);                                                                        // 🪧 highway identity (phase 2b): guide signs, gantries, gore markers, trailblazers, shoulder lighting
+  photoCorridorBuild(J,dummy);
   if(J.hwClose) for(const [list,color] of [[J.hwClose[0],0xe8862c],[J.hwClose[1],0xf2f2ec]]){ if(!list.length) continue;   // ⛔ corridor-end barriers (orange / white stripes)
     const hc=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hc.setMatrixAt(i,dummy.matrix); });
     hc.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hc); FLATCITY.parts.push(hc); }
   const wallPal=J.immersive?[0xc8997f,0xdac7ad,0xb88773,0xd0c9be,0xc7ad93,0xe2d8c5,0xbeb5a6]:[0xeceae4,0xe3e1da,0xe8e6df,0xdfe1e4,0xe9e7e0,0xdcdad2,0xe2e4e7], roofPal=J.immersive?[0x69717a,0x7e807e,0x626d78,0x8d8980]:[0xc4c1b8,0xcbc8bf,0xb8bbc1,0xcfccc3,0xbdc0c5];
-  if(B.length){ const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:J.immersive?streetscapeFacade():null})),B.length);
+  if(B.length){ const kinds=J.detail?4:1,counts=Array(kinds).fill(0),slots=Array(kinds).fill(0);
+    const kindOf=b=>J.detail?Math.floor(hash2(b.x,b.z)*10000)%kinds:0;
+    B.forEach(b=>counts[kindOf(b)]++);
+    const walls=counts.map((n,k)=>new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:J.detail?streetDetailFacade(k):J.immersive?streetscapeFacade():null})),n));
     const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),B.length);
     B.forEach((b,i)=>{ const bh=b.h,seed=J.immersive?Math.floor(hash2(b.x,b.z)*10000):i; const gy=navGroundY(b.x,b.z);
       // Hillside foundation: keep the roofline at the centre's ground + height, but extend the walls
@@ -4267,17 +4359,20 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       let drop=0; if(NAVGEO.active){ const a=b.ang||0,ca=Math.cos(a),sa=Math.sin(a),hw=b.w/2,hd=b.d/2; let gmin=gy;
         for(const [ox,oz] of [[hw,hd],[hw,-hd],[-hw,hd],[-hw,-hd]]){ const g=navGroundY(b.x+ox*ca+oz*sa,b.z-ox*sa+oz*ca); if(g<gmin)gmin=g; }
         drop=Math.min(10,gy-gmin); }
-      dummy.position.set(b.x,gy+bh/2-drop/2,b.z); dummy.scale.set(b.w,bh+drop,b.d); dummy.rotation.set(0,b.ang||0,0); dummy.updateMatrix(); bm.setMatrixAt(i,dummy.matrix); bm.setColorAt(i,col.setHex(wallPal[seed%wallPal.length]));
+      const kind=kindOf(b),bm=walls[kind],slot=slots[kind]++;
+      dummy.position.set(b.x,gy+bh/2-drop/2,b.z); dummy.scale.set(b.w,bh+drop,b.d); dummy.rotation.set(0,b.ang||0,0); dummy.updateMatrix(); bm.setMatrixAt(slot,dummy.matrix); bm.setColorAt(slot,col.setHex(J.detail?[0xe3c7b4,0xd7b7a3,0xf0e7d7,0xd5c3ad,0xbfa18d,0xddd4c8,0xc9b7a8][seed%7]:wallPal[seed%wallPal.length]));
       dummy.position.set(b.x,navGroundY(b.x,b.z)+bh+0.16,b.z); dummy.scale.set(b.w*1.03,0.34,b.d*1.03); dummy.updateMatrix(); caps.setMatrixAt(i,dummy.matrix); caps.setColorAt(i,col.setHex(roofPal[seed%roofPal.length])); });
-    bm.instanceMatrix.needsUpdate=true; if(bm.instanceColor)bm.instanceColor.needsUpdate=true;
+    for(const bm of walls){bm.instanceMatrix.needsUpdate=true;if(bm.instanceColor)bm.instanceColor.needsUpdate=true;FLATCITY.group.add(bm);FLATCITY.parts.push(bm);}
     caps.instanceMatrix.needsUpdate=true; if(caps.instanceColor)caps.instanceColor.needsUpdate=true;
-    FLATCITY.group.add(bm); FLATCITY.group.add(caps); FLATCITY.parts.push(bm,caps);
+    FLATCITY.group.add(caps); FLATCITY.parts.push(caps);
     if(J.immersive){
       // Recessed roof decks leave a pale parapet rim; modest rooftop units add depth without extra wall faces.
       const decks=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0x505c64})),B.length);
       const units=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xaeb7b5})),B.length);
       B.forEach((b,i)=>{dummy.rotation.set(0,b.ang,0);dummy.position.set(b.x,navGroundY(b.x,b.z)+b.h+0.35,b.z);dummy.scale.set(b.w-0.9,0.08,b.d-0.9);dummy.updateMatrix();decks.setMatrixAt(i,dummy.matrix);
-        dummy.position.set(b.x,navGroundY(b.x,b.z)+b.h+0.7,b.z);dummy.scale.set(1.5,0.65,2.1);dummy.updateMatrix();units.setMatrixAt(i,dummy.matrix);});
+        const seed=hash2(b.x+31,b.z),chimney=J.detail&&seed<0.6,ox=J.detail?b.w*0.24:0,oz=J.detail?b.d*0.18:0;
+        dummy.position.set(b.x+ox*Math.cos(b.ang)+oz*Math.sin(b.ang),navGroundY(b.x,b.z)+b.h+(chimney?1.05:0.7),b.z-ox*Math.sin(b.ang)+oz*Math.cos(b.ang));dummy.scale.set(chimney?0.85:1.5,chimney?1.3:0.65,chimney?0.9:2.1);dummy.updateMatrix();units.setMatrixAt(i,dummy.matrix);
+        if(J.detail)units.setColorAt(i,col.setHex(chimney?0x947665:0xc3c9c5));});
       for(const m of [decks,units]){m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
     }
     const pitched=B.filter(b=>b.roof);                                                   // 🏠 pitched roofs break up the flat-topped skyline
@@ -4312,7 +4407,8 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       if(J.immersive){for(let k=0;k<3;k++){
         const a=seed*1.7+k*2.094,offset=k?s*0.36:0;
         dummy.position.set(t.x+Math.cos(a)*offset,navGroundY(t.x,t.z)+th+s*(k?0.65:1.05),t.z+Math.sin(a)*offset);
-        dummy.scale.set(s*(k?0.68:0.76),s*(k?0.8:0.95),s*(k?0.68:0.76));dummy.rotation.set(0,a,0);dummy.updateMatrix();
+        const narrow=J.detail&&seed%3===0,wide=J.detail&&seed%3===1;
+        dummy.scale.set(s*(k?0.68:0.76)*(narrow?0.82:wide?1.04:1),s*(k?0.8:0.95)*(narrow?1.3:wide?0.9:1),s*(k?0.68:0.76)*(narrow?0.82:1));dummy.rotation.set(0,a,0);dummy.updateMatrix();
         cano.setMatrixAt(i*3+k,dummy.matrix);cano.setColorAt(i*3+k,col.setHex(leafPal[(seed+k)%leafPal.length]));
       }}else{dummy.position.set(t.x,th+s*0.62,t.z); dummy.scale.set(s,s*0.98,s); dummy.rotation.set(0,seed*1.7,0); dummy.updateMatrix(); cano.setMatrixAt(i,dummy.matrix); cano.setColorAt(i,col.setHex(leafPal[seed%leafPal.length]));}
       dummy.position.set(t.x,navGroundY(t.x,t.z)+th/2,t.z); dummy.scale.set(s*0.18,th,s*0.18); dummy.rotation.set(0,0,0); dummy.updateMatrix(); trunk.setMatrixAt(i,dummy.matrix);
