@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2045,7 +2045,13 @@ __b3d.push(function(){ // decks + rails at fixed deck height (do NOT conform to 
   if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(rn,3));
     scene.add(new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x3d6b52,side:THREE.DoubleSide}))); } });
 /* ---- floating street-name callout labels (Apple-Maps style; the cross street fades in as you approach it) ---- */
-const LBL={ pool:[], cache:{}, cap:16, showCap:6, rNear:55, rFar:130, float:1.4, H:1.35, acc:0, pastFade:20, refDist:55, maxGrow:1.9 };   // sixteen pooled candidates: the look-ahead walk stops when it has filled them, and on Ridge through East Falls ten were used up ~350 m out, so Calumet St only surfaced 31 m before it, up to six street-choice cards on screen — far ones are faded and small, so on a dense stretch like Ridge through East Falls the sixth is a hint, not clutter (was two: a 4-way's two hundred blocks filled both slots, so the NEXT junction's card only appeared once you had passed this one — owner: "streets don't come up until I'm almost past them")
+const LBL={ pool:[], cache:{}, last:null, cap:16, showCap:4, junctionCap:2, rNear:55, rFar:130, float:1.4, H:1.35, acc:0, pastFade:20, refDist:55, maxGrow:1.9 };   // sixteen pooled candidates; at most FOUR street-choice cards on screen, from at most TWO junctions ahead.
+// The depth limit (junctionCap) is the one that matters: six cards from four junctions, 20 m to 176 m out, was
+// unreadable on the phone (owner, v18y). Two junctions still shows BOTH turns at each — a 4-way's left and right
+// are different moves and stay separately tappable. The look-ahead DISTANCES (_far/_near below) are untouched:
+// they are the earlier owner fix for "streets don't come up until I'm almost past them", and the far card is
+// still faded and small. (Before that fix the cap was two, so a 4-way's two hundred blocks filled both slots and
+// the NEXT junction's card only appeared once you had passed this one.)
 function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 // Map-style abbreviation for the 3D callouts only (display text; the sprite still stores the full name for logic)
 const LBL_ABBR=[[/\bStreet\b/g,'St'],[/\bAvenue\b/g,'Ave'],[/\bLane\b/g,'Ln'],[/\bDrive\b/g,'Dr'],[/\bRoad\b/g,'Rd'],[/\bBoulevard\b/g,'Blvd'],[/\bPlace\b/g,'Pl'],[/\bCourt\b/g,'Ct'],[/\bTerrace\b/g,'Ter'],[/\bParkway\b/g,'Pkwy'],[/\bHighway\b/g,'Hwy'],[/\bCircle\b/g,'Cir'],[/\bSquare\b/g,'Sq'],[/\bExtension\b/g,'Ext'],[/\bMemorial\b/g,'Mem']];
@@ -2486,7 +2492,10 @@ function updateStreetLabels(dt){
       if(ramp&&e.wrong) return;                                                    // derived ramps follow the same rule as gantry ones: a wrong-way ramp gets no card
       if(!nm||nm==='—') return;
       const sameRoadTurn=!ramp&&canonStreet(nm)===curKey;
-      if(sameRoadTurn&&(!from||keepStreet(from,node)===e.to))return;
+      if(sameRoadTurn){ if(!from) return; const kp=keepStreet(from,node); if(kp===e.to) return;   // our own street: a card only for a GENUINE fork of it (Ridge keeps left / Main keeps right) —
+        if(branchForwardness(from,node,e.to)<=-0.25) return;                                     // not a stub that runs back the way we came (a 6m twin edge at Ridge × Calumet offered "4200 Ridge Ave" while ON the 4200 block of Ridge — owner, phone, v18v/v18y; reversing is the U-TURN button's job)
+        if(kp){ const reach=(n0,n1)=>{ const s=new Set([n1]); let pa=n0,pb=n1; for(let g=0;g<8;g++){ const nx=straightest(pa,pb); if(!nx) break; s.add(nx); pa=pb; pb=nx; } return s; };
+          const A=reach(node,e.to), B=reach(node,kp); for(const n of A) if(B.has(n)) return; } }   // and not a lane split / divided twin that rejoins the road within a few hops
       const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1;
       const off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));             // at the house keep the sign close to the corner, inside the Chase frame
       const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=ramp?(exitBlock||'RAMP'):(e.hw===1?hwyRouteLabel(e,node):hundredBlock(lx,lz,nm)),key=canonStreet(nm)+'|'+block;   // a carriageway card reads 'I-76 EAST', never a fabricated block
@@ -2512,10 +2521,12 @@ function updateStreetLabels(dt){
           const nx=sameStreetOn(pa,nb); if(!nx) break;
           walked+=Math.hypot(nx.x-nb.x,nx.z-nb.z); pa=nb; nb=nx; } }
       a=null; b=null; }
-    while(b && guard++<40 && cand.length<LBL.cap){
-      if(Math.hypot(b.x-truck.x,b.z-truck.z)>LBL._far) break;
-      const branches=b.adj.filter(e=>e.to!==a);
+    let junctions=0;                                                                       // 🃏 how DEEP the preview goes, counted in junctions that actually produced a card — not in cards.
+    while(b && guard++<40 && cand.length<LBL.cap){                                          // Ridge through East Falls stacked four junctions' cards (20m to 176m out) into one screen and the
+      if(Math.hypot(b.x-truck.x,b.z-truck.z)>LBL._far) break;                               // owner could not read them (phone, v18y). Two junctions keeps BOTH turn options at each one — a
+      const branches=b.adj.filter(e=>e.to!==a), before=cand.length;                         // 4-way's left and right are different moves and must stay separately tappable — and drops the rest.
       if(branches.length>1) for(const e of branches){ addBranch(b,e,null,a); if(cand.length>=LBL.cap) break; } // every visible driving sign stores its exact junction + branch
+      if(cand.length>before && ++junctions>=LBL.junctionCap) break;
       const nx=keepStreet(a,b); if(!nx) break; a=b; b=nx; }                                 // preview the same path the truck will actually take
     { const legal=new Set(); if(!DRIVE.parked&&curKey&&cur!=='—') legal.add(curKey);             // the street under the truck is legally present by definition — its divided-twin/opposite-
                                                                                                    // carriageway red cards are noise, so those go. Every OTHER wrong-way street keeps its red card even when
@@ -2528,6 +2539,7 @@ function updateStreetLabels(dt){
           if(!(c.block==='RAMP'&&dn&&canonStreet(c.name)===dn)) cand.splice(i,1); } } }
     if(cand.some(c=>c.sign)) cand.sort((p,q)=>(q.sign?1:0)-(p.sign?1:0));        // sourced gantry cards survive the cap (stable sort keeps the rest in walk order)
     if(cand.length>LBL.showCap) cand.length=LBL.showCap;                         // nearest choices only: prevent a stack of future-intersection signs
+    LBL.last=cand;                                                                // the candidate list, inspectable (tests / console)
     for(let i=0;i<LBL.pool.length;i++){ const sp=LBL.pool[i], cd=cand[i];
       if(!cd){ sp.visible=false; sp._name=null; sp._key=null; sp._block=null; sp._pick=null; continue; }
       const key=cd.name+'|'+cd.block+(cd.wrong?'|W':''); if(sp._key!==key){ const info=labelTex(cd.name,cd.block,cd.wrong); sp.material.map=info.tex; sp.material.needsUpdate=true; sp._key=key; sp._name=cd.name; sp._aspect=info.aspect; }
