@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19b";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2787,16 +2787,27 @@ const routeMeshFlat=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBas
 routeMeshFlat.frustumCulled=false; routeMeshFlat.visible=false; routeMeshFlat.renderOrder=3; scene.add(routeMeshFlat);
 // A corridor guide must follow the finished pavement triangles, not only the sampled road height:
 // a coarse bridge triangle can stand over 1m above navRoadY between its vertices and hide the blue line.
-const GUIDE_SURFACE={minX:-1350,maxX:-650,minZ:-450,maxZ:300,cell:32};
+// v19a did this for the City Ave corridor only, behind a bbox. The owner then photographed a broken ribbon on
+// the Green Lane bridge in Manayunk, far outside it — the cause is the same everywhere (a coarse road triangle
+// standing over the sampled height between its vertices), so the bbox is gone and the index covers the whole
+// local block. It is built from the road triangles the scenery already produced, so the only added cost is the
+// grid insert; measured at four neighbourhoods in tests/guide-visibility.browser.cjs.
+const GUIDE_SURFACE={cell:32};
 function guideSurfaceIndex(surfaces){const grid=new Map(),c=GUIDE_SURFACE.cell;
-  for(const s of surfaces){const x=(s.bb[0]+s.bb[2])/2,z=(s.bb[1]+s.bb[3])/2;
-    if(x<GUIDE_SURFACE.minX||x>GUIDE_SURFACE.maxX||z<GUIDE_SURFACE.minZ||z>GUIDE_SURFACE.maxZ)continue;
+  for(const s of surfaces){
     for(let gx=Math.floor(s.bb[0]/c);gx<=Math.floor(s.bb[2]/c);gx++)for(let gz=Math.floor(s.bb[1]/c);gz<=Math.floor(s.bb[3]/c);gz++){const k=gx+':'+gz,a=grid.get(k);if(a)a.push(s);else grid.set(k,[s]);} }
   return grid;}
-function guideSurfaceY(x,z,logicalY,name){if(name===null||x<GUIDE_SURFACE.minX||x>GUIDE_SURFACE.maxX||z<GUIDE_SURFACE.minZ||z>GUIDE_SURFACE.maxZ)return null;
+function guideSurfaceY(x,z,logicalY,name){if(name===null)return null;
   const list=FLATCITY.guideSurfaces?.get(Math.floor(x/GUIDE_SURFACE.cell)+':'+Math.floor(z/GUIDE_SURFACE.cell));if(!list)return null;
-  let best=null,dist=3;for(const s of list){if(s.name!==name)continue;const y=roadPaintPlaneY(x,z,[s]);if(y===null)continue;const d=Math.abs(y-logicalY);
-    if(d<dist){best=y;dist=d;}}return best;}
+  const hit=[];for(const s of list){const y=roadPaintPlaneY(x,z,[s]);if(y!==null)hit.push({y,name:s.name});}   // every finished triangle actually under this point
+  let best=null,dist=3;for(const h of hit){if(h.name!==name)continue;const d=Math.abs(h.y-logicalY);if(d<dist){best=h.y;dist=d;}}
+  // A junction stacks several triangles over one point — at Green Lane × Main Street there are four, spanning
+  // 0.6m. Clearing only our own road left the crossing street's triangle standing over the ribbon (owner photo,
+  // Manayunk). So take the HIGHEST surface within 1m of our own: that covers every pavement meeting here, while
+  // a stacked deck (metres apart) still cannot lift the guide, which is what the name match protects.
+  if(best!==null){for(const h of hit)if(h.y>best&&h.y-best<=1)best=h.y;return best;}
+  let d2=0.6;for(const h of hit){const d=Math.abs(h.y-logicalY);if(d<d2){best=h.y;d2=d;}}   // our road has no triangle here (the ribbon's outer edge past the kerb): nearest surface, tight window
+  return best;}
 const beaconG=new THREE.Group();
 const beam=new THREE.Mesh(new THREE.CylinderGeometry(8,8,120,16,1,true),new THREE.MeshBasicMaterial({color:0xff3b30,transparent:true,opacity:0.4,side:THREE.DoubleSide,depthWrite:false})); beam.position.y=55; beaconG.add(beam);
 const ring=new THREE.Mesh(new THREE.RingGeometry(6.4,8.6,26),new THREE.MeshBasicMaterial({color:0xff6b52,transparent:true,opacity:0.85,side:THREE.DoubleSide,depthWrite:false})); ring.rotation.x=-Math.PI/2; ring.position.y=0.3; beaconG.add(ring);
@@ -3223,7 +3234,7 @@ function updateHUD(dt){
     el.style.display=ww?'block':'none'; if(ww){ elTurn.style.display='none'; } if(ww && !DRIVE._wwLatch){ popup('⚠️ WRONG WAY!','red'); try{ sfx&&sfx.ding&&sfx.ding(); }catch(e){} } DRIVE._wwLatch=ww; }
   document.getElementById('pullOut').style.display = (state.running&&(DRIVE.parked||DRIVE.atChoice)&&!INTRO.active)?'flex':'none';   // also becomes manual junction controls when a street ends
   document.getElementById('zoomBtns').style.display = state.running?'flex':'none';
-  { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving                //
+  { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(mayMarkHydrants()&&state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving, and only for an account on HYDRANT_SCOUTS   //
   document.getElementById('btnRecenter').style.display = state.running?'block':'none';   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
   if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; } }
@@ -3287,7 +3298,7 @@ function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geomet
      only where it pokes back out, reading as broken chunks (owner report, Roxborough v18p; flat ground and
      East Falls' mild slope had hidden it). Subdivide to ~10m like the road surface itself. */
   const pts=[]; for(let i=0;i<pts0.length;i++){ const p=pts0[i];
-    if(i&&NAVGEO.active){ const q=pts0[i-1],d=Math.hypot(p.x-q.x,p.z-q.z),corridor=p.x>GUIDE_SURFACE.minX&&p.x<GUIDE_SURFACE.maxX&&p.z>GUIDE_SURFACE.minZ&&p.z<GUIDE_SURFACE.maxZ,n=Math.min(40,Math.ceil(d/(corridor?5:10)));
+    if(i&&NAVGEO.active){ const q=pts0[i-1],d=Math.hypot(p.x-q.x,p.z-q.z),n=Math.min(40,Math.ceil(d/5));   // 5m everywhere: the corridor got the finer spacing in v19a and it is what lets the ribbon follow the mesh
       for(let k=1;k<n;k++) pts.push({x:q.x+(p.x-q.x)*k/n,z:q.z+(p.z-q.z)*k/n}); }
     pts.push(p); }
   for(let i=0;i<pts.length;i++){ const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
@@ -5683,6 +5694,16 @@ document.getElementById('duePanel').addEventListener('keydown',e=>{
 const SB={ url:'https://evreumemwzhvdmpkcwqs.supabase.co',
   key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cmV1bWVtd3podmRtcGtjd3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1Mzc1MDksImV4cCI6MjEwMzExMzUwOX0.6AF4JkQAyZ2meB7bAY7oO5zMTMYrRF12a-AP2iUNOSY' };
 const AUTH={ session:null, user:null, tier:'free', name:'' };
+/* 🧯 WHO MAY MARK HYDRANTS. The owner kept hitting the 🧯 button by accident while playing (phone, v19b), so
+   marking is OFF for everyone until it is deliberately granted. Add a signed-in account's e-mail (or its profile
+   id) to this list to give it back — nothing else needs changing, the whole feature is still here. An empty list
+   means the button never appears and playerAddHydrant() refuses, so a stray tap cannot submit anything.
+   Case-insensitive. Note the list is client-side: it decides what the BUTTON offers, not what the database
+   accepts — server-side review of hydrant_submission rows is still the backstop.                              */
+const HYDRANT_SCOUTS=[];
+function mayMarkHydrants(){ if(!HYDRANT_SCOUTS.length||!AUTH.user) return false;
+  const who=[AUTH.user.email,AUTH.user.id].filter(Boolean).map(s=>String(s).toLowerCase());
+  return HYDRANT_SCOUTS.some(a=>who.includes(String(a).toLowerCase())); }
 function authHdr(withBearer){ const h={ 'apikey':SB.key, 'Content-Type':'application/json' };
   if(withBearer&&AUTH.session) h['Authorization']='Bearer '+AUTH.session.access_token; return h; }
 function authStore(o){ if(!o||!o.access_token){ AUTH.session=null; try{ localStorage.removeItem('pfd_auth'); }catch(e){} return; }
@@ -6153,7 +6174,7 @@ function playerAddHydrant(){ if(!state.running||DRIVE.going) return;
     body:JSON.stringify([{ profile_id:AUTH.user.id, lat:+ll.lat.toFixed(6), lon:+ll.lon.toFixed(6), world_x:hx, world_z:hz, game_build:BUILD }]) }); }catch(e){} }
   popup('🧯 HYDRANT MARKED · '+streetName(hx,hz),'green');
   radio('🧯 Hydrant logged at '+streetName(hx,hz)+'. '+(AUTH.user?'Sent for review — thanks!':'Sign in (👤 ACCOUNT) so it uploads automatically, or copy it from CAREER to send back.')); }
-document.getElementById('btnHyd').addEventListener('click',e=>{ e.preventDefault(); playerAddHydrant(); });
+document.getElementById('btnHyd').addEventListener('click',e=>{ e.preventDefault(); if(!mayMarkHydrants()) return; playerAddHydrant(); });   // belt and braces: the gate is on the action too, not only on the button
 const ordinal=n=>['1st','2nd','3rd','4th','5th'][n-1]||(n+'th');
 const engNum=id=>String(id).replace(/\D/g,'');
 function stDist(st,x,z){ return Math.hypot(st.x-x,st.z-z); }
