@@ -1,8 +1,13 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 13, 2026. **v18z is public and matches the authoring build** — commit
-`0d7e852`, service-worker cache `local-shell-v10`. The authoritative graphics handoff and source
+Planning snapshot: September 13, 2026. **v19a is public and matches the authoring build** — commit
+`71a25c4`, service-worker cache `local-shell-v11`. The authoritative graphics handoff and source
 references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+
+- [x] **v19a corridor guide visibility (September 13, 2026):** from 23 owner in-game phone screenshots of the
+  City Ave / Lincoln Dr / Kelly Dr ramp — the advisory guide is measured against the rendered pavement so it stops
+  sinking under the coarse road triangles at the merge, false crosswalks at bridge and unnamed-ramp junctions are
+  gone, and the road pill names the ramp you are on instead of a street on the deck overhead.
 
 - [x] **v18z street-choice cards (September 13, 2026):** owner phone review of v18y — no card for the street you
   are already on unless it genuinely forks, and the stack capped at two junctions ahead / four cards, with the

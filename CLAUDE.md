@@ -135,7 +135,13 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v18z (September 13, 2026), street-choice cards.** A card for the street under the truck needs a
+- **The build is v19a (September 13, 2026), corridor guide visibility.** Near the City Ave / Lincoln Dr / Kelly Dr
+  interchange the guide is held above the RENDERED road triangles (an index rebuilt with the scenery), not just the
+  sampled `navRoadY`, and subdivides to 5 m there; a height difference is only accepted for the same exact road
+  name, so the unnamed ramp still passes under City Ave. Crosswalks are skipped at bridge and unnamed-ramp
+  junctions, and the road pill reads `RAMP TO` its destination while on an unnamed ramp. Guide stays advisory;
+  camera, occlusion, manual turns and road levels are unchanged. Service-worker cache v11.
+- **v18z (September 13, 2026), street-choice cards.** A card for the street under the truck needs a
   genuine fork (not the continuation, a near-reversal stub, or a lane split that rejoins within 8 hops), and the
   preview is capped at two junctions ahead / four cards. The look-ahead DISTANCES are an earlier owner fix and must
   not be shortened to reduce clutter; cap the depth instead. Service-worker cache v10.
