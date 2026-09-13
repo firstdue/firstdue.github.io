@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19a";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19b";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3977,6 +3977,55 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   return true;
 }
 function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCity(J,1e9)); return J; }   // synchronous (first build only)
+/* ============ RAMP DETAIL — City Ave / Lincoln Dr / Kelly Dr interchange (owner choice, Sep 13 2026) ============
+   From the render study in notes/immersive-ramp-study.md, in the spirit of Google Maps' Immersive Navigation.
+   The owner picked TWO of the four parts: lane paint and the shoulder/embankment. The contact shadow was not
+   chosen and the global haze was explicitly rejected — do not add either back without asking.
+     paint    — ramps carried NO markings at all (roadGeomSeg paints cls<=2 streets and freeway records only),
+                which is exactly why they read as bare grey slabs. A ramp is a one-way carriageway, so it gets a
+                yellow left and a white right edge line — what the owner's own Kelly Dr / Lincoln Dr photos show.
+     shoulder — a narrow paved shoulder and then a graded earth slope out to the terrain, so the ramp sits IN the
+                ground instead of on it. Only where the ramp really is on grade; up on its deck the existing
+                parapets do that job and a skirt there would be wrong.
+   Scenery only: the road graph, navRoadY, RAMP_GRADE, drivable widths and every marking on a named street are
+   untouched. Limited to the interchange bbox — citywide ramp paint would touch every unnamed cls-4 connector in
+   Philadelphia and needs its own look pass first.                                                              */
+const RAMP_DETAIL={paint:true,shoulder:true,bbox:[-1340,-620,-60,420],shoulderW:5.5,paveW:1.1,edgeOff:0.75,
+  src:'Owner-approved render study Sep 13 2026; edge-line colours from firetruck pictures/Lincoln Dr and City ave (2026-09-12-20-43-13-76, 2026-09-10-15-50-04-25)'};
+function rampDetailSeg(s){ const b=RAMP_DETAIL.bbox;                                     // an interchange ramp: unnamed, not a freeway record, inside the study bbox
+  return !s.name&&!s.hw&&s.cls===4&&s.ax>b[0]&&s.ax<b[2]&&s.az>b[1]&&s.az<b[3]&&s.bx>b[0]&&s.bx<b[2]; }
+// Paved shoulder + graded embankment, one merged mesh each, built in commit like the rest of the scenery.
+function rampDetailBuild(J){
+  if(!RAMP_DETAIL.shoulder||!NAVGEO.active) return;
+  const pave=[],earth=[];
+  for(const s of J.list){ if(!rampDetailSeg(s)) continue;
+    const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz); if(L<2) continue;
+    const nx=-dz/L,nz=dx/L,hw=segHalf(s),N=Math.max(1,Math.ceil(L/6));
+    for(let i=0;i<N;i++){ const t0=i/N,t1=(i+1)/N;
+      const ax=s.ax+dx*t0,az=s.az+dz*t0,bx=s.ax+dx*t1,bz=s.az+dz*t1;
+      if(Math.hypot((ax+bx)/2-J.cx,(az+bz)/2-J.cz)>LOCAL.R) continue;
+      const ya=navRoadY(ax,az,null),yb=navRoadY(bx,bz,null);
+      for(const side of [-1,1]){ const p=(w,x,z)=>[x+nx*w*side,z+nz*w*side];
+        const E0=p(hw,ax,az),E1=p(hw,bx,bz),P0=p(hw+RAMP_DETAIL.paveW,ax,az),P1=p(hw+RAMP_DETAIL.paveW,bx,bz),
+              G0=p(hw+RAMP_DETAIL.shoulderW,ax,az),G1=p(hw+RAMP_DETAIL.shoulderW,bx,bz);
+        // The whole band must lie outside every pavement, not just its outer edge: where Ridge Ave or Kelly Dr
+        // cuts THROUGH the band, the outer point can be clear past the far kerb while the middle sits on the
+        // road (caught by tests/ramp-detail.browser.cjs). nearRoadEdge is the distance outside the nearest
+        // roadway, so one probe per station covers this ramp, its neighbours and every named street at once.
+        const M0=p(hw+(RAMP_DETAIL.paveW+RAMP_DETAIL.shoulderW)/2,ax,az),M1=p(hw+(RAMP_DETAIL.paveW+RAMP_DETAIL.shoulderW)/2,bx,bz);
+        if([E0,E1,P0,P1,M0,M1,G0,G1].some(q=>nearRoadEdge(q[0],q[1])<-0.2)) continue;     // E included: where the ramp's own edge overlaps Kelly Dr's pavement at the merge, even the inner seam would sit on the road
+        const g0=navGroundY(G0[0],G0[1]),g1=navGroundY(G1[0],G1[1]);
+        if(Math.abs(ya-g0)>4||Math.abs(yb-g1)>4) continue;                                // up on the deck: parapet's job, not an embankment's
+        pave.push(E0[0],ya+0.05,E0[1], P0[0],ya+0.02,P0[1], E1[0],yb+0.05,E1[1],
+                  P0[0],ya+0.02,P0[1], P1[0],yb+0.02,P1[1], E1[0],yb+0.05,E1[1]);
+        earth.push(P0[0],ya+0.02,P0[1], G0[0],g0,G0[1], P1[0],yb+0.02,P1[1],
+                   G0[0],g0,G0[1], G1[0],g1,G1[1], P1[0],yb+0.02,P1[1]); } } }
+  const mesh=(arr,color,name)=>{ if(!arr.length) return; const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(arr,3)); g.computeVertexNormals();
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color,side:THREE.DoubleSide})); m.name=name;
+    FLATCITY.group.add(m); FLATCITY.parts.push(m); };
+  mesh(pave,0x7b838d,'ramp-shoulder'); mesh(earth,0xb9bd9b,'ramp-embankment');
+}
 // Owner reference sequence: firetruck pictures/Lincoln Dr and City ave, Sep 10/12 2026.
 // Scenery coordinates follow the baked roads/rail. Heights and member sizes are visual estimates.
 const CORRIDOR_PHOTO={enabled:true,arch:{x:-1150,z:-291,ux:0.9397,uz:0.342,half:19},
@@ -4239,6 +4288,15 @@ function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOC
       let k=0; for(let o=-hw+0.6;o<hw;o+=1.2,k++) J.hwClose[k%2].push({x:px-dz*o,y:y+0.55,z:pz+dx*o,w:1.2,h:1.1,l:0.5,ang,pitch:0});
       J.hwClose[0].push({x:px,y:y+1.25,z:pz,w:hw*2,h:0.3,l:0.5,ang,pitch:0}); }
   }
+  if(RAMP_DETAIL.paint && rampDetailSeg(s) && l>6 && mk.length<240000){                  // 🛣️ RAMP EDGE LINES: yellow left, white right — a ramp is a one-way carriageway (owner's Kelly Dr / Lincoln Dr photos).
+    const off=hw-RAMP_DETAIL.edgeOff;                                                     // Ramps had no paint at all before this, which is why they read as bare slabs.
+    const onNamed=(x,z)=>{ for(const o of segNear(x,z)){ if(!o.name) continue; if(closestSeg(x,z,o).d<segHalf(o)+0.4) return true; } return false; };   // an edge line runs the WHOLE ramp and breaks only where it crosses a NAMED street's pavement, so it never paints over Ridge / Kelly / City Ave
+    const quad=(arr,t,t2,o,hwm)=>{ const p0x=s.ax+dx*t-dz*o, p0z=s.az+dz*t+dx*o, p1x=s.ax+dx*t2-dz*o, p1z=s.az+dz*t2+dx*o, mxn=-dz*hwm, mzn=dx*hwm;
+      arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); };
+    const clear=(t,t2,o)=>{ for(const k of [t,(t+t2)/2,t2]){ if(onNamed(s.ax+dx*k-dz*o,s.az+dz*k+dx*o)) return false; } return true; };   // probe the LINE itself, at both ends and the middle — a midpoint-only check let the ends bleed onto Ridge Ave and Kelly Dr (caught by tests/ramp-detail.browser.cjs)
+    for(let t=0.3;t<l-0.3;t+=6){ const t2=Math.min(l-0.3,t+6); if(t2-t<0.5) break;         // ≤6m pieces so the lines drape the smoothed profile like every other marking
+      if(clear(t,t2,-off)) quad(my,t,t2,-off,0.13);                                        // each edge line is judged on its own: the left can be clear while the right is over the road it joins
+      if(clear(t,t2,off)) quad(mk,t,t2,off,0.13); } }
   if(!s.hw && s.cls<=2 && l>14 && mk.length<240000){
     const dash=3.4, gap=4.6, hwm=s.cls<=1?0.30:0.26;
     const m0=jA?eA.hw+4.5:2, m1=jB?eB.hw+4.5:2;                                        // dashes STOP short of a junction, scaled to the CROSSING street's width
@@ -4435,6 +4493,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }
   hwyIdentityBuild(J,null,dummy);                                                                        // 🪧 highway identity (phase 2b): guide signs, gantries, gore markers, trailblazers, shoulder lighting
   photoCorridorBuild(J,dummy);
+  rampDetailBuild(J);                                                                                    // 🛣️ interchange ramp shoulder + embankment (owner choice, Sep 13 2026)
   if(J.hwClose) for(const [list,color] of [[J.hwClose[0],0xe8862c],[J.hwClose[1],0xf2f2ec]]){ if(!list.length) continue;   // ⛔ corridor-end barriers (orange / white stripes)
     const hc=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hc.setMatrixAt(i,dummy.matrix); });
