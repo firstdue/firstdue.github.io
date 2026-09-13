@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v8';   // v18x: City Ave / Lincoln Dr / Kelly Dr photo-based scenery and E35 facade preview
+const CACHE = 'local-shell-v9';   // v18y: corridor pass 2 — viaduct arcade, Lincoln barriers, gore chevrons, corridor gantries + lighting (v8 was v18x)
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

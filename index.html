@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v18y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2182,9 +2182,20 @@ const HWY_SIGNS=[
   { id:'cityave-ne-76e', road:'City Avenue', at:[-1530,441], back:28, mount:'post',
     panels:[{ shields:[['I','76'],['US','1']], card:'EAST NORTH', dest:['Central Phila','Roosevelt Expy'], arrow:'exit' }],
     src:'OSM node 4458600440; link 12109954 destination=Central Phila;Roosevelt Expressway destination:ref=I 76 East;US 1 North' },
-  { id:'cityave-ne-76w', road:'City Avenue', at:[-1350,327], back:28, mount:'post',
-    panels:[{ shields:[['I','76']], card:'WEST', dest:['Valley Forge'], arrow:'exit' }],
-    src:'OSM node 4458600494; link 1480965246 destination=Valley Forge destination:ref=I 76 West' },
+  { id:'cityave-ne-76w', road:'City Avenue', at:[-1350,327], back:28, mount:'gantry',
+    panels:[{ shields:[['I','76']], card:'WEST', dest:['Valley Forge'], arrow:'left', note:'NEXT LEFT' },
+            { dest:['Lincoln Drive'], arrow:'down' }],
+    src:'OSM node 4458600494; link 1480965246 destination=Valley Forge destination:ref=I 76 West; owner photo 2026-09-12-20-36-39-31 (Google Street View Jul 2025): full-span gantry "I-76 WEST Valley Forge NEXT LEFT" + "Lincoln Drive ↓" — City Ave continues onto the ramp down to Kelly Dr / Lincoln Dr' },
+  { id:'lincoln-sb-ridge-n-advance', road:'Lincoln Drive', at:[-1084,-380], back:150, mount:'gantry', halfRoad:true,
+    panels:[{ dest:['Ridge Ave'], sub:'NORTH', arrow:'down', exitOnly:true }],
+    src:'Owner photo 2026-09-10-15-50-04-25 (Google Street View Apr 2025): cantilever "Ridge Ave NORTH / EXIT ONLY ↓" over the right lane of Lincoln Dr southbound, ahead of the ramp to Ridge Ave' },
+  { id:'lincoln-sb-ridge-n-gantry', road:'Lincoln Drive', at:[-1084,-380], back:42, mount:'gantry', halfRoad:true,
+    panels:[{ dest:['Lincoln Drive'], arrow:'down', plaque:'NO TRUCKS' },
+            { dest:['Ridge Ave'], sub:'NORTH', arrow:'exit', exitOnly:true }],
+    src:'Owner photo 2026-09-10-15-50-18-08 (Google Street View Apr 2025): "Lincoln Drive ↓ / NO TRUCKS" + "Ridge Ave NORTH ↗ / EXIT ONLY" at the Ridge Ave ramp on Lincoln Dr southbound' },
+  { id:'kelly-nb-lincoln-gantry', road:'Kelly Drive', at:[-1171,-196], back:18, mount:'gantry', halfRoad:true,
+    panels:[{ dest:['Lincoln Drive'], arrow:'down', plaque:'NO TRUCKS' }],
+    src:'Owner photos 2026-09-12-20-38-33-80 and 2026-09-12-20-42-02-94 (Google Street View Jul 2026): "Lincoln Drive ↓ / NO TRUCKS" where the connector becomes Lincoln Dr northbound; the "TO Ridge Ave SOUTH Kelly Dr" and "Ridge Ave NORTH" exit panels beside it are omitted because the bake has no such exits at this merge' },
   { id:'cityave-sw-76', road:'City Avenue', at:[-1262,203], back:28, mount:'post',
     panels:[{ shields:[['I','76'],['US','1']], card:'EAST NORTH', dest:['Central Phila','Roosevelt Blvd'], arrow:'exit' },
             { shields:[['I','76']], card:'WEST', dest:['Valley Forge'], arrow:'exit2' }],
@@ -2367,6 +2378,7 @@ function hwySignFace(kind,panel,opts){ const key=kind+'|'+JSON.stringify(panel)+
   if(panel.exit&&kind!=='gore'){ const tw=S*(1.15+0.42*String(panel.exit).length), th=S*0.42; c.fillStyle=HWY_GREEN; c.fillRect(W-tw-S*0.2,S*0.02,tw,th); c.strokeStyle=HWY_GREEN_EDGE; c.lineWidth=S*0.04; c.strokeRect(W-tw-S*0.2,S*0.02,tw,th);
     c.fillStyle='#ffffff'; c.font='700 '+Math.round(S*0.3)+'px Arial,Helvetica,sans-serif'; c.textAlign='center'; c.fillText('EXIT '+panel.exit,W-tw/2-S*0.2,S*0.02+th/2); top=Math.max(top,S*0.5); }
   if(panel.exitOnly){ const yh=S*0.6; c.fillStyle=HWY_YELLOW; c.fillRect(S*0.1,H-yh-S*0.1,W-S*0.2,yh); c.fillStyle=HWY_INK; c.font='700 '+Math.round(S*0.34)+'px Arial,Helvetica,sans-serif'; c.textAlign='center'; c.fillText('EXIT ONLY',W/2-S*0.5,H-yh/2-S*0.1); hwyDrawArrow(c,'down',W/2+S*1.6,H-yh/2-S*0.1,S*0.42,HWY_INK); bottom=H-yh-S*0.2; }
+  if(panel.plaque||panel.note){ const yh=S*0.5, txt=panel.plaque||panel.note; c.fillStyle=panel.plaque?HWY_YELLOW:HWY_GREEN; c.fillRect(S*0.1,H-yh-S*0.1,W-S*0.2,yh); c.fillStyle=panel.plaque?HWY_INK:'#ffffff'; c.font='700 '+Math.round(S*0.3)+'px Arial,Helvetica,sans-serif'; c.textAlign='center'; c.fillText(txt,W/2,H-yh/2-S*0.1); bottom=H-yh-S*0.2; }   // "NO TRUCKS" (yellow) / "NEXT LEFT" (green) — owner photos, Lincoln Dr and City Ave
   if(kind==='mile'){ const [whole,tenth]=String(panel.mile).split('.'); c.fillStyle='#ffffff'; c.textAlign='center';   // PA-style green reference marker: MILE / 340 / .6 — a surveyed whole mile drops the tenth line
     c.font='700 '+Math.round(S*0.14)+'px Arial,Helvetica,sans-serif'; c.fillText('MILE',W/2,tenth?H*0.17:H*0.22);
     c.font='700 '+Math.round(S*(tenth?0.2:0.3))+'px Arial,Helvetica,sans-serif'; c.fillText(whole,W/2,tenth?H*0.47:H*0.63);
@@ -2376,8 +2388,8 @@ function hwySignFace(kind,panel,opts){ const key=kind+'|'+JSON.stringify(panel)+
     if(shields.length){ const sh=Math.min(bottom-top,S*1.3), sw=sh*0.8; for(const [sys,num] of shields){ hwyDrawShield(c,sys,num,x,top+(bottom-top-sh)/2-(panel.dest?S*0.05:0),sw,sh); x+=sw+S*0.16; }
       if(panel.card){ c.fillStyle=ink; c.font='700 '+Math.round(S*0.3)+'px Arial,Helvetica,sans-serif'; c.textAlign='left'; const cards=panel.card.split(' '); cards.forEach((cd,i)=>c.fillText(cd,x,top+S*0.22+i*S*0.34)); x+=S*(0.28*Math.max(...cards.map(t=>t.length))+0.3); }
       if(to.length){ c.fillStyle=ink; c.font='700 '+Math.round(S*0.26)+'px Arial,Helvetica,sans-serif'; c.textAlign='left'; c.fillText('TO',x,top+(bottom-top)/2); x+=S*0.55; for(const [sys,num] of to){ hwyDrawShield(c,sys,num,x,top+(bottom-top-sh)/2,sw,sh); x+=sw+S*0.16; } } }
-    const dest=panel.dest||[]; if(dest.length){ const lh=Math.min(S*0.62,(bottom-top)/dest.length), fs=Math.round(lh*0.66); c.fillStyle=ink; c.textAlign='left'; c.font='700 '+fs+'px Arial,Helvetica,sans-serif';
-      const avail=W-x-S*(panel.arrow&&panel.arrow!=='down'?1.1:0.3); dest.forEach((t,i)=>{ let f=fs; while(f>S*0.22&&c.measureText(t).width>avail){ f-=4; c.font='700 '+f+'px Arial,Helvetica,sans-serif'; } c.fillText(t,x,top+lh*(i+0.5)); c.font='700 '+fs+'px Arial,Helvetica,sans-serif'; }); }
+    const dest=(panel.dest||[]).concat(panel.sub?[panel.sub]:[]); if(dest.length){ const lh=Math.min(S*0.62,(bottom-top)/dest.length), fs=Math.round(lh*0.66); c.fillStyle=ink; c.textAlign='left'; c.font='700 '+fs+'px Arial,Helvetica,sans-serif';
+      const avail=W-x-S*(panel.arrow&&panel.arrow!=='down'?1.1:0.3); dest.forEach((t,i)=>{ let f=panel.sub&&i===dest.length-1?Math.round(fs*0.68):fs; c.font='700 '+f+'px Arial,Helvetica,sans-serif'; while(f>S*0.22&&c.measureText(t).width>avail){ f-=4; c.font='700 '+f+'px Arial,Helvetica,sans-serif'; } c.fillText(t,x,top+lh*(i+0.5)); c.font='700 '+fs+'px Arial,Helvetica,sans-serif'; }); }   // sub: the small cardinal line ("Ridge Ave / NORTH")
     if(panel.arrow&&panel.arrow!=='down'){ const k=panel.arrow==='right'||panel.arrow==='left'?panel.arrow:(panel.arrow==='exit2'?(opts.side2==='left'?'left':'exit'):(opts.side==='left'?'left':panel.arrow)); hwyDrawArrow(c,k,W-S*0.55,(top+bottom)/2,S*0.62,ink); }
     else if(panel.arrow==='down'&&!panel.exitOnly){ hwyDrawArrow(c,'down',W-S*0.55,bottom-S*0.35,S*0.5,ink); } }
   const tex=new THREE.CanvasTexture(cv); tex.anisotropy=4; tex.minFilter=THREE.LinearMipmapLinearFilter; tex.magFilter=THREE.LinearFilter; tex.generateMipmaps=true;
@@ -2426,8 +2438,8 @@ function hwyIdentityBuild(J,boxes,dummy){ const R=LOCAL.R, P=hwySignPlacements()
         if(ws){ let tx=ws.bx-ws.ax, tz=ws.bz-ws.az; const l=Math.hypot(tx,tz)||1; tx/=l; tz/=l; if(tx*p.dx+tz*p.dz>0){ tx=-tx; tz=-tz; } plant(p.x,p.z,tx,tz,ws,mile); } } } }   // westbound: the opposite carriageway beside it
   // lighting: masts on the right shoulder every ~45m inside the lit areas, additive pools of light on the pavement
   const poolTex=(()=>{ if(HWY_SIGN_TEX.get('pool')) return HWY_SIGN_TEX.get('pool'); const cv=document.createElement('canvas'); cv.width=cv.height=128; const c=cv.getContext('2d'); const g=c.createRadialGradient(64,64,4,64,64,62); g.addColorStop(0,'rgba(255,214,150,0.55)'); g.addColorStop(0.6,'rgba(255,200,120,0.18)'); g.addColorStop(1,'rgba(255,190,110,0)'); c.fillStyle=g; c.fillRect(0,0,128,128); const t=new THREE.CanvasTexture(cv); HWY_SIGN_TEX.set('pool',{tex:t,w:1,h:1}); return HWY_SIGN_TEX.get('pool'); })();
-  const segs=new Set(); for(const l of segGrid.values()) for(const s of l) if(s.hw) segs.add(s);
-  for(const s of segs){ const mx=(s.ax+s.bx)/2,mz=(s.az+s.bz)/2; if(Math.hypot(mx-J.cx,mz-J.cz)>R) continue; const area=HWY_LIGHTS.find(a=>Math.hypot(mx-a.at[0],mz-a.at[1])<a.r); if(!area) continue;
+  const segs=new Set(); for(const l of segGrid.values()) for(const s of l) if(s.hw||(CORRIDOR_PHOTO.enabled&&(photoCorridorRoad(s)||s.name==='City Avenue'||(!s.name&&s.cls===4&&s.ax>-1320&&s.ax<-640&&s.az>-420&&s.az<340)))) segs.add(s);   // owner photos: cobra-head masts along Kelly Dr, Lincoln Dr, City Ave and the interchange ramps
+  for(const s of segs){ const mx=(s.ax+s.bx)/2,mz=(s.az+s.bz)/2; if(Math.hypot(mx-J.cx,mz-J.cz)>R) continue; const area=HWY_LIGHTS.find(a=>Math.hypot(mx-a.at[0],mz-a.at[1])<a.r)||(!s.hw&&CORRIDOR_PHOTO.enabled?CORRIDOR_PHOTO.lights.find(a=>Math.hypot(mx-a.at[0],mz-a.at[1])<a.r):null); if(!area) continue;
     const dx=s.bx-s.ax,dz=s.bz-s.az,l=Math.hypot(dx,dz)||1,ux=dx/l,uz=dz/l,rx=-uz,rz=ux,hw=segHalf(s);
     const phase=((Math.round(s.ax)*7+Math.round(s.az)*13)%HWY_ID_SPEC.lampEvery+HWY_ID_SPEC.lampEvery)%HWY_ID_SPEC.lampEvery;
     for(let t=HWY_ID_SPEC.lampEvery-phase;t<l-4;t+=HWY_ID_SPEC.lampEvery){ const cx=s.ax+ux*t, cz=s.az+uz*t; if(Math.hypot(cx-area.at[0],cz-area.at[1])>area.r) continue;
@@ -3940,16 +3952,17 @@ function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCit
 // Owner reference sequence: firetruck pictures/Lincoln Dr and City ave, Sep 10/12 2026.
 // Scenery coordinates follow the baked roads/rail. Heights and member sizes are visual estimates.
 const CORRIDOR_PHOTO={enabled:true,arch:{x:-1150,z:-291,ux:0.9397,uz:0.342,half:19},
-  src:'Screenshot_2026-09-10-15-51-52-60 (stone arch); 2026-09-12-20-43-03-03 (Kelly wall); 2026-09-10-15-48-09-73 (green steel); 2026-09-10-15-52-27-22 (wooded Lincoln)'};
+  lights:[{id:'kelly-lincoln',at:[-1150,-160],r:300}],   // cobra-head masts on the surface roads and ramps here (owner photos 2026-09-10-15-50-04 Lincoln, 2026-09-12-20-43-52 / 20-45-32 Kelly); HWY_LIGHTS stays freeway-only
+  src:'Screenshot_2026-09-10-15-51-52-60 (stone arch); 2026-09-10-15-51-14-92 + 2026-09-12-20-39-02-74 (arcade, level deck); 2026-09-12-20-43-03-03 (Kelly wall); 2026-09-10-15-48-09-73 (green steel); 2026-09-10-15-52-27-22 (wooded Lincoln); 2026-09-12-20-39-02-74 + 20-40-00-28 (Lincoln concrete barriers + median); 2026-09-10-15-48-59-07 + 2026-09-12-20-38-33-80 + 20-44-45-30 (gore chevrons)'};
 function photoStoneTexture(){if(CORRIDOR_PHOTO.stone)return CORRIDOR_PHOTO.stone;
   const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d');g.fillStyle='#625d50';g.fillRect(0,0,256,256);
   for(let row=0;row<8;row++)for(let col=-1;col<6;col++){const x=col*52+(row%2)*26,y=row*32,v=Math.floor(hash2(row+7,col+11)*30)+135;g.fillStyle=`rgb(${v},${v-5},${v-21})`;g.fillRect(x+1,y+1,50,30);g.fillStyle='rgba(255,255,235,.15)';g.fillRect(x+2,y+2,48,2);}
   const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(.16,.16);tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());CORRIDOR_PHOTO.stone=tex;return tex;}
-function photoRailFloor(x,z){if(!CORRIDOR_PHOTO.enabled)return -Infinity;const a=CORRIDOR_PHOTO.arch,d=Math.hypot(x-a.x,z-a.z);return d<65?24-Math.max(0,d-25)*0.15:-Infinity;}
+function photoRailFloor(x,z){if(!CORRIDOR_PHOTO.enabled)return -Infinity;const a=CORRIDOR_PHOTO.arch,u=(x-a.x)*a.ux+(z-a.z)*a.uz,v=Math.abs((z-a.z)*a.ux-(x-a.x)*a.uz);return (v<10&&u>-100&&u<56)?24:-Infinity;}   // the viaduct is level end to end (owner photos from Kelly Dr / Lincoln Dr); u/v are along/across the twin rail line
 function photoCorridorRoad(s){return CORRIDOR_PHOTO.enabled&&((s.name==='Lincoln Drive'&&s.az>-800&&s.bz>-800&&s.az<-190&&s.bz<-190)||(s.name==='Kelly Drive'&&s.ax<-850&&s.bx<-850&&s.az<200&&s.bz<200));}
 function photoCorridorBuild(J,dummy){
   if(!CORRIDOR_PHOTO.enabled||!NAVGEO.active||Math.hypot(J.cx+1110,J.cz+150)>LOCAL.R+750)return;
-  const steel=[],posts=[],walls=[],caps=[];const seen=new Set();
+  const steel=[],posts=[],walls=[],caps=[],jersey=[],median=[],chev=[];const seen=new Set();
   // Guardrails only at exposed outer edges. Probe the full piece to leave every junction open.
   for(const s of J.list){if(!photoCorridorRoad(s))continue;const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz);if(L<3)continue;
     const ux=dx/L,uz=dz/L,ang=Math.atan2(dx,dz),hw=segHalf(s),N=Math.ceil(L/6),pl=L/N;
@@ -3960,10 +3973,44 @@ function photoCorridorBuild(J,dummy){
       if(navSpan(cx,cz,s.name,3)?.b.bridge)continue;seen.add(key);
       // Kelly southbound wall is on the inland/east side of the western curved carriageway.
       const retaining=s.name==='Kelly Drive'&&cx<-1170&&cz>-190&&cz<5&&x>cx;
+      // Lincoln between Ridge Ave and the viaduct: concrete barrier walls, not steel rail (owner photos 2026-09-12-20-39-02 / 20-40-00).
+      const concrete=s.name==='Lincoln Drive'&&cz>-335&&cz<-195;
       if(retaining){const h=4.6;walls.push({x,z,y:y+h/2,w:.55,h,l:pl*1.02,ang,pitch});caps.push({x,z,y:y+h+.10,w:.72,h:.20,l:pl*1.02,ang,pitch});}
+      else if(concrete)jersey.push({x,z,y:y+.42,w:.5,h:.84,l:pl*1.02,ang,pitch});
       else{steel.push({x,z,y:y+.78,w:.18,h:.28,l:pl*1.02,ang,pitch});posts.push({x,z,y:y+.4,w:.14,h:.9,l:.16,ang,pitch:0});}
     }
   }
+  // Median barrier between the two Lincoln carriageways on the same stretch (the photos show one continuous wall).
+  // Its own pass, so it does not inherit the outer-edge exclusions; the northbound carriageway (z decreasing) owns
+  // it, one piece per 6m, and it stops 14m short of any junction cluster (the Ridge Ave nodes).
+  for(const s of J.list){if(s.name!=='Lincoln Drive'||!photoCorridorRoad(s))continue;const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz);if(L<3||dz>=0)continue;
+    const ux=dx/L,uz=dz/L,ang=Math.atan2(dx,dz),N=Math.ceil(L/6),pl=L/N;
+    for(let i=0;i<N;i++){const t=(i+.5)/N,cx=s.ax+dx*t,cz=s.az+dz*t;if(cz<-335||cz>-195||Math.hypot(cx-J.cx,cz-J.cz)>LOCAL.R)continue;let tw=null;
+      for(const o of segNear(cx,cz)){if(o===s||o.name!=='Lincoln Drive')continue;const ox=o.bx-o.ax,oz=o.bz-o.az,ol=Math.hypot(ox,oz)||1;if((ox*ux+oz*uz)/ol>-0.85)continue;
+        const tt=((cx-o.ax)*ox+(cz-o.az)*oz)/(ol*ol),c=closestSeg(cx,cz,o);if(tt<0.02||tt>0.98||c.d<6||c.d>14||(tw&&c.d>=tw.d))continue;tw={cx:c.cx,cz:c.cz,d:c.d};}   // closestSeg clamps: reject a twin matched at its end
+      if(!tw)continue;const mx=(cx+tw.cx)/2,mz=(cz+tw.cz)/2;let junction=false;                                            // a real junction = a node here with a legal edge onto ANOTHER street (Ridge Ave, a ramp);
+      for(const n of ngrid.get(Math.floor(mx/NCELL)+':'+Math.floor(mz/NCELL))||[]){if(Math.hypot(n.x-mx,n.z-mz)<14&&n.adj.some(e=>!e.wrong&&e.name!=='Lincoln Drive')){junction=true;break;}}   // the one-way pair's wrong-way cross links are not junctions
+      if(junction)continue;
+      const my0=navRoadY(mx-ux*pl/2,mz-uz*pl/2,s.name),my1=navRoadY(mx+ux*pl/2,mz+uz*pl/2,s.name);
+      median.push({x:mx,z:mz,y:(my0+my1)/2+.45,w:.5,h:.9,l:pl*1.02,ang,pitch:-Math.atan2(my1-my0,pl)});}}
+  // Painted gores (owner photos: the Ridge Ave on-ramp split, the City Ave connector, Kelly Dr at Ridge Ave): white
+  // chevrons in the neutral wedge where two surface roadways part or join at a shallow angle, apex toward the
+  // approaching traffic. Decided from the graph, never placed on a third roadway, and never on the freeway (its
+  // gores have their own signs). Boxes float just above the roadway like the other paint.
+  if(Math.hypot(J.cx+1000,J.cz+50)<LOCAL.R+420){const rev=hwyRev(),key=n=>Math.round(n.x)+','+Math.round(n.z);
+    for(const n of gnodes.values()){if(chev.length>360)break;if(n.x<-1320||n.x>-640||n.z<-420||n.z>340||Math.hypot(n.x-J.cx,n.z-J.cz)>LOCAL.R)continue;
+      const out=n.adj.filter(e=>!e.wrong&&!e.hw),inc=(rev.get(n)||[]).filter(r=>!r.e.wrong&&!r.e.hw);let pair=null,away=1;
+      if(out.length===2&&inc.length<=1)pair=[out[0].to,out[1].to,out[0].name,out[1].name];else if(inc.length===2&&out.length<=1){pair=[inc[0].from,inc[1].from,inc[0].e.name,inc[1].e.name];away=-1;}
+      if(!pair)continue;if(pair[2]&&pair[2]===pair[3])continue;                                     // a same-street lane split is not a gore
+      const l1=Math.hypot(pair[0].x-n.x,pair[0].z-n.z)||1,l2=Math.hypot(pair[1].x-n.x,pair[1].z-n.z)||1,d1x=(pair[0].x-n.x)/l1,d1z=(pair[0].z-n.z)/l1,d2x=(pair[1].x-n.x)/l2,d2z=(pair[1].z-n.z)/l2;
+      const dot=d1x*d2x+d1z*d2z;if(dot<0.64||dot>0.99)continue;                                      // 8° to 50° between the two roadways
+      const th=Math.acos(dot),sh=Math.sin(th/2);let bx=d1x+d2x,bz=d1z+d2z;const bl=Math.hypot(bx,bz)||1;bx/=bl;bz/=bl;const nx=-bz,nz=bx;
+      const touches=s=>(Math.abs(s.ax-n.x)<.5&&Math.abs(s.az-n.z)<.5)||(Math.abs(s.bx-n.x)<.5&&Math.abs(s.bz-n.z)<.5);
+      for(let t=2.2/sh,k=0;t<70&&k<14;t+=2.6,k++){const px=n.x+bx*t,pz=n.z+bz*t;if(!onAsphalt(px,pz))break;
+        let blocked=false;for(const o of segNear(px,pz)){if(touches(o))continue;if(closestSeg(px,pz,o).d<segHalf(o)+.2){blocked=true;break;}}if(blocked)break;
+        const w=Math.min(5,2*t*sh-5);if(w<0.6)continue;const y=navRoadY(px,pz)+.32;   // the wedge between the two driving lines, 2.5m clear of each centreline
+        for(const sd of [-1,1]){const qx=px+bx*away*1.8+nx*sd*w/2,qz=pz+bz*away*1.8+nz*sd*w/2,L=Math.hypot(qx-px,qz-pz);
+          chev.push({x:(px+qx)/2,y,z:(pz+qz)/2,w:.32,h:.05,l:L,ang:Math.atan2(qx-px,qz-pz),pitch:0});}}}}
   // The stone arch follows the Norristown Line crossing; one shared opening clears both
   // drawn Lincoln carriageways. Rail scenery alone gets the crown floor, never navRoadY.
   const a=CORRIDOR_PHOTO.arch;
@@ -3980,9 +4027,23 @@ function photoCorridorBuild(J,dummy){
       dummy.position.set(a.x+a.ux*u-a.uz*4.12*side,y,a.z+a.uz*u+a.ux*4.12*side);dummy.rotation.set(0,-Math.atan2(a.uz,a.ux),Math.atan2(-6.6*Math.cos(t),a.half*Math.sin(t)),'YXZ');dummy.scale.set(1,1,1);dummy.updateMatrix();
       stones.setMatrixAt(si,dummy.matrix);stones.setColorAt(si++,col.setHex(i%3?0xb2a68b:0x978c73));}
     stones.instanceMatrix.needsUpdate=true;stones.name='photo-arch-stones';FLATCITY.group.add(stones);FLATCITY.parts.push(stones);
+    // Masonry arcade: the rest of the viaduct is stone arches on tall piers (owner photos 2026-09-10-15-51-14-92 from
+    // Kelly Dr, 2026-09-12-20-39-02-74 from Lincoln Dr). Bays follow the twin rail line either side of the road opening;
+    // an arch is cut only where the level deck stands well above the ground, so the ends read as solid embankment walls.
+    const arcade=(u0,u1)=>{const len=u1-u0,pier=3.2,nOpen=Math.max(0,Math.floor((len-pier)/11.6));if(len<6)return;
+      const pitch=nOpen?(len-pier)/nOpen:len,top=H,bays=[];let bottom=1e9;
+      for(let k=0;k<nOpen;k++){const cu=u0+pier+pitch*k+(pitch-pier)/2,r=(pitch-pier)/2;let gmax=-1e9;
+        for(const du of [-r*.8,0,r*.8])for(const dv of [-5,0,5]){gmax=Math.max(gmax,navGroundY(a.x+a.ux*(cu+du)-a.uz*dv,a.z+a.uz*(cu+du)+a.ux*dv));}
+        const rr=Math.min(r,(top-gmax-3.2)/2);if(rr<2.2||onAsphalt(a.x+a.ux*cu,a.z+a.uz*cu))continue;bays.push({cu,r:rr,ys:top-2.6-rr});}
+      for(let u=u0;u<=u1;u+=4)bottom=Math.min(bottom,navGroundY(a.x+a.ux*u,a.z+a.uz*u));bottom-=2;
+      const sh=new THREE.Shape();sh.moveTo(u0,bottom);sh.lineTo(u0,top);sh.lineTo(u1,top);sh.lineTo(u1,bottom);
+      for(let i=bays.length-1;i>=0;i--){const b=bays[i];sh.lineTo(b.cu+b.r,bottom);sh.lineTo(b.cu+b.r,b.ys);sh.absarc(b.cu,b.ys,b.r,0,Math.PI,false);sh.lineTo(b.cu-b.r,bottom);}
+      sh.lineTo(u0,bottom);const geo=new THREE.ExtrudeGeometry(sh,{depth:9,bevelEnabled:false,steps:1,curveSegments:14});geo.translate(0,0,-4.5);
+      const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:0xffffff,map:photoStoneTexture()}));m.position.set(a.x,0,a.z);m.rotation.y=-Math.atan2(a.uz,a.ux);m.name='photo-viaduct-arcade';FLATCITY.group.add(m);FLATCITY.parts.push(m);};
+    arcade(-99,-span);arcade(span,54);
   }
-  for(const [list,color,name] of [[steel,0xa8b4b0,'guardrails'],[posts,0x747c76,'posts'],[walls,0xb7b0a0,'kelly-wall'],[caps,0xd1c8b4,'wall-caps']]){if(!list.length)continue;
-    const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);m.name='photo-'+name;
+  for(const [list,color,name,basic] of [[steel,0xa8b4b0,'guardrails'],[posts,0x747c76,'posts'],[walls,0xb7b0a0,'kelly-wall'],[caps,0xd1c8b4,'wall-caps'],[jersey,0xc4c1b7,'lincoln-barrier'],[median,0xbdbab1,'lincoln-median'],[chev,0xf5f6f8,'gore-chevrons',true]]){if(!list.length)continue;
+    const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),basic?new THREE.MeshBasicMaterial({color}):new THREE.MeshLambertMaterial({color}),list.length);m.name='photo-'+name;if(basic)m.renderOrder=2;
     list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);
   }
 }
@@ -4273,7 +4334,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             if(rw.girder){for(const side of [-1,1])rGirder.push({x:px-uz*2.25*side,y:y-0.65,z:pz+ux*2.25*side,w:0.34,h:2.1,l:pll,ang,pitch});
               for(let k=-2;k<=2;k++)rTie.push({x:px+ux*pl*k/5,y:y+0.18,z:pz+uz*pl*k/5,w:4.7,h:0.18,l:0.34,ang,pitch});}
             const ground=navGroundY(px,pz),hh=y-ground-1.2;
-            if(hh>4&&j%2===0&&!onAsphalt(px,pz))rPier.push({x:px,y:ground+hh/2,z:pz,w:3.4,h:hh,l:1.8,ang,pitch:0});}   // no piers planted in the roadway below a span
+            if(hh>4&&j%2===0&&!onAsphalt(px,pz)&&!(CORRIDOR_PHOTO.enabled&&(rw.id===42705851||rw.id===98619777)))rPier.push({x:px,y:ground+hh/2,z:pz,w:3.4,h:hh,l:1.8,ang,pitch:0});}   // no piers planted in the roadway below a span; the photo viaduct stands on its stone arcade instead
           else{
             // Grade separation (owner-verified at Calumet St, Sep 6 2026): OSM marks every real
             // street-level rail crossing with a railway=level_crossing node (629 citywide, mostly
