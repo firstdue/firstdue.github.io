@@ -135,7 +135,13 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v18w.** v18t–v18w added the I-76 / US 1 freeway corridor: the drive graph, lane-count
+- **The build is v18x (September 13, 2026).** Owner-photo-based City Avenue / Lincoln Drive / Kelly
+  Drive scenery adds a Lincoln stone arch, Kelly retaining wall, green City girders, guardrails and
+  wooded Lincoln shoulders, plus Engine 35 facade detail. This is render-only; road graph,
+  navigation heights, `RAMP_GRADE` and routing remain untouched. Authoring evidence is in
+  `notes/city-lincoln-kelly-photo-pass.md`, which does not ship in this checkout.
+
+- **v18t–v18w added the I-76 / US 1 freeway corridor:** the drive graph, lane-count
   widths and elevation (v18t); structure — shared median, guardrails, retaining walls, piers and the
   Roosevelt road cut under Wissahickon Ave (v18u); driving fixes so a street that simply continues no
   longer stops, with street-choice cards earlier and more of them (v18v); and identity — guide signs,

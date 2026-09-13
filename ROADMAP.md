@@ -1,9 +1,13 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 11, 2026. **v18s is public and matches the local build** — the
-authoring folder was reconciled to v18s on September 10 (see CLAUDE.md "Before you publish").
-v18m–v18s were authored in the public repository rather than the authoring folder; read that
-CLAUDE.md section before any ship.
+Planning snapshot: September 13, 2026. **v18x is public and matches the authoring build** — commit
+`e779e2e`, service-worker cache `local-shell-v8`. The authoritative graphics handoff and source
+references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+
+- [x] **v18x City / Lincoln / Kelly graphics pass (September 13, 2026):** owner-photo-based, localized
+  scenery adds Lincoln's stone arch, Kelly's retaining wall, green City girders, guardrails and
+  wooded shoulders, plus Engine 35 facade detail. It leaves street geometry, the road graph,
+  navigation heights and routing unchanged. Owner phone review is next.
 
 - [x] **US 1 / I-76 highway support, phase 1 (September 11, 2026 — authored here, NOT published,
   BUILD not bumped).** The Schuylkill Expressway and the Roosevelt Expressway did not exist in the

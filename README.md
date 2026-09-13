@@ -1,13 +1,15 @@
 # Philly Fire Dispatch — Local
 
-**Current: PUBLIC = v18w (September 12, 2026).** Interstate 76 and the US 1 Roosevelt Expressway are
+**Current: PUBLIC = v18x (September 13, 2026).** Interstate 76 and the US 1 Roosevelt Expressway are
 drivable, with their ramps, interchanges and bridges. They carry real lane-count widths, medians,
 guardrails and piers, and now their own identity: green guide signs and exit gantries whose wording
 comes from OpenStreetMap tags, gore markers at the splits, I-76 and US 1 route shields, shoulder
 lighting, and mileposts anchored to PennDOT's surveyed mile markers. On a freeway the heads-up line
 names the route and the milepost you just passed instead of a street's hundred block.
 
-**PUBLIC = LOCAL, and the owner's authoring folder is the source of truth** — v18t–v18w were authored
+v18x adds owner-photo-based City Avenue, Lincoln Drive and Kelly Drive scenery: Lincoln's stone rail
+arch, Kelly's retaining wall, green City girders, guardrails and wooded shoulders, plus richer Engine
+35 facades. **PUBLIC = LOCAL, and the owner's authoring folder is the source of truth** — v18t–v18x were authored
 there and published here. See "Repository layout" and `CLAUDE.md` before editing.
 
 ## Release history
@@ -33,6 +35,11 @@ folder and published here, one owner phone test per build:
   surveyed mile markers, so whole miles are exact and only the tenths between them are estimated and
   labelled as such. On a freeway the heads-up line names the route and the milepost just passed, and
   an exit card shows the real sign rather than a guessed destination.
+
+**v18x (September 13, 2026) — City / Lincoln / Kelly reference pass.** Localized scenery based on
+owner-supplied photos: Lincoln Drive's stone railway arch, Kelly Drive's retaining wall, green City
+Avenue girders, guardrails, wooded shoulders, and richer Engine 35 facades. It does not change the
+road graph, navigation heights, routing, or street geometry.
 
 **v18n–v18r (September 9–10, 2026, authored in the public repo).** Citywide rollout and its
 fallout, one owner playtest per build:
@@ -147,12 +154,13 @@ A phone-friendly Philadelphia fire-engine navigation game. Choose a real company
 
 ## Current state
 
-Project handoff snapshot, September 12, 2026:
+Project handoff snapshot, September 13, 2026:
 
-- **Published: v18w. PUBLIC = LOCAL** — the owner's authoring folder and this repository match.
+- **Published: v18x. PUBLIC = LOCAL** — the owner's authoring folder and this repository match.
   v18t–v18w were authored in the folder and published here: the I-76 / US 1 freeway corridor and
   its graph and elevation (v18t), structure (v18u), driving fixes (v18v), and identity — sourced
-  signs, gantries, gore markers, shoulder lighting and real mileposts (v18w).
+  signs, gantries, gore markers, shoulder lighting and real mileposts (v18w). v18x then adds
+  the City / Lincoln / Kelly scenery pass and Engine 35 facade detail; service-worker cache v8.
 - The build tag in the HUD (top left, next to SAVES) is the fastest way to tell whether a phone has
   picked up a deploy or is serving a cached page.
 - Intersection Recall is the active TRAIN MY LOCAL drill: a named street intersection with no
