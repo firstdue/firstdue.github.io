@@ -1,8 +1,18 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 13, 2026. **v19b is public and matches the authoring build** — commit
-`46b9b56`, service-worker cache `local-shell-v12`. The authoritative graphics handoff and source
+Planning snapshot: September 13, 2026. **v19c is public and matches the authoring build** — commit
+`5979d75`, service-worker cache `local-shell-v13`. The authoritative graphics handoff and source
 references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+
+- [x] **v19c hydrant gate + citywide guide fix (September 13, 2026):** hydrant marking limited to granted
+  accounts after the owner kept pressing the button by accident, and the advisory guide held above the finished
+  pavement everywhere instead of inside a City Ave bbox (Manayunk went from 4 buried guide vertices to 0).
+
+- [ ] **Highway phase 2c — recover the freeway exits the bake drops at the city limits.** Two owner reports with
+  one cause: no I-76 tie-in to Belmont Ave / Green Lane (exit 338 is in the fetched data but the corridor stops
+  250–600 m short), and no eastbound exit to Ridge / Kelly / Lincoln at all (the eastbound 340A gore was clipped
+  out, so eastbound offers only exit 340B across the whole corridor). Needs a re-bake; moves pinned graph counts.
+  See the authoring folder's `notes/i76-belmont-green-lane-tiein.md`.
 
 - [x] **v19b interchange ramp detail (September 13, 2026):** from a render study of Google Maps' Immersive
   Navigation cues, of which the owner picked two — ramp lane paint (a yellow-left / white-right edge line; ramps

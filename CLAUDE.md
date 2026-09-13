@@ -135,7 +135,11 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19b (September 13, 2026), interchange ramp detail.** `RAMP_DETAIL` gives the unnamed ramps
+- **The build is v19c (September 13, 2026).** Hydrant marking is gated on `HYDRANT_SCOUTS` (ships empty; the
+  button hides AND `playerAddHydrant` refuses — add an account's e-mail or profile id to grant it). The guide's
+  pavement sampling is citywide, not corridor-bboxed, and clears the highest overlapping surface within 1 m at a
+  junction; do not re-introduce a bbox around `GUIDE_SURFACE`. Service-worker cache v13.
+- **v19b (September 13, 2026), interchange ramp detail.** `RAMP_DETAIL` gives the unnamed ramps
   inside the City Ave / Lincoln Dr / Kelly Dr bbox a yellow-left / white-right edge line and a paved shoulder plus
   graded embankment where they run on grade. Scenery only. **Both guards matter:** the edge line is probed along
   its whole piece at its own offset, and the shoulder band across its full width including the inner seam — a
