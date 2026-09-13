@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v18z";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19a";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2785,6 +2785,18 @@ const routeEdgeFlat=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBas
 routeEdgeFlat.frustumCulled=false; routeEdgeFlat.visible=false; routeEdgeFlat.renderOrder=2; scene.add(routeEdgeFlat);
 const routeMeshFlat=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x4424f4,transparent:true,opacity:0.95,side:THREE.DoubleSide,depthWrite:false}));   // FLAT blue-purple GPS route for the tilted map, sitting ON the roadway
 routeMeshFlat.frustumCulled=false; routeMeshFlat.visible=false; routeMeshFlat.renderOrder=3; scene.add(routeMeshFlat);
+// A corridor guide must follow the finished pavement triangles, not only the sampled road height:
+// a coarse bridge triangle can stand over 1m above navRoadY between its vertices and hide the blue line.
+const GUIDE_SURFACE={minX:-1350,maxX:-650,minZ:-450,maxZ:300,cell:32};
+function guideSurfaceIndex(surfaces){const grid=new Map(),c=GUIDE_SURFACE.cell;
+  for(const s of surfaces){const x=(s.bb[0]+s.bb[2])/2,z=(s.bb[1]+s.bb[3])/2;
+    if(x<GUIDE_SURFACE.minX||x>GUIDE_SURFACE.maxX||z<GUIDE_SURFACE.minZ||z>GUIDE_SURFACE.maxZ)continue;
+    for(let gx=Math.floor(s.bb[0]/c);gx<=Math.floor(s.bb[2]/c);gx++)for(let gz=Math.floor(s.bb[1]/c);gz<=Math.floor(s.bb[3]/c);gz++){const k=gx+':'+gz,a=grid.get(k);if(a)a.push(s);else grid.set(k,[s]);} }
+  return grid;}
+function guideSurfaceY(x,z,logicalY,name){if(name===null||x<GUIDE_SURFACE.minX||x>GUIDE_SURFACE.maxX||z<GUIDE_SURFACE.minZ||z>GUIDE_SURFACE.maxZ)return null;
+  const list=FLATCITY.guideSurfaces?.get(Math.floor(x/GUIDE_SURFACE.cell)+':'+Math.floor(z/GUIDE_SURFACE.cell));if(!list)return null;
+  let best=null,dist=3;for(const s of list){if(s.name!==name)continue;const y=roadPaintPlaneY(x,z,[s]);if(y===null)continue;const d=Math.abs(y-logicalY);
+    if(d<dist){best=y;dist=d;}}return best;}
 const beaconG=new THREE.Group();
 const beam=new THREE.Mesh(new THREE.CylinderGeometry(8,8,120,16,1,true),new THREE.MeshBasicMaterial({color:0xff3b30,transparent:true,opacity:0.4,side:THREE.DoubleSide,depthWrite:false})); beam.position.y=55; beaconG.add(beam);
 const ring=new THREE.Mesh(new THREE.RingGeometry(6.4,8.6,26),new THREE.MeshBasicMaterial({color:0xff6b52,transparent:true,opacity:0.85,side:THREE.DoubleSide,depthWrite:false})); ring.rotation.x=-Math.PI/2; ring.position.y=0.3; beaconG.add(ring);
@@ -3190,8 +3202,11 @@ document.getElementById('btnDrill').addEventListener('click',e=>{ e.preventDefau
 let hurryShown=false;
 function updateHUD(dt){
   const rp=[truck.x,truck.z];   // the street/block pill reads at the truck
-  const curStreet=streetName(rp[0],rp[1]); let curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
-  { const e=DRIVE.fromN&&DRIVE.toN?DRIVE.fromN.adj.find(a=>a.to===DRIVE.toN):null; const hb=hwyHudBlock(e,DRIVE.fromN,rp[0],rp[1]); if(hb) curBlock=hb; }   // 🛣️ freeway: 'I-76 EAST · MILE 340.6 · APPROX'
+  let curStreet=streetName(rp[0],rp[1]), curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
+  { const e=DRIVE.fromN&&DRIVE.toN?DRIVE.fromN.adj.find(a=>a.to===DRIVE.toN):null;
+    if(e&&!DRIVE.parked){ if(e.name){curStreet=e.name;curBlock=currentHundredBlock(rp[0],rp[1],curStreet);}
+      else {curStreet=rampDestName()||'Connecting ramp';curBlock='RAMP';} } // name the actual driven level, not the avenue passing overhead
+    const hb=hwyHudBlock(e,DRIVE.fromN,rp[0],rp[1]); if(hb) curBlock=hb; }   // 🛣️ freeway: 'I-76 EAST · MILE 340.6 · APPROX'
   elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+(FPSM.avg?' · '+(FPSM.avg|0)+' FPS · dip '+((FPSM.shownMin===999?FPSM.avg:FPSM.shownMin)|0):'')+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
   { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = '📻 DISPATCH » '; }   // boundary/training mode is not a live call
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
@@ -3272,7 +3287,7 @@ function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geomet
      only where it pokes back out, reading as broken chunks (owner report, Roxborough v18p; flat ground and
      East Falls' mild slope had hidden it). Subdivide to ~10m like the road surface itself. */
   const pts=[]; for(let i=0;i<pts0.length;i++){ const p=pts0[i];
-    if(i&&NAVGEO.active){ const q=pts0[i-1],d=Math.hypot(p.x-q.x,p.z-q.z),n=Math.min(40,Math.ceil(d/10));
+    if(i&&NAVGEO.active){ const q=pts0[i-1],d=Math.hypot(p.x-q.x,p.z-q.z),corridor=p.x>GUIDE_SURFACE.minX&&p.x<GUIDE_SURFACE.maxX&&p.z>GUIDE_SURFACE.minZ&&p.z<GUIDE_SURFACE.maxZ,n=Math.min(40,Math.ceil(d/(corridor?5:10)));
       for(let k=1;k<n;k++) pts.push({x:q.x+(p.x-q.x)*k/n,z:q.z+(p.z-q.z)*k/n}); }
     pts.push(p); }
   for(let i=0;i<pts.length;i++){ const p=pts[i],a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)],dx=b.x-a.x,dz=b.z-a.z,l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
@@ -3280,8 +3295,9 @@ function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geomet
     const navY=navRoadY(p.x,p.z,routeName,dx,dz);
     pos.push(p.x+nx*hw,navY+0.42,p.z+nz*hw, p.x-nx*hw,navY+0.42,p.z-nz*hw);
     const LN=(rs&&rs.hw)?hwyLaneOff(rs):2.4;                                              // shift the flat ribbon into the right-hand lane (a freeway lane centre under the lane-offset truck) so it runs under the lane-offset truck (nx,nz is already right-of-travel)
-    posF.push(p.x+nx*(LN+hwF),navY+0.52,p.z+nz*(LN+hwF), p.x+nx*(LN-hwF),navY+0.52,p.z+nz*(LN-hwF));
-    posE.push(p.x+nx*(LN+hwE),navY+0.46,p.z+nz*(LN+hwE), p.x+nx*(LN-hwE),navY+0.46,p.z+nz*(LN-hwE));
+    const fy=(o,lift)=>{const x=p.x+nx*o,z=p.z+nz*o,road=guideSurfaceY(x,z,navY,routeName);return Math.max(navY+lift,road===null?-Infinity:road+lift);};
+    posF.push(p.x+nx*(LN+hwF),fy(LN+hwF,0.52),p.z+nz*(LN+hwF), p.x+nx*(LN-hwF),fy(LN-hwF,0.52),p.z+nz*(LN-hwF));
+    posE.push(p.x+nx*(LN+hwE),fy(LN+hwE,0.46),p.z+nz*(LN+hwE), p.x+nx*(LN-hwE),fy(LN-hwE,0.46),p.z+nz*(LN-hwE));
     if(i){ const k=i*2; idx.push(k-2,k-1,k,k-1,k+1,k); } }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals();
   const gf=new THREE.BufferGeometry(); gf.setAttribute('position',new THREE.Float32BufferAttribute(posF,3)); gf.setIndex(idx.slice());
@@ -3854,13 +3870,13 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
   list.sort((p,q)=>((p.ax-cx)**2+(p.az-cz)**2)-((q.ax-cx)**2+(q.az-cz)**2));   // nearest streets first so the caps fill the view around the truck
   const ends=new Map(), ek=(x,z)=>(Math.round(x/2))+','+(Math.round(z/2));     // junction map: how many segments share the endpoint + the widest street's half-width there
   for(const s of list){ const hwv=segHalf(s);
-    for(const k of [ek(s.ax,s.az),ek(s.bx,s.bz)]){ const e=ends.get(k); if(e){ e.n++; if(hwv>e.hw)e.hw=hwv; } else ends.set(k,{n:1,hw:hwv}); } }
+    for(const k of [ek(s.ax,s.az),ek(s.bx,s.bz)]){ const e=ends.get(k); if(e){ e.n++; if(hwv>e.hw)e.hw=hwv; if(!s.name)e.ramp=true; } else ends.set(k,{n:1,hw:hwv,ramp:!s.name}); } }
   for(const s of list){ for(const q of [[s.ax,s.az],[s.bx,s.bz]]){ const e=ends.get(ek(q[0],q[1]));   // T-junctions: the side street's endpoint touches the through street MID-segment, so no endpoint is shared — probe for it (the missed case let sidewalks bar across Ridge at every T)
     if(!e||e.n>=3) continue;
     for(const o of segNear(q[0],q[1])){ if(o===s||o.name===s.name) continue;
       if(Math.hypot(o.ax-q[0],o.az-q[1])<3||Math.hypot(o.bx-q[0],o.bz-q[1])<3) continue;             // shares an endpoint — the first pass already counted it
       const ohw=segHalf(o);
-      if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; break; } } } }
+      if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; if(!o.name)e.ramp=true; break; } } } }
   return {cx,cz,list,ends,ek,detail:STREET_DETAIL.enabled&&DRIVE.stationId===STREET_DETAIL.companyId,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
 }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
@@ -3878,16 +3894,16 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
         let hit=false;
         if(Math.abs(det)>1e-6){ const rx=o.ax-s.ax, rz=o.az-s.az;
           const a=(odx*rz-odz*rx)/det, b=(dx*rz-dz*rx)/det;                                // a = metres along s; b = fraction along o
-          if(a>3&&a<sl-3&&b>0.02&&b<0.98){if(gradeSeparatedCrossing({nm:s.name},{nm:o.name},s.ax+dx*a,s.az+dz*a))continue; EV.push({t:a,hw:ohw,both:true,side:0}); hit=true; } }
+          if(a>3&&a<sl-3&&b>0.02&&b<0.98){if(gradeSeparatedCrossing({nm:s.name},{nm:o.name},s.ax+dx*a,s.az+dz*a))continue; EV.push({t:a,hw:ohw,both:true,side:0,ramp:!o.name}); hit=true; } }
         if(!hit){ for(const q of [[o.ax,o.az,o.bx,o.bz],[o.bx,o.bz,o.ax,o.az]]){           // T: the side street's endpoint touches s mid-segment
             const a=(q[0]-s.ax)*dx+(q[1]-s.az)*dz; if(a<3||a>sl-3) continue;
             const pd=(q[0]-s.ax)*nx+(q[1]-s.az)*nz; if(Math.abs(pd)>rh+2||gradeSeparatedCrossing({nm:s.name},{nm:o.name},s.ax+dx*a,s.az+dz*a)) continue;
             const fs=((q[2]-s.ax)*nx+(q[3]-s.az)*nz)>=0?1:-1;                              // which side the street comes from = the slab side its mouth interrupts
-            EV.push({t:a,hw:ohw,both:false,side:fs}); break; } } }
+            EV.push({t:a,hw:ohw,both:false,side:fs,ramp:!o.name}); break; } } }
       EV.sort((p,q)=>p.t-q.t);
       for(let i=EV.length-1;i>0;i--){ if(Math.abs(EV[i].t-EV[i-1].t)<3){                    // a chain split AT the crossing shows up as two Ts from opposite sides — merge to one X
           const m=EV[i-1]; m.t=(m.t+EV[i].t)/2; m.hw=Math.max(m.hw,EV[i].hw);
-          if(EV[i].both||m.both||EV[i].side!==m.side){ m.both=true; m.side=0; } EV.splice(i,1); } } }
+          if(EV[i].both||m.both||EV[i].side!==m.side){ m.both=true; m.side=0; } m.ramp ||= EV[i].ramp; EV.splice(i,1); } } }
     if(!s.name||s.hw) continue;                                                            // freeways likewise; unnamed = ramps/connectors: road surface only — no sidewalks, trees or buildings on an on-ramp (owner, City Ave interchange)
     if(sl>=6 && S.length<LOCAL.maxS){                                                      // 🛣️ kerb / sidewalk slab down each side of this street
       const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2;
@@ -4125,12 +4141,12 @@ function roadPaintY(P,x,z){const px=x-P.ax, pz=z-P.az, t=px*P.dx+pz*P.dz, o=px*P
 // Road surface + markings generation, moved VERBATIM out of FLATCITY.commit (v18o) so stepLocalCity can run
 // it under the frame budget — see the phase at the end of stepLocalCity. State lives on J.road; the mk/my
 // push overrides place each marking on the street's smoothed height profile the moment it is pushed.
-function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfaces:[],profile:null}; J.road=st; J.ri=0;
+function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfaces:[],guideSurfaces:[],profile:null}; J.road=st; J.ri=0;
   if(NAVGEO.active){st.rp.push=function(...v){
     const tri=(a,b,c,depth=0)=>{const ds=[Math.hypot(a[0]-b[0],a[2]-b[2]),Math.hypot(b[0]-c[0],b[2]-c[2]),Math.hypot(c[0]-a[0],c[2]-a[2])],m=Math.max(...ds);
       if(m>24&&depth<9){let x=a,y=b,z=c;if(ds[1]===m){x=b;y=c;z=a}else if(ds[2]===m){x=c;y=a;z=b}const mid=[(x[0]+y[0])/2,(x[1]+y[1])/2,(x[2]+y[2])/2];tri(x,mid,z,depth+1);tri(mid,y,z,depth+1);return;}
       const lifted=[];for(const p of [a,b,c]){if(p[3]===undefined)p[3]=navRoadY(p[0],p[2],st.roadName,st.roadDx,st.roadDz);const y=p[3];lifted.push(p[0],p[1]+y+0.16,p[2]);}Array.prototype.push.apply(this,lifted);
-      const surface=roadPaintSurface(lifted);if(surface)st.paintSurfaces.push(surface);};
+      const surface=roadPaintSurface(lifted);if(surface){surface.name=st.roadName;st.paintSurfaces.push(surface);st.guideSurfaces.push(surface);}};
     for(let i=0;i<v.length;i+=9)tri(v.slice(i,i+3),v.slice(i+3,i+6),v.slice(i+6,i+9));return this.length;};
     for(const arr of [st.mk,st.my])arr.push=function(...v){const P=st.profile;
       if(!P)return Array.prototype.push.apply(this,v);
@@ -4236,15 +4252,17 @@ function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOC
         arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn,
                 p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); } } }
   if(!s.hw && s.cls<=2 && l>18 && mk.length<240000){                                    // 🚸 zebra crosswalks — endpoint junctions AND every mid-segment crossing (what makes an intersection read as an intersection)
-    const zeb=(cxw,czw,fx2,fz2)=>{ const bl=1.3, nxu=-fz2, nzu=fx2;                    // bars elongated ALONG travel, arrayed across the road
+    const zeb=(cxw,czw,fx2,fz2)=>{ if(Math.hypot(cxw+1067,czw-90)<28)return; // Kelly under the City Ave structures: the photographed road has no pedestrian crossing here
+      const bl=1.3, nxu=-fz2, nzu=fx2;                    // bars elongated ALONG travel, arrayed across the road
       for(let o=-hw*0.82; o<=hw*0.82; o+=1.15){
         const bx=cxw+nxu*o, bz=czw+nzu*o, ax2=fx2*bl, az2=fz2*bl, sx2=nxu*0.28, sz2=nzu*0.28;
         mk.push(bx-ax2+sx2,MARK_Y,bz-az2+sz2, bx+ax2+sx2,MARK_Y,bz+az2+sz2, bx+ax2-sx2,MARK_Y,bz+az2-sz2,
                 bx-ax2+sx2,MARK_Y,bz-az2+sz2, bx+ax2-sx2,MARK_Y,bz+az2-sz2, bx-ax2-sx2,MARK_Y,bz-az2-sz2); } };
     const placed=[]; const ok=tt=>{ for(const p2 of placed) if(Math.abs(p2-tt)<9) return false; placed.push(tt); return true; };   // Philly side streets come every ~50m — without spacing the zebras overlapped into zigzag soup on Broad St
-    if(jA){ const t0=((eA?eA.hw:hw)+2.2); if(ok(t0)) zeb(s.ax+dx*t0, s.az+dz*t0, dx, dz); }
-    if(jB){ const t1=l-((eB?eB.hw:hw)+2.2); if(ok(t1)) zeb(s.ax+dx*t1, s.az+dz*t1, dx, dz); }
+    if(jA&&!eA.ramp&&!navSpan(s.ax,s.az,s.name,9,dx,dz)?.b.bridge){ const t0=eA.hw+2.2; if(ok(t0)) zeb(s.ax+dx*t0, s.az+dz*t0, dx, dz); }
+    if(jB&&!eB.ramp&&!navSpan(s.bx,s.bz,s.name,9,dx,dz)?.b.bridge){ const t1=l-(eB.hw+2.2); if(ok(t1)) zeb(s.ax+dx*t1, s.az+dz*t1, dx, dz); }
     for(const ev of EV){ if(mk.length>=240000||placed.length>=12) break;               // both approaches of every crossing/T get a zebra, spaced out
+      if(ev.ramp||navSpan(s.ax+dx*ev.t,s.az+dz*ev.t,s.name,9,dx,dz)?.b.bridge)continue; // a vehicle ramp or bridge crossing is not evidence of a pedestrian crossing
       for(const sgn of [-1,1]){ const tt=ev.t+sgn*(ev.hw+2.2); if(tt<3||tt>l-3) continue;
         if(ok(tt)) zeb(s.ax+dx*tt, s.az+dz*tt, dx, dz); } } }
 }
@@ -4390,6 +4408,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   // The geometry itself comes from roadGeomSeg, run under stepLocalCity's frame budget (v18o): the arrays arrive
   // finished on J.road and this section only turns them into the three merged meshes.
   if(J.road){ const {rp,mk,my}=J.road;
+    FLATCITY.guideSurfaces=guideSurfaceIndex(J.road.guideSurfaces);
     if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));
       const rd=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:J.immersive?0x697582:0x8896a8})); rd.renderOrder=1; FLATCITY.group.add(rd); FLATCITY.parts.push(rd); }
     if(mk.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(mk,3));
@@ -4490,6 +4509,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       dummy.scale.set(J.immersive?bed:s*1.5,J.immersive?0.12:0.09,J.immersive?bed:s*2.1); dummy.updateMatrix(); pad.setMatrixAt(i,dummy.matrix); });
     cano.instanceMatrix.needsUpdate=true; if(cano.instanceColor)cano.instanceColor.needsUpdate=true; trunk.instanceMatrix.needsUpdate=true; pad.instanceMatrix.needsUpdate=true;
     FLATCITY.group.add(pad); FLATCITY.group.add(trunk); FLATCITY.group.add(cano); FLATCITY.parts.push(pad,trunk,cano); }
+  if(routePts?.length>1)setRouteGeom(); // refresh the guide when its nearby pavement triangles are rebuilt
 };
 function __oldBuildFlatCity(){ genCityData(); if(!buildData.length) return;
   const dummy=new THREE.Object3D(), col=new THREE.Color();
