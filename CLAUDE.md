@@ -135,7 +135,11 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v18y (September 13, 2026), corridor pass 2.** On top of v18x: a level stone viaduct
+- **The build is v18z (September 13, 2026), street-choice cards.** A card for the street under the truck needs a
+  genuine fork (not the continuation, a near-reversal stub, or a lane split that rejoins within 8 hops), and the
+  preview is capped at two junctions ahead / four cards. The look-ahead DISTANCES are an earlier owner fix and must
+  not be shortened to reduce clutter; cap the depth instead. Service-worker cache v10.
+- **v18y (September 13, 2026), corridor pass 2.** On top of v18x: a level stone viaduct
   arcade either side of the Lincoln arch, concrete barriers and a median on Lincoln between Ridge Ave and
   the viaduct, painted gore chevrons at ramp splits/merges, photo-sourced gantries on Lincoln SB, Kelly NB
   and City Ave, and street lighting on the corridor roads (`CORRIDOR_PHOTO.lights`, not `HWY_LIGHTS`).

@@ -1,8 +1,12 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 13, 2026. **v18y is public and matches the authoring build** — commit
-`d56ff54`, service-worker cache `local-shell-v9`. The authoritative graphics handoff and source
+Planning snapshot: September 13, 2026. **v18z is public and matches the authoring build** — commit
+`0d7e852`, service-worker cache `local-shell-v10`. The authoritative graphics handoff and source
 references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+
+- [x] **v18z street-choice cards (September 13, 2026):** owner phone review of v18y — no card for the street you
+  are already on unless it genuinely forks, and the stack capped at two junctions ahead / four cards, with the
+  look-ahead distances untouched. Measured on screen: 6 cards at once down to 3-4, phantom own-street card gone.
 
 - [x] **v18y corridor pass 2 (September 13, 2026):** from the owner's 137 screenshots — level stone
   viaduct arcade, Lincoln concrete barriers + median, painted gore chevrons, photo-sourced gantries
