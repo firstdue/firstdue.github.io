@@ -1,0 +1,73 @@
+{
+ "_source": "PennDOT open data, ArcGIS MapServer layer opendata/interstatemilemarkers (surveyed interstate mile markers, 1432 statewide, whole miles only)",
+ "_endpoint": "https://gis.penndot.gov/arcgis/rest/services/opendata/interstatemilemarkers/MapServer/0/query",
+ "_query": "where=ST_RT_NO='0076' AND CTY_CODE='67' | outFields=CTY_CODE,ST_RT_NO,SEG_NO,JURIS,MILE_MARKER | outSR=4326",
+ "_fetched": "2026-09-12",
+ "_projection": "game x = (lon + 75.1924) * cos(40.0127 deg) * 111320 ; game z = (40.0127 - lat) * 110540  (the same LAT0/LON0 the bakes use)",
+ "_note": "Only miles 340, 341 and 342 fall inside the baked corridor; they land within 0.9 m of the eastbound reference line and anchor HWY_MILEPOSTS in index.html. The layer carries no tenth-mile posts and no US 1, so tenths are interpolated (labelled APPROX in the HUD) and the Roosevelt Expressway shows no mileage.",
+ "markers": [
+  {
+   "mile": 340.0,
+   "seg": "3400",
+   "cty": "67",
+   "lat": 40.007076,
+   "lon": -75.199884,
+   "game_x": -638.1,
+   "game_z": 621.6
+  },
+  {
+   "mile": 341.0,
+   "seg": "3410",
+   "cty": "67",
+   "lat": 39.994629,
+   "lon": -75.198546,
+   "game_x": -524.0,
+   "game_z": 1997.6
+  },
+  {
+   "mile": 342.0,
+   "seg": "3420",
+   "cty": "67",
+   "lat": 39.983041,
+   "lon": -75.208104,
+   "game_x": -1339.0,
+   "game_z": 3278.5
+  },
+  {
+   "mile": 343.0,
+   "seg": "3430",
+   "cty": "67",
+   "lat": 39.974504,
+   "lon": -75.194291,
+   "game_x": -161.2,
+   "game_z": 4222.2
+  },
+  {
+   "mile": 344.0,
+   "seg": "3440",
+   "cty": "67",
+   "lat": 39.963013,
+   "lon": -75.183736,
+   "game_x": 738.7,
+   "game_z": 5492.4
+  },
+  {
+   "mile": 346.0,
+   "seg": "3460",
+   "cty": "67",
+   "lat": 39.934855,
+   "lon": -75.199935,
+   "game_x": -642.5,
+   "game_z": 8605.0
+  },
+  {
+   "mile": 347.0,
+   "seg": "3470",
+   "cty": "67",
+   "lat": 39.926352,
+   "lon": -75.194571,
+   "game_x": -185.1,
+   "game_z": 9544.9
+  }
+ ]
+}
