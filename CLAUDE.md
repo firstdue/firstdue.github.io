@@ -135,7 +135,12 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v18x (September 13, 2026).** Owner-photo-based City Avenue / Lincoln Drive / Kelly
+- **The build is v18y (September 13, 2026), corridor pass 2.** On top of v18x: a level stone viaduct
+  arcade either side of the Lincoln arch, concrete barriers and a median on Lincoln between Ridge Ave and
+  the viaduct, painted gore chevrons at ramp splits/merges, photo-sourced gantries on Lincoln SB, Kelly NB
+  and City Ave, and street lighting on the corridor roads (`CORRIDOR_PHOTO.lights`, not `HWY_LIGHTS`).
+  Only sign panels the baked graph can honour were built. Scenery and signs only; service-worker cache v9.
+- **v18x (September 13, 2026).** Owner-photo-based City Avenue / Lincoln Drive / Kelly
   Drive scenery adds a Lincoln stone arch, Kelly retaining wall, green City girders, guardrails and
   wooded Lincoln shoulders, plus Engine 35 facade detail. This is render-only; road graph,
   navigation heights, `RAMP_GRADE` and routing remain untouched. Authoring evidence is in

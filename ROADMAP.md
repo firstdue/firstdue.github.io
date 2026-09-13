@@ -1,8 +1,13 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 13, 2026. **v18x is public and matches the authoring build** — commit
-`e779e2e`, service-worker cache `local-shell-v8`. The authoritative graphics handoff and source
+Planning snapshot: September 13, 2026. **v18y is public and matches the authoring build** — commit
+`d56ff54`, service-worker cache `local-shell-v9`. The authoritative graphics handoff and source
 references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+
+- [x] **v18y corridor pass 2 (September 13, 2026):** from the owner's 137 screenshots — level stone
+  viaduct arcade, Lincoln concrete barriers + median, painted gore chevrons, photo-sourced gantries
+  (Lincoln SB Ridge Ave North, Kelly NB Lincoln Drive, City Ave I-76 West / Lincoln Drive), corridor
+  street lighting. Scenery and signs only; graph and heights frozen. Owner phone review is next.
 
 - [x] **v18x City / Lincoln / Kelly graphics pass (September 13, 2026):** owner-photo-based, localized
   scenery adds Lincoln's stone arch, Kelly's retaining wall, green City girders, guardrails and
