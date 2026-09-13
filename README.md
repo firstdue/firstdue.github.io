@@ -1,14 +1,38 @@
 # Philly Fire Dispatch — Local
 
-**Current: PUBLIC = v18r (September 10, 2026).** The whole city now gets the Engine 35 treatment:
-terrain, bridges, rail and the immersive streetscape are live everywhere, the 380m scenery-rebuild
-hitch is fixed (~240–380ms → ~30–64ms worst frame), and three latent flat-world bugs the citywide
-flip exposed are repaired (stuck-at-the-scene, broken guide ribbon on hills, aerial intro shot).
-Losing a race now offers RETRY THIS BOX / NEXT CALL instead of dumping you at the station picker.
-**The authoring folder is BEHIND again — v18n–v18r were repo-authored; re-sync it before working
-there.** See "Repository layout" and `CLAUDE.md` before editing.
+**Current: PUBLIC = v18w (September 12, 2026).** Interstate 76 and the US 1 Roosevelt Expressway are
+drivable, with their ramps, interchanges and bridges. They carry real lane-count widths, medians,
+guardrails and piers, and now their own identity: green guide signs and exit gantries whose wording
+comes from OpenStreetMap tags, gore markers at the splits, I-76 and US 1 route shields, shoulder
+lighting, and mileposts anchored to PennDOT's surveyed mile markers. On a freeway the heads-up line
+names the route and the milepost you just passed instead of a street's hundred block.
+
+**PUBLIC = LOCAL, and the owner's authoring folder is the source of truth** — v18t–v18w were authored
+there and published here. See "Repository layout" and `CLAUDE.md` before editing.
 
 ## Release history
+
+**v18t–v18w (September 11–12, 2026) — the I-76 / US 1 freeway corridor.** Authored in the owner's
+folder and published here, one owner phone test per build:
+- **v18t** — the corridor exists and is drivable. Interstate 76 and the US 1 Roosevelt Expressway
+  come from supplemental OpenStreetMap fetches (the citywide extract has no motorway or trunk ways).
+  Freeway records carry a lane count, so width, paint, the median barrier, elevation and road lock
+  all key off them, and `RB.hj` fixes the only 25 nodes where a ramp may join a street — a viaduct
+  passing over a road no longer welds to it. Fourteen corridor ends are closed with striped barriers.
+- **v18u** — structure: one shared median between paired carriageways, guardrails only on exposed
+  edges, retaining walls where the ground stands above the roadway, piers and abutments under the
+  spans, and a depressed section carrying the Roosevelt Expressway under Wissahickon Avenue.
+- **v18v** — driving fixes from phone reports. A street whose only branch is legal now continues
+  instead of stopping to ask, a merge into a through road rolls, and street-choice cards appear
+  earlier with more of them on screen. Every wrong-way street keeps its red card, because the owner
+  wants to be able to take it deliberately.
+- **v18w** — identity. Green guide signs, exit gantries with lane assignments and yellow EXIT ONLY
+  panels, gore markers at the splits, I-76 and US 1 route shields, roadside trailblazers and
+  shoulder lighting. Every line of sign text traces to an OpenStreetMap tag or an owner photograph;
+  nothing is invented, and anything unverifiable is left off. Mileposts are anchored to PennDOT's
+  surveyed mile markers, so whole miles are exact and only the tenths between them are estimated and
+  labelled as such. On a freeway the heads-up line names the route and the milepost just passed, and
+  an exit card shows the real sign rather than a guessed destination.
 
 **v18n–v18r (September 9–10, 2026, authored in the public repo).** Citywide rollout and its
 fallout, one owner playtest per build:
@@ -123,10 +147,12 @@ A phone-friendly Philadelphia fire-engine navigation game. Choose a real company
 
 ## Current state
 
-Project handoff snapshot, September 7, 2026:
+Project handoff snapshot, September 12, 2026:
 
-- **Published: v18r.** The authoring folder still holds v18m — v18n–v18r were authored here, so
-  this repository is the source of truth until the folder is re-synced.
+- **Published: v18w. PUBLIC = LOCAL** — the owner's authoring folder and this repository match.
+  v18t–v18w were authored in the folder and published here: the I-76 / US 1 freeway corridor and
+  its graph and elevation (v18t), structure (v18u), driving fixes (v18v), and identity — sourced
+  signs, gantries, gore markers, shoulder lighting and real mileposts (v18w).
 - The build tag in the HUD (top left, next to SAVES) is the fastest way to tell whether a phone has
   picked up a deploy or is serving a cached page.
 - Intersection Recall is the active TRAIN MY LOCAL drill: a named street intersection with no

@@ -91,6 +91,14 @@ v18m–v18s were authored **in this public repository**, not in the owner's auth
 first sync since the split. Nothing was pending upstream: the folder held no unpublished work,
 verified by blob hash rather than by timestamps.
 
+**Since v18t the direction is back to normal: the authoring folder is the source of truth.**
+v18t–v18w (the I-76 / US 1 freeway corridor) were authored there and published here, so make
+changes in the folder and copy the split site into this checkout — never the other way round.
+**Copy only the runtime files into `data/`** (the six `*.js` globals plus small sourced JSON such as
+`data/penndot-mileposts-i76.json`). A blanket copy of the folder's `data/` plus `git add -A` drags
+roughly 55 MB of raw OSM fetches, shapefiles and a terrain TIFF in here; that was caught during the
+v18w release, before the push, and the published tree must stay as small as it is.
+
 A correction to what this file said before: the folder was at **v18n**, not v18m. Its
 `index.html` was byte-identical to the published v18n blob `327e6ec` once CRLF-normalised
 (679,961 → 673,799 bytes, exactly 6,162 CRLFs), and its `data/`, `vendor/`, `sw.js`,
@@ -127,7 +135,15 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v18s; the whole city is live.** `NAVGEO.active` is always true and
+- **The build is v18w.** v18t–v18w added the I-76 / US 1 freeway corridor: the drive graph, lane-count
+  widths and elevation (v18t); structure — shared median, guardrails, retaining walls, piers and the
+  Roosevelt road cut under Wissahickon Ave (v18u); driving fixes so a street that simply continues no
+  longer stops, with street-choice cards earlier and more of them (v18v); and identity — guide signs,
+  exit gantries, gore markers, route shields, shoulder lighting, and mileposts anchored to PennDOT's
+  surveyed markers (v18w). Freeway records carry `hw` and `ln`; `RB.hj` lists the only nodes where a ramp
+  may join a street. Sign text traces to an OSM tag or an owner photo, and mileage is anchored to the
+  surveyed markers — never inferred from exit numbers. `tests/` in the authoring folder covers all of it.
+- **The whole city is live.** `NAVGEO.active` is always true and
   `STREETSCAPE.all:true` opens the immersive streetscape everywhere (`companyId:'e35'` remains as
   the single-company fallback). Road surface + markings are generated under `stepLocalCity`'s
   frame budget (`roadGeomStart`/`roadGeomSeg`, state on `J.road`); `FLATCITY.commit` only turns
