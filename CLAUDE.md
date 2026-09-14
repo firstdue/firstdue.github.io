@@ -135,7 +135,14 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19c (September 13, 2026).** Hydrant marking is gated on `HYDRANT_SCOUTS` (ships empty; the
+- **The build is v19d (September 13, 2026), highway phase 2c.** `build_citywide.js` clips freeway ways at
+  `HWY_MARGIN` 250 m rather than `ROAD_MARGIN` 60 m, and a street carrying a ramp junction (`hwyJoinNodes`) gets
+  the same margin — otherwise the ramp arrives and the street it should meet has been cut, leaving an `hj` entry
+  with no street side. This recovered the eastbound exit 340A and exit 338. The graph counts the tests pin moved
+  once, here. `data/rb.js` changed in this release, which is rare — it must be published with the rest.
+  **Traps:** a drive test of an exit must start UPSTREAM of its gore, and never `assert.equal` two graph nodes
+  (the failure diff walks the whole graph and exhausts the heap). Service-worker cache v14.
+- **v19c (September 13, 2026).** Hydrant marking is gated on `HYDRANT_SCOUTS` (ships empty; the
   button hides AND `playerAddHydrant` refuses — add an account's e-mail or profile id to grant it). The guide's
   pavement sampling is citywide, not corridor-bboxed, and clears the highest overlapping surface within 1 m at a
   junction; do not re-introduce a bbox around `GUIDE_SURFACE`. Service-worker cache v13.

@@ -1,14 +1,20 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 13, 2026. **v19c is public and matches the authoring build** — commit
-`5979d75`, service-worker cache `local-shell-v13`. The authoritative graphics handoff and source
+Planning snapshot: September 13, 2026. **v19d is public and matches the authoring build** — commit
+`dff6f02`, service-worker cache `local-shell-v14`. The authoritative graphics handoff and source
 references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
 
 - [x] **v19c hydrant gate + citywide guide fix (September 13, 2026):** hydrant marking limited to granted
   accounts after the owner kept pressing the button by accident, and the advisory guide held above the finished
   pavement everywhere instead of inside a City Ave bbox (Manayunk went from 4 buried guide vertices to 0).
 
-- [ ] **Highway phase 2c — recover the freeway exits the bake drops at the city limits.** Two owner reports with
+- [x] **Highway phase 2c — recover the freeway exits the bake drops at the city limits (v19d, September 13,
+  2026).** Freeway ways now clip 250 m outside the city line instead of 60 m, as do streets carrying a ramp
+  junction. Eastbound I-76 offers exit 340A for Lincoln Drive / Kelly Drive and westbound offers exit 338 for
+  Belmont Avenue / Green Lane; both had been amputated. Re-baked the road data; the pinned graph counts moved
+  once, deliberately. Mileage was NOT extrapolated past the surveyed markers.
+
+- [x] ~~**Highway phase 2c — recover the freeway exits the bake drops at the city limits.**~~ Two owner reports with
   one cause: no I-76 tie-in to Belmont Ave / Green Lane (exit 338 is in the fetched data but the corridor stops
   250–600 m short), and no eastbound exit to Ridge / Kelly / Lincoln at all (the eastbound 340A gore was clipped
   out, so eastbound offers only exit 340B across the whole corridor). Needs a re-bake; moves pinned graph counts.
