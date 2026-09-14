@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v13';  // v19c: hydrant marking gated on HYDRANT_SCOUTS + citywide guide pavement sampling (v12 was v19b)
+const CACHE = 'local-shell-v14';  // v19d: highway phase 2c — re-baked road data, I-76 exits 340A eastbound and 338 recovered (v13 was v19c)
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

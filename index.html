@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19c";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2097,9 +2097,29 @@ const HWY_SIGNS=[
   // ---- I-76 EASTBOUND (toward Central Philadelphia; z increasing) ---------------------------------------------
   { id:'i76w-340a-post', road:'Schuylkill Expressway', dir:'W', at:[-784,525], back:60, mount:'post',
     panels:[{ exit:'340A', dest:['Lincoln Dr','Kelly Dr'], arrow:'exit' }],
-    src:'OSM node 360984042 junction:ref=340A; link 1480965255 destination=Lincoln Drive;Kelly Drive (the WESTBOUND gore — the graph heading proves it; the eastbound 340A gore, node 360984511, lies outside the city)' },
+    src:'OSM node 360984042 junction:ref=340A; link 1480965255 destination=Lincoln Drive;Kelly Drive (the WESTBOUND gore — the graph heading proves it; the eastbound gore is node 360984511, see i76e-340a-* below)' },
   { id:'i76w-340a-gore', road:'Schuylkill Expressway', dir:'W', at:[-784,525], mount:'gore', exit:'340A',
     src:'OSM node 360984042 junction:ref=340A' },
+  // The EASTBOUND 340A. Its gore sits 228m outside the city polygon, so until the phase 2c bake (September 13,
+  // 2026) it was clipped away and eastbound I-76 had no exit to Lincoln Dr / Kelly Dr at all — the owner reported
+  // being unable to leave the expressway for Ridge Ave or Kelly Dr except by driving against the traffic.
+  { id:'i76e-340a-post', road:'Schuylkill Expressway', dir:'E', at:[-1641,22], back:60, mount:'post',
+    panels:[{ exit:'340A', dest:['Lincoln Dr','Kelly Dr'], arrow:'exit' }],
+    src:'OSM node 360984511 junction:ref=340A; link 32151859 oneway=yes destination=Lincoln Drive;Kelly Drive (leaving the eastbound carriageway, ways 448887926 -> 448887928)' },
+  { id:'i76e-340a-gore', road:'Schuylkill Expressway', dir:'E', at:[-1641,22], mount:'gore', exit:'340A',
+    src:'OSM node 360984511 junction:ref=340A' },
+  // Exit 338, Belmont Ave / Green Lane — the north-west end of the corridor. Both gores are outside the city
+  // polygon, so this whole interchange only exists in the game from the phase 2c bake onward.
+  { id:'i76w-338-post', road:'Schuylkill Expressway', dir:'W', at:[-2938,-1312], back:60, mount:'post',
+    panels:[{ exit:'338', dest:['Belmont Ave','Green Lane'], arrow:'exit' }],
+    src:'OSM node 1200543263 junction:ref=338; links 423962261 / 1480965245 destination=Belmont Avenue;Green Lane' },
+  { id:'i76w-338-gore', road:'Schuylkill Expressway', dir:'W', at:[-2938,-1312], mount:'gore', exit:'338',
+    src:'OSM node 1200543263 junction:ref=338' },
+  { id:'i76e-338-post', road:'Schuylkill Expressway', dir:'E', at:[-3311,-1519], back:60, mount:'post',
+    panels:[{ exit:'338', dest:['Belmont Ave','Green Lane'], arrow:'exit' }],
+    src:'OSM node 360983173 junction:ref=338; links 423962262 / 1480965242 destination=Green Lane;Belmont Avenue' },
+  { id:'i76e-338-gore', road:'Schuylkill Expressway', dir:'E', at:[-3311,-1519], mount:'gore', exit:'338',
+    src:'OSM node 360983173 junction:ref=338' },
   { id:'i76e-340b-gantry', road:'Schuylkill Expressway', dir:'E', at:[-711,587], back:36, mount:'gantry',
     panels:[{ shields:[['I','76']], card:'EAST', dest:['Central Philadelphia'], arrow:'down', lanes:[2,3] },
             { exit:'340B', shields:[['US','1']], card:'NORTH', dest:['Roosevelt Blvd','Northeast Phila'], arrow:'down', exitOnly:true, lanes:[4] }],
@@ -2241,6 +2261,10 @@ const HWY_MILEPOSTS=[
   { mile:340, at:[-638.1,621.6],  src:'PennDOT interstatemilemarkers SEG_NO 3400 (40.007076, -75.199884)' },
   { mile:341, at:[-524.0,1997.6], src:'PennDOT interstatemilemarkers SEG_NO 3410 (39.994629, -75.198546)' },
   { mile:342, at:[-1339.0,3278.5],src:'PennDOT interstatemilemarkers SEG_NO 3420 (39.983041, -75.208104)' } ];
+// start stays at the City Avenue end even though phase 2c extended the corridor ~2.5km further north-west.
+// PennDOT's surveyed markers in the bake are miles 340, 341 and 342; running the line out to the new closure
+// would extrapolate mileage far past the outermost marker, which is exactly the mistake v18w was built to avoid
+// ("never infer mileage"). The new north-west stretch simply shows no milepost, as US 1 already does.
 const HWY_MILES={ road:'Schuylkill Expressway', ref:'I-76', start:[-1377,282], last:{x:1e9,z:1e9,v:null} };
 let HWY_MILE_ANCH=null;
 function hwyMileAnchors(){ if(HWY_MILE_ANCH) return HWY_MILE_ANCH; const L=hwyMileLine(), out=[];   // each surveyed marker projected onto the reference line -> {mile, s}
