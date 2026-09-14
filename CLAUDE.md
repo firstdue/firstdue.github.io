@@ -135,7 +135,11 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19d (September 13, 2026), highway phase 2c.** `build_citywide.js` clips freeway ways at
+- **The build is v19e (September 14, 2026).** Ramp cards name the carriageway they join (`RAMP TO I-76 WEST`),
+  because a junction with an on-ramp each way used to offer only one: both derived the same name and the same
+  `RAMP` caption, so they shared a card key in `addBranch` and the second was deduped away. Keep them
+  distinguishable; `tests/highway-corridor.test.mjs` pins both directions.
+- **v19d (September 13, 2026), highway phase 2c.** `build_citywide.js` clips freeway ways at
   `HWY_MARGIN` 250 m rather than `ROAD_MARGIN` 60 m, and a street carrying a ramp junction (`hwyJoinNodes`) gets
   the same margin — otherwise the ramp arrives and the street it should meet has been cut, leaving an `hj` entry
   with no street side. This recovered the eastbound exit 340A and exit 338. The graph counts the tests pin moved

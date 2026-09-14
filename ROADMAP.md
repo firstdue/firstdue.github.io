@@ -1,7 +1,7 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 13, 2026. **v19d is public and matches the authoring build** — commit
-`dff6f02`, service-worker cache `local-shell-v14`. The authoritative graphics handoff and source
+Planning snapshot: September 14, 2026. **v19e is public and matches the authoring build** — commit
+`d91e732`, service-worker cache `local-shell-v15`. The authoritative graphics handoff and source
 references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
 
 - [x] **v19c hydrant gate + citywide guide fix (September 13, 2026):** hydrant marking limited to granted
