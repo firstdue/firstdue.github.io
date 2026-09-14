@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19d";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2506,12 +2506,19 @@ function updateStreetLabels(dt){
       let nm=e.name, ramp=false, exitBlock=null;
       if(!nm&&e.hw===2){ const ex=hwyExitCard(node); if(ex){ nm=ex.name; ramp=true; exitBlock=ex.block; } }   // 🪧 a freeway exit reads its real sign: 'EXIT 340B / US 1 NORTH · Roosevelt Blvd' (sourced in HWY_SIGNS)
       if(!nm){ const guess=streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);        // unnamed edge: a noding stub of the street whose band it sits in — OR a ramp/connector chain.
-        let dest=null,pa2=node,pb2=e.to,walked=Math.hypot(e.to.x-node.x,e.to.z-node.z),g=0;   // walk the chain to the first REALLY-named street: that's where the ramp factually leads
+        let dest=null,destEdge=null,destFrom=null,pa2=node,pb2=e.to,walked=Math.hypot(e.to.x-node.x,e.to.z-node.z),g=0;   // walk the chain to the first REALLY-named street: that's where the ramp factually leads
         while(g++<(e.hw===2?60:12)&&walked<(e.hw===2?1500:450)){ const named=pb2.adj.find(e2=>e2.to!==pa2&&e2.name);   // a freeway ramp can run 1 km before it meets a named road (I-76 EB → US 1 N): walk it out, or the card degrades to a fake same-road block
-          if(named){ dest=named.name; break; }
+          if(named){ dest=named.name; destEdge=named; destFrom=pb2; break; }
           const nx=straightest(pa2,pb2); if(!nx) break;
           walked+=Math.hypot(nx.x-pb2.x,nx.z-pb2.z); pa2=pb2; pb2=nx; }
-        if(dest&&(dest!==guess||e.hw===2)){ nm=dest; ramp=true; }                    // leads somewhere else → "RAMP TO <street>" card (City Ave ramps at Ridge were invisible: no name, no band, NO SIGN). A freeway ramp is a ramp even when it already sits in its freeway's band — otherwise the wrong-way twin ramp at Ridge surfaced as a red 'Roosevelt Expressway 4100' street card
+        if(dest&&(dest!==guess||e.hw===2)){ nm=dest; ramp=true;                      // leads somewhere else → "RAMP TO <street>" card (City Ave ramps at Ridge were invisible: no name, no band, NO SIGN). A freeway ramp is a ramp even when it already sits in its freeway's band — otherwise the wrong-way twin ramp at Ridge surfaced as a red 'Roosevelt Expressway 4100' street card
+          // A junction can offer TWO on-ramps to the SAME freeway, one per direction — City Ave at I-76 does.
+          // Both walked out to "Schuylkill Expressway" with the block 'RAMP', so they shared a card key and the
+          // second was dropped as a duplicate: the owner could see only one and could not get on westbound
+          // toward Belmont Ave / Green Lane (phone, v19d). Name the carriageway the ramp actually joins, which
+          // the graph heading already knows — that tells the two apart in the caption AND in the key.
+          const route=destEdge&&destEdge.hw===1?hwyRouteLabel(destEdge,destFrom):null;
+          if(route) exitBlock='RAMP TO '+route; }
         else nm=guess; }                                                           // plain stub → keep the band name as before
       if(ramp&&e.wrong) return;                                                    // derived ramps follow the same rule as gantry ones: a wrong-way ramp gets no card
       if(!nm||nm==='—') return;
