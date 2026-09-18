@@ -135,7 +135,13 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19e (September 14, 2026).** Ramp cards name the carriageway they join (`RAMP TO I-76 WEST`),
+- **The build is v19f (September 18, 2026), graphics step 1.** Guardrails on the freeway, the viaduct and the
+  City Ave / Lincoln Dr corridor are tiled W-beam panels from one geometry (`hwyWBeamGeo` / `hwyWBeamTiles`);
+  `hwyStructure`'s placement rules are unchanged, so keep any rail change in the emitter. Interchange ramps have a
+  mitred edge ribbon + embankment (`rampRibbonStep`, generated in `stepLocalCity` under the frame budget — never
+  move it back into `commit`). Scenery only. Cache `local-shell-v17`. The authoring folder's perf gate
+  (`tests/perf-budget.browser.cjs` + `perf-budget.json`) is the check every later graphics step reports against.
+- **v19e (September 14, 2026).** Ramp cards name the carriageway they join (`RAMP TO I-76 WEST`),
   because a junction with an on-ramp each way used to offer only one: both derived the same name and the same
   `RAMP` caption, so they shared a card key in `addBranch` and the second was deduped away. Keep them
   distinguishable; `tests/highway-corridor.test.mjs` pins both directions.

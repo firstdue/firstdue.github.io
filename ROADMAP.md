@@ -1,8 +1,16 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 14, 2026. **v19e is public and matches the authoring build** — commit
-`d91e732`, service-worker cache `local-shell-v15`. The authoritative graphics handoff and source
-references live in the authoring folder's `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+Planning snapshot: September 18, 2026. **v19f is public and matches the authoring build**, service-worker
+cache `local-shell-v17`. The authoritative graphics handoff and source references live in the authoring
+folder's `START-HERE.md`, `notes/graphics-upgrade-plan.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+
+- [x] **Graphics upgrade step 1 (v19f, September 18, 2026):** tiled W-beam guardrail panels on the freeway,
+  the viaduct and the City Ave / Lincoln Dr corridor from one shared piece, plus a mitred edge ribbon and
+  embankment on the interchange ramps, generated under the frame budget. Scenery only. Measured against the
+  new perf gate (`tests/perf-budget.browser.cjs` in the authoring folder): draw calls, heap and commit flat;
+  the interchange triangle budget was raised 295k → 330k for it, on the owner's decision. The multi-release
+  graphics plan (typed procedural buildings, GLTF models, buses, parks/cemeteries/rail, hero landmarks) is
+  in the authoring folder's `notes/graphics-upgrade-plan.md`.
 
 - [x] **v19c hydrant gate + citywide guide fix (September 13, 2026):** hydrant marking limited to granted
   accounts after the owner kept pressing the button by accident, and the advisory guide held above the finished
