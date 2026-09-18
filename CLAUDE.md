@@ -135,7 +135,13 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19f (September 18, 2026), graphics step 1.** Guardrails on the freeway, the viaduct and the
+- **The build is v19g (September 18, 2026), typed buildings.** `data/btype.js` (`BTYPE.seg[i]`, one code per
+  segment of `RB.st[i]`) is a side table — never widen the RB record for it; the segment objects carry `ri`/`si`
+  as the key. Rows / twins / detached come from `typedBuildings` in `stepLocalCity` and the `bld-*` instanced
+  groups in `commit`; every other code is the untouched generic pipeline (`G = B.filter(b => !b.kind)`).
+  `btypeOf` returns `-` when `BTYPE` is undefined, so a missing file degrades to generic. Cache `local-shell-v18`.
+  Re-bake: `node fetch_opa_buildings.js` then `node bake_building_types.js` in the authoring folder.
+- **v19f (September 18, 2026), graphics step 1.** Guardrails on the freeway, the viaduct and the
   City Ave / Lincoln Dr corridor are tiled W-beam panels from one geometry (`hwyWBeamGeo` / `hwyWBeamTiles`);
   `hwyStructure`'s placement rules are unchanged, so keep any rail change in the emitter. Interchange ramps have a
   mitred edge ribbon + embankment (`rampRibbonStep`, generated in `stepLocalCity` under the frame budget — never

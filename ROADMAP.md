@@ -1,7 +1,15 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 18, 2026. **v19f is public and matches the authoring build**, service-worker
-cache `local-shell-v17`. The authoritative graphics handoff and source references live in the authoring
+Planning snapshot: September 18, 2026. **v19g is public and matches the authoring build**, service-worker
+cache `local-shell-v18`.
+
+- [x] **Graphics step 6, typed buildings, residential (v19g, September 18, 2026):** `data/btype.js`, a side table
+  keyed to the road graph by record and segment index with one typology code per segment (row, twin, detached,
+  apartments, commercial, industrial, park, unknown), baked from every OPA parcel's building code. Rows render
+  as instanced runs with a per-unit facade repeat and cornice, twins as gabled pairs with porches, detached with
+  a setback; the other codes keep the generic building until Phase C (apartments, commercial). Generated under
+  the frame budget; RB record and graph counts untouched; generic fallback if the table is absent. Gate within
+  budget with triangles and instances down at all three spots. The authoritative graphics handoff and source references live in the authoring
 folder's `START-HERE.md`, `notes/graphics-upgrade-plan.md` and `notes/city-lincoln-kelly-photo-pass.md`.
 
 - [x] **Graphics upgrade step 1 (v19f, September 18, 2026):** tiled W-beam guardrail panels on the freeway,
