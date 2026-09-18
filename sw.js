@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v15';  // v19e: on-ramp cards name the carriageway they join, so a junction with a ramp each way offers both (v14 was v19d)
+const CACHE = 'local-shell-v17';  // v19f: tiled W-beam guardrail (freeway, viaduct AND the City Ave / Lincoln Dr corridor rails) + mitred ramp edge ribbon, scenery only (v15 was v19e; v16 was the pre-corridor cut of v19f, never published)
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

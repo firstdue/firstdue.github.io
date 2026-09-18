@@ -810,7 +810,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19e";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4016,6 +4016,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   // here under the frame budget like everything else; commit just turns the arrays into meshes.
   if(!J.road)roadGeomStart(J);
   while(J.ri<J.list.length){if(performance.now()-t0>budgetMs)return false;roadGeomSeg(J,J.list[J.ri++]);}
+  if(!rampRibbonStep(J,t0,budgetMs))return false;                                            // 🎀 interchange ramp edge ribbon (v19f): needs the finished road surfaces, generated here not in commit
   return true;
 }
 function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCity(J,1e9)); return J; }   // synchronous (first build only)
@@ -4032,13 +4033,73 @@ function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCit
    Scenery only: the road graph, navRoadY, RAMP_GRADE, drivable widths and every marking on a named street are
    untouched. Limited to the interchange bbox — citywide ramp paint would touch every unnamed cls-4 connector in
    Philadelphia and needs its own look pass first.                                                              */
-const RAMP_DETAIL={paint:true,shoulder:true,bbox:[-1340,-620,-60,420],shoulderW:5.5,paveW:1.1,edgeOff:0.75,
+const RAMP_DETAIL={paint:true,shoulder:true,ribbon:true,bbox:[-1340,-620,-60,420],shoulderW:5.5,paveW:1.1,edgeOff:0.75,ribbonIn:0.3,ribbonOut:1.1,
   src:'Owner-approved render study Sep 13 2026; edge-line colours from firetruck pictures/Lincoln Dr and City ave (2026-09-12-20-43-13-76, 2026-09-10-15-50-04-25)'};
 function rampDetailSeg(s){ const b=RAMP_DETAIL.bbox;                                     // an interchange ramp: unnamed, not a freeway record, inside the study bbox
   return !s.name&&!s.hw&&s.cls===4&&s.ax>b[0]&&s.ax<b[2]&&s.az>b[1]&&s.az<b[3]&&s.bx>b[0]&&s.bx<b[2]; }
 // Paved shoulder + graded embankment, one merged mesh each, built in commit like the rest of the scenery.
+// 🎀 RAMP EDGE RIBBON (graphics step 1, v19f). Every roadway is drawn as per-segment quads extended a half-width at
+// each end, which on a curving ramp leaves a sawtooth of quad corners along both edges (owner screenshot, City Ave
+// on-ramp). This lays a continuous MITRED strip along each edge of each interchange ramp, from ribbonIn inside the
+// kerb line to ribbonOut beyond it, a hair above the finished pavement, so the edge reads as one smooth curve and
+// the corners underneath are covered; the graded embankment from the v19b study is emitted from the same mitred
+// offsets, so its outer edge is smooth too (the per-segment version in rampDetailBuild only builds with the ribbon
+// off). Rendering only: the quads, navRoadY, the graph and every marking are untouched; both strips break where
+// the ramp meets a named street's pavement (a merge) and where another ramp's pavement already lies there (a
+// fork), the same rule as the ramp paint. Same bbox as the rest of RAMP_DETAIL — citywide is a separate look pass.
+// Generated in stepLocalCity under the frame budget, one ramp chain per resume check — inside commit it cost 20ms
+// at the interchange (measured), which is exactly the single-frame hitch v18o removed. It runs after the road phase
+// because it reads the finished road triangles, and it builds the guide-surface index commit would otherwise build.
+function rampRibbonStep(J,t0,budgetMs){
+  if(!RAMP_DETAIL.ribbon||!NAVGEO.active||!J.road) return true;
+  if(!J.ribbon){ const chains=[], R2=(LOCAL.R+40)**2, b=RAMP_DETAIL.bbox;                    // first call: pick the ramp chains that touch the bbox and this block, then the surface index
+    for(const rec of RB.st){ const [name,cls,pts,ow,hwk]=rec; if(name||hwk||cls!==4||pts.length<2) continue;
+      if(!pts.some(p=>p[0]>b[0]&&p[0]<b[2]&&p[1]>b[1]&&p[1]<b[3]&&(p[0]-J.cx)**2+(p[1]-J.cz)**2<R2)) continue; chains.push(pts); }
+    J.ribbon={chains,i:0,out:[],earth:[]}; J.gsi=guideSurfaceIndex(J.road.guideSurfaces); }
+  const job=J.ribbon, IN=RAMP_DETAIL.ribbonIn, OUT=RAMP_DETAIL.ribbonOut, EW=RAMP_DETAIL.shoulderW, out=job.out, earth=job.earth, R2=LOCAL.R*LOCAL.R;
+  const topY=(x,z,dx,dz)=>{ const logical=navRoadY(x,z,null,dx,dz)+0.22; let y=logical;    // the finished pavement is 0.22 over navRoadY (ROAD_Y + the 0.16 lift); a coarse triangle can stand higher between its vertices
+    const list=J.gsi.get(Math.floor(x/GUIDE_SURFACE.cell)+':'+Math.floor(z/GUIDE_SURFACE.cell));
+    if(list) for(const s of list){ const h=roadPaintPlaneY(x,z,[s]); if(h!==null&&h>y&&h-logical<1.5) y=h; }
+    return y+0.025; };
+  while(job.i<job.chains.length){ if(performance.now()-t0>budgetMs) return false;
+    const pts=job.chains[job.i++];
+    const own=new Set(); for(let i=1;i<pts.length;i++) own.add(pts[i-1][0]+','+pts[i-1][1]+'>'+pts[i][0]+','+pts[i][1]);
+    const n=pts.length, dir=[], mit=[];                                                     // per-vertex direction, then the mitre normal (average of the two edge normals, stretched to keep the strip width; capped at a 60° corner)
+    for(let i=0;i<n-1;i++){ const dx=pts[i+1][0]-pts[i][0], dz=pts[i+1][1]-pts[i][1], L=Math.hypot(dx,dz)||1; dir.push([dx/L,dz/L]); }
+    for(let i=0;i<n;i++){ const d0=dir[Math.max(0,i-1)], d1=dir[Math.min(n-2,i)], n0=[-d0[1],d0[0]], n1=[-d1[1],d1[0]];
+      let mx=n0[0]+n1[0], mz=n0[1]+n1[1]; const ml=Math.hypot(mx,mz)||1; mx/=ml; mz/=ml;
+      const sc=1/Math.max(0.5,mx*n0[0]+mz*n0[1]); mit.push([mx*sc,mz*sc]); }
+    for(let i=0;i<n-1;i++){ const a=pts[i], b=pts[i+1], seg={name:'',hw:0,cls:4,ax:a[0],az:a[1],bx:b[0],bz:b[1]};
+      if(!rampDetailSeg(seg)) continue; const L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L<0.5) continue;
+      const hw=segHalf(seg), d=dir[i], N=Math.max(1,Math.ceil(L/6)), ma=mit[i], mb=mit[i+1];
+      for(const side of [-1,1]){
+        const P=(w,f)=>{ const x=a[0]+(b[0]-a[0])*f, z=a[1]+(b[1]-a[1])*f, m0=ma[0]+(mb[0]-ma[0])*f, m1=ma[1]+(mb[1]-ma[1])*f; return [x+m0*side*w, z+m1*side*w]; };
+        for(let k=0;k<N;k++){ const f0=k/N, f1=(k+1)/N, C=P(hw,(f0+f1)/2);                    // ≤6m pieces so the strips drape the profile like every other marking
+          if((C[0]-J.cx)**2+(C[1]-J.cz)**2>R2) continue;
+          // One neighbourhood query per piece (segNear covers ±64m, a piece is ≤6m), then every probe point is
+          // judged against the named streets and the OTHER ramps in it — twelve segNear calls per piece was the
+          // whole generation cost at the interchange (measured).
+          const near=segNear(C[0],C[1]), named=[], others=[];
+          for(const o of near){ if(o.name) named.push(o); else if(!o.hw&&o.cls===4&&!own.has(o.ax+','+o.az+'>'+o.bx+','+o.bz)) others.push(o); }
+          const blocked=q=>{ for(const o of named) if(closestSeg(q[0],q[1],o).d<segHalf(o)+0.4) return true; for(const o of others) if(closestSeg(q[0],q[1],o).d<segHalf(o)-0.3) return true; return false; };
+          const I0=P(hw-IN,f0),I1=P(hw-IN,f1),O0=P(hw+OUT,f0),O1=P(hw+OUT,f1),M0=P(hw+OUT/2,f0),M1=P(hw+OUT/2,f1);
+          if([I0,I1,O0,O1,M0,M1].some(blocked)) continue;                                     // probe the whole piece across its width (inner seam, middle, outer edge) at both ends — a midpoint-only check bleeds onto the road it joins
+          const yI0=topY(I0[0],I0[1],d[0],d[1]),yI1=topY(I1[0],I1[1],d[0],d[1]),yO0=topY(O0[0],O0[1],d[0],d[1]),yO1=topY(O1[0],O1[1],d[0],d[1]);
+          out.push(I0[0],yI0,I0[1], O0[0],yO0,O0[1], I1[0],yI1,I1[1],  O0[0],yO0,O0[1], O1[0],yO1,O1[1], I1[0],yI1,I1[1]);
+          // embankment: from the ribbon's outer edge down to the terrain at shoulderW, only where the ramp is on grade
+          const G0=P(hw+EW,f0),G1=P(hw+EW,f1),E0=P(hw+(OUT+EW)/2,f0),E1=P(hw+(OUT+EW)/2,f1);
+          if([G0,G1,E0,E1].some(blocked)) continue;
+          const g0=navGroundY(G0[0],G0[1]),g1=navGroundY(G1[0],G1[1]);
+          if(Math.abs(yO0-g0)>4||Math.abs(yO1-g1)>4) continue;                               // up on the deck: the parapet's job, not an embankment's
+          earth.push(O0[0],yO0-0.01,O0[1], G0[0],g0,G0[1], O1[0],yO1-0.01,O1[1],  G0[0],g0,G0[1], G1[0],g1,G1[1], O1[0],yO1-0.01,O1[1]); } } } }
+  return true; }
+function rampRibbonBuild(J){ if(!J.ribbon) return;                                          // commit: the finished arrays become meshes, nothing is generated here
+  for(const [arr,color,name] of [[J.ribbon.out,0x7d858f,'ramp-ribbon'],[J.ribbon.earth,0xb9bd9b,'ramp-embankment']]){ if(!arr.length) continue;
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(arr,3)); g.computeVertexNormals();
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color,side:THREE.DoubleSide})); m.name=name; if(name==='ramp-ribbon') m.renderOrder=1;
+    FLATCITY.group.add(m); FLATCITY.parts.push(m); } }
 function rampDetailBuild(J){
-  if(!RAMP_DETAIL.shoulder||!NAVGEO.active) return;
+  if(!RAMP_DETAIL.shoulder||!NAVGEO.active||RAMP_DETAIL.ribbon) return;                       // with the ribbon on (v19f) the mitred strips in rampRibbonStep carry the shoulder and the embankment
   const pave=[],earth=[];
   for(const s of J.list){ if(!rampDetailSeg(s)) continue;
     const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz); if(L<2) continue;
@@ -4085,6 +4146,10 @@ function photoCorridorBuild(J,dummy){
   // Guardrails only at exposed outer edges. Probe the full piece to leave every junction open.
   for(const s of J.list){if(!photoCorridorRoad(s))continue;const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz);if(L<3)continue;
     const ux=dx/L,uz=dz/L,ang=Math.atan2(dx,dz),hw=segHalf(s),N=Math.ceil(L/6),pl=L/N;
+    // Pass 1 decides every piece (both sides) with the exclusions unchanged; pass 2 emits, so a steel run knows
+    // whether its neighbour piece exists — the W-beam tiles (v19f, same hwyWBeamTiles as the freeway) plant an end
+    // post only where a run actually ends, instead of a post per 6m box.
+    const dec=[],have=new Set();
     for(let i=0;i<N;i++)for(const side of [-1,1]){const t=(i+.5)/N,cx=s.ax+dx*t,cz=s.az+dz*t,off=hw+1.1,x=cx-uz*off*side,z=cz+ux*off*side;
       if(Math.hypot(x-J.cx,z-J.cz)>LOCAL.R)continue;const key=Math.round(x/3)+':'+Math.round(z/3);if(seen.has(key))continue;
       if([-0.5,0,0.5].some(k=>nearRoadEdge(x+ux*pl*k,z+uz*pl*k)<0.65))continue;
@@ -4094,9 +4159,11 @@ function photoCorridorBuild(J,dummy){
       const retaining=s.name==='Kelly Drive'&&cx<-1170&&cz>-190&&cz<5&&x>cx;
       // Lincoln between Ridge Ave and the viaduct: concrete barrier walls, not steel rail (owner photos 2026-09-12-20-39-02 / 20-40-00).
       const concrete=s.name==='Lincoln Drive'&&cz>-335&&cz<-195;
-      if(retaining){const h=4.6;walls.push({x,z,y:y+h/2,w:.55,h,l:pl*1.02,ang,pitch});caps.push({x,z,y:y+h+.10,w:.72,h:.20,l:pl*1.02,ang,pitch});}
-      else if(concrete)jersey.push({x,z,y:y+.42,w:.5,h:.84,l:pl*1.02,ang,pitch});
-      else{steel.push({x,z,y:y+.78,w:.18,h:.28,l:pl*1.02,ang,pitch});posts.push({x,z,y:y+.4,w:.14,h:.9,l:.16,ang,pitch:0});}
+      dec.push({i,side,x,z,y,y0,y1,pitch,retaining,concrete});if(!retaining&&!concrete)have.add(side+':'+i);}
+    for(const D of dec){const {x,z,y,pitch}=D;
+      if(D.retaining){const h=4.6;walls.push({x,z,y:y+h/2,w:.55,h,l:pl*1.02,ang,pitch});caps.push({x,z,y:y+h+.10,w:.72,h:.20,l:pl*1.02,ang,pitch});}
+      else if(D.concrete)jersey.push({x,z,y:y+.42,w:.5,h:.84,l:pl*1.02,ang,pitch});
+      else hwyWBeamTiles(steel,posts,{x:x-ux*pl/2,y:D.y0+.16,z:z-uz*pl/2},{x:x+ux*pl/2,y:D.y1+.16,z:z+uz*pl/2},D.i*pl,(D.i+1)*pl,D.side<0,!have.has(D.side+':'+(D.i-1)),!have.has(D.side+':'+(D.i+1)));   // rail centre stays at y+0.78 (railY 0.62 + 0.16)
     }
   }
   // Median barrier between the two Lincoln carriageways on the same stretch (the photos show one continuous wall).
@@ -4161,8 +4228,8 @@ function photoCorridorBuild(J,dummy){
       const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:0xffffff,map:photoStoneTexture()}));m.position.set(a.x,0,a.z);m.rotation.y=-Math.atan2(a.uz,a.ux);m.name='photo-viaduct-arcade';FLATCITY.group.add(m);FLATCITY.parts.push(m);};
     arcade(-99,-span);arcade(span,54);
   }
-  for(const [list,color,name,basic] of [[steel,0xa8b4b0,'guardrails'],[posts,0x747c76,'posts'],[walls,0xb7b0a0,'kelly-wall'],[caps,0xd1c8b4,'wall-caps'],[jersey,0xc4c1b7,'lincoln-barrier'],[median,0xbdbab1,'lincoln-median'],[chev,0xf5f6f8,'gore-chevrons',true]]){if(!list.length)continue;
-    const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),basic?new THREE.MeshBasicMaterial({color}):new THREE.MeshLambertMaterial({color}),list.length);m.name='photo-'+name;if(basic)m.renderOrder=2;
+  for(const [list,color,name,basic,wbeam] of [[steel,0xb6bcc0,'guardrails',false,true],[posts,0x6f7477,'posts'],[walls,0xb7b0a0,'kelly-wall'],[caps,0xd1c8b4,'wall-caps'],[jersey,0xc4c1b7,'lincoln-barrier'],[median,0xbdbab1,'lincoln-median'],[chev,0xf5f6f8,'gore-chevrons',true]]){if(!list.length)continue;
+    const m=new THREE.InstancedMesh(wbeam?hwyWBeamGeo():new THREE.BoxGeometry(1,1,1),basic?new THREE.MeshBasicMaterial({color}):new THREE.MeshLambertMaterial({color,side:wbeam?THREE.DoubleSide:THREE.FrontSide}),list.length);m.name='photo-'+name;if(basic)m.renderOrder=2;   // wbeam: the freeway's W-beam panel (v19f), same geometry, same colour
     list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);
   }
 }
@@ -4257,7 +4324,33 @@ function roadGeomStart(J){ const st={rp:[],mk:[],my:[],roadName:null,paintSurfac
 //    another freeway roadway runs alongside (a merge or diverge lane) — that opening stays open.
 //  • Retaining walls where the ground stands above the roadway (a cut or a hillside), outside the shoulder,
 //    same exclusions; the median side of a paired carriageway never gets one.
-const HWS={step:10, medBar:6, medGrass:25, guardDrop:0.5, wallRise:1.2, wallMax:7};
+const HWS={step:10, medBar:6, medGrass:25, guardDrop:0.5, wallRise:1.2, wallMax:7, tile:3.81, railY:0.62};   // tile: one W-beam panel (12'6"), railY: rail centre above the shoulder edge
+// 🛡️ W-BEAM GUARDRAIL TILE (graphics step 1, v19f). One instance = one 3.81m panel authored at real size: the
+// corrugated W profile (two ridges toward traffic, recessed valley), a lap splice at the far end where the next
+// panel overlaps it, and a steel post at the near end. Placement is unchanged — hwyStructure still decides where a
+// rail belongs; this only replaces the flat box the pieces used to be. Local +z runs along the run, local +x
+// faces the roadway, y=0 is the rail centre. ~34 triangles; built fresh per commit like every other part.
+function hwyWBeamGeo(){ const TL=HWS.tile, P=[], N=[]; const quad=(a,b,c,d)=>{ P.push(...a,...b,...c, ...a,...c,...d); };
+  const prof=[[0,0.16],[0.07,0.11],[0.07,0.045],[0,0],[0.07,-0.045],[0.07,-0.11],[0,-0.16]];
+  const ribbon=(z0,z1,sx,ox)=>{ for(let i=0;i<prof.length-1;i++){ const [x0,y0]=prof[i],[x1,y1]=prof[i+1];
+    quad([x0*sx+ox,y0*sx,z0],[x0*sx+ox,y0*sx,z1],[x1*sx+ox,y1*sx,z1],[x1*sx+ox,y1*sx,z0]); } };
+  ribbon(0,TL,1,0); ribbon(TL-0.32,TL+0.02,1.12,0.012);                                                     // panel, then the lap that rides over the next panel's start
+  const x0=-0.17,x1=-0.03,y0=-0.9,y1=0.2,z0=0.0,z1=0.15;                                                   // post: 14cm × 15cm, buried 0.9m, top just above the rail
+  quad([x0,y0,z0],[x0,y1,z0],[x1,y1,z0],[x1,y0,z0]); quad([x1,y0,z1],[x1,y1,z1],[x0,y1,z1],[x0,y0,z1]);
+  quad([x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]); quad([x0,y0,z1],[x0,y1,z1],[x0,y1,z0],[x0,y0,z0]);
+  quad([x0,y1,z0],[x0,y1,z1],[x1,y1,z1],[x1,y1,z0]);
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(P,3)); g.computeVertexNormals(); return g; }
+// Tile a rail run from A to B (world points with y at the rail's ground line, along-positions tA..tB so panel
+// joints line up across the 10m stations of one segment). flip = the run's left-hand side: the tile is turned
+// 180° so its ridges still face the roadway, which means its post sits at the FAR end of each panel — so the
+// unposted end of a run is tB on the right and tA on the left, and firstRun/lastRun say when to plant that post.
+function hwyWBeamTiles(guard,post,A,B,tA,tB,flip,firstRun,lastRun){ const TL=HWS.tile, L=tB-tA; if(L<0.4) return;
+  const dx=B.x-A.x, dz=B.z-A.z, ang=Math.atan2(dx,dz)+(flip?Math.PI:0), pitch=-Math.atan2(B.y-A.y,Math.hypot(dx,dz)||1)*(flip?-1:1);
+  const at=u=>{ const f=(u-tA)/L; return {x:A.x+dx*f,y:A.y+(B.y-A.y)*f+HWS.railY,z:A.z+dz*f}; };
+  for(let u=tA;u<tB-0.05;){ const u1=Math.min(tB,(Math.floor(u/TL+1e-6)+1)*TL), P=at(flip?u1:u);
+    guard.push({x:P.x,y:P.y,z:P.z,w:1,h:1,l:(u1-u)/TL,ang,pitch}); u=u1; }
+  const endU=flip?(firstRun?tA:null):(lastRun?tB:null);
+  if(endU!==null){ const P=at(endU); post.push({x:P.x,y:P.y-0.35,z:P.z,w:0.14,h:1.1,l:0.15,ang,pitch:0}); } }
 function hwyTwinAt(s,px,pz,ux,uz){ let best=null;
   for(const o of segNear(px,pz)){ if(o===s||o.hw!==1||o.name!==s.name) continue; const ox=o.bx-o.ax,oz=o.bz-o.az,ol=Math.hypot(ox,oz)||1; if((ox*ux+oz*uz)/ol>-0.85) continue;
     const L=ox*ox+oz*oz||1,t=((px-o.ax)*ox+(pz-o.az)*oz)/L; if(t<0.02||t>0.98) continue;
@@ -4290,7 +4383,7 @@ function hwyStructure(J,s,dx,dz,l,hw,jA,eA,jB,eB,EV){ const out=J.hws; if(!out||
   for(let k=0;k<N;k++){ const A=st[k],B=st[k+1];
     if(A.own&&B.own&&A.med&&B.med&&A.med.kind===B.med.kind&&!(endA&&k===0)&&!(endB&&k===N-1)){
       if(A.med.kind==='bar') piece(out.med,A.med,B.med,A.med.y,B.med.y,0.6,0.9,0.45); else piece(out.grass,A.med,B.med,A.med.y,B.med.y,Math.min(A.med.w,B.med.w),0.14,0.07); }
-    for(const side of [-1,1]){ const ga=A.guard[side],gb=B.guard[side]; if(ga&&gb){ piece(out.guard,ga,gb,ga.y,gb.y,0.14,0.3,0.72); out.post.push({x:ga.x,y:ga.y+0.36,z:ga.z,w:0.12,h:0.72,l:0.12,ang:Math.atan2(dx,dz),pitch:0}); }
+    for(const side of [-1,1]){ const ga=A.guard[side],gb=B.guard[side]; if(ga&&gb) hwyWBeamTiles(out.guard,out.post,ga,gb,A.t,B.t,side<0,k===0||!st[k-1].guard[side],k===N-1||!st[k+1].guard[side]);   // 🛡️ tiled W-beam panels (v19f); the exposed-edge decision above is unchanged
       const wa=A.wall[side],wb=B.wall[side]; if(wa&&wb) piece(out.wall,wa.p,wb.p,wa.p.y-0.5+wa.h/2,wb.p.y-0.5+wb.h/2,0.45,Math.max(wa.h,wb.h),0); } } }
 // 🌉 Bridge supports (phase 2a): piers every ~28m along a span where the deck stands clear of the ground and
 // no road runs beneath the pier's footprint (the span's own roadway excepted), and an abutment where each end
@@ -4375,13 +4468,13 @@ FLATCITY.tick=function(){ if(!FLATCITY.job) return;
 FLATCITY.requestRebuild=function(cx,cz){ if(FLATCITY.job) return;               // one job at a time
   FLATCITY.cx=cx; FLATCITY.cz=cz; FLATCITY.job=startLocalCity(cx,cz); };
 FLATCITY.rebuild=function(cx,cz){ FLATCITY.job=null; FLATCITY.cx=cx; FLATCITY.cz=cz; FLATCITY.commit(genLocalCity(cx,cz)); };
-FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Color();
+FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Color(), vGuard=[], vPost=[];   // vGuard/vPost: the viaduct's W-beam tiles, built here in commit and kept OFF J.hws so committing the same job twice never doubles them
   FLATCITY.companyId=DRIVE.stationId; FLATCITY.immersive=J.immersive;
   FLATCITY.detail=!!J.detail;
   for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); o.geometry.dispose(); o.material.dispose(); }
   FLATCITY.parts=[];
   const B=J.B, T=J.T, S=J.S;
-  if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[],roadGirder=[],roadGuard=[],guardPost=[];
+  if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[],roadGirder=[];
     const stByName=new Map();for(const s of J.list)if(s.name&&!stByName.has(s.name))stByName.set(s.name,s);   // first match, exactly what the per-bridge find() did — 818 finds × the segment list was ~10ms
     for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=b.name?stByName.get(b.name):hwySegForSpan(b,J);if(!street)continue;const hw=segHalf(street);let along=0;
       for(let i=1;i<b.p.length;i++){const a=b.p[i-1],q=b.p[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz);const segStart=along;along+=l;
@@ -4419,8 +4512,9 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         for(let k=0;k<n;k++){const t0=k/n,t1=(k+1)/n,tm=(t0+t1)/2,px=a[0]+dx*tm,pz=a[1]+dz*tm;if(Math.hypot(px-J.cx,pz-J.cz)>LOCAL.R)continue;const y0=a[2]+(q[2]-a[2])*t0,y1=a[2]+(q[2]-a[2])*t1,py=(y0+y1)/2,pp=-Math.atan2(y1-y0,pl),ll=pl*1.07;
           deck.push({x:px,y:py-0.5,z:pz,w:hw*2+0.8,h:0.9,l:ll,ang,pitch:pp});
           para.push({x:px+uz*(hw+0.25),y:py+0.48,z:pz-ux*(hw+0.25),w:0.34,h:1.0,l:ll,ang,pitch:pp});
-          roadGuard.push({x:px-uz*(hw+0.28),y:py+0.82,z:pz+ux*(hw+0.28),w:0.22,h:0.24,l:ll,ang,pitch:pp});
-          if(k%3===1){guardPost.push({x:px-uz*(hw+0.28),y:py+0.38,z:pz+ux*(hw+0.28),w:0.18,h:0.9,l:0.18,ang,pitch:0});const g=navGroundY(px,pz),h=py-g-0.9;if(h>3&&!overNamedRoad(px,pz))piers.push({x:px,y:g+h/2,z:pz,w:1.8,h,l:2.3,ang,pitch:0});}   // no supports planted in Kelly Dr's roadway below the span (same rule as rail piers)
+          { const ox=-uz*(hw+0.28),oz=ux*(hw+0.28),h0=pl/2;                                                 // 🛡️ viaduct right-hand rail: the same W-beam panels as the freeway (v19f), abutting pieces phased along this polyline segment
+            hwyWBeamTiles(vGuard,vPost,{x:px-ux*h0+ox,y:y0+0.2,z:pz-uz*h0+oz},{x:px+ux*h0+ox,y:y1+0.2,z:pz+uz*h0+oz},l*t0,l*t0+pl,false,false,k===n-1); }
+          if(k%3===1){const g=navGroundY(px,pz),h=py-g-0.9;if(h>3&&!overNamedRoad(px,pz))piers.push({x:px,y:g+h/2,z:pz,w:1.8,h,l:2.3,ang,pitch:0});}   // no supports planted in Kelly Dr's roadway below the span (same rule as rail piers)
         }} }
     // 🚆 RAILROAD (OSM mainline/branch rail; NAVGEO.rail, separate from road bridges so navRoadY can
     // never lift the truck onto a rail deck). Ground track = ballast + twin rails per ≤24m piece;
@@ -4477,7 +4571,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
               rCutWall.push({x:wx,y:y+h/2,z:wz,w:0.42,h,l:pll,ang,pitch:0});}
           }
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
-    for(const [list,color] of [[deck,0x828b8c],[rails,0xd0cdc4],[piers,0x91958b],[truss,0xdcded9],[para,0xbdbab1],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961],[roadGuard,0xaeb7b5],[guardPost,0x7a7d80]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+    for(const [list,color] of [[deck,0x828b8c],[rails,0xd0cdc4],[piers,0x91958b],[truss,0xdcded9],[para,0xbdbab1],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
       list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
   }
   if(NAVGEO.active){
@@ -4508,7 +4602,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   // The geometry itself comes from roadGeomSeg, run under stepLocalCity's frame budget (v18o): the arrays arrive
   // finished on J.road and this section only turns them into the three merged meshes.
   if(J.road){ const {rp,mk,my}=J.road;
-    FLATCITY.guideSurfaces=guideSurfaceIndex(J.road.guideSurfaces);
+    FLATCITY.guideSurfaces=J.gsi||guideSurfaceIndex(J.road.guideSurfaces);                        // the ramp ribbon step may already have built the index under the frame budget
     if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));
       const rd=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:J.immersive?0x697582:0x8896a8})); rd.renderOrder=1; FLATCITY.group.add(rd); FLATCITY.parts.push(rd); }
     if(mk.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(mk,3));
@@ -4529,13 +4623,13 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     if(mp2.length){ const gm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xc8dcb0}),mp2.length);   // 🌿 grass median between divided-road carriageways
       mp2.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
       gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
-  if(J.hws) for(const [list,color] of [[J.hws.med,0xb9b6ad],[J.hws.grass,0xc8dcb0],[J.hws.guard,0xaeb7b5],[J.hws.post,0x7a7d80],[J.hws.wall,0x8f8b82]]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail / posts / retaining wall
-    const hb=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+  if(J.hws) for(const [list,color,name,wbeam] of [[J.hws.med,0xb9b6ad,'hwy-median'],[J.hws.grass,0xc8dcb0,'hwy-median-grass'],[J.hws.guard.concat(vGuard),0xb6bcc0,'hwy-guard',true],[J.hws.post.concat(vPost),0x6f7477,'hwy-post'],[J.hws.wall,0x8f8b82,'hwy-wall']]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail (W-beam tiles, v19f) / end posts / retaining wall
+    const hb=new THREE.InstancedMesh(wbeam?hwyWBeamGeo():new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color,side:wbeam?THREE.DoubleSide:THREE.FrontSide}),list.length); hb.name=name;
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
     hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }
   hwyIdentityBuild(J,null,dummy);                                                                        // 🪧 highway identity (phase 2b): guide signs, gantries, gore markers, trailblazers, shoulder lighting
   photoCorridorBuild(J,dummy);
-  rampDetailBuild(J);                                                                                    // 🛣️ interchange ramp shoulder + embankment (owner choice, Sep 13 2026)
+  rampDetailBuild(J); rampRibbonBuild(J);                                                                                    // 🛣️ interchange ramp shoulder + embankment (owner choice, Sep 13 2026)
   if(J.hwClose) for(const [list,color] of [[J.hwClose[0],0xe8862c],[J.hwClose[1],0xf2f2ec]]){ if(!list.length) continue;   // ⛔ corridor-end barriers (orange / white stripes)
     const hc=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hc.setMatrixAt(i,dummy.matrix); });
