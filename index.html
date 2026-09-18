@@ -780,6 +780,7 @@
 <script src="data/lmks.js"></script>
 <script src="data/navgeo.js"></script>
 <script src="data/landcover.js"></script>
+<script src="data/btype.js"></script>
 <script>
 /* ================================================================================
    PHILLY FIRE DISPATCH  —  v9 · Round B (real OpenStreetMap streets)
@@ -810,7 +811,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19f";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1029,7 +1030,7 @@ const SEGCELL=64, segGrid=new Map();
 function segPut(s){ const steps=Math.max(1,Math.ceil(Math.hypot(s.bx-s.ax,s.bz-s.az)/SEGCELL));
   for(let i=0;i<=steps;i++){ const t=i/steps,x=s.ax+(s.bx-s.ax)*t,z=s.az+(s.bz-s.az)*t;
     const k=Math.floor(x/SEGCELL)+':'+Math.floor(z/SEGCELL); let a=segGrid.get(k); if(!a){a=[];segGrid.set(k,a);} a.push(s); } }
-for(const [name,cls,pts,ow,hw,ln] of RB.st){ for(let i=1;i<pts.length;i++) segPut({ax:pts[i-1][0],az:pts[i-1][1],bx:pts[i][0],bz:pts[i][1],name,cls,ow:ow||0,hw:hw||0,ln:ln||0}); }   // ow: baked one-way flag (v12o) — markings use it
+for(let ri=0;ri<RB.st.length;ri++){ const [name,cls,pts,ow,hw,ln]=RB.st[ri]; for(let i=1;i<pts.length;i++) segPut({ax:pts[i-1][0],az:pts[i-1][1],bx:pts[i][0],bz:pts[i][1],name,cls,ow:ow||0,hw:hw||0,ln:ln||0,ri,si:i-1}); }   // ow: baked one-way flag (v12o) — markings use it; ri/si: record + segment index, the key into the BTYPE side table (v19g)
 function segNear(x,z){ const o=[],gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCELL);
   for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=segGrid.get(a+':'+b); if(l) o.push(...l); } return o; }
 function closestSeg(x,z,s){ const dx=s.bx-s.ax,dz=s.bz-s.az,L=dx*dx+dz*dz||1; let t=((x-s.ax)*dx+(z-s.az)*dz)/L; t=Math.max(0,Math.min(1,t));
@@ -3921,6 +3922,69 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
       if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; if(!o.name)e.ramp=true; break; } } } }
   return {cx,cz,list,ends,ek,detail:STREET_DETAIL.enabled&&DRIVE.stationId===STREET_DETAIL.companyId,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
 }
+// ===== 🏘️ TYPED BUILDINGS — graphics step 6B (v19g), residential codes only =====
+// BTYPE (data/btype.js) gives one typology code per road-graph segment, baked from every OPA parcel's building code.
+// R row home: one instanced box per attached run (≤ maxRun, so the hillside step below works per sub-run), the
+//   facade texture tiled once per unit through a per-instance UV repeat, and a cornice instance on top.
+// T twin: a pair per box, one gable roof with its ridge along the street, a porch box per unit.
+// D detached: a freestanding house set back from the kerb, gable roof, one porch.
+// C / I / A / P / unknown fall through to the generic building exactly as before. Placement uses the same block-face
+// cut as the sidewalk slabs (a run ends where the kerb does), the same occupancy grid as the generic pass, and
+// every corner of the rotated footprint must clear every roadway (footprintClearsRoadAt).
+const BTYPED={on:true, rowUnit:5.0, rowDepth:11.5, twinUnit:7.4, twinDepth:10.5, detW:10.5, detDepth:10, maxRun:32, tex:null};
+function btypeOf(s){ if(!BTYPED.on||typeof BTYPE==='undefined'||s.ri===undefined) return '-'; const t=BTYPE.seg[s.ri]; return (t&&t[s.si])||'-'; }
+function blockFacePieces(J,s,EV,side,walk,sl){ const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));   // the block face on one side between the junction trims and every crossing / T-mouth window — the sidewalk slab's cut
+  const T0=(eA&&eA.n>=3)?eA.hw+walk+0.6:0, T1=(eB&&eB.n>=3)?eB.hw+walk+0.6:0; if(sl-T0-T1<=2) return [];
+  let a0=T0; const outs=[]; for(const ev of EV){ if(!(ev.both||ev.side===side)) continue; const w0=ev.t-(ev.hw+walk+0.6), w1=ev.t+(ev.hw+walk+0.6);
+    if(w1<=a0) continue; if(w0>=sl-T1) break; if(w0>a0) outs.push([a0,w0]); a0=Math.max(a0,w1); }
+  if(a0<sl-T1) outs.push([a0,sl-T1]); return outs; }
+function footprintClearsRoadAt(cx,cz,w,d,ang){ const hw=w/2,hd=d/2,ca=Math.cos(ang),sa=Math.sin(ang);   // footprintClearsRoad for a street-aligned box: the ROTATED corners + centre must be off every roadway
+  return [[0,0],[hw,hd],[-hw,hd],[hw,-hd],[-hw,-hd]].every(([ox,oz])=>nearRoadEdge(cx+ox*ca+oz*sa,cz-ox*sa+oz*ca)>0.5); }
+function typedBuildings(J,s,code,dx,dz,nx,nz,sl,rh,EV){ const {cx,cz,B,grid}=J, R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
+  const walk=s.cls<=1?4.2:3.2, ang=-Math.atan2(dz,dx), ca=Math.cos(ang), sa=Math.sin(ang);        // same frame as the generic immersive box: local x along the street, local z toward side +1
+  const cells=(x,z,w,d)=>{ const out=[]; for(let ox=-w/2+2;ox<w/2;ox+=5.5) for(let oz=-d/2+2;oz<d/2;oz+=5.5) out.push(gk(x+ox*ca+oz*sa,z-ox*sa+oz*ca)); return out; };
+  const place=(tc,off,side,w,d,extra)=>{ if(B.length>=LOCAL.maxB) return false;
+    const x=s.ax+dx*tc+nx*off*side, z=s.az+dz*tc+nz*off*side; if((x-cx)**2+(z-cz)**2>R2) return false;
+    const reach=Math.hypot(w/2,d/2);
+    if(inWater(x,z)||landBlocksBuilding(x,z,reach*0.6)||railNear(x,z,reach+4)||navSpan(x,z,null,reach+22)?.b.bridge) return false;
+    if(CORRIDOR_PHOTO.enabled&&s.name==='Lincoln Drive'&&z>-780&&z<-330) return false;         // owner photo sequence: wooded shoulders before Gypsy Lane
+    if(!footprintClearsRoadAt(x,z,w,d,ang)) return false;
+    for(const st of stations){ if((st.curated||st.id===DRIVE.stationId)&&Math.hypot(x-st.x,z-st.z)<62) return false; }
+    if(STHOUSE.group){ const q=STHOUSE.group.position, r2=(STHOUSE.halfW||20)+14; if(Math.abs(x-q.x)<r2&&Math.abs(z-q.z)<r2) return false; }
+    const ks=cells(x,z,w,d); for(const k of ks) if(grid.has(k)) return false; for(const k of ks) grid.set(k,1);
+    B.push(Object.assign({x,z,w,d,ang,roof:false,roofH:0,fx:-nx*side,fz:-nz*side},extra)); return true; };   // fx/fz: unit vector from the house toward its street (porches go there)
+  for(const side of [1,-1]){
+    for(const [a0,a1] of blockFacePieces(J,s,EV,side,walk,sl)){ const L=a1-a0-2; if(L<6) continue;
+      const seed=hash2(Math.round(s.ax+dx*a0)*2+(side>0?1:0),Math.round(s.az+dz*a0));
+      if(code==='R'){ const unit=BTYPED.rowUnit*(0.92+seed*0.16), d=BTYPED.rowDepth*(0.9+hash2(Math.round(s.ax+dx*a0),Math.round(s.az+dz*a0)*3)*0.2), nsub=Math.max(1,Math.ceil(L/BTYPED.maxRun)), ls=L/nsub;
+        for(let k=0;k<nsub;k++){ const units=Math.floor(ls/unit); if(units<1) continue; const w=units*unit, tc=a0+1+ls*(k+0.5);
+          const hs=hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3); place(tc,rh+walk+0.6+d/2,side,w,d,{kind:'R',units,h:hs<0.72?7.4:10.6,pal:seed}); } }
+      else if(code==='T'){ const w=2*BTYPED.twinUnit, d=BTYPED.twinDepth, pitch=w+3.2, n=Math.floor(L/pitch); if(n<1) continue; const start=a0+1+(L-n*pitch)/2;
+        for(let k=0;k<n;k++){ const tc=start+pitch*(k+0.5); place(tc,rh+walk+3.5+d/2,side,w,d,{kind:'T',h:8.2,gable:true,roofH:3.4,porches:2,pal:hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3)}); } }
+      else { const w=BTYPED.detW*(0.9+seed*0.25), d=BTYPED.detDepth, pitch=w+7, n=Math.floor(L/pitch); if(n<1) continue; const start=a0+1+(L-n*pitch)/2;
+        for(let k=0;k<n;k++){ const tc=start+pitch*(k+0.5); place(tc,rh+walk+6+d/2,side,w,d,{kind:'D',h:7.2,gable:true,roofH:3.2,porches:1,pal:hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3)}); } } } } }
+// One row-house facade per unit: neutral tones so the per-run instance colour tints the brick; tiled along the run by
+// the per-instance repeat below (wrapS repeat), never stretched.
+function rowFacade(){ if(BTYPED.tex) return BTYPED.tex; const c=document.createElement('canvas'); c.width=128; c.height=256; const g=c.getContext('2d');
+  g.fillStyle='#e6dccf'; g.fillRect(0,0,128,256);
+  g.strokeStyle='rgba(60,40,30,0.13)'; g.lineWidth=1; for(let y=14;y<256;y+=8){ g.beginPath(); g.moveTo(0,y); g.lineTo(128,y); g.stroke(); for(let x=((y/8)%2)*12;x<128;x+=24){ g.beginPath(); g.moveTo(x,y-8); g.lineTo(x,y); g.stroke(); } }
+  g.fillStyle='#cdbfae'; g.fillRect(0,0,128,12); g.fillStyle='#bfae9a'; for(let x=4;x<128;x+=12) g.fillRect(x,8,6,5);          // cornice band + dentils
+  for(const x of [16,72]){ g.fillStyle='#a08c78'; g.fillRect(x-3,40,42,60); g.fillStyle='#3a4852'; g.fillRect(x,43,36,54);        // two upper windows
+    g.fillStyle='#7f939e'; g.fillRect(x+3,46,14,22); g.fillStyle='#5d717c'; g.fillRect(x+19,46,14,22); g.fillStyle='#d9cfc2'; g.fillRect(x+16,43,3,54); g.fillRect(x,69,36,3); g.fillStyle='#efe6d8'; g.fillRect(x-5,97,46,5); }
+  g.fillStyle='#a08c78'; g.fillRect(64,148,50,72); g.fillStyle='#3a4852'; g.fillRect(68,151,42,66); g.fillStyle='#7f939e'; g.fillRect(71,154,17,26); g.fillStyle='#5d717c'; g.fillRect(90,154,17,26); g.fillStyle='#d9cfc2'; g.fillRect(87,151,3,66); g.fillRect(68,182,42,3);   // ground-floor window
+  g.fillStyle='#8d7a68'; g.fillRect(10,152,40,96); g.fillStyle='#463830'; g.fillRect(14,160,32,88); g.fillStyle='#8fa2ac'; g.fillRect(17,163,26,14); g.fillStyle='#d6c9a5'; g.fillRect(38,205,3,3);   // door with transom + knob
+  g.fillStyle='#b9afa2'; g.fillRect(6,246,48,10); g.fillStyle='#cfc6b9'; g.fillRect(4,242,52,4);                                     // stoop
+  const tex=new THREE.CanvasTexture(c); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.ClampToEdgeWrapping; tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy()); BTYPED.tex=tex; return tex; }
+function rowGeo(n){ const g=new THREE.BoxGeometry(1,1,1); const f=new Float32Array(24); for(let i=16;i<24;i++) f[i]=1;   // BoxGeometry faces px,nx,py,ny,pz,nz × 4 verts: only the ±z (street-facing) faces tile
+  g.setAttribute('faceRep',new THREE.BufferAttribute(f,1)); g.setAttribute('aRep',new THREE.InstancedBufferAttribute(new Float32Array(n).fill(1),1)); return g; }
+function rowMaterial(){ const mat=new THREE.MeshLambertMaterial({color:0xffffff,map:rowFacade()});                  // nearFadeMaterial's view-space fade + the per-instance UV repeat, in one patch
+  mat.onBeforeCompile=sh=>{
+    sh.vertexShader='attribute float aRep; attribute float faceRep; varying float vCamDist;\n'+sh.vertexShader
+      .replace('#include <uv_vertex>','#include <uv_vertex>\n  vUv.x=vUv.x*mix(1.0,aRep,faceRep);')
+      .replace('#include <fog_vertex>','#include <fog_vertex>\n  vCamDist=length(mvPosition.xyz);');
+    sh.fragmentShader='varying float vCamDist;\n'+sh.fragmentShader.replace('#include <dithering_fragment>',
+      '#include <dithering_fragment>\n  float _f=smoothstep(12.0,26.0,vCamDist);\n  if(_f<0.999){ float _n=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);\n    if(_f<_n) discard; }'); };
+  return mat; }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
   while(J.i<J.list.length){
@@ -3972,6 +4036,8 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
               if(nearRoadEdge(sx2,sz2)<0.4) continue;                                      // the slab would sit ON another roadway's drawn band — stacked carriageways (Broad St) render as one wide road, so no strip of ANY colour belongs there; Henry Ave's real gaps pass this test and keep their grass
               S.push({x:sx2, z:sz2, len:L, w:walk, ang, name:s.name, g:isMed?1:0});
               if(S.length>=LOCAL.maxS) break; } } } } }
+    const bcode=(s.name&&!s.hw)?btypeOf(s):'-', typed=bcode==='R'||bcode==='T'||bcode==='D';   // 🏘️ typed massing (v19g): rows / twins / detached from the BTYPE side table; every other code keeps the generic building below
+    if(typed) typedBuildings(J,s,bcode,dx,dz,nx,nz,sl,rh,EV);
     for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
       if((px-cx)**2+(pz-cz)**2>R2) continue;
       for(const side of [1,-1]){ const rv=hash2(Math.round(px)*2+ (side>0?1:0), Math.round(pz));
@@ -3983,7 +4049,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
             if(STHOUSE.group){ const q=STHOUSE.group.position, r2=(STHOUSE.halfW||20)+12;
               if(Math.abs(tx-q.x)<r2 && Math.abs(tz-q.z)<r2) continue; } }
           grid.set(tk,1); T.push({x:tx,z:tz,s:0.8+rv*6}); continue; }
-        if(B.length>=LOCAL.maxB) continue;
+        if(typed||B.length>=LOCAL.maxB) continue;                                         // a typed street already has its houses; the tree branch above still runs for it
         const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=rh+3.2+reach;
         const bx=Math.round(px+nx*off*side), bz=Math.round(pz+nz*off*side), k=gk(bx,bz);
         if(grid.has(k)||inWater(bx,bz)||landBlocksBuilding(bx,bz,reach)||railNear(bx,bz,reach+4)||navSpan(bx,bz,null,reach+22)?.b.bridge) continue;
@@ -4635,12 +4701,13 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hc.setMatrixAt(i,dummy.matrix); });
     hc.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hc); FLATCITY.parts.push(hc); }
   const wallPal=J.immersive?[0xc8997f,0xdac7ad,0xb88773,0xd0c9be,0xc7ad93,0xe2d8c5,0xbeb5a6]:[0xeceae4,0xe3e1da,0xe8e6df,0xdfe1e4,0xe9e7e0,0xdcdad2,0xe2e4e7], roofPal=J.immersive?[0x69717a,0x7e807e,0x626d78,0x8d8980]:[0xc4c1b8,0xcbc8bf,0xb8bbc1,0xcfccc3,0xbdc0c5];
-  if(B.length){ const kinds=J.detail?4:1,counts=Array(kinds).fill(0),slots=Array(kinds).fill(0);
+  const G=B.filter(b=>!b.kind);                                                          // generic buildings — every code but R/T/D — exactly the pipeline before v19g
+  if(G.length){ const kinds=J.detail?4:1,counts=Array(kinds).fill(0),slots=Array(kinds).fill(0);
     const kindOf=b=>J.detail?Math.floor(hash2(b.x,b.z)*10000)%kinds:0;
-    B.forEach(b=>counts[kindOf(b)]++);
+    G.forEach(b=>counts[kindOf(b)]++);
     const walls=counts.map((n,k)=>new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:J.detail?streetDetailFacade(k):J.immersive?streetscapeFacade():null})),n));
-    const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),B.length);
-    B.forEach((b,i)=>{ const bh=b.h,seed=J.immersive?Math.floor(hash2(b.x,b.z)*10000):i; const gy=navGroundY(b.x,b.z);
+    const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),G.length);
+    G.forEach((b,i)=>{ const bh=b.h,seed=J.immersive?Math.floor(hash2(b.x,b.z)*10000):i; const gy=navGroundY(b.x,b.z);
       // Hillside foundation: keep the roofline at the centre's ground + height, but extend the walls
       // down to the LOWEST footprint corner so the downhill wall never floats (capped 10m vs DEM noise).
       let drop=0; if(NAVGEO.active){ const a=b.ang||0,ca=Math.cos(a),sa=Math.sin(a),hw=b.w/2,hd=b.d/2; let gmin=gy;
@@ -4654,19 +4721,38 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     FLATCITY.group.add(caps); FLATCITY.parts.push(caps);
     if(J.immersive){
       // Recessed roof decks leave a pale parapet rim; modest rooftop units add depth without extra wall faces.
-      const decks=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0x505c64})),B.length);
-      const units=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xaeb7b5})),B.length);
-      B.forEach((b,i)=>{dummy.rotation.set(0,b.ang,0);dummy.position.set(b.x,navGroundY(b.x,b.z)+b.h+0.35,b.z);dummy.scale.set(b.w-0.9,0.08,b.d-0.9);dummy.updateMatrix();decks.setMatrixAt(i,dummy.matrix);
+      const decks=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0x505c64})),G.length);
+      const units=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xaeb7b5})),G.length);
+      G.forEach((b,i)=>{dummy.rotation.set(0,b.ang,0);dummy.position.set(b.x,navGroundY(b.x,b.z)+b.h+0.35,b.z);dummy.scale.set(b.w-0.9,0.08,b.d-0.9);dummy.updateMatrix();decks.setMatrixAt(i,dummy.matrix);
         const seed=hash2(b.x+31,b.z),chimney=J.detail&&seed<0.6,ox=J.detail?b.w*0.24:0,oz=J.detail?b.d*0.18:0;
         dummy.position.set(b.x+ox*Math.cos(b.ang)+oz*Math.sin(b.ang),navGroundY(b.x,b.z)+b.h+(chimney?1.05:0.7),b.z-ox*Math.sin(b.ang)+oz*Math.cos(b.ang));dummy.scale.set(chimney?0.85:1.5,chimney?1.3:0.65,chimney?0.9:2.1);dummy.updateMatrix();units.setMatrixAt(i,dummy.matrix);
         if(J.detail)units.setColorAt(i,col.setHex(chimney?0x947665:0xc3c9c5));});
       for(const m of [decks,units]){m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
     }
-    const pitched=B.filter(b=>b.roof);                                                   // 🏠 pitched roofs break up the flat-topped skyline
+    const pitched=G.filter(b=>b.roof);                                                   // 🏠 pitched roofs break up the flat-topped skyline
     if(pitched.length){ const roofGeo=new THREE.ConeGeometry(0.72,1,4); roofGeo.rotateY(Math.PI/4);   // bake the 45° in so per-axis scaling stays axis-aligned (half-extent 0.509)
       const rf=new THREE.InstancedMesh(roofGeo,nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true})),pitched.length), rPal=[0xa89a8c,0x9c8f82,0xb3a596,0x8f8377];
       pitched.forEach((b,i)=>{ const rh=Math.min(3.4,b.roofH); dummy.position.set(b.x,navGroundY(b.x,b.z)+b.h+rh/2,b.z); dummy.scale.set(b.w*1.04,rh,b.d*1.04); dummy.rotation.set(0,0,0); dummy.updateMatrix(); rf.setMatrixAt(i,dummy.matrix); rf.setColorAt(i,col.setHex(rPal[i%rPal.length])); });
       rf.instanceMatrix.needsUpdate=true; if(rf.instanceColor)rf.instanceColor.needsUpdate=true; FLATCITY.group.add(rf); FLATCITY.parts.push(rf); } }
+  { const RW=B.filter(b=>b.kind==='R'), TD=B.filter(b=>b.kind==='T'||b.kind==='D');   // 🏘️ typed buildings (v19g): row runs, twins, detached — five draw calls in all
+    const hill=b=>{ const gy=navGroundY(b.x,b.z); let drop=0; if(NAVGEO.active){ const a=b.ang||0,ca=Math.cos(a),sa=Math.sin(a),hw=b.w/2,hd=b.d/2; let gmin=gy;   // the generic hillside step: roofline at the centre's ground, walls down to the lowest corner
+        for(const [ox,oz] of [[hw,hd],[hw,-hd],[-hw,hd],[-hw,-hd]]){ const g=navGroundY(b.x+ox*ca+oz*sa,b.z-ox*sa+oz*ca); if(g<gmin)gmin=g; } drop=Math.min(10,gy-gmin); } return {gy,drop}; };
+    const add=(m,name)=>{ m.name=name; m.instanceMatrix.needsUpdate=true; if(m.instanceColor) m.instanceColor.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); };
+    if(RW.length){ const geo=rowGeo(RW.length), rep=geo.getAttribute('aRep'), walls=new THREE.InstancedMesh(geo,rowMaterial(),RW.length), corn=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),RW.length);
+      const rowPal=[0xb9634b,0xc47d5f,0xd8b18c,0xe9dfcc,0xa9664f,0xcaa17f,0xbc8c6b], cornPal=[0x5b4b43,0x6c5c53,0x7d6b5f];
+      RW.forEach((b,i)=>{ const {gy,drop}=hill(b); dummy.position.set(b.x,gy+b.h/2-drop/2,b.z); dummy.scale.set(b.w,b.h+drop,b.d); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); walls.setMatrixAt(i,dummy.matrix); walls.setColorAt(i,col.setHex(rowPal[Math.floor(b.pal*97)%rowPal.length])); rep.setX(i,b.units);
+        dummy.position.set(b.x,gy+b.h+0.3,b.z); dummy.scale.set(b.w+0.7,0.6,b.d+0.5); dummy.updateMatrix(); corn.setMatrixAt(i,dummy.matrix); corn.setColorAt(i,col.setHex(cornPal[i%cornPal.length])); });
+      rep.needsUpdate=true; add(walls,'bld-row'); add(corn,'bld-cornice'); }
+    if(TD.length){ const np=TD.reduce((n,b)=>n+b.porches,0);
+      const walls=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:streetscapeFacade()})),TD.length);
+      const gables=new THREE.InstancedMesh(gableGeo(),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true})),TD.length);
+      const porch=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xefebe2})),Math.max(1,np));
+      const tdPal=[0xc9a48a,0xdac7ad,0xb98b73,0xd3c9bd,0xc7ad93,0xe1d7c4], roofPalT=[0x6b5f57,0x5f6a70,0x7a6a5d,0x625b58]; let pi=0;
+      TD.forEach((b,i)=>{ const {gy,drop}=hill(b); dummy.position.set(b.x,gy+b.h/2-drop/2,b.z); dummy.scale.set(b.w,b.h+drop,b.d); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); walls.setMatrixAt(i,dummy.matrix); walls.setColorAt(i,col.setHex(tdPal[Math.floor(b.pal*89)%tdPal.length]));
+        dummy.position.set(b.x,gy+b.h,b.z); dummy.rotation.set(0,b.ang+Math.PI/2,0); dummy.scale.set(b.d*1.08,b.roofH,b.w*1.08); dummy.updateMatrix(); gables.setMatrixAt(i,dummy.matrix); gables.setColorAt(i,col.setHex(roofPalT[Math.floor(b.pal*53)%roofPalT.length]));   // ridge along the street: gableGeo's ridge runs on local z, so it is turned 90°
+        const ca=Math.cos(b.ang),sa=Math.sin(b.ang), px=b.x+b.fx*(b.d/2+1.3), pz=b.z+b.fz*(b.d/2+1.3), pw=b.kind==='T'?BTYPED.twinUnit*0.86:Math.min(6,b.w*0.6);
+        for(let k=0;k<b.porches;k++){ const o=b.kind==='T'?(k?1:-1)*BTYPED.twinUnit/2:0; dummy.position.set(px+o*ca,gy+1.5,pz-o*sa); dummy.rotation.set(0,b.ang,0); dummy.scale.set(pw,3.0,2.6); dummy.updateMatrix(); porch.setMatrixAt(pi++,dummy.matrix); } });
+      porch.count=pi; add(walls,'bld-td'); add(gables,'bld-gable'); add(porch,'bld-porch'); } }
   // 🚒 FIRE HYDRANTS — simple low-poly kerbside pieces (body + bonnet + side outlet) so they sit in the same
   // world as the buildings and trees. Only the ones inside the current block are instanced, so this is nearly free.
   { const HY=hydrantsNear(J.cx,J.cz,LOCAL.R);
