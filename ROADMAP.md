@@ -1,6 +1,21 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19p is public**, service-worker cache `local-shell-v27`.
+Planning snapshot: September 19, 2026. **v19q is public**, service-worker cache `local-shell-v28`.
+
+- [x] **Roosevelt Boulevard and the trunk network (v19q, September 19, 2026):** twelve lanes of US 1
+  through the Northeast simply did not exist in the game, and nor did Penrose, Girard, Cheltenham,
+  Lancaster, Levick, Adams and 34 other trunk corridors — the road bake has always skipped
+  `highway=trunk` and only corridor fetches had ever brought any of it in. All of it is now in the
+  road table, and the gap that left the Roosevelt Expressway stopping dead short of the Boulevard is
+  closed, so US 1 is drivable from the Schuylkill to the Bucks County line. The Boulevard drives as
+  an ordinary arterial with junction cards and manual turns, which is right for a road with traffic
+  lights. Dead ends across the city FELL by 183: the new roads arrived connected, not as islands.
+
+- [ ] **Open decisions this release deliberately left alone.** US 1 route-following stops where the
+  freeway does, because the Boulevard's route designation is not carried onto ordinary street
+  records; every Boulevard carriageway renders at the same width, because lane counts are only kept
+  for freeway records, so it reads as four parallel arterials rather than one scaled boulevard; and
+  I-95 and PA 309 are still absent from the game entirely. Each is its own scoped decision.
 
 - [x] **US 1 flows through the I-76 interchange (v19p, September 19, 2026):** driving US 1 South
   through the split in East Falls, the truck used to stop dead — silently, on a live expressway.
