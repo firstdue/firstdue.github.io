@@ -1,6 +1,15 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19r is public**, service-worker cache `local-shell-v29`.
+Planning snapshot: September 19, 2026. **v19s is public**, service-worker cache `local-shell-v30`.
+
+- [x] **US 1 North drives through to the Boulevard (v19s, September 19, 2026):** the Roosevelt
+  Expressway stopped dead partway along and told you the road was closed, on a road that plainly
+  carries on. It is one road with two designations — an expressway in the west, an arterial in the
+  east — and the game kept those two halves in separate worlds, so the truck ran out of road exactly
+  where they meet. They are joined now, in both directions, and US 1 can be driven from East Falls to
+  the Bucks County line. The rule that keeps a viaduct from fusing with the street beneath it is
+  untouched: the halves are joined only because they share one surveyed point, which a bridge and the
+  road below it never do.
 
 - [x] **Free drive, and not being sent back to quarters (v19r, September 19, 2026):** losing a box or
   finishing one used to march you back to the firehouse whether you wanted to go or not. Both cards
