@@ -811,7 +811,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19g";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3931,7 +3931,7 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
 // C / I / A / P / unknown fall through to the generic building exactly as before. Placement uses the same block-face
 // cut as the sidewalk slabs (a run ends where the kerb does), the same occupancy grid as the generic pass, and
 // every corner of the rotated footprint must clear every roadway (footprintClearsRoadAt).
-const BTYPED={on:true, rowUnit:5.0, rowDepth:11.5, twinUnit:7.4, twinDepth:10.5, detW:10.5, detDepth:10, maxRun:32, tex:null};
+const BTYPED={on:true, rowUnit:5.0, rowDepth:11.5, twinUnit:7.4, twinDepth:10.5, detW:10.5, detDepth:10, maxRun:32, aptDepth:16, shopUnit:7.2, shopDepth:14, stripDepth:18, stripPark:14, tex:null, shopTex:null, stripTex:null, aptTex:null};
 function btypeOf(s){ if(!BTYPED.on||typeof BTYPE==='undefined'||s.ri===undefined) return '-'; const t=BTYPE.seg[s.ri]; return (t&&t[s.si])||'-'; }
 function blockFacePieces(J,s,EV,side,walk,sl){ const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));   // the block face on one side between the junction trims and every crossing / T-mouth window — the sidewalk slab's cut
   const T0=(eA&&eA.n>=3)?eA.hw+walk+0.6:0, T1=(eB&&eB.n>=3)?eB.hw+walk+0.6:0; if(sl-T0-T1<=2) return [];
@@ -3951,8 +3951,11 @@ function typedBuildings(J,s,code,dx,dz,nx,nz,sl,rh,EV){ const {cx,cz,B,grid}=J, 
     if(!footprintClearsRoadAt(x,z,w,d,ang)) return false;
     for(const st of stations){ if((st.curated||st.id===DRIVE.stationId)&&Math.hypot(x-st.x,z-st.z)<62) return false; }
     if(STHOUSE.group){ const q=STHOUSE.group.position, r2=(STHOUSE.halfW||20)+14; if(Math.abs(x-q.x)<r2&&Math.abs(z-q.z)<r2) return false; }
-    const ks=cells(x,z,w,d); for(const k of ks) if(grid.has(k)) return false; for(const k of ks) grid.set(k,1);
-    B.push(Object.assign({x,z,w,d,ang,roof:false,roofH:0,fx:-nx*side,fz:-nz*side},extra)); return true; };   // fx/fz: unit vector from the house toward its street (porches go there)
+    const ks=cells(x,z,w,d), fx=-nx*side, fz=-nz*side;                                          // fx/fz: unit vector from the building toward its street (porches and parking pads go there)
+    if(extra.pad){ const px=x+fx*(d/2+BTYPED.stripPark/2), pz=z+fz*(d/2+BTYPED.stripPark/2), pw=w+6, pd=BTYPED.stripPark-1.5;   // the strip mall's parking pad is part of the footprint: off every roadway and on free cells too
+      if(!footprintClearsRoadAt(px,pz,pw,pd,ang)) return false; ks.push(...cells(px,pz,pw,pd)); }
+    for(const k of ks) if(grid.has(k)) return false; for(const k of ks) grid.set(k,1);
+    B.push(Object.assign({x,z,w,d,ang,roof:false,roofH:0,fx,fz,unitsV:1},extra)); return true; };
   for(const side of [1,-1]){
     for(const [a0,a1] of blockFacePieces(J,s,EV,side,walk,sl)){ const L=a1-a0-2; if(L<6) continue;
       const seed=hash2(Math.round(s.ax+dx*a0)*2+(side>0?1:0),Math.round(s.az+dz*a0));
@@ -3961,8 +3964,17 @@ function typedBuildings(J,s,code,dx,dz,nx,nz,sl,rh,EV){ const {cx,cz,B,grid}=J, 
           const hs=hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3); place(tc,rh+walk+0.6+d/2,side,w,d,{kind:'R',units,h:hs<0.72?7.4:10.6,pal:seed}); } }
       else if(code==='T'){ const w=2*BTYPED.twinUnit, d=BTYPED.twinDepth, pitch=w+3.2, n=Math.floor(L/pitch); if(n<1) continue; const start=a0+1+(L-n*pitch)/2;
         for(let k=0;k<n;k++){ const tc=start+pitch*(k+0.5); place(tc,rh+walk+3.5+d/2,side,w,d,{kind:'T',h:8.2,gable:true,roofH:3.4,porches:2,pal:hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3)}); } }
-      else { const w=BTYPED.detW*(0.9+seed*0.25), d=BTYPED.detDepth, pitch=w+7, n=Math.floor(L/pitch); if(n<1) continue; const start=a0+1+(L-n*pitch)/2;
-        for(let k=0;k<n;k++){ const tc=start+pitch*(k+0.5); place(tc,rh+walk+6+d/2,side,w,d,{kind:'D',h:7.2,gable:true,roofH:3.2,porches:1,pal:hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3)}); } } } } }
+      else if(code==='D'){ const w=BTYPED.detW*(0.9+seed*0.25), d=BTYPED.detDepth, pitch=w+7, n=Math.floor(L/pitch); if(n<1) continue; const start=a0+1+(L-n*pitch)/2;
+        for(let k=0;k<n;k++){ const tc=start+pitch*(k+0.5); place(tc,rh+walk+6+d/2,side,w,d,{kind:'D',h:7.2,gable:true,roofH:3.2,porches:1,pal:hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3)}); } }
+      else if(code==='A'){ const w=18+seed*14, d=BTYPED.aptDepth, pitch=w+6, n=Math.floor(L/pitch); if(n<1) continue; const start=a0+1+(L-n*pitch)/2;   // apartments (v19h): 4–7 floors, flat roof with a parapet, 4 m setback, one floor-band facade tiled per bay and per floor
+        for(let k=0;k<n;k++){ const tc=start+pitch*(k+0.5), hs=hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3), fl=4+Math.floor(hs*4);
+          place(tc,rh+walk+4+d/2,side,w,d,{kind:'A',h:fl*3.1+0.8,units:Math.max(1,Math.round(w/6)),unitsV:fl,cap:true,pal:hs}); } }
+      else if(code==='C'){ const unit=BTYPED.shopUnit*(0.9+seed*0.2), d=BTYPED.shopDepth*(0.9+hash2(Math.round(s.ax+dx*a0),Math.round(s.az+dz*a0)*3)*0.2), nsub=Math.max(1,Math.ceil(L/BTYPED.maxRun)), ls=L/nsub;   // storefront rows (v19h): shop fronts under 1–2 upper floors, tiled per unit like the row homes, cornice on top
+        for(let k=0;k<nsub;k++){ const units=Math.floor(ls/unit); if(units<1) continue; const w=units*unit, tc=a0+1+ls*(k+0.5), hs=hash2(Math.round(s.ax+dx*tc),Math.round(s.az+dz*tc)*3);
+          place(tc,rh+walk+0.6+d/2,side,w,d,{kind:'C',units,h:hs<0.55?7.6:10.8,pal:seed}); } }
+      else if(code==='S'){ if(L<30) continue; const n=L>75?Math.floor(L/60):1, ls=L/n;                       // strip mall (v19h): one long low box per block face (or per 60 m), parapet, parking pad between kerb and front
+        for(let k=0;k<n;k++){ const w=Math.min(ls-6,24+seed*36), d=BTYPED.stripDepth, tc=a0+1+ls*(k+0.5);
+          place(tc,rh+walk+BTYPED.stripPark+d/2,side,w,d,{kind:'S',units:Math.max(2,Math.round(w/8)),h:5.4,cap:true,pad:true,pal:seed}); } } } } }
 // One row-house facade per unit: neutral tones so the per-run instance colour tints the brick; tiled along the run by
 // the per-instance repeat below (wrapS repeat), never stretched.
 function rowFacade(){ if(BTYPED.tex) return BTYPED.tex; const c=document.createElement('canvas'); c.width=128; c.height=256; const g=c.getContext('2d');
@@ -3975,12 +3987,34 @@ function rowFacade(){ if(BTYPED.tex) return BTYPED.tex; const c=document.createE
   g.fillStyle='#8d7a68'; g.fillRect(10,152,40,96); g.fillStyle='#463830'; g.fillRect(14,160,32,88); g.fillStyle='#8fa2ac'; g.fillRect(17,163,26,14); g.fillStyle='#d6c9a5'; g.fillRect(38,205,3,3);   // door with transom + knob
   g.fillStyle='#b9afa2'; g.fillRect(6,246,48,10); g.fillStyle='#cfc6b9'; g.fillRect(4,242,52,4);                                     // stoop
   const tex=new THREE.CanvasTexture(c); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.ClampToEdgeWrapping; tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy()); BTYPED.tex=tex; return tex; }
+// Storefront tile (v19h): shop glass, sign band and door on the ground floor, two floors of windows above, cornice.
+function shopFacade(){ if(BTYPED.shopTex) return BTYPED.shopTex; const c=document.createElement('canvas'); c.width=128; c.height=256; const g=c.getContext('2d');
+  g.fillStyle='#e2d8cb'; g.fillRect(0,0,128,256);
+  g.strokeStyle='rgba(60,40,30,0.11)'; g.lineWidth=1; for(let y=14;y<156;y+=8){ g.beginPath(); g.moveTo(0,y); g.lineTo(128,y); g.stroke(); for(let x=((y/8)%2)*12;x<128;x+=24){ g.beginPath(); g.moveTo(x,y-8); g.lineTo(x,y); g.stroke(); } }
+  g.fillStyle='#cdbfae'; g.fillRect(0,0,128,12); g.fillStyle='#bfae9a'; for(let x=4;x<128;x+=12) g.fillRect(x,8,6,5);
+  for(const y of [30,94]) for(const x of [16,72]){ g.fillStyle='#a08c78'; g.fillRect(x-3,y-3,46,54); g.fillStyle='#3a4852'; g.fillRect(x,y,40,48); g.fillStyle='#7f939e'; g.fillRect(x+3,y+3,16,20); g.fillStyle='#5d717c'; g.fillRect(x+21,y+3,16,20); g.fillStyle='#d9cfc2'; g.fillRect(x+18,y,3,48); g.fillRect(x,y+23,40,3); g.fillStyle='#efe6d8'; g.fillRect(x-5,y+51,50,4); }
+  g.fillStyle='#6b5a52'; g.fillRect(0,156,128,22); g.fillStyle='#d9cfc0'; g.fillRect(14,161,100,12);                        // sign band with a blank plate: no invented businesses
+  g.fillStyle='#2e3d47'; g.fillRect(6,180,116,66); g.fillStyle='#c9d0d2'; for(const x of [44,84]) g.fillRect(x,180,3,66); g.fillRect(6,196,116,2);   // storefront glass, mullions, transom
+  g.fillStyle='#4a5a63'; g.fillRect(48,198,32,48); g.fillStyle='#e7e2d6'; g.fillRect(48,198,32,3); g.fillStyle='#8d8579'; g.fillRect(0,246,128,10);   // door, bulkhead
+  const tex=new THREE.CanvasTexture(c); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.ClampToEdgeWrapping; tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy()); BTYPED.shopTex=tex; return tex; }
+// Strip-mall tile (v19h): one storey, a sign band over full-height glass, tiled per 8 m bay.
+function stripFacade(){ if(BTYPED.stripTex) return BTYPED.stripTex; const c=document.createElement('canvas'); c.width=128; c.height=128; const g=c.getContext('2d');
+  g.fillStyle='#e6e1d7'; g.fillRect(0,0,128,128); g.fillStyle='#d0c9bd'; g.fillRect(0,0,128,30); g.fillStyle='#5f5a60'; g.fillRect(10,6,108,18);
+  g.fillStyle='#2e3d47'; g.fillRect(4,34,120,84); g.fillStyle='#c9d0d2'; for(const x of [44,84]) g.fillRect(x,34,3,84); g.fillStyle='#4a5a63'; g.fillRect(48,74,32,44); g.fillStyle='#e7e2d6'; g.fillRect(48,74,32,3); g.fillStyle='#8d8579'; g.fillRect(0,118,128,10);
+  const tex=new THREE.CanvasTexture(c); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.ClampToEdgeWrapping; tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy()); BTYPED.stripTex=tex; return tex; }
+// Apartment tile (v19h): ONE floor — two windows and a floor band — tiled per bay AND per floor (aRepV), so a
+// seven-floor box shows seven rows of windows instead of a stretched two-row facade.
+function aptFacade(){ if(BTYPED.aptTex) return BTYPED.aptTex; const c=document.createElement('canvas'); c.width=128; c.height=64; const g=c.getContext('2d');
+  g.fillStyle='#ddd6cb'; g.fillRect(0,0,128,64); g.fillStyle='#c3b9ab'; g.fillRect(0,58,128,6);
+  for(const x of [14,74]){ g.fillStyle='#a49684'; g.fillRect(x-3,9,46,42); g.fillStyle='#36444e'; g.fillRect(x,12,40,36); g.fillStyle='#7f939e'; g.fillRect(x+3,15,16,14); g.fillStyle='#5d717c'; g.fillRect(x+21,15,16,14); g.fillStyle='#cfd6d8'; g.fillRect(x+18,12,3,36); g.fillRect(x,29,40,3); g.fillStyle='#efe9df'; g.fillRect(x-4,48,48,4); }
+  const tex=new THREE.CanvasTexture(c); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.RepeatWrapping; tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy()); BTYPED.aptTex=tex; return tex; }
 function rowGeo(n){ const g=new THREE.BoxGeometry(1,1,1); const f=new Float32Array(24); for(let i=16;i<24;i++) f[i]=1;   // BoxGeometry faces px,nx,py,ny,pz,nz × 4 verts: only the ±z (street-facing) faces tile
-  g.setAttribute('faceRep',new THREE.BufferAttribute(f,1)); g.setAttribute('aRep',new THREE.InstancedBufferAttribute(new Float32Array(n).fill(1),1)); return g; }
-function rowMaterial(){ const mat=new THREE.MeshLambertMaterial({color:0xffffff,map:rowFacade()});                  // nearFadeMaterial's view-space fade + the per-instance UV repeat, in one patch
+  g.setAttribute('faceRep',new THREE.BufferAttribute(f,1)); g.setAttribute('aRep',new THREE.InstancedBufferAttribute(new Float32Array(n).fill(1),1)); g.setAttribute('aRepV',new THREE.InstancedBufferAttribute(new Float32Array(n).fill(1),1)); return g; }
+function rowMaterial(){ return tiledMaterial(rowFacade()); }
+function tiledMaterial(tex){ const mat=new THREE.MeshLambertMaterial({color:0xffffff,map:tex});                    // nearFadeMaterial's view-space fade + the per-instance UV repeat (across per unit, up per floor), in one patch
   mat.onBeforeCompile=sh=>{
-    sh.vertexShader='attribute float aRep; attribute float faceRep; varying float vCamDist;\n'+sh.vertexShader
-      .replace('#include <uv_vertex>','#include <uv_vertex>\n  vUv.x=vUv.x*mix(1.0,aRep,faceRep);')
+    sh.vertexShader='attribute float aRep; attribute float aRepV; attribute float faceRep; varying float vCamDist;\n'+sh.vertexShader
+      .replace('#include <uv_vertex>','#include <uv_vertex>\n  vUv.x=vUv.x*mix(1.0,aRep,faceRep); vUv.y=vUv.y*mix(1.0,aRepV,faceRep);')
       .replace('#include <fog_vertex>','#include <fog_vertex>\n  vCamDist=length(mvPosition.xyz);');
     sh.fragmentShader='varying float vCamDist;\n'+sh.fragmentShader.replace('#include <dithering_fragment>',
       '#include <dithering_fragment>\n  float _f=smoothstep(12.0,26.0,vCamDist);\n  if(_f<0.999){ float _n=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);\n    if(_f<_n) discard; }'); };
@@ -4036,7 +4070,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
               if(nearRoadEdge(sx2,sz2)<0.4) continue;                                      // the slab would sit ON another roadway's drawn band — stacked carriageways (Broad St) render as one wide road, so no strip of ANY colour belongs there; Henry Ave's real gaps pass this test and keep their grass
               S.push({x:sx2, z:sz2, len:L, w:walk, ang, name:s.name, g:isMed?1:0});
               if(S.length>=LOCAL.maxS) break; } } } } }
-    const bcode=(s.name&&!s.hw)?btypeOf(s):'-', typed=bcode==='R'||bcode==='T'||bcode==='D';   // 🏘️ typed massing (v19g): rows / twins / detached from the BTYPE side table; every other code keeps the generic building below
+    const bcode=(s.name&&!s.hw)?btypeOf(s):'-', typed='RTDACS'.includes(bcode)&&bcode!=='';   // 🏘️ typed massing (v19g rows/twins/detached, v19h apartments/storefronts/strips) from the BTYPE side table; I / P / unknown keep the generic building below
     if(typed) typedBuildings(J,s,bcode,dx,dz,nx,nz,sl,rh,EV);
     for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
       if((px-cx)**2+(pz-cz)**2>R2) continue;
@@ -4734,25 +4768,33 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       const rf=new THREE.InstancedMesh(roofGeo,nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true})),pitched.length), rPal=[0xa89a8c,0x9c8f82,0xb3a596,0x8f8377];
       pitched.forEach((b,i)=>{ const rh=Math.min(3.4,b.roofH); dummy.position.set(b.x,navGroundY(b.x,b.z)+b.h+rh/2,b.z); dummy.scale.set(b.w*1.04,rh,b.d*1.04); dummy.rotation.set(0,0,0); dummy.updateMatrix(); rf.setMatrixAt(i,dummy.matrix); rf.setColorAt(i,col.setHex(rPal[i%rPal.length])); });
       rf.instanceMatrix.needsUpdate=true; if(rf.instanceColor)rf.instanceColor.needsUpdate=true; FLATCITY.group.add(rf); FLATCITY.parts.push(rf); } }
-  { const RW=B.filter(b=>b.kind==='R'), TD=B.filter(b=>b.kind==='T'||b.kind==='D');   // 🏘️ typed buildings (v19g): row runs, twins, detached — five draw calls in all
+  { const of=k=>B.filter(b=>k.includes(b.kind)), RW=of('R'), SH=of('C'), ST=of('S'), AP=of('A'), TD=of('TD'), CAPS=B.filter(b=>b.cap), PADS=B.filter(b=>b.pad);   // 🏘️ typed buildings (v19g rows/twins/detached, v19h apartments/storefronts/strips) — nine draw calls in all
     const hill=b=>{ const gy=navGroundY(b.x,b.z); let drop=0; if(NAVGEO.active){ const a=b.ang||0,ca=Math.cos(a),sa=Math.sin(a),hw=b.w/2,hd=b.d/2; let gmin=gy;   // the generic hillside step: roofline at the centre's ground, walls down to the lowest corner
         for(const [ox,oz] of [[hw,hd],[hw,-hd],[-hw,hd],[-hw,-hd]]){ const g=navGroundY(b.x+ox*ca+oz*sa,b.z-ox*sa+oz*ca); if(g<gmin)gmin=g; } drop=Math.min(10,gy-gmin); } return {gy,drop}; };
     const add=(m,name)=>{ m.name=name; m.instanceMatrix.needsUpdate=true; if(m.instanceColor) m.instanceColor.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); };
-    if(RW.length){ const geo=rowGeo(RW.length), rep=geo.getAttribute('aRep'), walls=new THREE.InstancedMesh(geo,rowMaterial(),RW.length), corn=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),RW.length);
-      const rowPal=[0xb9634b,0xc47d5f,0xd8b18c,0xe9dfcc,0xa9664f,0xcaa17f,0xbc8c6b], cornPal=[0x5b4b43,0x6c5c53,0x7d6b5f];
-      RW.forEach((b,i)=>{ const {gy,drop}=hill(b); dummy.position.set(b.x,gy+b.h/2-drop/2,b.z); dummy.scale.set(b.w,b.h+drop,b.d); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); walls.setMatrixAt(i,dummy.matrix); walls.setColorAt(i,col.setHex(rowPal[Math.floor(b.pal*97)%rowPal.length])); rep.setX(i,b.units);
-        dummy.position.set(b.x,gy+b.h+0.3,b.z); dummy.scale.set(b.w+0.7,0.6,b.d+0.5); dummy.updateMatrix(); corn.setMatrixAt(i,dummy.matrix); corn.setColorAt(i,col.setHex(cornPal[i%cornPal.length])); });
-      rep.needsUpdate=true; add(walls,'bld-row'); add(corn,'bld-cornice'); }
-    if(TD.length){ const np=TD.reduce((n,b)=>n+b.porches,0);
+    const tiled=(list,tex,name,pal)=>{ if(!list.length) return; const geo=rowGeo(list.length), rep=geo.getAttribute('aRep'), repV=geo.getAttribute('aRepV'), m=new THREE.InstancedMesh(geo,tiledMaterial(tex),list.length);
+      list.forEach((b,i)=>{ const {gy,drop}=hill(b); dummy.position.set(b.x,gy+b.h/2-drop/2,b.z); dummy.scale.set(b.w,b.h+drop,b.d); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); m.setMatrixAt(i,dummy.matrix); m.setColorAt(i,col.setHex(pal[Math.floor(b.pal*97)%pal.length])); rep.setX(i,b.units||1); repV.setX(i,b.unitsV||1); });
+      rep.needsUpdate=true; repV.needsUpdate=true; add(m,name); };
+    tiled(RW,rowFacade(),'bld-row',[0xb9634b,0xc47d5f,0xd8b18c,0xe9dfcc,0xa9664f,0xcaa17f,0xbc8c6b]);
+    tiled(SH,shopFacade(),'bld-shop',[0xc9b6a2,0xd7c3ad,0xb99c86,0xe2d6c6,0xc4ab98,0xb08a78]);
+    tiled(ST,stripFacade(),'bld-strip',[0xd9d2c6,0xcfc6b8,0xe3ddd2,0xc9c0b2]);
+    tiled(AP,aptFacade(),'bld-apt',[0xd8cfc2,0xc9bcaa,0xbfb3a5,0xe0d8cc,0xb8a999,0xcdb9a6]);
+    const CR=RW.concat(SH); if(CR.length){ const corn=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),CR.length), cornPal=[0x5b4b43,0x6c5c53,0x7d6b5f];
+      CR.forEach((b,i)=>{ const gy=navGroundY(b.x,b.z); dummy.position.set(b.x,gy+b.h+0.3,b.z); dummy.scale.set(b.w+0.7,0.6,b.d+0.5); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); corn.setMatrixAt(i,dummy.matrix); corn.setColorAt(i,col.setHex(cornPal[i%cornPal.length])); }); add(corn,'bld-cornice'); }
+    if(CAPS.length){ const cap=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0x615c57})),CAPS.length);   // parapet on the flat-roofed apartments and strip malls
+      CAPS.forEach((b,i)=>{ const gy=navGroundY(b.x,b.z); dummy.position.set(b.x,gy+b.h+0.35,b.z); dummy.scale.set(b.w+0.4,0.7,b.d+0.4); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); cap.setMatrixAt(i,dummy.matrix); }); add(cap,'bld-cap'); }
+    if(PADS.length){ const pad=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x6d727a}),PADS.length);   // the strip mall's parking pad between the kerb and the storefront
+      PADS.forEach((b,i)=>{ const px=b.x+b.fx*(b.d/2+BTYPED.stripPark/2), pz=b.z+b.fz*(b.d/2+BTYPED.stripPark/2), gy=navGroundY(px,pz); dummy.position.set(px,gy+0.07,pz); dummy.scale.set(b.w+6,0.14,BTYPED.stripPark-1.5); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); pad.setMatrixAt(i,dummy.matrix); }); add(pad,'bld-pad'); }
+    if(TD.length){ const GB=TD.filter(b=>b.gable), np=TD.reduce((n,b)=>n+(b.porches||0),0);
       const walls=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:streetscapeFacade()})),TD.length);
-      const gables=new THREE.InstancedMesh(gableGeo(),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true})),TD.length);
+      const gables=new THREE.InstancedMesh(gableGeo(),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true})),Math.max(1,GB.length));
       const porch=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xefebe2})),Math.max(1,np));
-      const tdPal=[0xc9a48a,0xdac7ad,0xb98b73,0xd3c9bd,0xc7ad93,0xe1d7c4], roofPalT=[0x6b5f57,0x5f6a70,0x7a6a5d,0x625b58]; let pi=0;
+      const tdPal=[0xc9a48a,0xdac7ad,0xb98b73,0xd3c9bd,0xc7ad93,0xe1d7c4], roofPalT=[0x6b5f57,0x5f6a70,0x7a6a5d,0x625b58]; let pi=0, gi=0;
       TD.forEach((b,i)=>{ const {gy,drop}=hill(b); dummy.position.set(b.x,gy+b.h/2-drop/2,b.z); dummy.scale.set(b.w,b.h+drop,b.d); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); walls.setMatrixAt(i,dummy.matrix); walls.setColorAt(i,col.setHex(tdPal[Math.floor(b.pal*89)%tdPal.length]));
-        dummy.position.set(b.x,gy+b.h,b.z); dummy.rotation.set(0,b.ang+Math.PI/2,0); dummy.scale.set(b.d*1.08,b.roofH,b.w*1.08); dummy.updateMatrix(); gables.setMatrixAt(i,dummy.matrix); gables.setColorAt(i,col.setHex(roofPalT[Math.floor(b.pal*53)%roofPalT.length]));   // ridge along the street: gableGeo's ridge runs on local z, so it is turned 90°
+        if(b.gable){ dummy.position.set(b.x,gy+b.h,b.z); dummy.rotation.set(0,b.ang+Math.PI/2,0); dummy.scale.set(b.d*1.08,b.roofH,b.w*1.08); dummy.updateMatrix(); gables.setMatrixAt(gi,dummy.matrix); gables.setColorAt(gi,col.setHex(roofPalT[Math.floor(b.pal*53)%roofPalT.length])); gi++; }   // ridge along the street: gableGeo's ridge runs on local z, so it is turned 90°
         const ca=Math.cos(b.ang),sa=Math.sin(b.ang), px=b.x+b.fx*(b.d/2+1.3), pz=b.z+b.fz*(b.d/2+1.3), pw=b.kind==='T'?BTYPED.twinUnit*0.86:Math.min(6,b.w*0.6);
-        for(let k=0;k<b.porches;k++){ const o=b.kind==='T'?(k?1:-1)*BTYPED.twinUnit/2:0; dummy.position.set(px+o*ca,gy+1.5,pz-o*sa); dummy.rotation.set(0,b.ang,0); dummy.scale.set(pw,3.0,2.6); dummy.updateMatrix(); porch.setMatrixAt(pi++,dummy.matrix); } });
-      porch.count=pi; add(walls,'bld-td'); add(gables,'bld-gable'); add(porch,'bld-porch'); } }
+        for(let k=0;k<(b.porches||0);k++){ const o=b.kind==='T'?(k?1:-1)*BTYPED.twinUnit/2:0; dummy.position.set(px+o*ca,gy+1.5,pz-o*sa); dummy.rotation.set(0,b.ang,0); dummy.scale.set(pw,3.0,2.6); dummy.updateMatrix(); porch.setMatrixAt(pi++,dummy.matrix); } });
+      gables.count=gi; porch.count=pi; add(walls,'bld-td'); add(gables,'bld-gable'); add(porch,'bld-porch'); } }
   // 🚒 FIRE HYDRANTS — simple low-poly kerbside pieces (body + bonnet + side outlet) so they sit in the same
   // world as the buildings and trees. Only the ones inside the current block are instanced, so this is nearly free.
   { const HY=hydrantsNear(J.cx,J.cz,LOCAL.R);

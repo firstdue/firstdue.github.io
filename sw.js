@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v18';  // v19g: typed buildings Phase B — data/btype.js loads, row / twin / detached massing (v17 was v19f, the W-beam guardrails + ramp ribbon)
+const CACHE = 'local-shell-v19';  // v19h: typed buildings Phase C — apartments, storefront rows and strip malls; btype.js gains the S code (v18 was v19g rows/twins/detached)
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
