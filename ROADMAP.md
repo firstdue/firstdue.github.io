@@ -1,7 +1,16 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19o is public**, service-worker cache `local-shell-v26`,
-with a later invisible re-bake of the road table on top of it.
+Planning snapshot: September 19, 2026. **v19p is public**, service-worker cache `local-shell-v27`.
+
+- [x] **US 1 flows through the I-76 interchange (v19p, September 19, 2026):** driving US 1 South
+  through the split in East Falls, the truck used to stop dead — silently, on a live expressway.
+  The Roosevelt Expressway genuinely ends at I-76 and US 1 carries on over an unnamed ramp, which
+  the drive layer could not recognise as the same road because it matched on street name. It now
+  follows the route designation the road table carries, in freeway context only and only when
+  exactly one branch matches, so an ordinary street junction is untouched. Measured against the
+  previous build over every legal movement in the city, two changed — this split and its northbound
+  mirror — and both are genuine US 1 continuations. The split stays a real choice: both ramps are
+  still offered, now captioned from the road table's own sign tags rather than a guess.
 
 - [x] **Road table carries route designations (data only, September 19, 2026):** freeway and ramp
   records now keep the OSM `ref`, `destination` and `destination:ref` tags verbatim. Nothing reads
