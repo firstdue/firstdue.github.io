@@ -1,7 +1,14 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 18, 2026. **v19g is public and matches the authoring build**, service-worker
-cache `local-shell-v18`.
+Planning snapshot: September 18, 2026. **v19h is public and matches the authoring build**, service-worker
+cache `local-shell-v19`.
+
+- [x] **Graphics step 6, typed buildings, apartments and commercial (v19h, September 18, 2026):** apartments
+  (4–7 floors, parapet, per-floor facade tiling), storefront rows (shop glass under upper floors, cornice) and
+  strip malls (long low box, parapet, parking pad) from `data/btype.js`, which now carries `S` for large-lot
+  commercial: road class cannot separate a storefront corridor from a strip (the corridors are all class 0), so
+  the parcels' building descriptions decide, and institutions are ignored. Industrial, park frontage and unknown
+  stay generic. Gate within budget, triangles and instances down again.
 
 - [x] **Graphics step 6, typed buildings, residential (v19g, September 18, 2026):** `data/btype.js`, a side table
   keyed to the road graph by record and segment index with one typology code per segment (row, twin, detached,

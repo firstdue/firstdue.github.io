@@ -135,7 +135,13 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19g (September 18, 2026), typed buildings.** `data/btype.js` (`BTYPE.seg[i]`, one code per
+- **The build is v19h (September 18, 2026), typed buildings Phase C.** `BTYPE` codes are now R T D A C S I P `-`;
+  `C` is storefront-density commercial and `S` large-lot / car-oriented commercial, decided from the OPA building
+  descriptions in `bake_building_types.js` (`parcelCode`), never from road class — every commercial corridor in
+  the city is class 0. Apartments, storefronts and strips render from `typedBuildings` through the `bld-apt`,
+  `bld-shop`, `bld-strip`, `bld-cap` and `bld-pad` groups; `tiledMaterial` carries the per-bay and per-floor UV
+  repeat. A re-bake of `data/btype.js` ships in the same commit as `index.html`. Cache `local-shell-v19`.
+- **v19g (September 18, 2026), typed buildings.** `data/btype.js` (`BTYPE.seg[i]`, one code per
   segment of `RB.st[i]`) is a side table — never widen the RB record for it; the segment objects carry `ri`/`si`
   as the key. Rows / twins / detached come from `typedBuildings` in `stepLocalCity` and the `bld-*` instanced
   groups in `commit`; every other code is the untouched generic pipeline (`G = B.filter(b => !b.kind)`).
