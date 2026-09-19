@@ -811,7 +811,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19i";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19j";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -826,7 +826,7 @@ for(const f of LANDCOVER.features){for(const p of [...f.outer,...f.inner])p.bb=[
 function landContains(f,x,z){const hit=p=>x>=p.bb[0]&&z>=p.bb[1]&&x<=p.bb[2]&&z<=p.bb[3]&&pip(x,z,p);return f.outer.some(hit)&&!f.inner.some(hit);}
 function landNear(x,z){return landGrid.get(Math.floor(x/LANDCELL)+':'+Math.floor(z/LANDCELL))||[];}
 function landKind(x,z){let kind=null;for(const f of landNear(x,z)){if(!landContains(f,x,z))continue;if(f.kind==='open')return 'open';if(f.kind==='wood')kind='wood';else if(!kind)kind='park';}return kind;}
-function landBlocksBuilding(x,z,r=0){for(const f of landNear(x,z)){if(x+r<f.bb[0]||x-r>f.bb[2]||z+r<f.bb[1]||z-r>f.bb[3])continue;if(landContains(f,x,z))return true;
+function landBlocksBuilding(x,z,r=0){if(typeof cemAt==='function'&&LANDCOVER.cemeteries&&cemAt(x,z))return true;for(const f of landNear(x,z)){if(x+r<f.bb[0]||x-r>f.bb[2]||z+r<f.bb[1]||z-r>f.bb[3])continue;if(landContains(f,x,z))return true;
     // A bounding circle protects the complete rotated footprint, including park edges.
     if(r)for(const p of [...f.outer,...f.inner]){if(x+r<p.bb[0]||x-r>p.bb[2]||z+r<p.bb[1]||z-r>p.bb[3])continue;
       for(let i=1;i<p.length;i++){const a=p[i-1],b=p[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));if(Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)<r)return true;}}}return false;}
@@ -4029,11 +4029,25 @@ function tiledMaterial(tex){ const mat=new THREE.MeshLambertMaterial({color:0xff
 // lawns get scattered instanced trees on the existing forest-tree mechanism, capped separately from street trees.
 // The park ground sits 6–10 cm over the terrain sample: below the road (+22 cm) and the kerb slabs, above the
 // terrain mesh (−60 cm). Cemeteries and rail electrification are the NEXT phase (they need a re-fetch).
-const PARKS={on:true, lift:{park:0.06,wood:0.08,open:0.10}, colors:{park:0xb7d3a0,wood:0x9dbb8a,open:0xc3dcab}, fenceMax:400, fenceR:0.6, treeMax:70, subdiv:32, subdivFar:48, farR:0.5, openR:0.7};
+const PARKS={on:true, lift:{park:0.06,wood:0.08,open:0.10,cemetery:0.07}, colors:{park:0xb7d3a0,wood:0x9dbb8a,open:0xc3dcab,cemetery:0xa8c398}, fenceMax:400, fenceR:0.6, treeMax:70, subdiv:32, subdivFar:48, farR:0.5, openR:0.7,
+  cemSubdiv:40, cemSubdivFar:64, wallMax:300, stoneMax:600, stoneR:0.35, stoneRow:3.4, stoneGap:2.1, mastGap:55, mastR:0.6};   // stoneR: headstones only within 0.35·R, so the cap fills real rows near the truck instead of a sprinkle across the block
 // treeMax 70: each tree is ~300 triangles (three canopy lobes), and Fairmount beside the interchange sits at the 330k budget.
 // Distance level of detail (owner's rule for the interchange: trim, never raise the budget): triangles whose centre is
 // beyond farR·R subdivide at subdivFar instead of subdiv; 'open' polygons (pitches, grass patches) wholly beyond
 // openR·R are skipped; fences only within fenceR·R of the truck.
+// Cemeteries (v19j, from the separate LANDCOVER.cemeteries array): the same ground machinery at a coarser subdivision
+// and a greyer green, a low stone wall where the edge is not a road (wallMax pieces), and headstones in rough rows —
+// each cemetery has one row direction, stones snap to a lattice of stoneRow × stoneGap in that frame, sampled from
+// the cemetery's own triangles inside farR (no point-in-polygon), capped at stoneMax. Catenary masts every mastGap
+// metres along `el:'c'` rail within mastR·R (commit's rail loop; third rail stays unmarked).
+let cemGrid=null; const CEMCELL=240;
+function cemIndex(){ if(cemGrid) return cemGrid; cemGrid=new Map();
+  for(const f of (LANDCOVER.cemeteries||[])){ let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9;
+    for(const ring of [...f.outer,...f.inner]){ let a=1e9,b=1e9,c=-1e9,d=-1e9; for(const p of ring){ if(p[0]<a)a=p[0]; if(p[1]<b)b=p[1]; if(p[0]>c)c=p[0]; if(p[1]>d)d=p[1]; } ring.bb=[a,b,c,d]; }
+    for(const ring of f.outer){ x0=Math.min(x0,ring.bb[0]); z0=Math.min(z0,ring.bb[1]); x1=Math.max(x1,ring.bb[2]); z1=Math.max(z1,ring.bb[3]); } f.bb=[x0,z0,x1,z1]; f.kind='cemetery';
+    for(let gx=Math.floor(x0/CEMCELL);gx<=Math.floor(x1/CEMCELL);gx++)for(let gz=Math.floor(z0/CEMCELL);gz<=Math.floor(z1/CEMCELL);gz++){ const k=gx+':'+gz; let a=cemGrid.get(k); if(!a){ a=[]; cemGrid.set(k,a); } a.push(f); } }
+  return cemGrid; }
+function cemAt(x,z){ const a=cemIndex().get(Math.floor(x/CEMCELL)+':'+Math.floor(z/CEMCELL)); if(!a) return null; for(const f of a){ if(landContains(f,x,z)) return f; } return null; }   // no house on the graves: landBlocksBuilding asks this too
 function landTriangles(f){ if(f._tri) return f._tri; const out=[];
   for(const ring of f.outer){ if(ring.length<3) continue; const shape=new THREE.Shape(ring.map(p=>new THREE.Vector2(p[0],-p[1])));
     for(const hole of f.inner) if(hole.length>2&&pip(hole[0][0],hole[0][1],ring)) shape.holes.push(new THREE.Path(hole.map(p=>new THREE.Vector2(p[0],-p[1]))));
@@ -4048,12 +4062,12 @@ function parkTri(B,ax,ay,az,bx,by,bz,cx,cy,cz){ if(B.len+9>B.p.length){ const p=
   if(ny<0){ nx=-nx; ny=-ny; nz=-nz; }                                                              // ground faces up whatever the ring winding (the material is double-sided anyway)
   const P=B.p, N=B.n, o=B.len; P[o]=ax; P[o+1]=ay; P[o+2]=az; P[o+3]=bx; P[o+4]=by; P[o+5]=bz; P[o+6]=cx; P[o+7]=cy; P[o+8]=cz;
   for(let k=0;k<9;k+=3){ N[o+k]=nx; N[o+k+1]=ny; N[o+k+2]=nz; } B.len+=9; }
-function parkFences(J,f){ const P=J.park, R=LOCAL.R*PARKS.fenceR; if(P.fence.length>=PARKS.fenceMax) return;
+function parkFences(J,f,list,max,w,h){ const R=LOCAL.R*PARKS.fenceR; if(list.length>=max) return;   // park fence or cemetery wall along the outer rings, inside fenceR only
   for(const ring of f.outer){ for(let i=1;i<ring.length;i++){ const a=ring[i-1],b=ring[i], dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz); if(L<1) continue; const n=Math.ceil(L/9), pl=L/n, ang=Math.atan2(dx,dz);
-      for(let k=0;k<n;k++){ if(P.fence.length>=PARKS.fenceMax) return; const t=(k+0.5)/n, x=a[0]+dx*t, z=a[1]+dz*t; if(Math.hypot(x-J.cx,z-J.cz)>R) continue;
-        if(nearRoadEdge(x,z)<1.2||inWater(x,z)||railNear(x,z,3)) continue;                                   // a park edge that IS a road edge (Kelly Drive through Fairmount) gets no fence across the kerb
+      for(let k=0;k<n;k++){ if(list.length>=max) return; const t=(k+0.5)/n, x=a[0]+dx*t, z=a[1]+dz*t; if(Math.hypot(x-J.cx,z-J.cz)>R) continue;
+        if(nearRoadEdge(x,z)<1.2||inWater(x,z)||railNear(x,z,3)) continue;                                   // an edge that IS a road edge (Kelly Drive through Fairmount) gets nothing across the kerb
         const y0=navGroundY(a[0]+dx*(k/n),a[1]+dz*(k/n)), y1=navGroundY(a[0]+dx*((k+1)/n),a[1]+dz*((k+1)/n));
-        P.fence.push({x,y:(y0+y1)/2+0.45,z,w:0.07,h:0.9,l:pl*1.02,ang,pitch:-Math.atan2(y1-y0,pl)}); } } } }
+        list.push({x,y:(y0+y1)/2+h/2,z,w,h,l:pl*1.02,ang,pitch:-Math.atan2(y1-y0,pl)}); } } } }
 function parkTrees(J){ const {T,grid}=J, R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0); let added=0;   // scattered lawn trees from the sites the ground phase collected
   for(const [px,pz] of J.park.sites){ if(added>=PARKS.treeMax) break; if((px-J.cx)**2+(pz-J.cz)**2>R2) continue;
     if(inWater(px,pz)||nearRoadEdge(px,pz)<6||railNear(px,pz,3.5)||navSpan(px,pz,null,20)?.b.bridge||grid.has(gk(px,pz))) continue;
@@ -4061,31 +4075,43 @@ function parkTrees(J){ const {T,grid}=J, R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0
     grid.set(gk(px,pz),1); T.push({x:px,z:pz,s:1.1+hash2(Math.round(px),Math.round(pz)+9)*1.2,forest:true}); added++; } }
 function parkGroundStep(J,t0,budgetMs){ if(!PARKS.on||!NAVGEO.active) return true;
   const R=LOCAL.R, cx=J.cx, cz=J.cz, farR2=(R*PARKS.farR)**2, openR=R*PARKS.openR;
-  if(!J.park){ const list=[]; for(const f of LANDCOVER.features){ const b=f.bb; if(!b||b[2]<cx-R||b[0]>cx+R||b[3]<cz-R||b[1]>cz+R) continue;
+  if(!J.park){ const list=[]; cemIndex();
+    for(const f of [...LANDCOVER.features,...(LANDCOVER.cemeteries||[])]){ const b=f.bb; if(!b||b[2]<cx-R||b[0]>cx+R||b[3]<cz-R||b[1]>cz+R) continue;
       if(f.kind==='open'){ const ddx=Math.max(b[0]-cx,0,cx-b[2]), ddz=Math.max(b[1]-cz,0,cz-b[3]); if(Math.hypot(ddx,ddz)>openR) continue; }   // far pitches and grass patches are not worth their triangles
       list.push(f); }
-    J.park={list,i:0,out:{park:parkBuf(),wood:parkBuf(),open:parkBuf()},fence:[],sites:[],treesDone:false}; }
+    J.park={list,i:0,out:{park:parkBuf(),wood:parkBuf(),open:parkBuf(),cemetery:parkBuf()},fence:[],wall:[],sites:[],stones:[],treesDone:false}; }
   const P=J.park, ground=(x,z)=>navGroundY(x,z)-navRailCutDepth(x,z)-navRoadCutDepth(x,z,null);
-  while(P.i<P.list.length){ if(performance.now()-t0>budgetMs) return false; const f=P.list[P.i++]; const tri=landTriangles(f), out=P.out[f.kind]||P.out.park, lift=PARKS.lift[f.kind]||0.06, memo=new Map();
+  while(P.i<P.list.length){ if(performance.now()-t0>budgetMs) return false; const f=P.list[P.i++]; const tri=landTriangles(f), cem=f.kind==='cemetery', out=P.out[f.kind]||P.out.park, lift=PARKS.lift[f.kind]||0.06, memo=new Map();
+    const nearLim=cem?PARKS.cemSubdiv:PARKS.subdiv, farLim=cem?PARKS.cemSubdivFar:PARKS.subdivFar;
+    const rot=cem?hash2(parseInt(String(f.id).replace(/\D/g,''),10)%1000003,7)*Math.PI:0, rux=Math.cos(rot), ruz=Math.sin(rot);   // one row direction per cemetery
     const yAt=(x,z)=>{ const k=((x*2)|0)*131071+((z*2)|0); let y=memo.get(k); if(y===undefined){ y=ground(x,z)+lift; memo.set(k,y); } return y; };   // a subdivided vertex is shared by ~6 triangles: sample the terrain once per vertex
     const push=(ax,az,bx,bz,cx3,cz3,depth)=>{ if(Math.max(ax,bx,cx3)<cx-R||Math.min(ax,bx,cx3)>cx+R||Math.max(az,bz,cz3)<cz-R||Math.min(az,bz,cz3)>cz+R) return;
-      const d0=Math.hypot(ax-bx,az-bz), d1=Math.hypot(bx-cx3,bz-cz3), d2=Math.hypot(cx3-ax,cz3-az), m=Math.max(d0,d1,d2), mx=(ax+bx+cx3)/3, mz=(az+bz+cz3)/3;
-      const lim=((mx-cx)**2+(mz-cz)**2>farR2)?PARKS.subdivFar:PARKS.subdiv;
+      const d0=Math.hypot(ax-bx,az-bz), d1=Math.hypot(bx-cx3,bz-cz3), d2=Math.hypot(cx3-ax,cz3-az), m=Math.max(d0,d1,d2), mx=(ax+bx+cx3)/3, mz=(az+bz+cz3)/3, far=(mx-cx)**2+(mz-cz)**2>farR2;
+      const lim=far?farLim:nearLim;
       if(m>lim&&depth<18){ let x0=ax,z0=az,x1=bx,z1=bz,x2=cx3,z2=cz3; if(d1===m){ x0=bx;z0=bz;x1=cx3;z1=cz3;x2=ax;z2=az; } else if(d2===m){ x0=cx3;z0=cz3;x1=ax;z1=az;x2=bx;z2=bz; }
         const hx=(x0+x1)/2, hz=(z0+z1)/2; push(x0,z0,hx,hz,x2,z2,depth+1); push(hx,hz,x1,z1,x2,z2,depth+1); return; }
       parkTri(out,ax,yAt(ax,az),az, bx,yAt(bx,bz),bz, cx3,yAt(cx3,cz3),cz3);
-      if(f.kind==='park'&&P.sites.length<600&&hash2(Math.round(mx),Math.round(mz))<0.07) P.sites.push([mx,mz]); };   // lawn-tree candidates: triangle centroids are inside the polygon by construction — no point-in-polygon scan
+      if(f.kind==='park'&&P.sites.length<600&&hash2(Math.round(mx),Math.round(mz))<0.07) P.sites.push([mx,mz]);   // lawn-tree candidates: triangle centroids are inside the polygon by construction — no point-in-polygon scan
+      if(cem&&P.stones.length<PARKS.stoneMax&&(mx-cx)**2+(mz-cz)**2<(R*PARKS.stoneR)**2){ const mn=Math.min(d0,d1,d2); if(mn>=7){   // headstones: rows through this triangle, snapped to the cemetery's lattice, kept inside the triangle's core
+          const core=mn*0.33, s0=mx*rux+mz*ruz, t0=-mx*ruz+mz*rux;
+          for(let r=-1;r<=1;r++){ const t=Math.round(t0/PARKS.stoneRow+r)*PARKS.stoneRow; if(Math.abs(t-t0)>core) continue;
+            for(let k=-3;k<=3;k++){ const sk=Math.round(s0/PARKS.stoneGap+k)*PARKS.stoneGap, X=rux*sk-ruz*t, Z=ruz*sk+rux*t; if(Math.hypot(X-mx,Z-mz)>core||nearRoadEdge(X,Z)<2) continue; P.stones.push([X,Z,rot]); if(P.stones.length>=PARKS.stoneMax) break; } } } } };
     for(let i=0;i<tri.length;i+=6) push(tri[i],tri[i+1],tri[i+2],tri[i+3],tri[i+4],tri[i+5],0);
-    if(f.kind==='park') parkFences(J,f); }
+    if(f.kind==='park') parkFences(J,f,P.fence,PARKS.fenceMax,0.07,0.9); else if(cem) parkFences(J,f,P.wall,PARKS.wallMax,0.35,1.1); }
   if(!P.treesDone){ P.treesDone=true; parkTrees(J); }
   return true; }
 function parkBuild(J){ const P=J.park; if(!P) return;                                        // commit: wrap the typed arrays the phase filled; nothing is generated or recomputed here
-  for(const kind of ['park','wood','open']){ const B=P.out[kind]; if(!B.len) continue; const g=new THREE.BufferGeometry();
+  for(const kind of ['park','wood','open','cemetery']){ const B=P.out[kind]; if(!B.len) continue; const g=new THREE.BufferGeometry();
     g.setAttribute('position',new THREE.BufferAttribute(B.p.subarray(0,B.len),3)); g.setAttribute('normal',new THREE.BufferAttribute(B.n.subarray(0,B.len),3));
     const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:PARKS.colors[kind],side:THREE.DoubleSide})); m.name='land-'+kind; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
-  if(P.fence.length){ const dummy=new THREE.Object3D(), fm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x3f4a3c}),P.fence.length);
-    P.fence.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); fm.setMatrixAt(i,dummy.matrix); });
-    fm.instanceMatrix.needsUpdate=true; fm.name='park-fence'; FLATCITY.group.add(fm); FLATCITY.parts.push(fm); } }
+  const dummy=new THREE.Object3D(), col=new THREE.Color();
+  for(const [list,color,name] of [[P.fence,0x3f4a3c,'park-fence'],[P.wall,0x8f8a80,'cemetery-wall']]){ if(!list.length) continue;
+    const fm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+    list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); fm.setMatrixAt(i,dummy.matrix); });
+    fm.instanceMatrix.needsUpdate=true; fm.name=name; FLATCITY.group.add(fm); FLATCITY.parts.push(fm); }
+  if(P.stones.length){ const sm=new THREE.InstancedMesh(new THREE.BoxGeometry(0.55,0.75,0.12),new THREE.MeshLambertMaterial({color:0xffffff}),P.stones.length), pal=[0xb9b6ae,0xcac7bf,0xa9a69e,0xd2cfc6,0x9f9c95];   // plain markers, no text
+    P.stones.forEach(([x,z,rot],i)=>{ dummy.position.set(x,navGroundY(x,z)+0.375,z); dummy.rotation.set(0,-rot,0); dummy.scale.set(1,0.85+hash2(Math.round(x),Math.round(z)+5)*0.4,1); dummy.updateMatrix(); sm.setMatrixAt(i,dummy.matrix); sm.setColorAt(i,col.setHex(pal[i%pal.length])); });
+    sm.instanceMatrix.needsUpdate=true; if(sm.instanceColor) sm.instanceColor.needsUpdate=true; sm.name='cemetery-stone'; FLATCITY.group.add(sm); FLATCITY.parts.push(sm); } }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
   while(J.i<J.list.length){
@@ -4690,8 +4716,8 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     // A narrow, local terrain depression makes a road-over-rail crossing read at the correct
     // level instead of merely erasing the rails where they meet asphalt. cut[] is
     // [center x,z, rail unit x,z, half-length, half-width, depth] from the bake's sourced override.
-    const ballast=[],railBars=[],rDeck=[],rWall=[],rPier=[],rAbut=[],rGirder=[],rTie=[],rCutWall=[];
-    for(const rw of (NAVGEO.rail||[])){ if(rw.tunnel)continue;
+    const ballast=[],railBars=[],rDeck=[],rWall=[],rPier=[],rAbut=[],rGirder=[],rTie=[],rCutWall=[],mastPost=[],mastArm=[],wire=[];   // mast/arm/wire: catenary on el:'c' ways (v19j)
+    for(const rw of (NAVGEO.rail||[])){ if(rw.tunnel)continue; rw._mk=-1; rw._ml=null;                      // catenary bookkeeping is per commit: last mast index / position on this way
       let len=0;for(let i=1;i<rw.p.length;i++)len+=Math.hypot(rw.p[i][0]-rw.p[i-1][0],rw.p[i][1]-rw.p[i-1][1]);
       const sY=navTerrain(...rw.p[0]),eY=navTerrain(...rw.p[rw.p.length-1]);let along=0;
       // Stone abutments (owner Street View reference, Falls Rd underpass, Sep 6 2026): a rail span's
@@ -4738,9 +4764,14 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             const dep=navRailCutDepth(px,pz);if(rw.cutWalls&&dep>0.4)for(const side of [-1,1]){const wx=px-uz*2.7*side,wz=pz+ux*2.7*side,top=navTerrain(wx,wz),h=Math.max(0.5,top-y);
               rCutWall.push({x:wx,y:y+h/2,z:wz,w:0.42,h,l:pll,ang,pitch:0});}
           }
+          if(rw.el==='c'&&Math.hypot(px-J.cx,pz-J.cz)<LOCAL.R*PARKS.mastR){ const k=Math.floor((segAlong+o)/PARKS.mastGap);   // ⚡ catenary (v19j): a mast every mastGap m on the electrified ways, alternating sides, a cantilever arm over the track and a wire between masts; within mastR·R only
+            if(rw._mk!==k){ rw._mk=k; const side=(k%2)?1:-1, top=y+(rw.bridge?0.12:0.45), mx=px-uz*2.9*side, mz=pz+ux*2.9*side;
+              mastPost.push({x:mx,y:top+3.4,z:mz,w:0.22,h:6.8,l:0.22,ang,pitch:0}); mastArm.push({x:px-uz*1.45*side,y:top+5.9,z:pz+ux*1.45*side,w:0.14,h:0.14,l:3.1,ang:ang+Math.PI/2,pitch:0});
+              if(rw._ml){ const l=rw._ml, dx=px-l.x, dz=pz-l.z, d=Math.hypot(dx,dz); if(d>8&&d<90) wire.push({x:(px+l.x)/2,y:(top+l.y)/2+5.4,z:(pz+l.z)/2,w:0.06,h:0.06,l:d,ang:Math.atan2(dx,dz),pitch:-Math.atan2(top-l.y,d)}); }
+              rw._ml={x:px,y:top,z:pz}; } }
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
-    for(const [list,color] of [[deck,0x828b8c],[rails,0xd0cdc4],[piers,0x91958b],[truss,0xdcded9],[para,0xbdbab1],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961]]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
-      list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
+    for(const [list,color,name] of [[deck,0x828b8c],[rails,0xd0cdc4],[piers,0x91958b],[truss,0xdcded9],[para,0xbdbab1],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961],[mastPost,0x6d7276,'rail-mast'],[mastArm,0x6d7276,'rail-mast-arm'],[wire,0x3a3d40,'rail-wire']]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+      list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;if(name)m.name=name;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
   }
   if(NAVGEO.active){
     const p=[],gx=NAVGEO.terrain,step=gx.dx,stepZ=gx.dz,r=LOCAL.R+60,x0=gx.minX+Math.floor((J.cx-r-gx.minX)/step)*step,z0=gx.minZ+Math.floor((J.cz-r-gx.minZ)/stepZ)*stepZ;
