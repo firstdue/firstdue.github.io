@@ -135,7 +135,13 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **Data re-bake, September 18, 2026 (build still v19i):** `data/landcover.js` carries `LANDCOVER.cemeteries`
+- **The build is v19j (September 19, 2026), cemeteries + catenary.** Cemetery ground / walls / headstones come
+  from `LANDCOVER.cemeteries` through the park machinery (`parkGroundStep`, typed arrays, budgeted phase; stones
+  from triangle lattices inside 0.35 R, cap 600); `cemAt` keeps buildings off the graves. Catenary masts, arms
+  and wires ride commit's existing rail loop on `el:'c'` ways within 0.6 R (`rail-mast`, `rail-mast-arm`,
+  `rail-wire`); the per-way `_mk`/`_ml` bookkeeping resets each commit so wires never span blocks. All of it is
+  distance-thinned; keep it that way rather than raising a budget. Cache `local-shell-v21`.
+- **Data re-bake, September 18, 2026 (build was v19i):** `data/landcover.js` carries `LANDCOVER.cemeteries`
   (175, kind `cemetery`) SEPARATE from `LANDCOVER.features` — keep it separate until the cemetery render phase,
   because `landKind` treats any unknown kind as park and the v19i park phase would draw them green.
   `data/navgeo.js` rail records carry `el` (`c` catenary, `r` third rail); the geometry is unchanged. The raw

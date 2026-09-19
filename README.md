@@ -1,6 +1,6 @@
 # Philly Fire Dispatch — Local
 
-**Current: PUBLIC = v19i (September 18, 2026).** Interstate 76 and the US 1 Roosevelt Expressway are
+**Current: PUBLIC = v19j (September 19, 2026).** Interstate 76 and the US 1 Roosevelt Expressway are
 drivable, with their ramps, interchanges and bridges. They carry real lane-count widths, medians,
 guardrails and piers, and now their own identity: green guide signs and exit gantries whose wording
 comes from OpenStreetMap tags, gore markers at the splits, I-76 and US 1 route shields, shoulder
@@ -42,6 +42,13 @@ folder and published here, one owner phone test per build:
 owner-supplied photos: Lincoln Drive's stone railway arch, Kelly Drive's retaining wall, green City
 Avenue girders, guardrails, wooded shoulders, and richer Engine 35 facades. It does not change the
 road graph, navigation heights, routing, or street geometry.
+
+**v19j (September 19, 2026) — cemeteries and catenary.** The 175 cemetery polygons shipped in the data re-bake
+now render: quieter green grounds with a low stone wall where the boundary is not a road, and plain grave
+markers in rows on the lawns near the truck — generic markers, no names. Along the electrified rail lines,
+catenary masts stand every 55 metres with cantilever arms over the track and a wire strung between them, so the
+SEPTA lines read as electric railways; third rail is left unmarked. Everything thins with distance to protect
+the phone, and no performance budget moved. Buildings now also keep off cemetery grounds.
 
 **Data re-bake, September 18, 2026 (no version change) — cemeteries and rail electrification arrive in the
 data.** `data/landcover.js` now carries the city's 175 cemetery polygons in their own list and `data/navgeo.js`
@@ -240,7 +247,7 @@ A phone-friendly Philadelphia fire-engine navigation game. Choose a real company
 
 Project handoff snapshot, September 13, 2026:
 
-- **Published: v19i. PUBLIC = LOCAL** — the owner's authoring folder and this repository match.
+- **Published: v19j. PUBLIC = LOCAL** — the owner's authoring folder and this repository match.
   v18t–v18w were authored in the folder and published here: the I-76 / US 1 freeway corridor and
   its graph and elevation (v18t), structure (v18u), driving fixes (v18v), and identity — sourced
   signs, gantries, gore markers, shoulder lighting and real mileposts (v18w). v18x then adds
@@ -252,8 +259,9 @@ Project handoff snapshot, September 13, 2026:
   step (tiled W-beam guardrails on the freeway, viaduct and corridor, mitred ramp edge ribbon), and v19g typed
   residential buildings from the baked `data/btype.js` typology table, and v19h its apartments, storefronts and
   strip malls (the table re-baked with the storefront / large-lot split), and v19i the parks drawn from the
-  existing landcover polygons, then an invisible data re-bake adding cemetery polygons and rail electrification;
-  service-worker cache v20.
+  existing landcover polygons, then an invisible data re-bake adding cemetery polygons and rail electrification,
+  and v19j rendering both — cemetery grounds, walls and grave markers, catenary masts and wires; service-worker
+  cache v21.
 - The build tag in the HUD (top left, next to SAVES) is the fastest way to tell whether a phone has
   picked up a deploy or is serving a cached page.
 - Intersection Recall is the active TRAIN MY LOCAL drill: a named street intersection with no

@@ -1,7 +1,15 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 18, 2026. **v19i is public and matches the authoring build**, service-worker
-cache `local-shell-v20`.
+Planning snapshot: September 19, 2026. **v19j is public and matches the authoring build**, service-worker
+cache `local-shell-v21`.
+
+- [x] **Graphics step 4, render half — cemeteries and catenary (v19j, September 19, 2026):** cemetery ground in a
+  greyer green through the park machinery at a coarser subdivision, stone walls where the edge is not a road,
+  headstone rows sampled from the cemetery's own triangles near the truck (cap 600, no text), buildings excluded
+  from cemetery grounds; catenary masts every 55 m with arms and a wire between masts on the electrified ways,
+  within 60% of the block radius, in the commit rail loop. Distance level of detail throughout; the interchange
+  generation reading did not move and no budget changed. This closes step 4; next is the pumper (GLTFLoader),
+  then buses and hero landmarks.
 
 - [x] **Graphics step 4, second half, data (September 18, 2026, no version change):** `LANDCOVER.cemeteries`
   (175 polygons, kind `cemetery`, a separate array so the live park renderer skips them) and an additive `el` flag
