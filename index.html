@@ -271,7 +271,8 @@
   #coachLegend .lgYou { color:#6fa8ff; } #coachLegend .lgOpt { color:#3fbf7a; }
   #coachSay { margin-top:8px; font-size:13px; line-height:1.45; color:#e8edf5; border-left:3px solid #ffd27a; padding-left:10px; }
   #coachSay div { margin:4px 0; }
-  #btnCoachNext { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:900; background:#d33; color:#fff; pointer-events:auto; }
+  #btnCoachNext, #btnCoachKeep { width:100%; margin-top:10px; border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:900; background:#d33; color:#fff; pointer-events:auto; }
+  #btnCoachKeep { background:#2b3d5c; }        /* stay out on the road — the alternative to going back to quarters, offered every run */
   /* 🧑‍🚒 career layer */
   .ccBadge { color:#ffd27a; font-weight:900; }
   #houseCard .hcCareer { color:#7fe0a0; font-size:11px; font-weight:900; letter-spacing:.5px; margin-top:4px; }
@@ -557,6 +558,7 @@
 <div id="combo" class="hud">🔥 x1.0</div>
 <div id="saves" class="hud">SAVES 0 · BEST 0</div>
 <div id="cornerBtns">
+  <button class="abtn" id="btnCall" style="display:none">📟 GET A CALL</button>
   <button class="abtn" id="btnSettings">⚙ SETTINGS</button>
   <button class="abtn" id="btnAccount">👤 ACCOUNT</button>
 </div>
@@ -711,7 +713,8 @@
     <canvas id="coachCanvas"></canvas>
     <div id="coachLegend"><span class="lgYou">━ the way you went</span><span class="lgOpt">┅ the way I'd have gone</span></div>
     <div id="coachSay"></div>
-    <button id="btnCoachNext">🚒 NEXT RUN</button>
+    <button id="btnCoachNext">🏠 BACK TO QUARTERS</button>
+    <button id="btnCoachKeep">🚒 KEEP DRIVING</button>
   </div>
 </div>
 <button id="btnHyd" title="Mark a hydrant here">🧯</button>
@@ -752,12 +755,15 @@
       <button class="hcGo" id="hcGo">🚒 RIDE OUT</button>
       <button class="hcLb" id="hcLb">🏁 LEADERBOARD</button>
       <button class="hcLb" id="hcZone">🗺️ FIRST-DUE ZONE</button>
+      <button class="hcLb" id="hcFree">🧭 FREE DRIVE: OFF</button>
     </div>
     <div id="homeListPane">
       <button id="btnBackToMap">◀ BACK TO MAP</button>
       <div class="card">
       <h1>🚒 CHOOSE YOUR FIREHOUSE</h1>
       <div class="sub">Every Philadelphia Fire Department engine house, at its real address, grouped by battalion. Pick any to run out of.</div>
+      <button class="btn btnSecondary" id="btnFreeMode">🧭 FREE DRIVE: OFF</button>
+      <div class="sub" style="font-size:.86em;opacity:.78;margin-top:-2px">Free drive rides out with no rival companies, no BEATEN IN, and no box until you ask for one — and never touches your career.</div>
       <div id="stationList"></div>
         <div class="best" id="bestLine">BEST RUN: —</div>
       <button class="btn" id="btnCloseList" style="background:#333a55;box-shadow:none">✖ BACK TO MAP</button>
@@ -769,7 +775,8 @@
   <div class="sub" id="finalStats">0 dispatches completed</div><div class="best" id="finalBest"></div>
   <div class="sub" id="finalFact" style="color:#8fd;"></div>
   <button class="btn" id="retryBoxBtn">🔄 RETRY THIS BOX</button>
-  <button class="btn btnSecondary" id="nextCallBtn">🚨 NEXT CALL</button>
+  <button class="btn btnSecondary" id="nextCallBtn">🚨 NEXT CALL · FROM QUARTERS</button>
+  <button class="btn btnSecondary" id="keepDrivingBtn">🚒 KEEP DRIVING</button>
   <button class="btnText" id="restartBtn">CHANGE STATION</button>
 </div></div>
 
@@ -812,7 +819,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19q";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19r";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -5307,6 +5314,26 @@ const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, pl
    one of them left to write the flag alone desyncs the button: it then reads the opposite of the
    truth and the next tap does the opposite of what it says. */
 function setRivals(on){ RIVALS.on=!!on; const b=document.getElementById('btnRivals'); if(b) b.classList.toggle('on',RIVALS.on); return RIVALS.on; }
+/* 🧭 FREE DRIVE / PATROL — a shift with no rival companies, no BEATEN IN and no automatic box:
+   you ride out of a real house and pull a call when you want one. It is kept out of Career exactly the
+   way the training modes are — profileRun() returns before it writes anything — so no run, badge, rank,
+   board post or account push comes out of it.
+     FREE.arm is what the picker holds; FREE.on is what the RUNNING shift is. startShift decides once,
+   from the arm, and the career ride-out paths (drill, qualification, due training) override it. Both are
+   memory-only — a reload comes back in Career, which is the safe default. */
+const FREE={ arm:false, on:false };
+function freeSet(on){ FREE.arm=!!on;
+  const txt='🧭 FREE DRIVE: '+(FREE.arm?'ON':'OFF');
+  for(const id of ['btnFreeMode','hcFree']){ const b=document.getElementById(id); if(b){ b.textContent=txt; b.style.background=FREE.arm?'#1d6b4a':''; } }
+  return FREE.arm; }
+function freeCallBtn(){ const b=document.getElementById('btnCall'); if(b) b.style.display=FREE.on?'':'none'; }
+document.getElementById('btnFreeMode').addEventListener('click',e=>{ e.preventDefault(); freeSet(!FREE.arm); });
+document.getElementById('hcFree').addEventListener('click',e=>{ e.preventDefault(); freeSet(!FREE.arm); });
+document.getElementById('btnCall').addEventListener('click',e=>{ e.preventDefault();                      // 📟 dispatch on demand — the only way a box arrives in free drive
+  if(!FREE.on||!state.running) return;
+  if(state.target){ popup('📟 YOU ARE ALREADY ON A RUN','red'); return; }
+  newDispatch(); });
+freeSet(false);
 /* 🎯 DIFFICULTY — how fast the other companies run. The player's own truck does 15 u/s by default and can be
    pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
 const DIFF={ level:1, names:['TRAINING','STANDARD','PRO','EXPERT'],  // gameplay DIFFICULTY — a FREE player choice, fully independent of career rank (RANKS) since P3
@@ -6642,7 +6669,8 @@ function calcOVR(log){                                                     // ro
 function calcStreak(log){ let k=0;                                          // consecutive eligible runs with the due slot held, newest backward
   for(let i=(log||[]).length-1;i>=0;i--){ const r=log[i]; if(!(r.due>0)||r.guide) continue; if(r.held) k++; else break; }
   return k; }
-function profileRun(rv,ok){ const e=profEng(); if(!e) return [];                                        // one run record per box, success or fail
+function profileRun(rv,ok){ if(FREE.on) return [];                                                      // 🧭 free drive is not Career: no log row, no badge, no rank, no board post, no account push
+  const e=profEng(); if(!e) return [];                                        // one run record per box, success or fail
   const earned=[];
   const sc=rv?calcRunScore(rv,ok):null;
   const row=rv?{ t:Math.round(GT), box:rv.box, lv:DIFF.level, place:rv.place, due:rv.due,
@@ -6930,7 +6958,7 @@ function updateRivals(dt){ if(!RIVALS.on||!state.target) return;
       if(!RIVALS.playerPlaced && RIVALS.playerDue && RIVALS.order.length>=RIVALS.playerDue){ missedDue(); return; } } }
   renderRivalHUD();
 }
-function missedDue(){ if(state.over) return;
+function missedDue(){ if(state.over||FREE.on) return;                                            // 🧭 free drive has no rivals, so this cannot fire — but BEATEN IN must never open on a patrol
   DRIVE.going=false; setRivals(false); renderRivalHUD(); profileRun(coachCapture(),false);       // 🧑‍🚒 the loss still goes on your record
   // ^ updateRivals returns straight after this call and every later frame early-returns on !RIVALS.on,
   //   so nothing else would repaint the strip: it froze mid-race, showing live percentages for a race
@@ -7051,9 +7079,16 @@ function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCa
   const s0=r.trail[0];
   c.fillStyle='#fff'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),5,0,6.283); c.fill(); c.fillStyle='#1e6fd9'; c.beginPath(); c.arc(sx(s0[0]),sy(s0[1]),3.2,0,6.283); c.fill();
   c.font='16px sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('🔥',sx(r.fx),sy(r.fz)); }
-document.getElementById('btnCoachNext').addEventListener('click',()=>{ coachHide(); if(!state.running) return;
-  try{ returnToStation(); newDispatch(); }                                     // same stranding guard as completeDispatch's timeout — NEXT RUN must always hand over a next run
-  catch(err){ radio('⚠️ NEXT RUN ERROR — '+((err&&err.message)||err)+'. Screenshot this line.'); } });
+/* After the senior man's review you pick each time: back to quarters, or stay out. Both keep the same
+   stranding guard as completeDispatch's timeout — whichever button you press must hand over a next run,
+   and an uncaught throw here strands the player with no card and no box (owner report, v18n/v18o). */
+function coachDone(keep){ coachHide(); if(!state.running) return;
+  try{ if(!keep) returnToStation();
+    if(FREE.on) radio('🧭 IN SERVICE — tap 📟 GET A CALL when you want the next box.');
+    else newDispatch(); }
+  catch(err){ radio('⚠️ NEXT RUN ERROR — '+((err&&err.message)||err)+'. Screenshot this line.'); } }
+document.getElementById('btnCoachNext').addEventListener('click',()=>coachDone(false));
+document.getElementById('btnCoachKeep').addEventListener('click',()=>coachDone(true));
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDrill,updateBoxDrill,updateCoach];             // road-follow + arrive-to-douse + rival engines
 const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() renders the Tilt view
 
@@ -7201,7 +7236,7 @@ function trainingRideOut(companyId,due){
   setDueLevel(due,true);                                                     // quiet — the confirmation below says it better
   const pc=document.getElementById('profileCard'); if(pc){ pc.classList.remove('show'); pc.setAttribute('aria-hidden','true'); }
   const already=state.running&&DRIVE.stationId===companyId;
-  if(!already) startShift(st);
+  if(!already) startShift(st,{free:false});                                  // 🧭 due training is Career progress by definition — never a patrol, whatever the picker has armed
   const nm=['','1ST','2ND','3RD','4TH'][due];
   popup('🚒 ENGINE '+engNum(companyId)+' · '+nm+' DUE TRAINING','green');
   radio('📻 ENGINE '+engNum(companyId)+' · '+nm+' DUE TRAINING — calls will put you '+nm.toLowerCase()+' due.');
@@ -7617,7 +7652,8 @@ function closeHomeMap(){ if(HOMEMAP.raf){ cancelAnimationFrame(HOMEMAP.raf); HOM
   window.addEventListener('resize',()=>{ if(homeEl.classList.contains('show')){ HOMEMAP.ready=false; HOMEMAP.dots=[]; HOMEMAP.rot=undefined; buildHomeBase(); } });
   if(homeEl.classList.contains('show')) openHomeMap();
 })();
-function goHome(){ boxdClear('home'); qualClear('home'); document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); openHomeMap(); }
+function goHome(){ boxdClear('home'); qualClear('home'); FREE.on=false; freeCallBtn();                   // 🧭 the patrol ends with the shift; the picker's armed toggle survives, the running mode does not
+  document.getElementById('over').classList.remove('show'); updateBest(); homeEl.classList.add('show'); openHomeMap(); }
 /* 📱 Reopen → home. The installed PWA can resume a run mid-drive after being backgrounded (iOS keeps
    the page in memory), which lands you confusingly mid-street. If the app was away >60s and a run is live,
    return to the firehouse picker on the way back in. Brief app-switches (<60s) keep your run going. */
@@ -7632,12 +7668,17 @@ document.addEventListener('visibilitychange',()=>{
   }
   __awayAt=0;
 });
-function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
+function startShift(st,opts){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
+  /* 🧭 The shift's mode is decided ONCE, here: the picker's armed toggle, unless a caller says otherwise.
+     A pending drill or qualification is Career by definition and overrides the arm on its own. */
+  FREE.on = (opts&&opts.free!==undefined) ? !!opts.free : !!FREE.arm;
+  if(BOXD.pending||QUAL.pending) FREE.on=false;
   if(!(BOXD.pending&&BOXD._own&&st&&st.id===BOXD.pendCompany)) boxdClear('shift-change');                  // a drill-initiated ride-out keeps its own pending
   if(!(QUAL.pending&&QUAL._own&&st&&st.id===QUAL.companyId)) qualClear('shift-change');                  // 🎖 any shift change abandons an exam — EXCEPT the qual-initiated startShift itself (_own)
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
   sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
-  state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; setRivals(true);
+  state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; setRivals(!FREE.on);   // 🧭 no rivals on a patrol — and with no rivals there is no missedDue, so no BEATEN IN
+  clearRivals();   // the strip and the pooled rival trucks belong to the PREVIOUS shift's box. In Career the first dispatch clears them a moment later; a patrol has no first dispatch, so the old race stayed frozen on screen.
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=groundHeight(SPAWN.x,SPAWN.z); truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; truck.pitch=0; camTheta=SPAWN.theta;
   parkAtStation(st); CAMLOOK.yaw=0; CAMLOOK.pitch=0;
   NAVGEO.active=true;   // terrain, bridges, decks and rail citywide. The baked data was always citywide
@@ -7654,6 +7695,8 @@ function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); docume
   pumperLoad();                                                              // one-time async model fetch; the procedural truck stays on screen until it lands
   setTruckEngine(engNum(st.id));
   state.running=true; state.timeLeft=CONFIG.timer.start;
+  freeCallBtn();
+  if(FREE.on){ radio('🧭 FREE DRIVE — '+st.companies[0]+' in service. No rivals, no box until you tap GET A CALL. Career untouched.'); return; }
   radio('Dispatch to '+st.companies[0]+', '+st.address+': shift started. Stand by…'); setTimeout(newDispatch,900); }
 /* BEATEN IN card actions. The loss was already recorded ONCE in missedDue (profileRun → career/board)
    BEFORE gameOver opened this card — none of these buttons touch the record. A retried or next run only
@@ -7667,6 +7710,13 @@ document.getElementById('retryBoxBtn').addEventListener('click',()=>{ if(!overRe
 document.getElementById('nextCallBtn').addEventListener('click',()=>{ if(!overResume()) return;
   state.target=null; state.onScene=false; state.douse=0; setRivals(true); clearRivals();   // missedDue turned rivals off; a fresh call needs them back on (startShift normally does this)
   returnToStation(); newDispatch(); });
+/* 🚒 KEEP DRIVING — NEXT CALL without the trip back to quarters: you stay where the box was lost,
+   in service, and the next one is answered from there. The record is untouched either way; the loss was
+   already written ONCE in missedDue before this card opened, and OVER_BUSY still latches the first tap. */
+document.getElementById('keepDrivingBtn').addEventListener('click',()=>{ if(!overResume()) return;
+  state.target=null; state.onScene=false; state.douse=0; setRivals(true); clearRivals();
+  radio('🚒 STILL IN SERVICE — staying out on the road. Next box comes to you where you are.');
+  newDispatch(); });
 document.getElementById('restartBtn').addEventListener('click',goHome);
 updateBest();
 
