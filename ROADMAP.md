@@ -1,7 +1,15 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 18, 2026. **v19h is public and matches the authoring build**, service-worker
-cache `local-shell-v19`.
+Planning snapshot: September 18, 2026. **v19i is public and matches the authoring build**, service-worker
+cache `local-shell-v20`.
+
+- [x] **Graphics step 4, first half — parks from the existing landcover (v19i, September 18, 2026):** the
+  `LANDCOVER` park / wood / open polygons drawn as draped ground (water-triangulation pattern, earcut cached per
+  feature, typed arrays and normals assembled under the frame budget so commit only wraps them), park-edge fences
+  off the roads, lawn trees sampled from the park triangles, distance level of detail for the City Ave
+  interchange. No data change. A gate stop on the interchange commit reading was diagnosed as first-touch
+  allocation in commit and removed before publishing; no budget raised. Second half — cemeteries and rail
+  electrification — needs a re-fetch and re-bake.
 
 - [x] **Graphics step 6, typed buildings, apartments and commercial (v19h, September 18, 2026):** apartments
   (4–7 floors, parapet, per-floor facade tiling), storefront rows (shop glass under upper floors, cornice) and

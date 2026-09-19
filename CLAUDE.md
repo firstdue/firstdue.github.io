@@ -135,7 +135,14 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19h (September 18, 2026), typed buildings Phase C.** `BTYPE` codes are now R T D A C S I P `-`;
+- **The build is v19i (September 18, 2026), parks.** `parkGroundStep` (last phase of `stepLocalCity`) fills typed
+  arrays with normals for the `LANDCOVER` park / wood / open ground, fences and lawn-tree sites; `parkBuild` in
+  `commit` only wraps them — keep it that way: a plain-array build in commit cost ~4 ms of first-touch allocation
+  at the interchange and blocked a release. Each feature's earcut is cached on the feature (`f._tri`). `PARKS`
+  carries the distance level of detail (far subdivision, far `open` skipped, fence radius) that keeps the City Ave
+  interchange inside its generation and triangle budgets; the interchange has ~2.5 ms of generation headroom, so
+  the next heavy phase there trims or uses level of detail rather than raising a budget. Cache `local-shell-v20`.
+- **v19h (September 18, 2026), typed buildings Phase C.** `BTYPE` codes are now R T D A C S I P `-`;
   `C` is storefront-density commercial and `S` large-lot / car-oriented commercial, decided from the OPA building
   descriptions in `bake_building_types.js` (`parcelCode`), never from road class — every commercial corridor in
   the city is class 0. Apartments, storefronts and strips render from `typedBuildings` through the `bld-apt`,
