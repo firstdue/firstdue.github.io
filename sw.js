@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v26';  // v19o: the Blender ramp-nose kit -- gore crash cushions and guardrail end terminals; corridor kit v1 -> v2.
+const CACHE = 'local-shell-v27';  // v19p: US 1 flows through the I-76 interchange; ramp cards captioned from the baked OSM tags.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

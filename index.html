@@ -812,7 +812,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19o";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19p";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1858,16 +1858,17 @@ function gradeSeparatedCrossing(A,B,X,Z){
 (function buildGraph(){ const GS=48, gi=new Map();
   for(const n of gnodes.values()){ const k=Math.floor(n.x/GS)+':'+Math.floor(n.z/GS); let a=gi.get(k); if(!a){a=[];gi.set(k,a);} a.push(n); }
   const near=(x,z,out)=>{ const gx=Math.floor(x/GS),gz=Math.floor(z/GS); for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=gi.get(a+':'+b); if(l) for(const n of l) out.add(n); } };
-  const edge=(a,b,nm,ow,hw)=>{ if(a===b) return; const w=Math.hypot(a.x-b.x,a.z-b.z); const sw = w<3 ? 0 : ow;   // ignore one-way only on sub-3m stubs (noding artifacts — and the 3m weld now eats those anyway). Was <8m,
+  const edge=(a,b,nm,ow,hw,ref,dst,drf)=>{ if(a===b) return; const w=Math.hypot(a.x-b.x,a.z-b.z); const sw = w<3 ? 0 : ow;   // ignore one-way only on sub-3m stubs (noding artifacts — and the 3m weld now eats those anyway). Was <8m,
                                                                                                               // which stripped the flags off REAL 4-8m one-way ramp fragments: at the City Ave interchange that opened a
                                                                                                               // legal crossover from the northbound roadway into Ramp H (to Kelly Dr) that doesn't exist on the ground (owner)
-    a.adj.push({to:b,w,name:nm,wrong: sw===-1,hw:hw||0});   // one-way flag on the edge: travelling a->b is wrong-way when the legal direction is the reverse
-    b.adj.push({to:a,w,name:nm,wrong: sw===1,hw:hw||0}); };   // hw: 1 freeway carriageway, 2 freeway ramp, 0 street  // and b->a is wrong-way when the legal direction is forward (a->b)
+    a.adj.push({to:b,w,name:nm,wrong: sw===-1,hw:hw||0,ref,dst,drf});   // one-way flag on the edge: travelling a->b is wrong-way when the legal direction is the reverse
+    b.adj.push({to:a,w,name:nm,wrong: sw===1,hw:hw||0,ref,dst,drf}); };   // hw: 1 freeway carriageway, 2 freeway ramp, 0 street  // ref/dst/drf: the baked OSM route designation, guide-sign destination and destination:ref, freeway records only  // and b->a is wrong-way when the legal direction is forward (a->b)
   const TH=4.5;
   for(let si=0; si<RB.st.length; si++){ const pts=RB.st[si][2], snm=RB.st[si][0], sow=RB.st[si][3]||0, shw=RB.st[si][4]||0;
+    const sref=RB.st[si][6]||'', sdst=RB.st[si][7]||'', sdrf=RB.st[si][8]||'';                 // only freeway/ramp records carry these; every other record leaves them ''
     for(let i=1;i<pts.length;i++){ const ax=pts[i-1][0],az=pts[i-1][1],bx=pts[i][0],bz=pts[i][1];
     const a=gnodeFor(ax,az,shw), b=gnodeFor(bx,bz,shw), dx=bx-ax,dz=bz-az, L2=dx*dx+dz*dz;
-    if(L2<1){ edge(a,b,snm,sow,shw); continue; }
+    if(L2<1){ edge(a,b,snm,sow,shw,sref,sdst,sdrf); continue; }
     const cand=new Set(), steps=Math.max(1,Math.ceil(Math.sqrt(L2)/40));
     for(let s=0;s<=steps;s++) near(ax+dx*s/steps, az+dz*s/steps, cand);
     const chain=[{n:a,t:0},{n:b,t:1}];
@@ -1885,7 +1886,7 @@ function gradeSeparatedCrossing(A,B,X,Z){
     const xc=XCUT.get(si+':'+i);                                                                      // + true crossings with other roads (shared node → the turn exists)
     if(xc) for(const c of xc) chain.push({n:gnode(c.X,c.Z), t:c.t});
     chain.sort((p,q)=>p.t-q.t);
-    for(let k=1;k<chain.length;k++) edge(chain[k-1].n, chain[k].n, snm, sow, shw); } } })();
+    for(let k=1;k<chain.length;k++) edge(chain[k-1].n, chain[k].n, snm, sow, shw, sref, sdst, sdrf); } } })();
 // WELD NEAR-DUPLICATE NODES. The bake rounds coordinates to whole metres and the crossing pass adds its own nodes,
 // so an intersection often ends up as two or three nodes 0.7–1.4m apart with edges criss-crossing between them.
 // A street then has no continuation edge at the junction (its far half hangs off the twin), which made the truck
@@ -1906,7 +1907,12 @@ function gradeSeparatedCrossing(A,B,X,Z){
   const find=n=>rep.get(n)||n;
   for(const r of isRep){ const seen=new Map();
     const take=src=>{ for(const e of src.adj){ const t=find(e.to); if(t===r) continue;
-      const prev=seen.get(t); if(!prev||(e.name&&!prev.name)) seen.set(t,{to:t,w:Math.hypot(t.x-r.x,t.z-r.z),name:e.name,wrong:e.wrong,hw:e.hw||0}); } };   // keep the one-way flag through welding
+      const prev=seen.get(t);
+      // Welding rebuilds the edge object, so EVERY field a rule reads has to be copied here or it is
+      // silently lost — ref/dst/drf were, and the route-continuation rule then never fired anywhere.
+      // Preference between duplicates: a named edge wins; failing that, one that carries a route ref.
+      if(!prev||(e.name&&!prev.name)||(!prev.name&&!e.name&&e.ref&&!prev.ref))
+        seen.set(t,{to:t,w:Math.hypot(t.x-r.x,t.z-r.z),name:e.name,wrong:e.wrong,hw:e.hw||0,ref:e.ref||'',dst:e.dst||'',drf:e.drf||''}); } };   // keep the one-way flag through welding
     take(r); const c=kids.get(r); if(c) for(const m of c) take(m);
     r.adj=[...seen.values()]; }
   for(const [k,n] of [...gnodes]) if(rep.has(n)) gnodes.delete(k); })();
@@ -2507,6 +2513,15 @@ function updateStreetLabels(dt){
         return; }
       let nm=e.name, ramp=false, exitBlock=null;
       if(!nm&&e.hw===2){ const ex=hwyExitCard(node); if(ex){ nm=ex.name; ramp=true; exitBlock=ex.block; } }   // 🪧 a freeway exit reads its real sign: 'EXIT 340B / US 1 NORTH · Roosevelt Blvd' (sourced in HWY_SIGNS)
+      // 🪧 TAG-SOURCED RAMP CARD. Failing a HWY_SIGNS entry, caption the ramp from the tags the bake now
+      // carries instead of walking the chain to guess a street: `destination:ref` names the movement
+      // ("I 76 West;US 1 South") and `destination` names where it goes ("Valley Forge"). VERBATIM — the
+      // only thing added is a separator between the semicolon-joined values, never a word. At the west
+      // end of the Roosevelt Expressway this is what distinguishes two otherwise identical ramps: one
+      // reads US 1 South / Valley Forge, the other I 76 East / Central Philadelphia. The guess below
+      // still handles every ramp OSM leaves untagged.
+      if(!nm&&e.hw===2&&(e.dst||e.drf)){ const j=t=>t.split(';').map(x=>x.trim()).filter(Boolean).join(' · ');
+        nm=e.dst?j(e.dst):j(e.drf); ramp=true; if(e.drf) exitBlock='RAMP TO '+j(e.drf); }
       if(!nm){ const guess=streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);        // unnamed edge: a noding stub of the street whose band it sits in — OR a ramp/connector chain.
         let dest=null,destEdge=null,destFrom=null,pa2=node,pb2=e.to,walked=Math.hypot(e.to.x-node.x,e.to.z-node.z),g=0;   // walk the chain to the first REALLY-named street: that's where the ramp factually leads
         while(g++<(e.hw===2?60:12)&&walked<(e.hw===2?1500:450)){ const named=pb2.adj.find(e2=>e2.to!==pa2&&e2.name);   // a freeway ramp can run 1 km before it meets a named road (I-76 EB → US 1 N): walk it out, or the card degrades to a fake same-road block
@@ -3606,8 +3621,32 @@ function branchForwardness(a,b,next){ const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(
   let pa=b,pb=next,run=Math.hypot(pb.x-pa.x,pb.z-pa.z),g=0;                         // judge where the only branch ends up, not just its first few metres
   while(run<45&&g++<8){ const nx=straightest(pa,pb); if(!nx) break; run+=Math.hypot(nx.x-pb.x,nx.z-pb.z); pa=pb; pb=nx; }
   const dx=pb.x-b.x,dz=pb.z-b.z,l=Math.hypot(dx,dz)||1; return (hx*dx+hz*dz)/(hl*l); }
+// 🛣️ ROUTE CONTINUATION ACROSS AN UNNAMED RAMP. A freeway route can carry on through a ramp with no
+// name of its own: the Roosevelt Expressway (US 1) genuinely ENDS at I-76 in East Falls, and US 1 South
+// continues onto motorway_link 1481203908, tagged ref=US 1. sameStreetOn matches on NAME, finds nothing,
+// and the two ramps leaving that node score 0.994 and 0.981 forward — a dead heat no angle rule can
+// call — so the truck stopped dead on a live freeway. This follows the baked route designation instead,
+// and ONLY here:
+//   • the edge we are on must be a freeway record WITH a ref, and the branch must be an UNNAMED RAMP
+//     (hw 2). An ordinary street fork cannot reach this code at all, so manual turns and the v18z
+//     street-choice rules are untouched by construction, not by luck;
+//   • the refs must INTERSECT, so a multiplexed "I 76;US 1" carries either route on;
+//   • EXACTLY ONE branch may match. Two matching branches is a genuine route split and the truck must
+//     still stop and ask — which is also why the cards keep offering both ramps here.
+const routeRefs=s=>String(s||'').split(';').map(t=>t.trim().toUpperCase()).filter(Boolean);
+function routeRefsMeet(p,q){ const A=routeRefs(p); if(!A.length) return false; return routeRefs(q).some(r=>A.includes(r)); }
+function sameRouteOn(a,b){
+  const ce=a.adj.find(e=>e.to===b); if(!ce||!ce.hw||!ce.ref) return null;
+  let hit=null;
+  for(const e of b.adj){ if(e.to===a||e.hw!==2||e.name) continue;                 // unnamed freeway RAMP only
+    if(e.wrong&&!ce.wrong) continue;                                              // never auto-continue the wrong way (same rule sameStreetOn uses)
+    if(!routeRefsMeet(ce.ref,e.ref)) continue;
+    if(hit) return null;                                                          // two ways carry this route on: a real split, stop and ask
+    hit=e; }
+  return hit?hit.to:null; }
 function roadContinuation(a,b){ if(!b) return null;
   const same=sameStreetOn(a,b); if(same) return same;
+  const route=sameRouteOn(a,b); if(route) return route;
   const fwd=b.adj.filter(e=>e.to!==a);                                          // every physical branch (incl. wrong-way carriageways)
   const ceR=a.adj.find(e=>e.to===b), curWrongR=!!(ceR&&ceR.wrong);
   const legalDepth=(n0,n1,H)=>{ let pa=n0,pb=n1,d=1;                              // how far an unnamed connector can be driven LEGALLY before it dead-ends (or reaches a named street = far enough)
