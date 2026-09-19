@@ -819,7 +819,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19r";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1955,6 +1955,51 @@ function gradeSeparatedCrossing(A,B,X,Z){
         n.adj.push({to:m,w:dist,name:nm,wrong:wNM,hw:back.hw||0}); m.adj.push({to:n,w:dist,name:nm,wrong:wMN,hw:back.hw||0}); added.push(dist);
       } } }
   window.__bridged=added.length; })();
+/* 🛣️ CLASS SEAMS — one road, two OSM classes. The Roosevelt Expressway is highway=motorway in the
+   west and highway=trunk in the east, so half of ONE road bakes into the freeway namespace and half into
+   the street namespace. The weld above refuses to join those namespaces — correctly, for viaducts — and
+   that severed the Expressway: the truck drove its whole length and met "ROAD CLOSED" on an open road
+   (owner report, twice; the northbound drive reached 22% of the corridor and stopped).
+     GROUND TRUTH, and the ONLY reason this is safe: the bake rounds coordinates to whole metres, so two
+   vertices at IDENTICAL coordinates came from ONE SHARED OSM NODE — that is real connectivity. A bridge
+   NEVER shares a node with the road beneath it; its vertices merely land nearby. **NEVER loosen this to
+   near-coincidence.** A tolerance of even one metre re-admits every viaduct the namespace rule exists to
+   keep apart (Roosevelt Expressway over Kelly Drive), and the turns it would invent are not on the ground.
+     It runs as its OWN pass, after the general weld, on purpose. The first cut put the exception inside
+   weldNodes, where it restructured the 3 m clusters around the seam and handed the merged node a legal
+   edge onto the SOUTHBOUND carriageway — a U-turn across the median. Separate and purely additive, it
+   cannot: see the phantom-turn guard below.
+     It also runs BEFORE HWY_ENDS, so the corridor-end list never learns about a seam at all — once the
+   degree-1 freeway stub is gone there is no end there to close with a barrier or announce as closed. */
+const SEAM=new Set();
+(function seamWeld(){ const at=new Map();
+  for(const n of gnodes.values()){ const k=n.x+','+n.z; let a=at.get(k); if(!a){a=[];at.set(k,a);} a.push(n); }
+  const gone=new Map();                                                          // the freeway half -> the street node it folds into
+  for(const list of at.values()){ if(list.length!==2) continue;                   // exactly one vertex from each side
+    const st=list.find(n=>!HWONLY.has(n)), hw=list.find(n=>HWONLY.has(n));
+    if(!st||!hw) continue;                                                        // two vertices of the SAME namespace are not a seam
+    const nm=new Set(st.adj.map(e=>e.name).filter(Boolean));
+    if(!hw.adj.some(e=>e.name&&nm.has(e.name))) continue;                         // and it has to be the same ROAD on both sides, by name
+    for(const e of hw.adj){ if(e.to===st||st.adj.some(q=>q.to===e.to)) continue;
+      /* PHANTOM-TURN GUARD. Carry across the freeway half's OWN edges and nothing else, and never one
+         that lands on an opposing carriageway of the same road — that is the median U-turn this pass must
+         never create. roadContinuation happening to choose correctly today is NOT a guard. */
+      if(e.hw===1&&st.adj.some(q=>q.hw===1&&q.name===e.name&&
+        ((q.to.x-st.x)*(e.to.x-st.x)+(q.to.z-st.z)*(e.to.z-st.z))<0)) continue;
+      st.adj.push({to:e.to,w:e.w,name:e.name,wrong:e.wrong,hw:e.hw||0,ref:e.ref||'',dst:e.dst||'',drf:e.drf||''}); }
+    gone.set(hw,st); SEAM.add(st); }
+  window.__seams=SEAM.size;
+  if(!gone.size) return;
+  for(const n of gnodes.values()){ if(gone.has(n)) continue;                      // repoint anything that pointed at the freeway half
+    let touched=false;
+    for(const e of n.adj){ const t=gone.get(e.to); if(t){ e.to=t; touched=true; } }
+    if(!touched) continue;
+    const seen=new Map();
+    for(const e of n.adj){ if(e.to===n) continue;                                 // never leave a self-loop behind
+      const p=seen.get(e.to);
+      if(!p||(e.name&&!p.name)||(!p.name&&!e.name&&e.ref&&!p.ref)) seen.set(e.to,e); }
+    n.adj=[...seen.values()]; }
+  for(const [k,n] of [...gnodes]) if(gone.has(n)) gnodes.delete(k); })();
 // ⛔ CORRIDOR ENDS. The freeway fetch stops at its bbox and at the city line: a carriageway or ramp whose
 // last vertex meets no other road is unfinished pavement, not a destination. Listed here so the scenery
 // closes it with a striped barrier and the drive stops short of it with a message (ux,uz points outward).
