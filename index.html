@@ -774,6 +774,7 @@
 </div></div>
 
 <script src="vendor/three.147.min.js"></script>
+<script src="assets/highway/GLTFLoader.147.js"></script>
 <script src="data/addr.js"></script>
 <script src="data/rb.js"></script>
 <script src="data/ab.js"></script>
@@ -811,7 +812,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19k";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4332,6 +4333,57 @@ function rampDetailBuild(J){
 }
 // Owner reference sequence: firetruck pictures/Lincoln Dr and City ave, Sep 10/12 2026.
 // Scenery coordinates follow the baked roads/rail. Heights and member sizes are visual estimates.
+// BLENDER_HIGHWAY_BEGIN — local visual kit, independent of graph, driving and camera.
+// Dimensions/axes/placement and the region bounds are documented in notes/blender-highway-slice.md.
+const HIGHWAY_KIT={enabled:true,url:'assets/highway/corridor-kit-v1.glb',status:'idle',templates:null,
+  bbox:[-1500,-620,-800,500],railRadius:300,error:null,loads:0};
+function highwayKitInside(p){const b=HIGHWAY_KIT.bbox;return p.x>=b[0]&&p.x<=b[1]&&p.z>=b[2]&&p.z<=b[3];}
+function highwayKitLoad(){
+  if(!HIGHWAY_KIT.enabled||HIGHWAY_KIT.status!=='idle')return;
+  if(typeof THREE.GLTFLoader!=='function'){HIGHWAY_KIT.status='failed';HIGHWAY_KIT.error='Local GLTF loader unavailable';return;}
+  HIGHWAY_KIT.status='loading';HIGHWAY_KIT.loads++;
+  const fail=e=>{if(HIGHWAY_KIT.status!=='loading')return;HIGHWAY_KIT.status='failed';HIGHWAY_KIT.error=String(e?.message||e||'GLB load failed');};
+  const timer=setTimeout(()=>fail('GLB load timed out; procedural scenery retained'),12000);
+  try{new THREE.GLTFLoader().load(HIGHWAY_KIT.url,gltf=>{
+    const templates={},geos=new Set(),mats=new Set();
+    try{
+      gltf.scene.updateMatrixWorld(true);
+      gltf.scene.traverse(o=>{if(!o.isMesh)return;geos.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);
+        if(['ConcreteBarrier','RailPanel','RailEndPost','RetainingWall'].includes(o.name)){
+          const g=o.geometry.clone();g.applyMatrix4(o.matrixWorld);g.computeBoundingBox();g.computeBoundingSphere();templates[o.name]=g;
+        }});
+      for(const key of ['ConcreteBarrier','RailPanel','RailEndPost','RetainingWall'])if(!templates[key]?.attributes.position)throw new Error('Missing kit mesh: '+key);
+      if(HIGHWAY_KIT.status!=='loading'){Object.values(templates).forEach(g=>g.dispose());return;}
+      HIGHWAY_KIT.templates=templates;HIGHWAY_KIT.status='ready';
+      // Enqueue once through the normal budgeted scenery pipeline. Never cancel an in-flight job:
+      // that job will use the ready kit when it commits; home and company transitions keep ownership.
+      if(FLATCITY.built&&!FLATCITY.job)FLATCITY.requestRebuild(truck.x,truck.z);
+    }catch(e){Object.values(templates).forEach(g=>g.dispose());fail(e);}
+    finally{clearTimeout(timer);geos.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());}
+  },undefined,e=>{clearTimeout(timer);fail(e);});}catch(e){clearTimeout(timer);fail(e);}
+}
+function highwayKitMesh(list,color,name,kind,J,dummy){
+  if(!HIGHWAY_KIT.enabled||HIGHWAY_KIT.status!=='ready'||!list.length)return false;
+  // Only the highway W-beam group is split: one extra draw call. Small photo-pass groups
+  // are already corridor-scoped; replace the whole group only when every member is in bounds.
+  const selected=kind==='RailPanel'&&name==='hwy-guard'
+    ?list.filter(p=>highwayKitInside(p)&&Math.hypot(p.x-J.cx,p.z-J.cz)<HIGHWAY_KIT.railRadius)
+    :(list.every(highwayKitInside)?list:[]);
+  if(!selected.length)return false;
+  const selectedSet=new Set(selected),rest=selected.length===list.length?[]:list.filter(p=>!selectedSet.has(p));
+  for(const [pieces,kit] of [[selected,true],[rest,false]]){if(!pieces.length)continue;
+    // Clones belong to FLATCITY.parts and its normal disposal lifecycle; templates are loaded
+    // once and never disposed by a scenery rebuild. Material tint preserves the city's palette.
+    const geo=kit?HIGHWAY_KIT.templates[kind].clone():hwyWBeamGeo();
+    const material=new THREE.MeshLambertMaterial({color,vertexColors:kit&&!!geo.attributes.color,side:kind==='RailPanel'?THREE.DoubleSide:THREE.FrontSide});
+    const m=new THREE.InstancedMesh(geo,material,pieces.length);m.name=name;
+    m.userData.highwayKit=kit?kind:null;m.userData.placements=pieces.map(p=>({x:p.x,y:p.y,z:p.z,w:p.w,h:p.h,l:p.l,ang:p.ang,pitch:p.pitch}));
+    pieces.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);});
+    m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);
+  }
+  return true;
+}
+// BLENDER_HIGHWAY_END
 const CORRIDOR_PHOTO={enabled:true,arch:{x:-1150,z:-291,ux:0.9397,uz:0.342,half:19},
   lights:[{id:'kelly-lincoln',at:[-1150,-160],r:300}],   // cobra-head masts on the surface roads and ramps here (owner photos 2026-09-10-15-50-04 Lincoln, 2026-09-12-20-43-52 / 20-45-32 Kelly); HWY_LIGHTS stays freeway-only
   src:'Screenshot_2026-09-10-15-51-52-60 (stone arch); 2026-09-10-15-51-14-92 + 2026-09-12-20-39-02-74 (arcade, level deck); 2026-09-12-20-43-03-03 (Kelly wall); 2026-09-10-15-48-09-73 (green steel); 2026-09-10-15-52-27-22 (wooded Lincoln); 2026-09-12-20-39-02-74 + 20-40-00-28 (Lincoln concrete barriers + median); 2026-09-10-15-48-59-07 + 2026-09-12-20-38-33-80 + 20-44-45-30 (gore chevrons)'};
@@ -4343,6 +4395,7 @@ function photoRailFloor(x,z){if(!CORRIDOR_PHOTO.enabled)return -Infinity;const a
 function photoCorridorRoad(s){return CORRIDOR_PHOTO.enabled&&((s.name==='Lincoln Drive'&&s.az>-800&&s.bz>-800&&s.az<-190&&s.bz<-190)||(s.name==='Kelly Drive'&&s.ax<-850&&s.bx<-850&&s.az<200&&s.bz<200));}
 function photoCorridorBuild(J,dummy){
   if(!CORRIDOR_PHOTO.enabled||!NAVGEO.active||Math.hypot(J.cx+1110,J.cz+150)>LOCAL.R+750)return;
+  highwayKitLoad();
   const steel=[],posts=[],walls=[],caps=[],jersey=[],median=[],chev=[];const seen=new Set();
   // Guardrails only at exposed outer edges. Probe the full piece to leave every junction open.
   for(const s of J.list){if(!photoCorridorRoad(s))continue;const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz);if(L<3)continue;
@@ -4430,6 +4483,8 @@ function photoCorridorBuild(J,dummy){
     arcade(-99,-span);arcade(span,54);
   }
   for(const [list,color,name,basic,wbeam] of [[steel,0xb6bcc0,'guardrails',false,true],[posts,0x6f7477,'posts'],[walls,0xb7b0a0,'kelly-wall'],[caps,0xd1c8b4,'wall-caps'],[jersey,0xc4c1b7,'lincoln-barrier'],[median,0xbdbab1,'lincoln-median'],[chev,0xf5f6f8,'gore-chevrons',true]]){if(!list.length)continue;
+    const kitKind={guardrails:'RailPanel',posts:'RailEndPost','kelly-wall':'RetainingWall','lincoln-barrier':'ConcreteBarrier','lincoln-median':'ConcreteBarrier'}[name];
+    if(kitKind&&highwayKitMesh(list,color,'photo-'+name,kitKind,J,dummy))continue;
     const m=new THREE.InstancedMesh(wbeam?hwyWBeamGeo():new THREE.BoxGeometry(1,1,1),basic?new THREE.MeshBasicMaterial({color}):new THREE.MeshLambertMaterial({color,side:wbeam?THREE.DoubleSide:THREE.FrontSide}),list.length);m.name='photo-'+name;if(basic)m.renderOrder=2;   // wbeam: the freeway's W-beam panel (v19f), same geometry, same colour
     list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);});m.instanceMatrix.needsUpdate=true;FLATCITY.group.add(m);FLATCITY.parts.push(m);
   }
@@ -4830,6 +4885,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       mp2.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
       gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
   if(J.hws) for(const [list,color,name,wbeam] of [[J.hws.med,0xb9b6ad,'hwy-median'],[J.hws.grass,0xc8dcb0,'hwy-median-grass'],[J.hws.guard.concat(vGuard),0xb6bcc0,'hwy-guard',true],[J.hws.post.concat(vPost),0x6f7477,'hwy-post'],[J.hws.wall,0x8f8b82,'hwy-wall']]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail (W-beam tiles, v19f) / end posts / retaining wall
+    if(wbeam&&highwayKitMesh(list,color,name,'RailPanel',J,dummy))continue;
     const hb=new THREE.InstancedMesh(wbeam?hwyWBeamGeo():new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color,side:wbeam?THREE.DoubleSide:THREE.FrontSide}),list.length); hb.name=name;
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
     hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }

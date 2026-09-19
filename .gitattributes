@@ -4,3 +4,6 @@
 # on a file if you ever need to review a re-bake line by line.
 data/*.js -diff linguist-generated
 vendor/*.js -diff linguist-generated
+assets/highway/*.glb binary -diff
+tools/*.blend binary -diff
+assets/highway/GLTFLoader.147.js -diff linguist-vendored

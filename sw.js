@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v22';  // v19k: city buses in the traffic pool — main streets only, blank blinds, brief dwells at stops (v21 was v19j cemeteries + catenary)
+const CACHE = 'local-shell-v23';  // v19l: Blender highway kit and reliable offline cache writes; owner-approved release.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
@@ -29,7 +29,7 @@ self.addEventListener('fetch', function (e) {
     e.respondWith((async function () {
       try {
         var res = await fetch(req, { cache: 'no-cache' });
-        if (res && res.status === 200) { var c = await caches.open(CACHE); c.put(req, res.clone()); }
+        if (res && res.status === 200) { var c = await caches.open(CACHE); await c.put(req, res.clone()); }
         return res;
       } catch (_) {
         return (await caches.match(req)) || (await caches.match('./index.html')) || Response.error();
@@ -39,8 +39,10 @@ self.addEventListener('fetch', function (e) {
     // baked data + library — stale-while-revalidate: instant launch, refreshed for the next one
     e.respondWith((async function () {
       var cached = await caches.match(req);
-      var network = fetch(req).then(function (res) {
-        if (res && res.status === 200) { caches.open(CACHE).then(function (c) { c.put(req, res.clone()); }); }
+      // Keep the cache write inside the fetch lifetime. Fire-and-forget writes lost large
+      // data/library responses before an offline reload in the Blender slice browser test.
+      var network = fetch(req).then(async function (res) {
+        if (res && res.status === 200) { var c = await caches.open(CACHE); await c.put(req, res.clone()); }
         return res;
       });
       if (cached) { e.waitUntil(network.catch(function () {})); return cached; }
@@ -52,7 +54,7 @@ self.addEventListener('fetch', function (e) {
       var cached = await caches.match(req);
       if (cached) return cached;
       var res = await fetch(req);
-      if (res && res.status === 200) { var c = await caches.open(CACHE); c.put(req, res.clone()); }
+      if (res && res.status === 200) { var c = await caches.open(CACHE); await c.put(req, res.clone()); }
       return res;
     })());
   }
