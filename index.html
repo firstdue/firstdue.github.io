@@ -811,7 +811,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19h";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19i";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4019,6 +4019,73 @@ function tiledMaterial(tex){ const mat=new THREE.MeshLambertMaterial({color:0xff
     sh.fragmentShader='varying float vCamDist;\n'+sh.fragmentShader.replace('#include <dithering_fragment>',
       '#include <dithering_fragment>\n  float _f=smoothstep(12.0,26.0,vCamDist);\n  if(_f<0.999){ float _n=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);\n    if(_f<_n) discard; }'); };
   return mat; }
+// ===== 🌳 PARKS — graphics step 4 (v19i): the LANDCOVER polygons drawn, not just used as a mask =====
+// park / wood / open polygons become draped green ground that follows the terrain (the water triangulation
+// pattern: Shape → ShapeGeometry → subdivide long triangles → drape each vertex on navGroundY, minus the rail and
+// road cuts the terrain itself honours). The earcut of a big Fairmount polygon is the expensive part, so each
+// feature's flat 2D triangles are computed ONCE per session (f._tri) and every block only subdivides, clips and
+// drapes them — and that runs as a phase of stepLocalCity under the frame budget, one feature per resume check,
+// never in commit. Park (not wood/open) edges get a low iron fence where the edge is not a road, capped per block;
+// lawns get scattered instanced trees on the existing forest-tree mechanism, capped separately from street trees.
+// The park ground sits 6–10 cm over the terrain sample: below the road (+22 cm) and the kerb slabs, above the
+// terrain mesh (−60 cm). Cemeteries and rail electrification are the NEXT phase (they need a re-fetch).
+const PARKS={on:true, lift:{park:0.06,wood:0.08,open:0.10}, colors:{park:0xb7d3a0,wood:0x9dbb8a,open:0xc3dcab}, fenceMax:400, fenceR:0.6, treeMax:70, subdiv:32, subdivFar:48, farR:0.5, openR:0.7};
+// treeMax 70: each tree is ~300 triangles (three canopy lobes), and Fairmount beside the interchange sits at the 330k budget.
+// Distance level of detail (owner's rule for the interchange: trim, never raise the budget): triangles whose centre is
+// beyond farR·R subdivide at subdivFar instead of subdiv; 'open' polygons (pitches, grass patches) wholly beyond
+// openR·R are skipped; fences only within fenceR·R of the truck.
+function landTriangles(f){ if(f._tri) return f._tri; const out=[];
+  for(const ring of f.outer){ if(ring.length<3) continue; const shape=new THREE.Shape(ring.map(p=>new THREE.Vector2(p[0],-p[1])));
+    for(const hole of f.inner) if(hole.length>2&&pip(hole[0][0],hole[0][1],ring)) shape.holes.push(new THREE.Path(hole.map(p=>new THREE.Vector2(p[0],-p[1]))));
+    let raw; try{ raw=new THREE.ShapeGeometry(shape); }catch(e){ continue; } raw.rotateX(-Math.PI/2); const flat=raw.toNonIndexed(), pos=flat.attributes.position;
+    for(let i=0;i<pos.count;i++) out.push(pos.getX(i),pos.getZ(i)); raw.dispose(); flat.dispose(); }
+  f._tri=new Float32Array(out); return f._tri; }
+// A growable Float32Array pair (positions + flat normals) filled in the budgeted phase, so commit only wraps typed
+// arrays — a plain-array build in commit cost ~4 ms of first-touch allocation at the interchange (measured).
+function parkBuf(){ return {p:new Float32Array(9*2048),n:new Float32Array(9*2048),len:0}; }
+function parkTri(B,ax,ay,az,bx,by,bz,cx,cy,cz){ if(B.len+9>B.p.length){ const p=new Float32Array(B.p.length*2), n=new Float32Array(B.p.length*2); p.set(B.p); n.set(B.n); B.p=p; B.n=n; }
+  const ux=bx-ax,uy=by-ay,uz=bz-az, vx=cx-ax,vy=cy-ay,vz=cz-az; let nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx; const l=Math.hypot(nx,ny,nz)||1; nx/=l; ny/=l; nz/=l;
+  if(ny<0){ nx=-nx; ny=-ny; nz=-nz; }                                                              // ground faces up whatever the ring winding (the material is double-sided anyway)
+  const P=B.p, N=B.n, o=B.len; P[o]=ax; P[o+1]=ay; P[o+2]=az; P[o+3]=bx; P[o+4]=by; P[o+5]=bz; P[o+6]=cx; P[o+7]=cy; P[o+8]=cz;
+  for(let k=0;k<9;k+=3){ N[o+k]=nx; N[o+k+1]=ny; N[o+k+2]=nz; } B.len+=9; }
+function parkFences(J,f){ const P=J.park, R=LOCAL.R*PARKS.fenceR; if(P.fence.length>=PARKS.fenceMax) return;
+  for(const ring of f.outer){ for(let i=1;i<ring.length;i++){ const a=ring[i-1],b=ring[i], dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz); if(L<1) continue; const n=Math.ceil(L/9), pl=L/n, ang=Math.atan2(dx,dz);
+      for(let k=0;k<n;k++){ if(P.fence.length>=PARKS.fenceMax) return; const t=(k+0.5)/n, x=a[0]+dx*t, z=a[1]+dz*t; if(Math.hypot(x-J.cx,z-J.cz)>R) continue;
+        if(nearRoadEdge(x,z)<1.2||inWater(x,z)||railNear(x,z,3)) continue;                                   // a park edge that IS a road edge (Kelly Drive through Fairmount) gets no fence across the kerb
+        const y0=navGroundY(a[0]+dx*(k/n),a[1]+dz*(k/n)), y1=navGroundY(a[0]+dx*((k+1)/n),a[1]+dz*((k+1)/n));
+        P.fence.push({x,y:(y0+y1)/2+0.45,z,w:0.07,h:0.9,l:pl*1.02,ang,pitch:-Math.atan2(y1-y0,pl)}); } } } }
+function parkTrees(J){ const {T,grid}=J, R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0); let added=0;   // scattered lawn trees from the sites the ground phase collected
+  for(const [px,pz] of J.park.sites){ if(added>=PARKS.treeMax) break; if((px-J.cx)**2+(pz-J.cz)**2>R2) continue;
+    if(inWater(px,pz)||nearRoadEdge(px,pz)<6||railNear(px,pz,3.5)||navSpan(px,pz,null,20)?.b.bridge||grid.has(gk(px,pz))) continue;
+    if(stations.some(st=>(st.curated||st.id===DRIVE.stationId)&&Math.hypot(px-st.x,pz-st.z)<62)) continue;
+    grid.set(gk(px,pz),1); T.push({x:px,z:pz,s:1.1+hash2(Math.round(px),Math.round(pz)+9)*1.2,forest:true}); added++; } }
+function parkGroundStep(J,t0,budgetMs){ if(!PARKS.on||!NAVGEO.active) return true;
+  const R=LOCAL.R, cx=J.cx, cz=J.cz, farR2=(R*PARKS.farR)**2, openR=R*PARKS.openR;
+  if(!J.park){ const list=[]; for(const f of LANDCOVER.features){ const b=f.bb; if(!b||b[2]<cx-R||b[0]>cx+R||b[3]<cz-R||b[1]>cz+R) continue;
+      if(f.kind==='open'){ const ddx=Math.max(b[0]-cx,0,cx-b[2]), ddz=Math.max(b[1]-cz,0,cz-b[3]); if(Math.hypot(ddx,ddz)>openR) continue; }   // far pitches and grass patches are not worth their triangles
+      list.push(f); }
+    J.park={list,i:0,out:{park:parkBuf(),wood:parkBuf(),open:parkBuf()},fence:[],sites:[],treesDone:false}; }
+  const P=J.park, ground=(x,z)=>navGroundY(x,z)-navRailCutDepth(x,z)-navRoadCutDepth(x,z,null);
+  while(P.i<P.list.length){ if(performance.now()-t0>budgetMs) return false; const f=P.list[P.i++]; const tri=landTriangles(f), out=P.out[f.kind]||P.out.park, lift=PARKS.lift[f.kind]||0.06, memo=new Map();
+    const yAt=(x,z)=>{ const k=((x*2)|0)*131071+((z*2)|0); let y=memo.get(k); if(y===undefined){ y=ground(x,z)+lift; memo.set(k,y); } return y; };   // a subdivided vertex is shared by ~6 triangles: sample the terrain once per vertex
+    const push=(ax,az,bx,bz,cx3,cz3,depth)=>{ if(Math.max(ax,bx,cx3)<cx-R||Math.min(ax,bx,cx3)>cx+R||Math.max(az,bz,cz3)<cz-R||Math.min(az,bz,cz3)>cz+R) return;
+      const d0=Math.hypot(ax-bx,az-bz), d1=Math.hypot(bx-cx3,bz-cz3), d2=Math.hypot(cx3-ax,cz3-az), m=Math.max(d0,d1,d2), mx=(ax+bx+cx3)/3, mz=(az+bz+cz3)/3;
+      const lim=((mx-cx)**2+(mz-cz)**2>farR2)?PARKS.subdivFar:PARKS.subdiv;
+      if(m>lim&&depth<18){ let x0=ax,z0=az,x1=bx,z1=bz,x2=cx3,z2=cz3; if(d1===m){ x0=bx;z0=bz;x1=cx3;z1=cz3;x2=ax;z2=az; } else if(d2===m){ x0=cx3;z0=cz3;x1=ax;z1=az;x2=bx;z2=bz; }
+        const hx=(x0+x1)/2, hz=(z0+z1)/2; push(x0,z0,hx,hz,x2,z2,depth+1); push(hx,hz,x1,z1,x2,z2,depth+1); return; }
+      parkTri(out,ax,yAt(ax,az),az, bx,yAt(bx,bz),bz, cx3,yAt(cx3,cz3),cz3);
+      if(f.kind==='park'&&P.sites.length<600&&hash2(Math.round(mx),Math.round(mz))<0.07) P.sites.push([mx,mz]); };   // lawn-tree candidates: triangle centroids are inside the polygon by construction — no point-in-polygon scan
+    for(let i=0;i<tri.length;i+=6) push(tri[i],tri[i+1],tri[i+2],tri[i+3],tri[i+4],tri[i+5],0);
+    if(f.kind==='park') parkFences(J,f); }
+  if(!P.treesDone){ P.treesDone=true; parkTrees(J); }
+  return true; }
+function parkBuild(J){ const P=J.park; if(!P) return;                                        // commit: wrap the typed arrays the phase filled; nothing is generated or recomputed here
+  for(const kind of ['park','wood','open']){ const B=P.out[kind]; if(!B.len) continue; const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(B.p.subarray(0,B.len),3)); g.setAttribute('normal',new THREE.BufferAttribute(B.n.subarray(0,B.len),3));
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:PARKS.colors[kind],side:THREE.DoubleSide})); m.name='land-'+kind; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
+  if(P.fence.length){ const dummy=new THREE.Object3D(), fm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x3f4a3c}),P.fence.length);
+    P.fence.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); fm.setMatrixAt(i,dummy.matrix); });
+    fm.instanceMatrix.needsUpdate=true; fm.name='park-fence'; FLATCITY.group.add(fm); FLATCITY.parts.push(fm); } }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
   while(J.i<J.list.length){
@@ -4116,7 +4183,8 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   // here under the frame budget like everything else; commit just turns the arrays into meshes.
   if(!J.road)roadGeomStart(J);
   while(J.ri<J.list.length){if(performance.now()-t0>budgetMs)return false;roadGeomSeg(J,J.list[J.ri++]);}
-  if(!rampRibbonStep(J,t0,budgetMs))return false;                                            // 🎀 interchange ramp edge ribbon (v19f): needs the finished road surfaces, generated here not in commit
+  if(!rampRibbonStep(J,t0,budgetMs))return false;
+  if(!parkGroundStep(J,t0,budgetMs))return false;                                            // 🌳 park / wood / open ground, fences and lawn trees (v19i): one landcover feature per resume check                                            // 🎀 interchange ramp edge ribbon (v19f): needs the finished road surfaces, generated here not in commit
   return true;
 }
 function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCity(J,1e9)); return J; }   // synchronous (first build only)
@@ -4729,7 +4797,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }
   hwyIdentityBuild(J,null,dummy);                                                                        // 🪧 highway identity (phase 2b): guide signs, gantries, gore markers, trailblazers, shoulder lighting
   photoCorridorBuild(J,dummy);
-  rampDetailBuild(J); rampRibbonBuild(J);                                                                                    // 🛣️ interchange ramp shoulder + embankment (owner choice, Sep 13 2026)
+  rampDetailBuild(J); rampRibbonBuild(J); parkBuild(J);                                                                                    // 🛣️ interchange ramp shoulder + embankment (owner choice, Sep 13 2026)
   if(J.hwClose) for(const [list,color] of [[J.hwClose[0],0xe8862c],[J.hwClose[1],0xf2f2ec]]){ if(!list.length) continue;   // ⛔ corridor-end barriers (orange / white stripes)
     const hc=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hc.setMatrixAt(i,dummy.matrix); });
