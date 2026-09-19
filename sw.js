@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v24';  // v19m: Blender pumper model over the procedural truck (graphics step 2). AUTHORED LOCALLY, not published.
+const CACHE = 'local-shell-v25';  // v19n: ramp edge detail citywide, including every freeway ramp.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
