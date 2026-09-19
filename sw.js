@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v21';  // v19j: cemeteries (ground, walls, headstones from LANDCOVER.cemeteries) and catenary masts on electrified rail (v20 was v19i parks)
+const CACHE = 'local-shell-v22';  // v19k: city buses in the traffic pool — main streets only, blank blinds, brief dwells at stops (v21 was v19j cemeteries + catenary)
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

@@ -811,7 +811,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19j";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19k";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2847,10 +2847,15 @@ const ORB_N=26, orbGeo=new THREE.BufferGeometry(); orbGeo.setAttribute('position
 const orbPts=new THREE.Points(orbGeo,new THREE.PointsMaterial({color:0xff5040,size:1.7,transparent:true,opacity:0.95,depthWrite:false})); orbPts.frustumCulled=false; beaconG.add(orbPts);
 beaconG.add(new THREE.PointLight(0xff4030,1.4,80,2)); scene.add(beaconG);
 const cars=[], carCols=[0xd9d9de,0x3f4d63,0x8a4040,0xc8b660,0x4a6d52,0x8892a0];
-function mkCar(){ const g=new THREE.Group(); box(1.8,1.2,3.6,carCols[(Math.random()*carCols.length)|0],0,0.95,0,g); box(1.6,0.9,1.9,0x222831,0,1.9,0.2,g); scene.add(g);
-  const drv=RB.st.filter(s=>s[1]<=3 && s[2].length>=2); const e=drv[(Math.random()*drv.length)|0], pts=e[2];
-  return {g, pts, seg:1+((Math.random()*(pts.length-1))|0), t:Math.random(), dir:Math.random()<0.5?1:-1, w:CLASSW[e[1]], speed:8+Math.random()*4, scare:0, x:0, z:0}; }
-for(let i=0;i<CONFIG.traffic.count;i++) cars.push(mkCar());
+function mkCar(bus){ const g=new THREE.Group();                                            // 🚌 v19k: every 5th pool slot is a plain city bus — same pool, same updateTraffic, no data
+  if(bus){ box(2.45,2.35,10.4,0xe9e7e1,0,1.55,0,g); box(2.5,0.72,10.5,0x2c3540,0,2.28,0,g); }   // long body + a window band that wraps the front: its dark front face IS the blank destination blind (no invented routes — house rules). Two boxes, exactly a car's draw calls, so the pool costs the phone nothing extra
+  else { box(1.8,1.2,3.6,carCols[(Math.random()*carCols.length)|0],0,0.95,0,g); box(1.6,0.9,1.9,0x222831,0,1.9,0.2,g); }
+  scene.add(g);
+  const drv=bus?RB.st.filter(s=>s[0]&&!s[4]&&s[1]<=1&&s[2].length>=2):RB.st.filter(s=>s[1]<=3 && s[2].length>=2);   // a bus runs NAMED main streets only (cls 0/1), never residential (cls 3) and never a freeway record
+  const e=drv[(Math.random()*drv.length)|0], pts=e[2];
+  return {g, pts, seg:1+((Math.random()*(pts.length-1))|0), t:Math.random(), dir:Math.random()<0.5?1:-1, w:CLASSW[e[1]], speed:bus?5.5+Math.random()*2:8+Math.random()*4, scare:0, x:0, z:0,
+    bus:!!bus, stopIn:bus?10+Math.random()*20:0, pause:0, r:bus?5.6:CONFIG.traffic.bump}; }   // stopIn/pause: a bus dwells a few seconds at intervals so it reads as making stops; r: a longer body pushes the truck off sooner
+for(let i=0;i<CONFIG.traffic.count;i++) cars.push(mkCar(i%5===4));
 /* --- Round D: truck headlights (fake additive cones always; real SpotLights on desktop only) --- */
 const headlights=new THREE.Group(); headlights.visible=false; truckG.add(headlights);   // truck nose = -Z
 for(const hx of [-0.9,0.9]){
@@ -3062,16 +3067,18 @@ function updatePhysics(dt){ if(!state.running||AUTO.active) return;    // autopi
   else if(spd<CONFIG.combo.slow) state.combo=Math.max(1,state.combo-dt*CONFIG.combo.decay);
 }
 function updateTraffic(dt){ if(!state.running) return;
-  for(const c of cars){ const pts=c.pts; let a=pts[c.seg-1], b=pts[c.seg]; let sl=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
+  for(const c of cars){ if(c.bus){ if(c.pause>0){ c.pause-=dt; continue; } c.stopIn-=dt; if(c.stopIn<=0){ c.pause=2.5+Math.random()*2.5; c.stopIn=16+Math.random()*22; continue; } }   // 🚌 dwell at a stop: hold the last pose, no movement
+    const pts=c.pts; let a=pts[c.seg-1], b=pts[c.seg]; let sl=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
     c.t+=c.dir*c.speed*dt/sl; let guard=0;
     while((c.t>1||c.t<0)&&guard++<4){ if(c.t>1){ c.seg++; if(c.seg>pts.length-1){ c.seg=pts.length-1; c.dir=-1; c.t=1-(c.t-1); } else c.t-=1; }
       else { c.seg--; if(c.seg<1){ c.seg=1; c.dir=1; c.t=-c.t; } else c.t+=1; } a=pts[c.seg-1]; b=pts[c.seg]; sl=Math.hypot(b[0]-a[0],b[1]-a[1])||1; }
     let dx=b[0]-a[0],dz=b[1]-a[1]; const dl=Math.hypot(dx,dz)||1; dx/=dl; dz/=dl; const lane=(c.w>=16?4.5:3)*c.dir, nx=-dz,nz=dx;
     let x=a[0]+(b[0]-a[0])*c.t+nx*lane, z=a[1]+(b[1]-a[1])*c.t+nz*lane;
     const pdx=x-truck.x, pdz=z-truck.z, pd=Math.hypot(pdx,pdz)||1;
-    if(state.siren&&pd<CONFIG.traffic.scatter){ c.scare=Math.min(1,c.scare+dt*3); x+=pdx/pd*7*c.scare; z+=pdz/pd*7*c.scare; c.speed=Math.min(18,c.speed+10*dt); } else c.scare=Math.max(0,c.scare-dt);
+    if(state.siren&&pd<CONFIG.traffic.scatter){ c.scare=Math.min(1,c.scare+dt*3); const sway=c.bus?3.5:7; x+=pdx/pd*sway*c.scare; z+=pdz/pd*sway*c.scare; c.speed=Math.min(c.bus?11:18,c.speed+10*dt); } else c.scare=Math.max(0,c.scare-dt);
     c.x=x; c.z=z; c.g.position.set(x,navRoadY(x,z,c.s?.name??''),z); c.g.rotation.y=Math.atan2(-dx*c.dir,-dz*c.dir);
-    if(pd<CONFIG.traffic.bump){ const nnx=(truck.x-x)/pd, nnz=(truck.z-z)/pd; truck.x+=nnx*(CONFIG.traffic.bump-pd); truck.z+=nnz*(CONFIG.traffic.bump-pd);
+    const br=c.r||CONFIG.traffic.bump;                                                       // a bus is 10.4m long: its collision ring matches the body
+    if(pd<br){ const nnx=(truck.x-x)/pd, nnz=(truck.z-z)/pd; truck.x+=nnx*(br-pd); truck.z+=nnz*(br-pd);
       const vn=truck.vx*nnx+truck.vz*nnz; if(vn<0){ truck.vx-=nnx*vn*1.5; truck.vz-=nnz*vn*1.5; } truck.vx*=0.75; truck.vz*=0.75; shake=Math.min(1.2,shake+0.45); comboBreak(); sfx.crash(); burstSparks(x,1.2,z,8); }
   }
 }
