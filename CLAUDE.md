@@ -135,6 +135,12 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
+- **Data re-bake, September 18, 2026 (build still v19i):** `data/landcover.js` carries `LANDCOVER.cemeteries`
+  (175, kind `cemetery`) SEPARATE from `LANDCOVER.features` — keep it separate until the cemetery render phase,
+  because `landKind` treats any unknown kind as park and the v19i park phase would draw them green.
+  `data/navgeo.js` rail records carry `el` (`c` catenary, `r` third rail); the geometry is unchanged. The raw
+  fetches and the scripts (`fetch_cemetery_citywide.py`, `fetch_rail_electrified.py`, ids + tags only) live in the
+  authoring folder; never re-fetch the original landcover or rail sources — that moves pinned geometry.
 - **The build is v19i (September 18, 2026), parks.** `parkGroundStep` (last phase of `stepLocalCity`) fills typed
   arrays with normals for the `LANDCOVER` park / wood / open ground, fences and lawn-tree sites; `parkBuild` in
   `commit` only wraps them — keep it that way: a plain-array build in commit cost ~4 ms of first-touch allocation

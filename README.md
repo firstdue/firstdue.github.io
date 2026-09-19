@@ -43,6 +43,12 @@ owner-supplied photos: Lincoln Drive's stone railway arch, Kelly Drive's retaini
 Avenue girders, guardrails, wooded shoulders, and richer Engine 35 facades. It does not change the
 road graph, navigation heights, routing, or street geometry.
 
+**Data re-bake, September 18, 2026 (no version change) — cemeteries and rail electrification arrive in the
+data.** `data/landcover.js` now carries the city's 175 cemetery polygons in their own list and `data/navgeo.js`
+marks which rail lines are electrified (catenary or third rail). Nothing looks different yet: the existing park,
+wood, open, rail, bridge and water geometry is byte-for-byte what it was, and the game does not read the new fields
+until the next release draws cemetery grounds, headstones and catenary. The build stays v19i.
+
 **v19i (September 18, 2026) — the parks are green.** The 10,678 park, wood and open-land polygons the game has
 carried since v17n were only an invisible mask that kept buildings and trees out of them. They are now drawn as
 green ground that follows the terrain, with low fences along park edges where the edge is not a road and scattered
@@ -246,7 +252,8 @@ Project handoff snapshot, September 13, 2026:
   step (tiled W-beam guardrails on the freeway, viaduct and corridor, mitred ramp edge ribbon), and v19g typed
   residential buildings from the baked `data/btype.js` typology table, and v19h its apartments, storefronts and
   strip malls (the table re-baked with the storefront / large-lot split), and v19i the parks drawn from the
-  existing landcover polygons; service-worker cache v20.
+  existing landcover polygons, then an invisible data re-bake adding cemetery polygons and rail electrification;
+  service-worker cache v20.
 - The build tag in the HUD (top left, next to SAVES) is the fastest way to tell whether a phone has
   picked up a deploy or is serving a cached page.
 - Intersection Recall is the active TRAIN MY LOCAL drill: a named street intersection with no

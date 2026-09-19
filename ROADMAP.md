@@ -3,6 +3,11 @@
 Planning snapshot: September 18, 2026. **v19i is public and matches the authoring build**, service-worker
 cache `local-shell-v20`.
 
+- [x] **Graphics step 4, second half, data (September 18, 2026, no version change):** `LANDCOVER.cemeteries`
+  (175 polygons, kind `cemetery`, a separate array so the live park renderer skips them) and an additive `el` flag
+  on 1,681 electrified rail ways, both from new fetches that bring only the new data and merge by id — the existing
+  landcover, rail, bridge, water and terrain geometry is byte-identical. Invisible until the render phase
+  (cemetery ground, headstones, fences; catenary masts).
 - [x] **Graphics step 4, first half — parks from the existing landcover (v19i, September 18, 2026):** the
   `LANDCOVER` park / wood / open polygons drawn as draped ground (water-triangulation pattern, earcut cached per
   feature, typed arrays and normals assembled under the frame budget so commit only wraps them), park-edge fences
