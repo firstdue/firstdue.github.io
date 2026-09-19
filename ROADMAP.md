@@ -1,98 +1,69 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19k is public and matches the authoring build**, service-worker
-cache `local-shell-v22`.
+Planning snapshot: September 19, 2026. **v19m is public and matches the authoring build**,
+service-worker cache `local-shell-v24`.
 
-- [x] **Graphics step 5 — buses (v19k, September 19, 2026):** every 5th traffic-pool slot is a plain city bus
-  (two boxes, a blank blind, named class 0/1 streets only, slower, brief dwells at intervals, halved siren sway,
-  a longer collision ring); total vehicle count unchanged, no data. The release was held a day because the
-  laptop was throttling ~2× under sustained load and the gate failed on the published build too; on a fresh boot
-  the gate passed absolutely at all three spots. Next: the pumper (GLTFLoader), then hero landmarks.
+- [x] **Graphics step 2 — the pumper model (v19m, September 19, 2026):** the player's engine is now a
+  Blender-authored GLB, `assets/truck/pumper-v1.glb` (324 KB, 4,396 triangles, one material, no
+  textures), loaded once through the r147 GLTFLoader vendored for the highway kit. It replaces the
+  shaded bodywork only — the lightbar, beacons, warning lights, side markers, cargo net, contact
+  shadow and the ENGINE-number decals stay procedural at their existing coordinates, so the siren and
+  the engine-number texture are untouched; only the wheels rebind, to three axle objects. Any loader
+  or model failure leaves the complete procedural truck on screen. The truck fell from about 105 draw
+  calls to 21 for roughly 2k more triangles, and the gate passed absolutely at all three spots with
+  nothing raised. Next, by the owner's choice: ramp detail citywide, then Roosevelt Boulevard, which
+  is not in the baked road graph yet.
 
-- [x] **Graphics step 4, render half — cemeteries and catenary (v19j, September 19, 2026):** cemetery ground in a
-  greyer green through the park machinery at a coarser subdivision, stone walls where the edge is not a road,
-  headstone rows sampled from the cemetery's own triangles near the truck (cap 600, no text), buildings excluded
-  from cemetery grounds; catenary masts every 55 m with arms and a wire between masts on the electrified ways,
-  within 60% of the block radius, in the commit rail loop. Distance level of detail throughout; the interchange
-  generation reading did not move and no budget changed. This closes step 4; next is the pumper (GLTFLoader),
-  then buses and hero landmarks.
+- [x] **Blender highway slice published as v19l**, September 19, owner authorized;
+  commit `38a8112`, cache v23, verified live. Next is real-phone review, followed by
+  source-matched guardrail terminals. Local-only wording below records the preview.
 
-- [x] **Graphics step 4, second half, data (September 18, 2026, no version change):** `LANDCOVER.cemeteries`
-  (175 polygons, kind `cemetery`, a separate array so the live park renderer skips them) and an additive `el` flag
-  on 1,681 electrified rail ways, both from new fetches that bring only the new data and merge by id — the existing
-  landcover, rail, bridge, water and terrain geometry is byte-identical. Invisible until the render phase
-  (cemetery ground, headstones, fences; catenary masts).
-- [x] **Graphics step 4, first half — parks from the existing landcover (v19i, September 18, 2026):** the
-  `LANDCOVER` park / wood / open polygons drawn as draped ground (water-triangulation pattern, earcut cached per
-  feature, typed arrays and normals assembled under the frame budget so commit only wraps them), park-edge fences
-  off the roads, lawn trees sampled from the park triangles, distance level of detail for the City Ave
-  interchange. No data change. A gate stop on the interchange commit reading was diagnosed as first-touch
-  allocation in commit and removed before publishing; no budget raised. Second half — cemeteries and rail
-  electrification — needs a re-fetch and re-bake.
+- [x] **First Blender highway kit — local only, September 19:** four reusable modules,
+  async r147 GLB loader, instancing, fallback and offline validation. No graph changes,
+  release or identifier bump. See `notes/blender-highway-slice.md`.
+- [ ] Owner review on a real phone; then photo-matched guardrail terminal module.
 
-- [x] **Graphics step 6, typed buildings, apartments and commercial (v19h, September 18, 2026):** apartments
-  (4–7 floors, parapet, per-floor facade tiling), storefront rows (shop glass under upper floors, cornice) and
-  strip malls (long low box, parapet, parking pad) from `data/btype.js`, which now carries `S` for large-lot
-  commercial: road class cannot separate a storefront corridor from a strip (the corridors are all class 0), so
-  the parcels' building descriptions decide, and institutions are ignored. Industrial, park frontage and unknown
-  stay generic. Gate within budget, triangles and instances down again.
+The planning snapshot below predates this local slice; newest state is in START-HERE.
 
-- [x] **Graphics step 6, typed buildings, residential (v19g, September 18, 2026):** `data/btype.js`, a side table
-  keyed to the road graph by record and segment index with one typology code per segment (row, twin, detached,
-  apartments, commercial, industrial, park, unknown), baked from every OPA parcel's building code. Rows render
-  as instanced runs with a per-unit facade repeat and cornice, twins as gabled pairs with porches, detached with
-  a setback; the other codes keep the generic building until Phase C (apartments, commercial). Generated under
-  the frame budget; RB record and graph counts untouched; generic fallback if the table is absent. Gate within
-  budget with triangles and instances down at all three spots. The authoritative graphics handoff and source references live in the authoring
-folder's `START-HERE.md`, `notes/graphics-upgrade-plan.md` and `notes/city-lincoln-kelly-photo-pass.md`.
+Planning snapshot: September 13, 2026. **v18x is public and matches the local build** — commit
+`e779e2e`, cache `local-shell-v8`. v18x followed the v18t–v18w freeway work with localized,
+owner-photo-based City Avenue / Lincoln Drive / Kelly Drive scenery and Engine 35 facade detail.
+Read `START-HERE.md` and `notes/city-lincoln-kelly-photo-pass.md` before changing that corridor.
 
-- [x] **Graphics upgrade step 1 (v19f, September 18, 2026):** tiled W-beam guardrail panels on the freeway,
-  the viaduct and the City Ave / Lincoln Dr corridor from one shared piece, plus a mitred edge ribbon and
-  embankment on the interchange ramps, generated under the frame budget. Scenery only. Measured against the
-  new perf gate (`tests/perf-budget.browser.cjs` in the authoring folder): draw calls, heap and commit flat;
-  the interchange triangle budget was raised 295k → 330k for it, on the owner's decision. The multi-release
-  graphics plan (typed procedural buildings, GLTF models, buses, parks/cemeteries/rail, hero landmarks) is
-  in the authoring folder's `notes/graphics-upgrade-plan.md`.
-
-- [x] **v19c hydrant gate + citywide guide fix (September 13, 2026):** hydrant marking limited to granted
-  accounts after the owner kept pressing the button by accident, and the advisory guide held above the finished
-  pavement everywhere instead of inside a City Ave bbox (Manayunk went from 4 buried guide vertices to 0).
-
-- [x] **Highway phase 2c — recover the freeway exits the bake drops at the city limits (v19d, September 13,
-  2026).** Freeway ways now clip 250 m outside the city line instead of 60 m, as do streets carrying a ramp
-  junction. Eastbound I-76 offers exit 340A for Lincoln Drive / Kelly Drive and westbound offers exit 338 for
-  Belmont Avenue / Green Lane; both had been amputated. Re-baked the road data; the pinned graph counts moved
-  once, deliberately. Mileage was NOT extrapolated past the surveyed markers.
-
-- [x] ~~**Highway phase 2c — recover the freeway exits the bake drops at the city limits.**~~ Two owner reports with
-  one cause: no I-76 tie-in to Belmont Ave / Green Lane (exit 338 is in the fetched data but the corridor stops
-  250–600 m short), and no eastbound exit to Ridge / Kelly / Lincoln at all (the eastbound 340A gore was clipped
-  out, so eastbound offers only exit 340B across the whole corridor). Needs a re-bake; moves pinned graph counts.
-  See the authoring folder's `notes/i76-belmont-green-lane-tiein.md`.
-
-- [x] **v19b interchange ramp detail (September 13, 2026):** from a render study of Google Maps' Immersive
-  Navigation cues, of which the owner picked two — ramp lane paint (a yellow-left / white-right edge line; ramps
-  had no markings at all) and a paved shoulder with a graded embankment. The contact shadow and a global haze were
-  rejected. Scenery only, limited to the interchange; citywide ramp paint still needs its own look pass.
-
-- [x] **v19a corridor guide visibility (September 13, 2026):** from 23 owner in-game phone screenshots of the
-  City Ave / Lincoln Dr / Kelly Dr ramp — the advisory guide is measured against the rendered pavement so it stops
-  sinking under the coarse road triangles at the merge, false crosswalks at bridge and unnamed-ramp junctions are
-  gone, and the road pill names the ramp you are on instead of a street on the deck overhead.
-
-- [x] **v18z street-choice cards (September 13, 2026):** owner phone review of v18y — no card for the street you
-  are already on unless it genuinely forks, and the stack capped at two junctions ahead / four cards, with the
-  look-ahead distances untouched. Measured on screen: 6 cards at once down to 3-4, phantom own-street card gone.
-
-- [x] **v18y corridor pass 2 (September 13, 2026):** from the owner's 137 screenshots — level stone
-  viaduct arcade, Lincoln concrete barriers + median, painted gore chevrons, photo-sourced gantries
-  (Lincoln SB Ridge Ave North, Kelly NB Lincoln Drive, City Ave I-76 West / Lincoln Drive), corridor
-  street lighting. Scenery and signs only; graph and heights frozen. Owner phone review is next.
-
-- [x] **v18x City / Lincoln / Kelly graphics pass (September 13, 2026):** owner-photo-based, localized
-  scenery adds Lincoln's stone arch, Kelly's retaining wall, green City girders, guardrails and
-  wooded shoulders, plus Engine 35 facade detail. It leaves street geometry, the road graph,
-  navigation heights and routing unchanged. Owner phone review is next.
+- [x] **Graphics upgrade step 5 — buses — v19k (September 19, 2026, published):** two-box city buses in the
+  traffic pool, main streets only, blank blinds, dwells; count unchanged, no data. Held a day for a throttling
+  laptop; passed the gate absolutely on a fresh boot. Write-up `notes/step5-buses.md`.
+- [x] **Graphics upgrade step 4, render half — cemeteries + catenary — v19j (September 19, 2026, published):**
+  cemetery ground, walls and headstone rows from `LANDCOVER.cemeteries`; catenary masts, arms and wires on the
+  electrified ways; distance level of detail, no budget change, interchange generation unmoved. Step 4 closed.
+  Write-up `notes/step4c-cemetery-catenary.md`.
+- [x] **Graphics upgrade step 4, first half — parks — v19i (September 18, 2026, published):** the existing
+  `LANDCOVER` polygons drawn as draped ground with fences and lawn trees, generated under the frame budget with
+  distance level of detail; no data change. Cemeteries and rail electrification (re-fetch + re-bake) are the second
+  half. Write-up `notes/step4-parks.md`.
+- [x] **Graphics upgrade step 6, typed buildings (apartments + commercial) — v19h (September 18, 2026, published):**
+  apartments, storefront rows and strip malls from the table; `S` code from the parcels' own building forms (road
+  class cannot split the two); institutions ignored. Gate within budget, triangles down. Write-up
+  `notes/step6c-apartments-commercial.md`.
+- [x] **Graphics upgrade step 6, typed buildings (residential) — v19g (September 18, 2026, published):**
+  `data/btype.js` side table from every OPA parcel's building code (`fetch_opa_buildings.js` +
+  `bake_building_types.js`, parallel-street guard, reach 40 m); rows as tiled instanced runs with cornices, twins
+  as gabled pairs with porches, detached with a setback; other codes generic until Phase C. Gate within budget,
+  triangles and instances down. Write-up `notes/step6b-typed-buildings.md`.
+- [x] **Graphics upgrade step 1 — v19f (September 18, 2026, published):** tiled W-beam guardrail panels on the
+  freeway, the viaduct and the City Ave / Lincoln Dr corridor from one shared piece; mitred edge ribbon and
+  embankment on the interchange ramps, generated under the frame budget. Scenery only; graph, drivable quads,
+  `navRoadY` and markings untouched. First release measured against the perf gate
+  (`tests/perf-budget.browser.cjs`): calls, heap and commit flat; interchange triangle budget raised 295k → 330k
+  on the owner's decision. The multi-release plan, decisions and known issues: `notes/graphics-upgrade-plan.md`;
+  the step write-up: `notes/step1-guardrail-ribbon.md`.
+- [x] **v18x City / Lincoln / Kelly graphics pass (September 13, 2026):** 137 owner screenshots
+  inform a localized Lincoln stone arch, Kelly wall, green City girders, guardrails and wooded
+  shoulders. `CORRIDOR_PHOTO` is render-only: graph, `navRoadY`, `RAMP_GRADE`, signs and roadway
+  geometry remain unchanged. Browser checks confirm 6.44m sampled arch clearance and no new rail/
+  wall/guardrail piece on pavement; the existing graph suite stays 50 pass / 1 known skipped.
+  Remaining work after owner phone review: embankments, additional masonry arches, pavement hatch/
+  arrows, remaining signs, and the coarse Lincoln road/sidewalk joins.
 
 - [x] **US 1 / I-76 highway support, phase 1 (September 11, 2026 — authored here, NOT published,
   BUILD not bumped).** The Schuylkill Expressway and the Roosevelt Expressway did not exist in the
@@ -214,6 +185,15 @@ unless the owner explicitly changes them.
 
 - [x] v17j local Engine 35 sample: facades, street alignment, flat roofs, palette and road contrast.
 - [x] Offline mobile/desktop inspection, clearance/rebuild checks and gameplay regression checks.
+- [x] v18z street-choice cards (September 13, 2026, published, `0d7e852`): from the owner's phone review of v18y —
+      no card for the street you are already on unless it genuinely forks, and the preview capped at two junctions
+      ahead / four cards. The look-ahead DISTANCES stay as they are: capping depth is what removes clutter without
+      bringing back "streets don't come up until I'm almost past them". On screen at once: 6 → 3 (East Falls),
+      6 → 4 (Manayunk); the phantom own-street card is gone. `tests/street-cards.browser.cjs` measures both builds.
+- [x] v18y corridor pass 2 (September 13, 2026, published, `d56ff54`): from the owner's 137 City Ave / Lincoln Dr /
+      Kelly Dr screenshots — level stone viaduct arcade, Lincoln concrete barriers + median, painted gore chevrons,
+      photo-sourced gantries (Lincoln SB Ridge Ave North, Kelly NB Lincoln Drive, City Ave I-76 West / Lincoln
+      Drive), corridor street lighting. Scenery and signs only; graph and heights frozen. Awaits owner phone review.
 - [ ] Review sample and refine landscaping, lighting/depth and building variety.
 - [ ] Evaluate on a real phone before extending citywide.
 
