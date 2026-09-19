@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v27';  // v19p: US 1 flows through the I-76 interchange; ramp cards captioned from the baked OSM tags.
+const CACHE = 'local-shell-v28';  // v19q: Roosevelt Boulevard and 39 other trunk corridors enter the road table; the US 1 freeway gap is closed.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
