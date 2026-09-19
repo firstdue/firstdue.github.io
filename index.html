@@ -812,7 +812,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19n";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19o";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3966,7 +3966,7 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
       if(Math.hypot(o.ax-q[0],o.az-q[1])<3||Math.hypot(o.bx-q[0],o.bz-q[1])<3) continue;             // shares an endpoint — the first pass already counted it
       const ohw=segHalf(o);
       if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; if(!o.name)e.ramp=true; break; } } } }
-  return {cx,cz,list,ends,ek,detail:STREET_DETAIL.enabled&&DRIVE.stationId===STREET_DETAIL.companyId,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
+  return {cx,cz,list,ends,ek,detail:STREET_DETAIL.enabled&&DRIVE.stationId===STREET_DETAIL.companyId,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[],term:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
 }
 // ===== 🏘️ TYPED BUILDINGS — graphics step 6B (v19g), residential codes only =====
 // BTYPE (data/btype.js) gives one typology code per road-graph segment, baked from every OPA parcel's building code.
@@ -4273,7 +4273,7 @@ function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCit
    Scenery only: the road graph, navRoadY, RAMP_GRADE, drivable widths and every marking on a named street are
    untouched. Limited to the interchange bbox — citywide ramp paint would touch every unnamed cls-4 connector in
    Philadelphia and needs its own look pass first.                                                              */
-const RAMP_DETAIL={paint:true,shoulder:true,ribbon:true,citywide:true,bbox:[-1340,-620,-60,420],R:520,farR:340,
+const RAMP_DETAIL={paint:true,shoulder:true,ribbon:true,citywide:true,bbox:[-1340,-620,-60,420],R:520,farR:340,goreCap:8,
   shoulderW:5.5,paveW:1.1,edgeOff:0.75,ribbonIn:0.3,ribbonOut:1.1,
   src:'Owner-approved render study Sep 13 2026; edge-line colours from firetruck pictures/Lincoln Dr and City ave (2026-09-12-20-43-13-76, 2026-09-10-15-50-04-25)'};
 // A RAMP is an unnamed link carriageway: cls 4 covers BOTH kinds, trunk_link (City Avenue's ramps, no `hw`)
@@ -4307,7 +4307,7 @@ function rampRibbonStep(J,t0,budgetMs){
       if(!pts.some(p=>(p[0]-J.cx)**2+(p[1]-J.cz)**2<R2)) continue;
       if(!RAMP_DETAIL.citywide&&!pts.some(p=>p[0]>b[0]&&p[0]<b[2]&&p[1]>b[1]&&p[1]<b[3])) continue;
       chains.push({pts,hw:hwk||0,ln:ln||0}); }                                               // hw/ln ride along: segHalf gives a freeway ramp its own width, not the cls-4 default
-    J.ribbon={chains,i:0,out:[],earth:[]}; J.gsi=guideSurfaceIndex(J.road.guideSurfaces); }
+    J.ribbon={chains,i:0,out:[],earth:[],gore:[]}; J.gsi=guideSurfaceIndex(J.road.guideSurfaces); }
   // The ribbon works at the scale of a kerb line, so it does not need the full 760 m scenery radius: at 520 m
   // it is still guaranteed for 140 m around the truck (the rebuild threshold is 380 m), and the piece count --
   // which is what the phase costs, one segNear and six blocking probes each -- drops to less than half.
@@ -4338,6 +4338,7 @@ function rampRibbonStep(J,t0,budgetMs){
     return e; };
   while(job.i<job.chains.length){ if(performance.now()-t0>budgetMs) return false;
     const chain=job.chains[job.i++], pts=chain.pts;
+    if(chain.hw===2&&job.gore.length<RAMP_DETAIL.goreCap) rampGoreNose(J,chain,job.gore,R2);
     const own=new Set(); for(let i=1;i<pts.length;i++) own.add(pts[i-1][0]+','+pts[i-1][1]+'>'+pts[i][0]+','+pts[i][1]);
     const n=pts.length, dir=[], mit=[];                                                     // per-vertex direction, then the mitre normal (average of the two edge normals, stretched to keep the strip width; capped at a 60° corner)
     for(let i=0;i<n-1;i++){ const dx=pts[i+1][0]-pts[i][0], dz=pts[i+1][1]-pts[i][1], L=Math.hypot(dx,dz)||1; dir.push([dx/L,dz/L]); }
@@ -4379,6 +4380,56 @@ function rampRibbonStep(J,t0,budgetMs){
           if(Math.abs(yO0-g0)>4||Math.abs(yO1-g1)>4) continue;                               // up on the deck: the parapet's job, not an embankment's
           earth.push(O0[0],yO0-0.01,O0[1], G0[0],g0,G0[1], O1[0],yO1-0.01,O1[1],  G0[0],g0,G0[1], G1[0],g1,G1[1], O1[0],yO1-0.01,O1[1]); } } } }
   return true; }
+// 🛢️ GORE NOSE. Where a freeway ramp leaves or joins a mainline the two pavements pull apart from a
+// point; that point is the gore nose, and what stands in it is a crash cushion. It is FOUND from the
+// baked geometry, never placed by hand: take each end of a ramp chain, find the mainline carriageway
+// running alongside it, then walk outward until the gap between the two pavement edges is wide enough
+// for the array's nose barrel, and check it is still wide enough a full array-length later. Entrance and
+// exit need no distinction -- an array widens away from its nose either way, and the walk direction is
+// always the widening one. Every corner of the array is probed against nearRoadEdge before it is kept,
+// the same rule the ramp ribbon follows; a crash cushion standing on a live lane would be worse than none.
+function rampGoreNose(J,chain,out,R2){
+  const pts=chain.pts, n=pts.length, hwR=segHalf({hw:chain.hw,ln:chain.ln,cls:4});
+  for(const endI of [0,n-1]){
+    const E=pts[endI], into=endI?-1:1;
+    if((E[0]-J.cx)**2+(E[1]-J.cz)**2>R2) continue;
+    let main=null,md=1e9;
+    for(const o of segNear(E[0],E[1])){ if(o.hw!==1) continue; const d=closestSeg(E[0],E[1],o).d; if(d<md){md=d;main=o;} }
+    if(!main||md>60) continue;
+    const mh=segHalf(main);
+    const along=u=>{ let rem=u,i=endI;                                            // u metres from this end, into the chain
+      for(;;){ const j=i+into; if(j<0||j>=n) return null;
+        const dx=pts[j][0]-pts[i][0], dz=pts[j][1]-pts[i][1], L=Math.hypot(dx,dz)||1;
+        if(rem<=L) return [pts[i][0]+dx*rem/L, pts[i][1]+dz*rem/L, dx/L, dz/L];
+        rem-=L; i=j; } };
+    const gapAt=P=>closestSeg(P[0],P[1],main).d-mh-hwR;                           // pavement edge to pavement edge
+    // The array is 4.2 m long and widens from a 0.42 m nose barrel to 1.65 m each side, so it is not
+    // enough for the gore to be open AT the nose -- it has to stay open for the array's whole length.
+    // Three stations, each with margin, and the array is then centred on the MID station's bisector,
+    // which keeps both ends inside a gore that is still widening under a rigid object.
+    let nose=null,noseU=0,gapMid=0;
+    for(let u=0;u<=70;u+=2){ const P=along(u); if(!P) break; if(gapAt(P)<2.2) continue;
+      const mid=along(u+2.4), tail=along(u+4.3); if(!mid||!tail) break;
+      const gm=gapAt(mid); if(gm<3.4||gapAt(tail)<4.4) continue;
+      nose=P; noseU=u; gapMid=gm; break; }
+    if(!nose) continue;
+    const c=closestSeg(nose[0],nose[1],main), dd=Math.hypot(c.cx-nose[0],c.cz-nose[1])||1;
+    const lx=(c.cx-nose[0])/dd, lz=(c.cz-nose[1])/dd, off=hwR+gapMid/2;
+    const x=nose[0]+lx*off, z=nose[1]+lz*off, ang=Math.atan2(nose[2],nose[3]);
+    const px=Math.sin(ang), pz=Math.cos(ang);                                     // local +Z in world, local +X is (cos,-sin)
+    // nearRoadEdge is deliberately NOT the test. A gore is paved and a crash cushion stands ON that
+    // pavement; every candidate probed at -9 m against it, which is the model telling the truth about
+    // overlapping carriageway quads, not a fault. The gap test above is what keeps the array out of the
+    // two travelled roadways; this probe only keeps it off a NAMED street, which a freeway gore has none of.
+    let clear=true;
+    for(const [du,dv] of [[0.2,0],[2.4,0.9],[2.4,-0.9],[4.2,1.7],[4.2,-1.7],[4.2,0]]){
+      const qx=x+px*du+pz*dv, qz=z+pz*du-px*dv;
+      for(const o of segNear(qx,qz)){ if(!o.name) continue; if(closestSeg(qx,qz,o).d<segHalf(o)-0.2){ clear=false; break; } }
+      if(!clear) break; }
+    if(!clear) continue;
+    out.push({x,y:navRoadY(x,z,null)+0.2,z,ang,pitch:0});
+    if(out.length>=RAMP_DETAIL.goreCap) return;
+  } }
 function rampRibbonBuild(J){ if(!J.ribbon) return;                                          // commit: the finished arrays become meshes, nothing is generated here
   for(const [arr,color,name] of [[J.ribbon.out,0x7d858f,'ramp-ribbon'],[J.ribbon.earth,0xb9bd9b,'ramp-embankment']]){ if(!arr.length) continue;
     const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(arr,3)); g.computeVertexNormals();
@@ -4419,7 +4470,7 @@ function rampDetailBuild(J){
 // Scenery coordinates follow the baked roads/rail. Heights and member sizes are visual estimates.
 // BLENDER_HIGHWAY_BEGIN — local visual kit, independent of graph, driving and camera.
 // Dimensions/axes/placement and the region bounds are documented in notes/blender-highway-slice.md.
-const HIGHWAY_KIT={enabled:true,url:'assets/highway/corridor-kit-v1.glb',status:'idle',templates:null,
+const HIGHWAY_KIT={enabled:true,url:'assets/highway/corridor-kit-v2.glb',status:'idle',templates:null,
   bbox:[-1500,-620,-800,500],railRadius:300,error:null,loads:0};
 function highwayKitInside(p){const b=HIGHWAY_KIT.bbox;return p.x>=b[0]&&p.x<=b[1]&&p.z>=b[2]&&p.z<=b[3];}
 function highwayKitLoad(){
@@ -4433,9 +4484,11 @@ function highwayKitLoad(){
     try{
       gltf.scene.updateMatrixWorld(true);
       gltf.scene.traverse(o=>{if(!o.isMesh)return;geos.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])mats.add(m);
-        if(['ConcreteBarrier','RailPanel','RailEndPost','RetainingWall'].includes(o.name)){
+        if(['ConcreteBarrier','RailPanel','RailEndPost','RetainingWall','RailTerminal','GoreAttenuator'].includes(o.name)){
           const g=o.geometry.clone();g.applyMatrix4(o.matrixWorld);g.computeBoundingBox();g.computeBoundingSphere();templates[o.name]=g;
         }});
+      // The four v1 modules are required; RailTerminal and GoreAttenuator (v2) are OPTIONAL on purpose --
+      // a stale cached v1 then still gives the corridor its barriers instead of failing the whole kit.
       for(const key of ['ConcreteBarrier','RailPanel','RailEndPost','RetainingWall'])if(!templates[key]?.attributes.position)throw new Error('Missing kit mesh: '+key);
       if(HIGHWAY_KIT.status!=='loading'){Object.values(templates).forEach(g=>g.dispose());return;}
       HIGHWAY_KIT.templates=templates;HIGHWAY_KIT.status='ready';
@@ -4684,13 +4737,20 @@ function hwyWBeamGeo(){ const TL=HWS.tile, P=[], N=[]; const quad=(a,b,c,d)=>{ P
 // joints line up across the 10m stations of one segment). flip = the run's left-hand side: the tile is turned
 // 180° so its ridges still face the roadway, which means its post sits at the FAR end of each panel — so the
 // unposted end of a run is tB on the right and tA on the left, and firstRun/lastRun say when to plant that post.
-function hwyWBeamTiles(guard,post,A,B,tA,tB,flip,firstRun,lastRun){ const TL=HWS.tile, L=tB-tA; if(L<0.4) return;
+function hwyWBeamTiles(guard,post,A,B,tA,tB,flip,firstRun,lastRun,TERM){ const TL=HWS.tile, L=tB-tA; if(L<0.4) return;
   const dx=B.x-A.x, dz=B.z-A.z, ang=Math.atan2(dx,dz)+(flip?Math.PI:0), pitch=-Math.atan2(B.y-A.y,Math.hypot(dx,dz)||1)*(flip?-1:1);
   const at=u=>{ const f=(u-tA)/L; return {x:A.x+dx*f,y:A.y+(B.y-A.y)*f+HWS.railY,z:A.z+dz*f}; };
   for(let u=tA;u<tB-0.05;){ const u1=Math.min(tB,(Math.floor(u/TL+1e-6)+1)*TL), P=at(flip?u1:u);
     guard.push({x:P.x,y:P.y,z:P.z,w:1,h:1,l:(u1-u)/TL,ang,pitch}); u=u1; }
   const endU=flip?(firstRun?tA:null):(lastRun?tB:null);
-  if(endU!==null){ const P=at(endU); post.push({x:P.x,y:P.y-0.35,z:P.z,w:0.14,h:1.1,l:0.15,ang,pitch:0}); } }
+  if(endU!==null){ const P=at(endU); post.push({x:P.x,y:P.y-0.35,z:P.z,w:0.14,h:1.1,l:0.15,ang,pitch:0});
+    // 🔩 END TREATMENT (v19o). The kit's RailTerminal runs from its own Z 0 (the connection) to Z 1.32
+    // (the impact head), so `ang` -- which already points local +Z along the run, flipped and all -- stands
+    // it just PAST the end, pointing away. Nothing overlaps the panel that is already there. It is placed
+    // only where the tip clears every roadway: the rail can end at a junction gap, and 1.3 m more of it
+    // must not reach onto pavement. Never scaled; a crash terminal is a fixed real-world object.
+    if(TERM){ const tx=P.x+Math.sin(ang)*1.36, tz=P.z+Math.cos(ang)*1.36;
+      if(nearRoadEdge(tx,tz)>0.3) TERM.push({x:P.x,y:P.y,z:P.z,w:1,h:1,l:1,ang,pitch:0}); } } }
 function hwyTwinAt(s,px,pz,ux,uz){ let best=null;
   for(const o of segNear(px,pz)){ if(o===s||o.hw!==1||o.name!==s.name) continue; const ox=o.bx-o.ax,oz=o.bz-o.az,ol=Math.hypot(ox,oz)||1; if((ox*ux+oz*uz)/ol>-0.85) continue;
     const L=ox*ox+oz*oz||1,t=((px-o.ax)*ox+(pz-o.az)*oz)/L; if(t<0.02||t>0.98) continue;
@@ -4723,7 +4783,7 @@ function hwyStructure(J,s,dx,dz,l,hw,jA,eA,jB,eB,EV){ const out=J.hws; if(!out||
   for(let k=0;k<N;k++){ const A=st[k],B=st[k+1];
     if(A.own&&B.own&&A.med&&B.med&&A.med.kind===B.med.kind&&!(endA&&k===0)&&!(endB&&k===N-1)){
       if(A.med.kind==='bar') piece(out.med,A.med,B.med,A.med.y,B.med.y,0.6,0.9,0.45); else piece(out.grass,A.med,B.med,A.med.y,B.med.y,Math.min(A.med.w,B.med.w),0.14,0.07); }
-    for(const side of [-1,1]){ const ga=A.guard[side],gb=B.guard[side]; if(ga&&gb) hwyWBeamTiles(out.guard,out.post,ga,gb,A.t,B.t,side<0,k===0||!st[k-1].guard[side],k===N-1||!st[k+1].guard[side]);   // 🛡️ tiled W-beam panels (v19f); the exposed-edge decision above is unchanged
+    for(const side of [-1,1]){ const ga=A.guard[side],gb=B.guard[side]; if(ga&&gb) hwyWBeamTiles(out.guard,out.post,ga,gb,A.t,B.t,side<0,k===0||!st[k-1].guard[side],k===N-1||!st[k+1].guard[side],out.term);   // 🛡️ tiled W-beam panels (v19f); the exposed-edge decision above is unchanged
       const wa=A.wall[side],wb=B.wall[side]; if(wa&&wb) piece(out.wall,wa.p,wb.p,wa.p.y-0.5+wa.h/2,wb.p.y-0.5+wb.h/2,0.45,Math.max(wa.h,wb.h),0); } } }
 // 🌉 Bridge supports (phase 2a): piers every ~28m along a span where the deck stands clear of the ground and
 // no road runs beneath the pier's footprint (the span's own roadway excepted), and an abutment where each end
@@ -4968,6 +5028,19 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     if(mp2.length){ const gm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xc8dcb0}),mp2.length);   // 🌿 grass median between divided-road carriageways
       mp2.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
       gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
+  // 🧰 v2 KIT MODULES (v19o): RailTerminal and GoreAttenuator are fixed real-world objects, so they are
+  // instanced at 1:1 and never scaled, and they are CITYWIDE -- HIGHWAY_KIT.bbox gates the modules that
+  // REPLACE existing corridor scenery, not these, which add where nothing stood before. There is no
+  // procedural fallback by design: without the kit they simply do not appear, and the road is exactly
+  // what it was. Both carry their own vertex colours, so the material is plain white.
+  if(HIGHWAY_KIT.status==='ready'&&HIGHWAY_KIT.templates)
+    for(const [list,kind,name] of [[J.hws&&J.hws.term,'RailTerminal','hwy-terminal'],
+                                   [J.ribbon&&J.ribbon.gore,'GoreAttenuator','ramp-attenuator']]){
+      const tpl=list&&list.length?HIGHWAY_KIT.templates[kind]:null; if(!tpl) continue;
+      const geo=tpl.clone(), m=new THREE.InstancedMesh(geo,new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:!!geo.attributes.color}),list.length);
+      m.name=name; m.userData.highwayKit=kind;
+      list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch||0,p.ang,0,'YXZ');dummy.scale.set(1,1,1);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);});
+      m.instanceMatrix.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
   if(J.hws) for(const [list,color,name,wbeam] of [[J.hws.med,0xb9b6ad,'hwy-median'],[J.hws.grass,0xc8dcb0,'hwy-median-grass'],[J.hws.guard.concat(vGuard),0xb6bcc0,'hwy-guard',true],[J.hws.post.concat(vPost),0x6f7477,'hwy-post'],[J.hws.wall,0x8f8b82,'hwy-wall']]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail (W-beam tiles, v19f) / end posts / retaining wall
     if(wbeam&&highwayKitMesh(list,color,name,'RailPanel',J,dummy))continue;
     const hb=new THREE.InstancedMesh(wbeam?hwyWBeamGeo():new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color,side:wbeam?THREE.DoubleSide:THREE.FrontSide}),list.length); hb.name=name;
