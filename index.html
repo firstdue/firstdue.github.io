@@ -812,7 +812,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19l";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19m";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2811,6 +2811,44 @@ truckG.scale.setScalar(1.25);                                                  /
 { const sh=new THREE.Mesh(new THREE.CircleGeometry(1.7,18), new THREE.MeshBasicMaterial({color:0x2a2f38,transparent:true,opacity:0.20,depthWrite:false}));   // contact shadow just larger than the wheelbase (4.6 read as a huge grey pool around the truck)
   sh.rotation.x=-Math.PI/2; sh.position.y=0.30; sh.scale.set(1,2.5,1); sh.renderOrder=4; truckG.add(sh); }
 scene.add(truckG);
+// PUMPER_MODEL_BEGIN -- the Blender pumper as an ASYNC UPGRADE over the procedural truck above.
+// Visual only: the envelope, the 1.25 group scale, the camera, collision, routing and the HUD are
+// untouched, and a missing loader / missing / invalid / slow GLB leaves the procedural truck exactly
+// as it is. The MeshBasicMaterial overlays already on truckG -- lightbar, beacons, warning lights,
+// side markers, cargo net, contact shadow and the ENGINE-number decals -- deliberately STAY
+// procedural and keep their coordinates; tools/blender-pumper.py models the bodywork AROUND them, so
+// the siren animation, setTruckEngine and the headlight cones added further down keep working with no
+// rebind at all. Only the wheels rebind: the model carries one object per axle whose origin sits ON
+// the axle line, so updateTruckVisual goes on spinning them with rotation.x. notes/step2-pumper-gltf.md.
+const PUMPER={enabled:true,url:'assets/truck/pumper-v1.glb',status:'idle',error:null,loads:0,timeout:12000,
+  root:null,axles:null,parts:truckG.children.slice(),procWheels:wheels.slice()};   // captured BEFORE headlights/spots are added below
+function pumperShow(on){ if(!PUMPER.root) return false;
+  PUMPER.root.visible=!!on;
+  for(const c of PUMPER.parts) if(!c.material||!c.material.isMeshBasicMaterial) c.visible=!on;   // hide the shaded bodywork only
+  wheels.length=0; for(const w of (on?PUMPER.axles:PUMPER.procWheels)) wheels.push(w);
+  return true; }
+function pumperLoad(){
+  if(!PUMPER.enabled||PUMPER.status!=='idle') return;
+  if(typeof THREE.GLTFLoader!=='function'){ PUMPER.status='failed'; PUMPER.error='Local GLTF loader unavailable'; return; }
+  PUMPER.status='loading'; PUMPER.loads++;
+  const fail=e=>{ if(PUMPER.status!=='loading') return; PUMPER.status='failed'; PUMPER.error=String((e&&e.message)||e||'GLB load failed'); };
+  const drop=o=>o.traverse(n=>{ if(!n.isMesh) return; n.geometry.dispose(); for(const m of (Array.isArray(n.material)?n.material:[n.material])) if(m) m.dispose(); });
+  const timer=setTimeout(()=>fail('GLB load timed out; procedural pumper retained'),PUMPER.timeout);
+  try{ new THREE.GLTFLoader().load(PUMPER.url,gltf=>{ clearTimeout(timer); const root=gltf.scene;
+    try{
+      if(PUMPER.status!=='loading'){ drop(root); return; }                                       // a failure already ran: do not adopt a late model
+      const axles=['Axle_Front','Axle_Mid','Axle_Rear'].map(n=>root.getObjectByName(n)), meshes=[];
+      if(!root.getObjectByName('Body')||axles.some(a=>!a)) throw new Error('Pumper GLB is missing Body or an axle');
+      root.traverse(o=>{ if(o.isMesh) meshes.push(o); });
+      for(const o of meshes) if(!o.geometry.attributes.color) throw new Error('Pumper mesh without vertex colours: '+o.name);
+      const skin=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true});              // one material: the whole bodywork is four draw calls, not ~70
+      for(const o of meshes){ for(const m of (Array.isArray(o.material)?o.material:[o.material])) if(m) m.dispose(); o.material=skin; }
+      for(const a of axles) a.rotation.order='YXZ';
+      PUMPER.root=root; PUMPER.axles=axles; truckG.add(root); pumperShow(true); PUMPER.status='ready';
+    }catch(e){ drop(root); fail(e); }
+  },undefined,e=>{ clearTimeout(timer); fail(e); }); }catch(e){ clearTimeout(timer); fail(e); }
+}
+// PUMPER_MODEL_END
 // GPS route line (blue, follows real streets; visible in BOTH camera views)
 const routeMesh=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2b7cff,transparent:true,opacity:0.92,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
 routeMesh.frustumCulled=false; routeMesh.visible=false; routeMesh.renderOrder=2; scene.add(routeMesh);
@@ -7455,6 +7493,7 @@ function startShift(st){ closeHomeMap(); homeEl.classList.remove('show'); docume
   // including nearby company switches that never cross the normal 380 m rebuild threshold.
   if(FLATCITY.built) FLATCITY.rebuild(truck.x,truck.z);
   startIntro(st);           // park at the firehouse curb, nose to the street; bay doors roll up + roll out, then LEFT/RIGHT pulls out
+  pumperLoad();                                                              // one-time async model fetch; the procedural truck stays on screen until it lands
   setTruckEngine(engNum(st.id));
   state.running=true; state.timeLeft=CONFIG.timer.start;
   radio('Dispatch to '+st.companies[0]+', '+st.address+': shift started. Stand by…'); setTimeout(newDispatch,900); }

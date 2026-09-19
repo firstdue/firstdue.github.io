@@ -5,5 +5,6 @@
 data/*.js -diff linguist-generated
 vendor/*.js -diff linguist-generated
 assets/highway/*.glb binary -diff
+assets/truck/*.glb binary -diff
 tools/*.blend binary -diff
 assets/highway/GLTFLoader.147.js -diff linguist-vendored
