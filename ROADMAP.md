@@ -1,6 +1,17 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19q is public**, service-worker cache `local-shell-v28`.
+Planning snapshot: September 19, 2026. **v19r is public**, service-worker cache `local-shell-v29`.
+
+- [x] **Free drive, and not being sent back to quarters (v19r, September 19, 2026):** losing a box or
+  finishing one used to march you back to the firehouse whether you wanted to go or not. Both cards
+  now offer **KEEP DRIVING** — stay where you are, in service, and take the next box from there —
+  alongside the old return to quarters, which is unchanged and still what RETRY THIS BOX does.
+  Answering from the road is a handicap rather than an advantage: rival companies still leave their
+  own quarters and the box still assigns your due slot from the fire, so it simply matches a company
+  already out on the street. And there is now a **FREE DRIVE** shift, offered from either firehouse
+  picker: no rival companies, no BEATEN IN, and no call until you ask for one. It is kept entirely
+  out of Career — nothing in a free drive touches your record, rank, badges or the leaderboard — the
+  same rule the training modes follow.
 
 - [x] **Roosevelt Boulevard and the trunk network (v19q, September 19, 2026):** twelve lanes of US 1
   through the Northeast simply did not exist in the game, and nor did Penrose, Girard, Cheltenham,
