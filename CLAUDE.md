@@ -135,7 +135,14 @@ index.html to DO-NOT-PUBLISH.html and publish that".
 
 ## Current state
 
-- **The build is v19j (September 19, 2026), cemeteries + catenary.** Cemetery ground / walls / headstones come
+- **The build is v19k (September 19, 2026), buses.** `mkCar(bus)`: every 5th pool slot (`i%5===4`) is a bus —
+  two boxes so its draw calls equal a car's (a third box tipped the East Falls calls budget), a window band whose
+  dark front face is the BLANK destination blind, named cls 0/1 streets only, slower; `updateTraffic` dwells it
+  (`stopIn`/`pause`), halves its siren sway and uses `c.r` for the collision ring. Total vehicle count unchanged.
+  **Perf gate lesson:** never run two browser suites at once, and when every CPU reading doubles on unchanged
+  code, run the gate on the published backup (`GAME_PAGE=`) — a throttling laptop failed it too; a full reboot
+  fixed it. Cache `local-shell-v22`.
+- **v19j (September 19, 2026), cemeteries + catenary.** Cemetery ground / walls / headstones come
   from `LANDCOVER.cemeteries` through the park machinery (`parkGroundStep`, typed arrays, budgeted phase; stones
   from triangle lattices inside 0.35 R, cap 600); `cemAt` keeps buildings off the graves. Catenary masts, arms
   and wires ride commit's existing rail loop on `el:'c'` ways within 0.6 R (`rail-mast`, `rail-mast-arm`,

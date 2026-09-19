@@ -1,7 +1,13 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19j is public and matches the authoring build**, service-worker
-cache `local-shell-v21`.
+Planning snapshot: September 19, 2026. **v19k is public and matches the authoring build**, service-worker
+cache `local-shell-v22`.
+
+- [x] **Graphics step 5 — buses (v19k, September 19, 2026):** every 5th traffic-pool slot is a plain city bus
+  (two boxes, a blank blind, named class 0/1 streets only, slower, brief dwells at intervals, halved siren sway,
+  a longer collision ring); total vehicle count unchanged, no data. The release was held a day because the
+  laptop was throttling ~2× under sustained load and the gate failed on the published build too; on a fresh boot
+  the gate passed absolutely at all three spots. Next: the pumper (GLTFLoader), then hero landmarks.
 
 - [x] **Graphics step 4, render half — cemeteries and catenary (v19j, September 19, 2026):** cemetery ground in a
   greyer green through the park machinery at a coarser subdivision, stone walls where the edge is not a road,
