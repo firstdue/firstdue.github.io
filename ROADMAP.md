@@ -1,7 +1,27 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19m is public and matches the authoring build**,
-service-worker cache `local-shell-v24`.
+Planning snapshot: September 19, 2026. **v19o is public and matches the authoring build**,
+service-worker cache `local-shell-v26`.
+
+- [x] **Blender ramp-nose kit (v19o, September 19, 2026):** the corridor kit goes from four modules
+  to six. `GoreAttenuator` is an eight-barrel sand array — the crash cushion that actually stands at
+  a gore nose — and `RailTerminal` is the shaped, energy-absorbing end treatment on every freeway
+  guardrail run, in place of a capped post. Both are authored in metres and instanced at 1:1 rather
+  than stretched to fit, and both are placed from the baked geometry: terminals reuse the station
+  where the guardrail already ends, and gore noses are found by walking out from a ramp end until the
+  gap between the two pavement edges is wide enough to hold the array along its whole length.
+  `corridor-kit-v1.glb` was deleted in the same commit that added v2, because the service worker
+  serves that path cache-first. The gate passed at all three spots with nothing raised, and the City
+  Avenue interchange is now the binding constraint at 325,757 of 330,000 triangles.
+
+- [x] **Ramp edge detail citywide (v19n, September 19, 2026):** the yellow-left / white-right edge
+  lines, paved shoulder, graded embankment and mitred edge ribbon had been fenced into the City
+  Avenue interchange by a bounding box, and separately excluded every freeway (motorway_link) ramp,
+  so I-76's and the Roosevelt Expressway's ramps were bare quads with a ragged edge. Both fences are
+  gone. Distance level of detail keeps it affordable and never removes anything as you approach; when
+  the first cut blew the interchange budget the fix was to make the phase faster, not the feature
+  smaller. Rendering only — the road graph, driving and every marking on a named street are
+  untouched.
 
 - [x] **Graphics step 2 — the pumper model (v19m, September 19, 2026):** the player's engine is now a
   Blender-authored GLB, `assets/truck/pumper-v1.glb` (324 KB, 4,396 triangles, one material, no
