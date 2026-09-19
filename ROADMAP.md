@@ -1,7 +1,15 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19o is public and matches the authoring build**,
-service-worker cache `local-shell-v26`.
+Planning snapshot: September 19, 2026. **v19o is public**, service-worker cache `local-shell-v26`,
+with a later invisible re-bake of the road table on top of it.
+
+- [x] **Road table carries route designations (data only, September 19, 2026):** freeway and ramp
+  records now keep the OSM `ref`, `destination` and `destination:ref` tags verbatim. Nothing reads
+  them yet. They exist because driving US 1 South into the I-76 interchange in East Falls stops the
+  truck dead: the Roosevelt Expressway genuinely ends there, and US 1 continues onto an unnamed ramp
+  that the drive layer could not recognise as the same road. An invisible release — `data/rb.js`
+  alone, no game change, no cache bump — verified by re-running the bake unchanged first and proving
+  every existing field byte-identical.
 
 - [x] **Blender ramp-nose kit (v19o, September 19, 2026):** the corridor kit goes from four modules
   to six. `GoreAttenuator` is an eight-barrel sand array — the crash cushion that actually stands at
