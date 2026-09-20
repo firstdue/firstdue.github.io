@@ -436,6 +436,14 @@
   #radio .tag { color:#aaffc0; font-weight:700; } #radio .cur { animation:blink .8s steps(1) infinite; }
   @keyframes blink { 50% { opacity:0; } }
   body.touch #radio { bottom:auto; top:calc(max(8px,env(safe-area-inset-top)) + 84px); }   /* below the responding strip */
+  /* 📻 COLLAPSED RADIO. On a patrol the banner has nothing urgent to say and it sits over the road for
+     the whole shift. After a few seconds it folds into a pill under the corner buttons; a tap opens it
+     again. A LIVE BOX NEVER COLLAPSES — rdCollapse() refuses while state.target is set. */
+  #radio.mini { width:auto; min-height:0; left:auto; right:max(8px,env(safe-area-inset-right)); transform:none;
+    bottom:auto; top:calc(max(8px,env(safe-area-inset-top)) + 44px); padding:5px 10px; border-radius:999px;
+    font-size:clamp(10px,2.3vw,12px); pointer-events:auto; cursor:pointer; white-space:nowrap; }
+  /* the pill says WHERE the banner went and that it can be tapped; half a truncated sentence is noise */
+  #radio.mini .cur, #radio.mini #radioTxt { display:none; }
   #popup { top:24%; left:50%; transform:translateX(-50%); font-size:clamp(24px,6vw,42px); font-weight:900; white-space:nowrap;
     color:#ffe14d; font-family:"Arial Black",sans-serif; letter-spacing:2px; opacity:0; z-index:15; text-shadow:0 0 16px rgba(255,160,0,.9), 0 4px 0 #7a3a00, 0 7px 10px rgba(0,0,0,.7); }
   #popup.pop { animation:popIn 1.4s ease forwards; }
@@ -558,7 +566,7 @@
 <div id="combo" class="hud">🔥 x1.0</div>
 <div id="saves" class="hud">SAVES 0 · BEST 0</div>
 <div id="cornerBtns">
-  <button class="abtn" id="btnCall" style="display:none">📟 GET A CALL</button>
+  <button class="abtn" id="btnCallIcon" style="display:none;font-size:15px;padding:5px 9px" title="Get a call" aria-label="Get a call">📟</button>
   <button class="abtn" id="btnSettings">⚙ SETTINGS</button>
   <button class="abtn" id="btnAccount">👤 ACCOUNT</button>
 </div>
@@ -623,7 +631,8 @@
   <button class="abtn" id="btnSiren">🚨 SIREN</button>
   <button class="abtn on" id="btnGuide">🔵 GUIDE</button>
   <button class="abtn on" id="btnDue">🚒 DUE: 1ST</button>
-  <button class="abtn on" id="btnRivals">🚑 RIVALS</button>
+  <button class="abtn" id="btnCall" style="display:none">📟 GET A CALL</button>
+  <button class="abtn" id="btnRivals">🚑 RIVALS</button>
   <button class="abtn" id="btnDrill">🎓 KNOW YOUR LOCAL</button>
   <button class="abtn" id="btnDiff">🎯 FIREFIGHTER</button>
   <button class="abtn" id="btnRerun">🔁 RESTART RUN</button>
@@ -819,7 +828,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19s";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19t";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3382,7 +3391,8 @@ function updateHUD(dt){
   { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(mayMarkHydrants()&&state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving, and only for an account on HYDRANT_SCOUTS   //
   document.getElementById('btnRecenter').style.display = state.running?'block':'none';   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
-  if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; } }
+  if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; }
+  rdCollapse(dt); }
 // On-screen dispatch marker: projects the target to the screen, sticks to the edge with an arrow when off-screen, always shows distance.
 const _wpV=new THREE.Vector3(), _wpF=new THREE.Vector3();
 const elWp=document.getElementById('wp'), elWpPin=elWp.querySelector('.pin'), elWpArr=elWp.querySelector('.arr'), elWpDist=elWp.querySelector('.dist');
@@ -5371,13 +5381,20 @@ function freeSet(on){ FREE.arm=!!on;
   const txt='🧭 FREE DRIVE: '+(FREE.arm?'ON':'OFF');
   for(const id of ['btnFreeMode','hcFree']){ const b=document.getElementById(id); if(b){ b.textContent=txt; b.style.background=FREE.arm?'#1d6b4a':''; } }
   return FREE.arm; }
-function freeCallBtn(){ const b=document.getElementById('btnCall'); if(b) b.style.display=FREE.on?'':'none'; }
+/* 📟 Two doors to the same action, both free-drive only: the icon beside SETTINGS is the one tap a
+   patrol actually uses, and the labelled button inside Settings is where it is discoverable and what
+   the radio line points at. The icon forwards its click, so there is still ONE handler. */
+function freeCallBtn(){ for(const id of ['btnCall','btnCallIcon']){ const b=document.getElementById(id); if(b) b.style.display=FREE.on?'':'none'; } }
+document.getElementById('btnCallIcon').addEventListener('click',e=>{ e.preventDefault(); document.getElementById('btnCall').click(); });
 document.getElementById('btnFreeMode').addEventListener('click',e=>{ e.preventDefault(); freeSet(!FREE.arm); });
 document.getElementById('hcFree').addEventListener('click',e=>{ e.preventDefault(); freeSet(!FREE.arm); });
 document.getElementById('btnCall').addEventListener('click',e=>{ e.preventDefault();                      // 📟 dispatch on demand — the only way a box arrives in free drive
   if(!FREE.on||!state.running) return;
   if(state.target){ popup('📟 YOU ARE ALREADY ON A RUN','red'); return; }
+  try{ closeSettings(); }catch(err){}                                                                     // it lives in Settings now: get out of the way so the box can be read
   newDispatch(); });
+document.getElementById('radio').addEventListener('click',e=>{ if(RADIO.open) return;                     // only the collapsed pill is a target
+  e.preventDefault(); rdSet(true); });
 freeSet(false);
 /* 🎯 DIFFICULTY — how fast the other companies run. The player's own truck does 15 u/s by default and can be
    pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
@@ -7129,7 +7146,7 @@ function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCa
    and an uncaught throw here strands the player with no card and no box (owner report, v18n/v18o). */
 function coachDone(keep){ coachHide(); if(!state.running) return;
   try{ if(!keep) returnToStation();
-    if(FREE.on) radio('🧭 IN SERVICE — tap 📟 GET A CALL when you want the next box.');
+    if(FREE.on) radio('🧭 IN SERVICE — ⚙ SETTINGS › 📟 GET A CALL when you want the next box.');
     else newDispatch(); }
   catch(err){ radio('⚠️ NEXT RUN ERROR — '+((err&&err.message)||err)+'. Screenshot this line.'); } }
 document.getElementById('btnCoachNext').addEventListener('click',()=>coachDone(false));
@@ -7140,7 +7157,17 @@ const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];    
 state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
 let radioQueue='', radioShown='', radioT=0, lastIdx=-1;
-function radio(m){ radioQueue=m; radioShown=''; radioT=0; }
+/* 📻 The dispatch banner folds itself away on a patrol. RADIO.t counts up once the line has finished
+   typing; at RADIO.hold it collapses. Any new message opens it again (and restarts the count), and a
+   tap toggles it by hand. A live box holds it open — that is the one thing this must never hide. */
+const RADIO={ t:0, hold:5, open:true };
+function rdSet(open){ RADIO.open=!!open; RADIO.t=0;
+  const el=document.getElementById('radio'); if(el) el.classList.toggle('mini',!RADIO.open); }
+function rdCollapse(dt){ const el=document.getElementById('radio'); if(!el) return;
+  if(!FREE.on||state.target){ if(!RADIO.open) rdSet(true); return; }                  // Career, or a live box: always the full banner
+  if(!RADIO.open||radioShown.length<radioQueue.length) return;                        // still typing: let it finish
+  RADIO.t+=dt; if(RADIO.t>=RADIO.hold) rdSet(false); }
+function radio(m){ radioQueue=m; radioShown=''; radioT=0; rdSet(true); }
 function popup(txt,cls){ const p=document.getElementById('popup'); p.textContent=txt; p.className='hud '+(cls||''); void p.offsetWidth; p.classList.add('pop'); }
 const ADDRESS_INCIDENTS=['Dwelling fire','Kitchen fire','Smoke in a dwelling','Electrical fire','Shed fire','Alarm sounding','Gas leak outside','Trash fire'];
 let lastAddress='', addressCursor=(Math.random()*ADDR.a.length)|0;
@@ -7741,7 +7768,7 @@ function startShift(st,opts){ closeHomeMap(); homeEl.classList.remove('show'); d
   setTruckEngine(engNum(st.id));
   state.running=true; state.timeLeft=CONFIG.timer.start;
   freeCallBtn();
-  if(FREE.on){ radio('🧭 FREE DRIVE — '+st.companies[0]+' in service. No rivals, no box until you tap GET A CALL. Career untouched.'); return; }
+  if(FREE.on){ radio('🧭 FREE DRIVE — '+st.companies[0]+' in service. No rivals, no box until you tap GET A CALL in ⚙ SETTINGS. Career untouched.'); return; }
   radio('Dispatch to '+st.companies[0]+', '+st.address+': shift started. Stand by…'); setTimeout(newDispatch,900); }
 /* BEATEN IN card actions. The loss was already recorded ONCE in missedDue (profileRun → career/board)
    BEFORE gameOver opened this card — none of these buttons touch the record. A retried or next run only

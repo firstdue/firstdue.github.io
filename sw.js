@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v30';  // v19s: the Roosevelt Expressway class seam — the motorway and trunk halves of one road shared an OSM node but not a graph node, and the drive halted on an open road.
+const CACHE = 'local-shell-v31';  // v19t: free-drive UI tidy — the dispatch banner folds into a corner pill on a patrol, and GET A CALL moves into Settings.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
