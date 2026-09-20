@@ -1,6 +1,12 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19s is public**, service-worker cache `local-shell-v30`.
+Planning snapshot: September 19, 2026. **v19t is public**, service-worker cache `local-shell-v31`.
+
+- [x] **Free drive gets out of its own way (v19t, September 19, 2026):** on a patrol the dispatch
+  banner had nothing urgent to say and sat across the road for the whole shift. It now folds itself
+  into a small pill in the corner after a few seconds, and a tap opens it again — but never while you
+  are on a live box, and never in a career shift. Asking for a call is a single tap on its own button
+  beside Settings, with the full labelled entry still inside Settings where it is easy to find.
 
 - [x] **US 1 North drives through to the Boulevard (v19s, September 19, 2026):** the Roosevelt
   Expressway stopped dead partway along and told you the road was closed, on a road that plainly
