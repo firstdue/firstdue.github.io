@@ -423,6 +423,54 @@
   #pullOut button { pointer-events:auto; background:#2b6df6; color:#fff; border:none; border-radius:12px; padding:9px 13px;
     font-size:clamp(11px,2.8vw,14px); font-weight:800; box-shadow:0 3px 10px rgba(0,0,0,.3); cursor:pointer; font-family:inherit; white-space:nowrap; }
   #pullOut button:active { transform:scale(.95); }
+  /* ===================== CONTROLLER MODE (v19w) =====================
+     A second control scheme, off by default. body.ctl is the ONLY switch: every rule below is scoped
+     to it, so TAP mode renders byte-for-byte as before and the keyboard is untouched in both.
+     Targets are >=44px throughout, and every control has a pressed state. */
+  body.ctl #pullOut, body.ctl #btnUturn, body.ctl #zoomBtns, body.ctl #hint { display:none !important; }
+  #ctlPad, #ctlSpeed { position:absolute; z-index:14; pointer-events:auto; display:none; touch-action:none; }
+  body.ctl #ctlPad, body.ctl #ctlSpeed { display:block; }
+  /* the Game Boy cross, on its concentric dark backing */
+  /* 132px of cross = three 44px cells, the minimum touch target, and it has to share 375px with the
+     street panel and the speed buttons. The concentric backing is drawn behind it, larger, by ::before. */
+  #ctlPad { left:max(8px,env(safe-area-inset-left)); bottom:max(10px,env(safe-area-inset-bottom));
+    width:132px; height:132px; }
+  #ctlPad::before { content:""; position:absolute; left:-11px; top:-11px; width:154px; height:154px; border-radius:50%;
+    background:radial-gradient(circle at 50% 50%, rgba(150,170,205,.20) 0 44%, rgba(150,170,205,.10) 44% 70%, rgba(150,170,205,.05) 70% 100%); }
+  #ctlPad .dp { position:absolute; width:44px; height:44px; border:0; padding:0; cursor:pointer;
+    background:#2b3038; color:#e8edf5; font-size:17px; line-height:1; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 3px 7px rgba(0,0,0,.45); }
+  #ctlPad .dp.up    { left:44px; top:0;   border-radius:9px 9px 0 0; }
+  #ctlPad .dp.down  { left:44px; top:88px; border-radius:0 0 9px 9px; }
+  #ctlPad .dp.left  { left:0;   top:44px; border-radius:9px 0 0 9px; }
+  #ctlPad .dp.right { left:88px; top:44px; border-radius:0 9px 9px 0; }
+  #ctlPad .hub { position:absolute; left:44px; top:44px; width:44px; height:44px; background:#2b3038; }
+  #ctlPad .dp:active, #ctlPad .dp.held { background:#171a1f; transform:scale(.94); }
+  /* the two big round speed buttons */
+  #ctlSpeed { right:max(8px,env(safe-area-inset-right)); bottom:max(10px,env(safe-area-inset-bottom)); width:104px; height:150px; }
+  #ctlSpeed button { position:absolute; width:80px; height:80px; border-radius:50%; border:3px solid rgba(255,255,255,.55);
+    font:900 32px "Arial Black",sans-serif; color:#fff; cursor:pointer; text-shadow:0 2px 3px rgba(0,0,0,.5);
+    box-shadow:0 5px 14px rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; }
+  #ctlSpeed #ctlGas   { right:24px; top:0;   background:linear-gradient(180deg,#f2c14e,#c8922a); }
+  #ctlSpeed #ctlBrake { right:0;    top:68px; background:linear-gradient(180deg,#e04b46,#b02722); }
+  #ctlSpeed button:active, #ctlSpeed button.held { transform:scale(.93); filter:brightness(.86); }
+  /* RE-CENTER becomes the round compass above the pad side */
+  body.ctl #btnRecenter { display:flex !important; flex-direction:column; align-items:center; justify-content:center;
+    left:max(14px,env(safe-area-inset-left)); bottom:clamp(168px,30vh,208px); width:72px; height:72px; border-radius:50%;
+    background:#2b3444; color:#dbe6f5; border:2px solid rgba(255,255,255,.28); font-size:9px; font-weight:800; letter-spacing:.6px;
+    box-shadow:0 5px 14px rgba(0,0,0,.42); padding:0; }
+  /* The dark street panel, bottom centre. It sits BETWEEN the pad and the speed buttons, so it is
+     width-limited and lifted clear of both — at 375px the pad and buttons each claim 150px. */
+  body.ctl #hood { bottom:calc(max(10px,env(safe-area-inset-bottom)) + 14px); width:auto; max-width:142px;
+    display:flex; flex-direction:column; align-items:center; }
+  body.ctl #hood .n { order:1; background:rgba(24,34,52,.94); border:1px solid rgba(255,255,255,.14);
+    border-radius:14px; padding:7px 16px 8px; min-width:0; color:#fff; font-weight:800;
+    box-shadow:0 6px 18px rgba(0,0,0,.45); max-width:142px; font-size:clamp(13px,3.2vw,17px); }
+  body.ctl #hood .n .block { color:#aab6c8; }
+  body.ctl #hood .n .street { display:block; max-width:118px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    border-bottom:2px solid #f2c14e; padding-bottom:5px; }
+  body.ctl #hood .s { order:2; color:#c3cede; text-shadow:none; margin:5px 0 0;
+    background:rgba(24,34,52,.94); border-radius:9px; padding:2px 10px; }
   #zoomBtns { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:clamp(90px,20vh,150px); z-index:13; display:none; flex-direction:column; gap:8px; }
   #zoomBtns button { pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#fff; color:#22252b;
     font-size:26px; font-weight:800; line-height:1; box-shadow:0 3px 10px rgba(0,0,0,.3); cursor:pointer; font-family:inherit; }
@@ -632,6 +680,7 @@
   <button class="abtn" id="btnSiren">🚨 SIREN</button>
   <button class="abtn on" id="btnGuide">🔵 GUIDE</button>
   <button class="abtn on" id="btnDue">🚒 DUE: 1ST</button>
+  <button class="abtn" id="btnControls">👆 CONTROLS: TAP</button>
   <button class="abtn" id="btnFreeLive">🧭 FREE DRIVE</button>
   <button class="abtn" id="btnCall" style="display:none">📟 GET A CALL</button>
   <button class="abtn" id="btnRivals">🚑 RIVALS</button>
@@ -738,6 +787,15 @@
 <button id="btnUturn">↩ U-TURN</button>
 <button id="btnRecenter">&#127919; RE-CENTER</button>
 <div id="pullOut"><button id="btnLeft">⬅ GO LEFT</button><button id="btnRight">GO RIGHT ➡</button></div>
+<div id="ctlPad" aria-label="Drive pad">
+  <div class="hub"></div>
+  <button class="dp up"    id="ctlUp"    aria-label="Straight ahead, or continue">▲</button>
+  <button class="dp left"  id="ctlLeft"  aria-label="Take the next left">◀</button>
+  <button class="dp right" id="ctlRight" aria-label="Take the next right">▶</button>
+  <button class="dp down"  id="ctlDown"  aria-label="U-turn">▼</button>
+</div>
+<div id="ctlSpeed"><button id="ctlGas" aria-label="Accelerate">+</button><button id="ctlBrake" aria-label="Slow and brake">−</button></div>
+
 <div id="speed" class="hud"><div class="num">0</div><div class="cap">MPH</div></div>
 <div id="popup" class="hud"></div>
 <div id="douse" class="hud"><div class="t">💦 EXTINGUISHING…</div><div class="bar"><div class="fill" id="douseFill"></div></div></div>
@@ -831,7 +889,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19v";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3061,6 +3119,36 @@ function bindBtn(id,onDown,onUp){ const el=document.getElementById(id);
   el.addEventListener('pointerdown',e=>{ e.preventDefault(); el.classList.add('held'); onDown(); try{ el.setPointerCapture(e.pointerId); }catch(_){}} ,{passive:false});
   const up=()=>{ el.classList.remove('held'); if(onUp) onUp(); }; el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); el.addEventListener('lostpointercapture',up); }
 bindBtn('bGas',()=>TCH.gas=true,()=>TCH.gas=false); bindBtn('bBrake',()=>TCH.brake=true,()=>TCH.brake=false); bindBtn('bDrift',()=>TCH.drift=true,()=>TCH.drift=false); bindBtn('bJump',()=>doJump());
+/* 🎮 CONTROLLER MODE (v19w). A second control SCHEME, not a second control PATH: every button below
+   calls a handler that already exists, so manual turns, the v18z street-choice rules and the driving
+   physics are untouched by construction. TAP stays the default and is unchanged.
+   The D-pad's ▼ is the only U-turn control in this mode — the U-TURN pill is hidden, not duplicated. */
+const CTL={ mode:'tap' };
+try{ const v=localStorage.getItem('pfd_controls'); if(v==='controller'||v==='tap') CTL.mode=v; }catch(e){}   // unreadable storage -> TAP, the default
+function ctlApply(){ document.body.classList.toggle('ctl',CTL.mode==='controller');
+  const b=document.getElementById('btnControls');
+  if(b){ b.textContent=CTL.mode==='controller'?'🎮 CONTROLS: CONTROLLER':'👆 CONTROLS: TAP';
+    b.classList.toggle('on',CTL.mode==='controller'); } }
+function ctlSet(m){ CTL.mode=(m==='controller')?'controller':'tap';
+  try{ localStorage.setItem('pfd_controls',CTL.mode); }catch(e){}
+  ctlApply(); popup(CTL.mode==='controller'?'🎮 CONTROLLER CONTROLS':'👆 TAP CONTROLS'); }
+document.getElementById('btnControls').addEventListener('click',e=>{ e.preventDefault();
+  ctlSet(CTL.mode==='controller'?'tap':'controller'); });
+/* ▲ = what tapping the truck does: take the straight branch at a junction, otherwise roll again.
+   It never STOPS the truck — a d-pad up that toggled would be a trap at a junction. */
+function ctlStraight(){ if(!state.running) return;
+  if(DRIVE.atChoice){ chooseStraight(); return; }
+  DRIVE.going=true; }
+document.getElementById('ctlUp').addEventListener('click',e=>{ e.preventDefault(); ctlStraight(); });
+document.getElementById('ctlLeft').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(-1)) pullOut(-1); });    // the GO LEFT handler, verbatim
+document.getElementById('ctlRight').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(1)) pullOut(1); });     // the GO RIGHT handler, verbatim
+document.getElementById('ctlDown').addEventListener('click',e=>{ e.preventDefault(); uTurn(); });
+/* HELD, not tapped, and through TCH — the same struct the keyboard ORs into at IN.up()/IN.down(), so
+   there is one accelerate and one brake in the game, not three. */
+bindBtn('ctlGas',()=>TCH.gas=true,()=>TCH.gas=false);
+bindBtn('ctlBrake',()=>TCH.brake=true,()=>TCH.brake=false);
+ctlApply();
+
 (function steerSlider(){ const el=document.getElementById('steer'), knob=document.getElementById('steerKnob'); let pid=null;
   function setFromX(cx){ const r=el.getBoundingClientRect(); let v=((cx-r.left)/r.width)*2-1; v=Math.max(-1,Math.min(1,v)); TCH.steer=-v; knob.style.left=(50+v*38)+'%'; }
   el.addEventListener('pointerdown',e=>{ e.preventDefault(); pid=e.pointerId; setFromX(e.clientX); try{ el.setPointerCapture(pid); }catch(_){}} ,{passive:false});
