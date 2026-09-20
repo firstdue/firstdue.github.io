@@ -446,6 +446,8 @@
   #ctlPad .dp.right { left:88px; top:44px; border-radius:0 9px 9px 0; }
   #ctlPad .hub { position:absolute; left:44px; top:44px; width:44px; height:44px; background:#2b3038; }
   #ctlPad .dp:active, #ctlPad .dp.held { background:#171a1f; transform:scale(.94); }
+  /* an armed turn stays lit until it applies or is cleared — the pad is the only turn indicator in this mode */
+  #ctlPad .dp.armed { background:#f2c14e; color:#231a08; box-shadow:0 0 13px rgba(242,193,78,.85); }
   /* the two big round speed buttons */
   #ctlSpeed { right:max(8px,env(safe-area-inset-right)); bottom:max(10px,env(safe-area-inset-bottom)); width:104px; height:150px; }
   #ctlSpeed button { position:absolute; width:80px; height:80px; border-radius:50%; border:3px solid rgba(255,255,255,.55);
@@ -889,7 +891,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19w";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3125,6 +3127,13 @@ bindBtn('bGas',()=>TCH.gas=true,()=>TCH.gas=false); bindBtn('bBrake',()=>TCH.bra
    The D-pad's ▼ is the only U-turn control in this mode — the U-TURN pill is hidden, not duplicated. */
 const CTL={ mode:'tap' };
 try{ const v=localStorage.getItem('pfd_controls'); if(v==='controller'||v==='tap') CTL.mode=v; }catch(e){}   // unreadable storage -> TAP, the default
+/* The armed arrow stays lit until the turn applies or is cleared. DRIVE.arrow is the existing turn
+   signal (-1 left, +1 right); pending is what makes it real, so both have to hold. */
+function ctlArmed(){ if(CTL.mode!=='controller') return;
+  const dir=DRIVE.pending?DRIVE.arrow:0;
+  const l=document.getElementById('ctlLeft'), r=document.getElementById('ctlRight');
+  if(l) l.classList.toggle('armed',dir<0);
+  if(r) r.classList.toggle('armed',dir>0); }
 function ctlApply(){ document.body.classList.toggle('ctl',CTL.mode==='controller');
   const b=document.getElementById('btnControls');
   if(b){ b.textContent=CTL.mode==='controller'?'🎮 CONTROLS: CONTROLLER':'👆 CONTROLS: TAP';
@@ -3134,19 +3143,45 @@ function ctlSet(m){ CTL.mode=(m==='controller')?'controller':'tap';
   ctlApply(); popup(CTL.mode==='controller'?'🎮 CONTROLLER CONTROLS':'👆 TAP CONTROLS'); }
 document.getElementById('btnControls').addEventListener('click',e=>{ e.preventDefault();
   ctlSet(CTL.mode==='controller'?'tap':'controller'); });
-/* ▲ = what tapping the truck does: take the straight branch at a junction, otherwise roll again.
-   It never STOPS the truck — a d-pad up that toggled would be a trap at a junction. */
+/* ▲ = what tapping the truck does: take the straight branch at a junction, otherwise roll again. It
+   never STOPS the truck — a d-pad up that toggled would be a trap at a junction — and it CANCELS an
+   armed turn, which is the only way to change your mind without turning. */
+function ctlFlash(id){ const el=document.getElementById(id); if(!el) return;
+  el.classList.add('held'); setTimeout(()=>el.classList.remove('held'),140); }                 // ▲ had no visible response at all while rolling: it looked dead
 function ctlStraight(){ if(!state.running) return;
+  ctlFlash('ctlUp');
+  if(DRIVE.pending){ DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; popup('↑ STRAIGHT ON'); }
   if(DRIVE.atChoice){ chooseStraight(); return; }
   DRIVE.going=true; }
+/* ◀ / ▶ ARM A TURN AT THE NEXT JUNCTION. This is the original spec — "hit left and you go left down
+   the next street" — and it is why the arrows felt dead after the bay: chooseAtT() returns false unless
+   the truck is STOPPED at a junction and pullOut() returns unless it is PARKED, so between those two
+   states both were no-ops for the whole drive.
+     pickTurn(sign) already did exactly this and had no callers: it walks nextJunction(), takes a real
+   branch on the requested side by cross product, and sets the SAME DRIVE.pending a tapped street card
+   sets. So the turn still goes through the protected turn system — nothing new decides where the truck
+   may go, only when the request is made. Latest press wins, because pickTurn overwrites pending. */
+function ctlTurn(dir){ if(!state.running) return;
+  if(DRIVE.parked){ pullOut(dir); return; }                                                    // at the bay: unchanged
+  if(DRIVE.atChoice){ chooseAtT(dir); return; }                                                // stopped at a junction: unchanged
+  const had=DRIVE.pending; pickTurn(dir);
+  if(DRIVE.pending===had) popup(dir<0?'← NO LEFT AHEAD':'→ NO RIGHT AHEAD','red'); }   // nothing on that side within look-ahead: say so rather than arm silently
 document.getElementById('ctlUp').addEventListener('click',e=>{ e.preventDefault(); ctlStraight(); });
-document.getElementById('ctlLeft').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(-1)) pullOut(-1); });    // the GO LEFT handler, verbatim
-document.getElementById('ctlRight').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(1)) pullOut(1); });     // the GO RIGHT handler, verbatim
+document.getElementById('ctlLeft').addEventListener('click',e=>{ e.preventDefault(); ctlTurn(-1); });
+document.getElementById('ctlRight').addEventListener('click',e=>{ e.preventDefault(); ctlTurn(1); });
 document.getElementById('ctlDown').addEventListener('click',e=>{ e.preventDefault(); uTurn(); });
-/* HELD, not tapped, and through TCH — the same struct the keyboard ORs into at IN.up()/IN.down(), so
-   there is one accelerate and one brake in the game, not three. */
-bindBtn('ctlGas',()=>TCH.gas=true,()=>TCH.gas=false);
-bindBtn('ctlBrake',()=>TCH.brake=true,()=>TCH.brake=false);
+/* HELD + / −, through setDriveSpeed — the ONE thing the road-following drive reads.
+   The first cut bound these to TCH.gas/TCH.brake "the same struct the keyboard ORs into". That was
+   true and useless: IN.up()/IN.down() feed the ARC arcade physics, and the road-follow drive advances
+   by DRIVE.speed*dt and never reads them. The buttons fired perfectly and the truck ignored them. */
+const CTLSPD={ t:0 };
+function ctlSpeedStart(step){ if(CTLSPD.t) clearInterval(CTLSPD.t);
+  setDriveSpeed(DRIVE.speed+step,true);
+  CTLSPD.t=setInterval(()=>setDriveSpeed(DRIVE.speed+step,true),180); }                        // held, not tapped
+function ctlSpeedStop(){ if(!CTLSPD.t) return; clearInterval(CTLSPD.t); CTLSPD.t=0;
+  popup(Math.round(DRIVE.speed*2.237)+' MPH'); }                                               // one reading, on release
+bindBtn('ctlGas',()=>ctlSpeedStart(3),()=>ctlSpeedStop());
+bindBtn('ctlBrake',()=>ctlSpeedStart(-3),()=>ctlSpeedStop());
 ctlApply();
 
 (function steerSlider(){ const el=document.getElementById('steer'), knob=document.getElementById('steerKnob'); let pid=null;
@@ -3417,7 +3452,8 @@ function chooseStraight(){ if(!DRIVE.atChoice) return false; const b=DRIVE.toN, 
   DRIVE.fromN=b; DRIVE.toN=pick; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return true; }
 document.getElementById('btnLeft').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(-1)) pullOut(-1); });
 document.getElementById('btnRight').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(1)) pullOut(1); });
-function setDriveSpeed(v){ DRIVE.speed=Math.max(6,Math.min(70,v)); popup(Math.round(DRIVE.speed*2.237)+' MPH'); }   // world u/s ≈ m/s → mph; cap ~156 mph
+function setDriveSpeed(v,quiet){ DRIVE.speed=Math.max(6,Math.min(70,v));                                  // world u/s ≈ m/s → mph; cap ~156 mph
+  if(!quiet) popup(Math.round(DRIVE.speed*2.237)+' MPH'); }   // quiet: a HELD button steps repeatedly and says the speed once, on release
 document.getElementById('btnZoomIn').addEventListener('click',e=>{ e.preventDefault(); setDriveSpeed(DRIVE.speed+6); });    // ＋ = faster
 document.getElementById('btnZoomOut').addEventListener('click',e=>{ e.preventDefault(); setDriveSpeed(DRIVE.speed-6); });   // － = slower  (zoom is now pinch)
 /* BOUNDARIES retired (v16d) — real PFD first-due zones cover the whole city; the hand-tracing trainer is gone. */
@@ -3492,7 +3528,7 @@ function updateHUD(dt){
   document.getElementById('btnRecenter').style.display = state.running?'block':'none';   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
   if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; }
-  rdCollapse(dt); freeLiveBtn(); }
+  rdCollapse(dt); freeLiveBtn(); ctlArmed(); }
 // On-screen dispatch marker: projects the target to the screen, sticks to the edge with an arrow when off-screen, always shows distance.
 const _wpV=new THREE.Vector3(), _wpF=new THREE.Vector3();
 const elWp=document.getElementById('wp'), elWpPin=elWp.querySelector('.pin'), elWpArr=elWp.querySelector('.arr'), elWpDist=elWp.querySelector('.dist');

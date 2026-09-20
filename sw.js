@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v34';  // v19w: CONTROLLER control scheme — a D-pad, held speed buttons and a round re-center, opt-in from Settings.
+const CACHE = 'local-shell-v35';  // v19x: the CONTROLLER pad actually drives — arrows arm a turn at the next junction, + / - reach setDriveSpeed.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
