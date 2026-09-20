@@ -1,6 +1,12 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19u is public**, service-worker cache `local-shell-v32`.
+Planning snapshot: September 20, 2026. **v19v is public**, service-worker cache `local-shell-v33`.
+
+- [x] **Free play is a switch now, not a decision you make at the door (v19v, September 19–20,
+  2026):** riding without rivals meant choosing it before the shift started and going back to the
+  firehouse picker to change your mind. It is a toggle in Settings now, both directions, during a
+  shift. It greys out while you are on a box — a run has to finish as the kind of run it started as,
+  or the record of it would not mean anything.
 
 - [x] **US 1 stops asking a question with one answer (v19u, September 19, 2026):** where the
   Roosevelt Expressway becomes the Roosevelt Boulevard, at Broad and 9th, the road's name changes but
