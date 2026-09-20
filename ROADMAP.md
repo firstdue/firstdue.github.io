@@ -1,6 +1,23 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 20, 2026. **v19y is public**, service-worker cache `local-shell-v36`.
+Planning snapshot: September 20, 2026. **v19z is public**, service-worker cache `local-shell-v37`.
+
+- [x] **One bar across the top, instead of things scattered in the corners (v19z, September 20, 2026):**
+  your saves, your best, how due you are where you are standing, settings, your account and the radio
+  now sit together in a single dark bar, in both control schemes and whether you are on a box or out on
+  patrol. The build number is still up there — it moved into the status pill rather than going anywhere.
+  On a phone the two button labels fold down to their icons, because six things spelled out do not fit
+  across a phone; the buttons themselves did not get any smaller.
+
+- [x] **Cross-street signs you can actually pick out (v19z, September 20, 2026):** the street names
+  ahead of you are red rounded callouts now, the way the rest of the game's signage reads. A street you
+  would be entering the wrong way still stands apart — it is darker, edged in gold, and carries a
+  hazard stripe along the top, so the warning survives everything around it turning red.
+
+- [x] **The street you are on, told the same way everywhere (v19z, September 20, 2026):** the dark panel
+  with the hundred block, the street name and the neighbourhood and ZIP is no longer only for the
+  controller — it is the panel in tap mode too, in the same place the old pale pill used to sit, and it
+  stays clear of every button around it even with the longest street name in the city.
 
 - [x] **Smaller controls, and the arrows stop arguing with the cards (v19y, September 20, 2026):** the
   pad crowded the screen on a phone, so everything shrank by about a quarter — without any button
