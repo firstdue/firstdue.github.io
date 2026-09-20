@@ -1,6 +1,14 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 19, 2026. **v19t is public**, service-worker cache `local-shell-v31`.
+Planning snapshot: September 19, 2026. **v19u is public**, service-worker cache `local-shell-v32`.
+
+- [x] **US 1 stops asking a question with one answer (v19u, September 19, 2026):** where the
+  Roosevelt Expressway becomes the Roosevelt Boulevard, at Broad and 9th, the road's name changes but
+  the route does not — and the truck used to halt there and wait to be told which way to go. It now
+  reads the route number the way a driver reads a shield and carries straight on. It will only do that
+  when exactly one road ahead carries the route and that road really is the one ahead; two roads
+  carrying US 1, or a route that turns off while another road runs straight on, still ask. Nothing
+  without a route number is affected at all.
 
 - [x] **Free drive gets out of its own way (v19t, September 19, 2026):** on a patrol the dispatch
   banner had nothing urgent to say and sat across the road for the whole shift. It now folds itself
