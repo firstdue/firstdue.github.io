@@ -54,9 +54,25 @@
     text-shadow:0 0 10px rgba(255,140,40,.8), 0 2px 3px #000; opacity:.55; }
   #combo.hot { opacity:1; animation:cpulse .5s ease infinite; }
   @keyframes cpulse { 50%{ transform:scale(1.1) rotate(-2deg); } }
-  #saves { top:max(8px, env(safe-area-inset-top)); left:max(10px, env(safe-area-inset-left)); font-size:clamp(9px,2vw,12px); max-width:44vw; line-height:1.25;   /* top-left corner, above the responding strip (buttons are right-aligned) */
-    font-weight:800; color:#9fd7ff; text-shadow:0 1px 3px #000; letter-spacing:1px; }
-  #saves .ver { display:block; color:#8aa0bd; font-weight:800; letter-spacing:1px; }
+  /* 🧭 THE TOP BAR (v19z). One dark bar carries SAVES, BEST, the due-status pill with the BUILD tag,
+     SETTINGS, ACCOUNT and the DISPATCH pill. It is GLOBAL: both control schemes, Career and free drive
+     alike, because nothing here is scoped to body.ctl. Everything that used to stack under the old
+     top-left SAVES block now anchors to --barBot, which is the ONE place the bar's height is stated. */
+  :root { --barTop: max(8px, env(safe-area-inset-top)); --barBot: calc(max(8px, env(safe-area-inset-top)) + 58px); }
+  #topBar { position:absolute; z-index:16; top:var(--barTop); height:52px;
+    left:max(5px,env(safe-area-inset-left)); right:max(5px,env(safe-area-inset-right));
+    box-sizing:border-box; display:flex; align-items:center; gap:1px; padding:3px 4px;
+    background:rgba(18,26,40,.93); border:1.5px solid rgba(255,255,255,.15); border-radius:16px;
+    box-shadow:0 6px 20px rgba(0,0,0,.45); pointer-events:none; overflow:hidden;
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
+  /* the three that moved IN stop positioning themselves */
+  #topBar #saves, #topBar #dueChip, #topBar #cornerBtns { position:static; top:auto; left:auto; right:auto; max-width:none; }
+  #topBar #saves { display:flex; align-items:center; flex:0 0 auto; color:#e9eef7; text-shadow:none; letter-spacing:0; }
+  #topBar #saves .stat { display:grid; grid-template-columns:auto auto; align-items:center; column-gap:3px; padding:1px 3px; }
+  #topBar #saves .stat + .stat { border-left:1px solid rgba(255,255,255,.14); }
+  #topBar #saves .stat i { grid-row:1/3; font-style:normal; font-size:13px; line-height:1; }
+  #topBar #saves .stat b { font-size:7px; font-weight:900; letter-spacing:.02em; color:#aab7c9; line-height:1.2; }
+  #topBar #saves .stat u { text-decoration:none; font-size:13px; font-weight:900; color:#fff; line-height:1.1; }
   /* 🚨 DUE-ORDER CHIP — how due YOUR engine is at the spot you're standing on right now */
   #dueChip { position:absolute; z-index:15; top:calc(max(8px,env(safe-area-inset-top)) + 32px); left:max(10px,env(safe-area-inset-left));   /* clears the 2-line SAVES/BEST + version block (v16m stacked the version onto its own line) */
     display:none; align-items:center; gap:6px; padding:4px 10px 4px 7px; border-radius:999px;
@@ -68,16 +84,28 @@
   #dueChip .dueDot { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; }
   #dueChip .dueTxt { color:#fff; }
   #dueChip .dueWho { color:#9fb4cc; font-weight:800; font-size:.86em; letter-spacing:.6px; }
+  /* Inside the bar the pill is ALWAYS rendered, even before a due rank is known, because the BUILD tag
+     rides in it and that tag is the owner's cache check — it may not come and go. The rank still shows
+     only when it is known: the dot keeps its rank colour, which is what OUT OF AREA / 2ND IN read from. */
+  #topBar #dueChip { display:flex; flex:1 1 auto; min-width:72px; flex-direction:column; align-items:center;
+    justify-content:center; gap:0; padding:3px 7px; background:rgba(9,14,24,.92);
+    border:1.5px solid rgba(255,255,255,.14); box-shadow:0 2px 8px rgba(0,0,0,.4); transform:none !important; }
+  #topBar #dueChip .dueRow { display:flex; align-items:center; gap:5px; max-width:100%; overflow:hidden; }
+  #topBar #dueChip .dueTxt { font-size:12px; white-space:nowrap; }
+  #topBar #dueChip .dueWho { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #topBar #dueChip .dueVer { color:#8fa2ba; font-weight:800; font-size:7px; letter-spacing:0; white-space:nowrap;
+    max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+  #topBar #dueChip:not(.on) .dueRow { display:none; }
   /* 🎓 drill banner — sits under the top button row, in place of the dispatch banner */
   #drillHUD { position:absolute; z-index:15; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right));
-    top:calc(max(8px,env(safe-area-inset-top)) + 44px); display:none; flex-wrap:wrap; align-items:center; gap:7px;
+    top:var(--barBot); display:none; flex-wrap:wrap; align-items:center; gap:7px;
     background:rgba(16,32,24,.94); border:1.5px solid #3ddc84; border-radius:13px; padding:7px 11px;
     box-shadow:0 3px 13px rgba(0,0,0,.5); pointer-events:none;
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
   #drillHUD.show { display:flex; }
   /* 🎓 D2 Box Recall HUD + report */
   #boxdHUD { position:absolute; z-index:16; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right));
-    top:calc(max(8px,env(safe-area-inset-top)) + 44px); display:none; flex-wrap:wrap; align-items:center; gap:7px;
+    top:var(--barBot); display:none; flex-wrap:wrap; align-items:center; gap:7px;
     background:rgba(13,22,38,.95); border:1.5px solid #f4b950; border-radius:13px; padding:7px 11px;
     box-shadow:0 3px 13px rgba(0,0,0,.5); font-family:"Barlow Condensed","Arial Narrow",sans-serif; }
   #boxdHUD.show { display:flex; }
@@ -115,10 +143,39 @@
   .abtn.on { border-color:#ff3b30; color:#fff; background:rgba(160,20,20,.8); box-shadow:0 0 14px rgba(255,60,40,.7); animation:sirGlow .5s steps(2) infinite; }
   @keyframes sirGlow { 50% { box-shadow:0 0 22px rgba(80,120,255,.9); border-color:#4d7dff; } }
   #cornerBtns { justify-content:flex-end; }
-  #cornerBtns .abtn { background:rgba(24,29,38,.9); border-color:#e7e9ed; color:#fff; box-shadow:0 2px 8px rgba(0,0,0,.28); }
+  #topBar #cornerBtns { display:flex; flex-direction:row; flex-wrap:nowrap; gap:0; margin-left:auto; align-items:center; }
+  #topBar .abtn { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+    min-height:44px; padding:2px 4px; background:none; border:0; border-radius:11px; box-shadow:none;
+    color:#e9eef7; text-shadow:none; line-height:1; pointer-events:auto; }
+  #topBar .abtn i { font-style:normal; font-size:14px; line-height:1; }
+  #topBar .abtn b { font-size:7px; font-weight:900; letter-spacing:0; color:#c3cede; }
+  #topBar .abtn:active { background:rgba(255,255,255,.1); }
+  /* 📻 The DISPATCH pill is the banner's handle. Lit while the banner is open (Career and a live box
+     are ALWAYS open — v19t's rule), outlined while it is folded away on a patrol. A tap only ever OPENS. */
+  #topBar #dispatchPill { flex:0 0 auto; flex-direction:row; gap:3px; min-height:44px; padding:5px 5px; border-radius:999px;
+    background:rgba(11,17,14,.92); border:1.5px solid #2c4c37; }
+  #topBar #dispatchPill i { font-size:13px; opacity:.55; }
+  #topBar #dispatchPill b { color:#7e9a88; font-size:7px; letter-spacing:0; }
+  #topBar #dispatchPill.open { background:rgba(9,22,13,.92); border-color:#3ddc84; box-shadow:0 0 12px rgba(61,220,132,.4); }
+  #topBar #dispatchPill.open i { opacity:1; }
+  #topBar #dispatchPill.open b { color:#eafff0; }
+  /* AT PHONE WIDTH THE FIVE CELLS DO NOT ALL FIT WITH WORDS. 359px of bar, minus padding and gaps, is
+     340 for SAVES + BEST + the status pill + two buttons + the DISPATCH pill, and with every label
+     spelled out they need ~400. Something has to give, and it is the SETTINGS / ACCOUNT words: the
+     gear and the person are the icons the mockup itself draws, both keep their title and aria-label,
+     and both keep a 44px target. The BUILD tag, the rank and the DISPATCH pill's word all stay —
+     those are the things the bar exists to say. Above 420px every label is back, as drawn. */
+  @media (max-width:420px) {
+    #topBar #saves .stat b { display:none; }                                    /* 🔥 12 and 🏆 15 read on their own */
+    #topBar #saves .stat { column-gap:2px; padding:1px 3px; }
+    #topBar #saves .stat u { font-size:14px; }
+    #topBar #btnSettings b, #topBar #btnAccount b { display:none; }
+    #topBar #btnSettings i, #topBar #btnAccount i { font-size:18px; }
+    #topBar #cornerBtns .abtn { min-width:44px; padding:2px 0; }                /* the words go, the 44px target does not */
+  }
   #settingsShade { position:absolute; inset:0; z-index:45; display:none; background:rgba(0,0,0,.12); pointer-events:auto; }
   #settingsShade.show { display:block; }
-  #settingsPanel { position:absolute; top:calc(max(8px,env(safe-area-inset-top)) + 42px); right:max(8px,env(safe-area-inset-right)); z-index:46;
+  #settingsPanel { position:absolute; top:var(--barBot); right:max(8px,env(safe-area-inset-right)); z-index:46;
     display:none; width:min(330px,calc(100vw - 16px)); padding:14px; background:rgba(24,29,38,.97); border:1px solid rgba(255,255,255,.28);
     border-radius:16px; box-shadow:0 12px 34px rgba(0,0,0,.46); color:#fff; pointer-events:auto; }
   #settingsPanel.show { display:block; }
@@ -145,11 +202,21 @@
   .legendSwatch { display:inline-block; width:22px; height:6px; border-radius:4px; margin-right:6px; vertical-align:middle; }
   .legendDone { background:#14824b; }
   .legendOpen { width:11px; height:11px; border-radius:50%; border:3px solid #f08a24; background:#fff4e7; }
-  #hood { bottom:clamp(88px,18vh,132px); left:50%; transform:translateX(-50%); text-align:center; width:100%; }
-  #hood .n { display:inline-flex; flex-direction:column; align-items:center; font-size:clamp(15px,3.5vw,21px); font-weight:600; color:#0a6cff; letter-spacing:.2px; line-height:1.05;
-    background:#fff; border-radius:999px; padding:6px 20px 7px; min-width:150px; box-shadow:0 2px 8px rgba(0,0,0,.18), 0 0 0 .5px rgba(0,0,0,.05); font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
-  #hood .n .block { margin-bottom:3px; color:#5d6470; font-size:clamp(8px,1.9vw,10.5px); font-weight:800; letter-spacing:1.35px; line-height:1; }
-  #hood .s { font-size:clamp(9px,2vw,11.5px); font-weight:700; color:#6b7079; text-shadow:0 1px 2px rgba(255,255,255,.85); letter-spacing:2px; margin-bottom:6px; }
+  /* 🏘 THE STREET PANEL (dark from v19z). Hundred block, street name under a gold rule, then the
+     neighbourhood · ZIP beneath it. This is the panel in BOTH control schemes now — only the SEAT it
+     takes differs, and that is the one thing still scoped to body.ctl further down, because the pad and
+     the speed buttons claim the bottom corners and squeeze it to 142px. In TAP it keeps the seat the
+     old light pill had, above the GO LEFT / GO RIGHT row and clear of the + / − buttons. */
+  #hood { bottom:clamp(88px,18vh,132px); left:50%; transform:translateX(-50%); text-align:center; width:100%;
+    display:flex; flex-direction:column; align-items:center; }
+  #hood .n { order:1; display:inline-flex; flex-direction:column; align-items:center; font-size:clamp(15px,3.5vw,21px); font-weight:800; color:#fff; letter-spacing:.2px; line-height:1.05;
+    background:rgba(24,34,52,.94); border:1px solid rgba(255,255,255,.14); border-radius:14px; padding:7px 18px 8px; min-width:0; max-width:min(228px,60vw);
+    box-shadow:0 6px 18px rgba(0,0,0,.45); font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
+  #hood .n .block { margin-bottom:3px; color:#aab6c8; font-size:clamp(8px,1.9vw,10.5px); font-weight:800; letter-spacing:1.35px; line-height:1; }
+  #hood .n .street { display:block; max-width:min(190px,52vw); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    border-bottom:2px solid #f2c14e; padding-bottom:5px; }
+  #hood .s { order:2; font-size:clamp(9px,2vw,11.5px); font-weight:700; color:#c3cede; text-shadow:none; letter-spacing:2px;
+    margin:5px 0 0; background:rgba(24,34,52,.94); border-radius:9px; padding:2px 10px; }
   #wp { left:0; top:0; z-index:11; display:none; will-change:transform; }
   #wp .pin { position:absolute; left:0; top:0; margin:-19px 0 0 -19px; width:38px; height:38px; border-radius:50%; background:rgba(255,45,40,.94); border:2.5px solid #fff;
     box-shadow:0 2px 9px rgba(0,0,0,.55), 0 0 16px rgba(255,60,40,.75); display:flex; align-items:center; justify-content:center; font-size:20px; animation:wpPulse 1s ease-in-out infinite; }
@@ -164,23 +231,33 @@
   #mini, #wp, #speed, #timer, #combo, #cash, #touchUI, #btnNight, #btnRoute, #btnSiren, #btnMute, #crt, #vig { display:none !important; }
   #parkedStreetChoices { position:absolute; inset:0; z-index:13; display:none; pointer-events:none; overflow:hidden; }
   #parkedStreetChoices.show { display:block; }
+  /* v19z: the mockup's red rounded bubble with a pointer. These DOM cards are what you actually tap at
+     a junction — the LBL sprite under each one is set to zero opacity by updateParkedStreetChoices — so
+     the sprite palette (SIGN_BG / CALLOUT_WRONG_*) and these rules must be changed TOGETHER or a callout
+     changes colour the moment it becomes tappable. */
   .parkStreetChoice { position:absolute; transform:translate(-50%,-50%); pointer-events:auto; touch-action:manipulation; min-height:26px;
-    background:#ffffff; color:#2a2e35; border:1px solid rgba(0,0,0,.14); border-radius:11px; padding:3px 9px 4px; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
-    box-shadow:0 1px 4px rgba(0,0,0,.22); text-align:center; white-space:nowrap; cursor:pointer; line-height:1.05; }
-  .parkStreetChoice::after { content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#ffffff; }
-  .parkStreetChoice .block { display:block; font-size:7.5px; font-weight:800; letter-spacing:.9px; margin-bottom:1px; color:#8a9099; }
+    background:#d12b2b; color:#ffffff; border:1px solid rgba(255,255,255,.34); border-radius:11px; padding:3px 9px 4px; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
+    box-shadow:0 2px 7px rgba(0,0,0,.34); text-align:center; white-space:nowrap; cursor:pointer; line-height:1.05; }
+  .parkStreetChoice::after { content:""; position:absolute; left:50%; top:100%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#d12b2b; }
+  .parkStreetChoice .block { display:block; font-size:7.5px; font-weight:800; letter-spacing:.9px; margin-bottom:1px; color:rgba(255,255,255,.82); }
   .parkStreetChoice .street { display:block; font-size:clamp(11px,2.7vw,13px); font-weight:650; overflow:hidden; text-overflow:ellipsis; }
   .parkStreetChoice.selected { background:#1f6ff0; border-color:rgba(255,255,255,.9); color:#fff; box-shadow:0 2px 8px rgba(31,111,240,.5); }
   .parkStreetChoice.selected .block { color:rgba(255,255,255,.8); }
   .parkStreetChoice.selected::after { border-top-color:#1f6ff0; }
-  .parkStreetChoice.wrong { background:#bd2926; color:#fff; border-color:#fff; box-shadow:0 2px 8px rgba(100,15,15,.35); }
-  .parkStreetChoice.wrong .block { color:rgba(255,255,255,.85); }
-  .parkStreetChoice.wrong::after { border-top-color:#bd2926; }
+  /* ⚠ A WRONG-WAY CARD USED TO BE 'THE RED ONE' — the code above still says the colour alone flags it.
+     It cannot any more, now that every callout is red, so the warning moved to a GOLD HAZARD BAR across
+     the top and a gold edge, on a darker body. Do not drop the bar: with it gone the card is simply
+     another street. The hundred block stays, as it always has (owner's rule). */
+  .parkStreetChoice.wrong { background:#7d1a12; color:#fff; border-color:#f4b950; box-shadow:0 2px 9px rgba(100,15,15,.5); padding-top:9px; }
+  .parkStreetChoice.wrong::before { content:""; position:absolute; left:0; right:0; top:0; height:5px; border-radius:10px 10px 0 0;
+    background:repeating-linear-gradient(-52deg,#f4b950 0 5px,#20293b 5px 10px); }
+  .parkStreetChoice.wrong .block { color:#ffe6b3; }
+  .parkStreetChoice.wrong::after { border-top-color:#7d1a12; }
   .parkStreetChoice.wrong.selected { outline:3px solid #ffcf66; outline-offset:2px; }
   .parkStreetChoice:active { transform:translate(-50%,-50%) scale(.96); }
   /* turn banner (top) */
   /* 🚑 rival engines panel — the 4 engines responding to the current fire */
-  #rivals { position:absolute; z-index:14; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); top:calc(max(8px,env(safe-area-inset-top)) + 44px); bottom:auto;
+  #rivals { position:absolute; z-index:14; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); top:var(--barBot); bottom:auto;
     display:none; flex-direction:row; flex-wrap:nowrap; align-items:center; justify-content:center; gap:7px;
     background:rgba(15,19,27,.93); border:1px solid rgba(255,255,255,.14); border-radius:13px; padding:5px 9px; box-shadow:0 3px 13px rgba(0,0,0,.5); pointer-events:none; overflow:hidden; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
   #rivals.show { display:flex; }
@@ -406,7 +483,7 @@
   #qcStart { display:block; width:100%; border:none; border-radius:10px; padding:12px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:15px; background:linear-gradient(180deg,#f4b950,#c98d2a); color:#241a05; cursor:pointer; pointer-events:auto; }
   #qcStart:disabled { opacity:.6; }
   #qcCancel { display:block; width:100%; margin-top:8px; border:none; border-radius:10px; padding:11px; font-weight:900; background:#343c49; color:#fff; cursor:pointer; pointer-events:auto; }
-  #qualChip { position:absolute; z-index:15; top:calc(max(8px,env(safe-area-inset-top)) + 64px); left:max(10px,env(safe-area-inset-left)); display:none; pointer-events:none;
+  #qualChip { position:absolute; z-index:15; top:calc(var(--barBot) + 22px); left:max(10px,env(safe-area-inset-left)); display:none; pointer-events:none;
     background:rgba(12,17,26,.94); border:1.5px solid #f4b950; border-radius:10px; padding:5px 10px; box-shadow:0 3px 12px rgba(0,0,0,.5);
     font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:12px; color:#ffd27a; }
   #qualChip b { color:#e9eef7; font-weight:800; }
@@ -477,18 +554,11 @@
     left:max(14px,env(safe-area-inset-left)); bottom:clamp(146px,27vh,186px); width:56px; height:56px; border-radius:50%;
     background:#2b3444; color:#dbe6f5; border:2px solid rgba(255,255,255,.28); font-size:9px; font-weight:800; letter-spacing:.6px;
     box-shadow:0 5px 14px rgba(0,0,0,.42); padding:0; }
-  /* The dark street panel, bottom centre. It sits BETWEEN the pad and the speed buttons, so it is
-     width-limited and lifted clear of both — at 375px the pad and buttons each claim 150px. */
-  body.ctl #hood { bottom:calc(max(10px,env(safe-area-inset-bottom)) + 14px); width:auto; max-width:142px;
-    display:flex; flex-direction:column; align-items:center; }
-  body.ctl #hood .n { order:1; background:rgba(24,34,52,.94); border:1px solid rgba(255,255,255,.14);
-    border-radius:14px; padding:7px 16px 8px; min-width:0; color:#fff; font-weight:800;
-    box-shadow:0 6px 18px rgba(0,0,0,.45); max-width:142px; font-size:clamp(13px,3.2vw,17px); }
-  body.ctl #hood .n .block { color:#aab6c8; }
-  body.ctl #hood .n .street { display:block; max-width:118px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    border-bottom:2px solid #f2c14e; padding-bottom:5px; }
-  body.ctl #hood .s { order:2; color:#c3cede; text-shadow:none; margin:5px 0 0;
-    background:rgba(24,34,52,.94); border-radius:9px; padding:2px 10px; }
+  /* CONTROLLER only changes the panel's SEAT, not its look: it drops between the pad and the speed
+     buttons, which each claim 150px at 375px, so it is width-limited and lifted clear of both. */
+  body.ctl #hood { bottom:calc(max(10px,env(safe-area-inset-bottom)) + 14px); width:auto; max-width:132px; }
+  body.ctl #hood .n { padding:7px 14px 8px; max-width:132px; font-size:clamp(13px,3.2vw,17px); }
+  body.ctl #hood .n .street { max-width:104px; }
   #zoomBtns { position:absolute; right:max(12px,env(safe-area-inset-right)); bottom:clamp(90px,20vh,150px); z-index:13; display:none; flex-direction:column; gap:8px; }
   #zoomBtns button { pointer-events:auto; width:52px; height:52px; border-radius:50%; border:none; background:#fff; color:#22252b;
     font-size:26px; font-weight:800; line-height:1; box-shadow:0 3px 10px rgba(0,0,0,.3); cursor:pointer; font-family:inherit; }
@@ -502,15 +572,14 @@
     box-shadow:0 0 18px rgba(20,160,60,.25), inset 0 0 30px rgba(0,60,10,.35); }
   #radio .tag { color:#aaffc0; font-weight:700; } #radio .cur { animation:blink .8s steps(1) infinite; }
   @keyframes blink { 50% { opacity:0; } }
-  body.touch #radio { bottom:auto; top:calc(max(8px,env(safe-area-inset-top)) + 84px); }   /* below the responding strip */
+  body.touch #radio { bottom:auto; top:calc(var(--barBot) + 40px); }   /* below the bar and the responding strip */
   /* 📻 COLLAPSED RADIO. On a patrol the banner has nothing urgent to say and it sits over the road for
      the whole shift. After a few seconds it folds into a pill under the corner buttons; a tap opens it
      again. A LIVE BOX NEVER COLLAPSES — rdCollapse() refuses while state.target is set. */
-  #radio.mini { width:auto; min-height:0; left:auto; right:max(8px,env(safe-area-inset-right)); transform:none;
-    bottom:auto; top:calc(max(8px,env(safe-area-inset-top)) + 44px); padding:5px 10px; border-radius:999px;
-    font-size:clamp(10px,2.3vw,12px); pointer-events:auto; cursor:pointer; white-space:nowrap; }
-  /* the pill says WHERE the banner went and that it can be tapped; half a truncated sentence is noise */
-  #radio.mini .cur, #radio.mini #radioTxt { display:none; }
+  /* v19z: the folded banner is now represented by the DISPATCH pill in the top bar, so folding hides the
+     banner outright rather than leaving a second pill floating under the corner buttons. The .mini class
+     is still the state flag, and #radio still answers a click, so nothing that drove v19t changed. */
+  #radio.mini { display:none; }
   #popup { top:24%; left:50%; transform:translateX(-50%); font-size:clamp(24px,6vw,42px); font-weight:900; white-space:nowrap;
     color:#ffe14d; font-family:"Arial Black",sans-serif; letter-spacing:2px; opacity:0; z-index:15; text-shadow:0 0 16px rgba(255,160,0,.9), 0 4px 0 #7a3a00, 0 7px 10px rgba(0,0,0,.7); }
   #popup.pop { animation:popIn 1.4s ease forwards; }
@@ -631,11 +700,15 @@
 <div id="timer" class="hud"><div class="num">60</div><div class="cap">TIME</div></div>
 <div id="cash" class="hud"><span class="sub">CASH</span>$0</div>
 <div id="combo" class="hud">🔥 x1.0</div>
-<div id="saves" class="hud">SAVES 0 · BEST 0</div>
-<div id="cornerBtns">
-  <button class="abtn" id="btnCallIcon" style="display:none;font-size:15px;padding:5px 9px" title="Get a call" aria-label="Get a call">📟</button>
-  <button class="abtn" id="btnSettings">⚙ SETTINGS</button>
-  <button class="abtn" id="btnAccount">👤 ACCOUNT</button>
+<div id="topBar">
+  <div id="saves" class="hud"><span class="stat"><i>🔥</i><b>SAVES</b><u id="savesN">0</u></span><span class="stat"><i>🏆</i><b>BEST</b><u id="bestN">0</u></span></div>
+  <div id="dueChip"><span class="dueRow"><span class="dueDot"></span><span class="dueTxt">1ST IN</span><span class="dueWho"></span></span><b class="dueVer" id="verTag"></b></div>
+  <div id="cornerBtns">
+    <button class="abtn" id="btnCallIcon" style="display:none" title="Get a call" aria-label="Get a call"><i>📟</i></button>
+    <button class="abtn" id="btnSettings"><i>⚙</i><b>SETTINGS</b></button>
+    <button class="abtn" id="btnAccount"><i>👤</i><b>ACCOUNT</b></button>
+  </div>
+  <button class="abtn open" id="dispatchPill" title="Dispatch radio" aria-label="Dispatch radio"><i>📻</i><b>DISPATCH</b></button>
 </div>
 <div id="qualChip">🎖 CHIEF QUAL · <b id="qualChipTxt"></b></div>
 <div id="qualCard" aria-hidden="true">
@@ -649,7 +722,6 @@
   </div>
 </div>
 <div id="rivals"></div>
-<div id="dueChip"><span class="dueDot"></span><span class="dueTxt">1ST IN</span><span class="dueWho"></span></div>
 <div id="drillHUD"></div>
 <style>
   #duePanel { position:absolute; inset:0; z-index:70; display:none; background:#09111f; color:#e9eef7; pointer-events:auto; overflow:auto; padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left)); box-sizing:border-box; }
@@ -907,7 +979,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19z";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1054,7 +1126,12 @@ const RD_FILL=['#fbe4a8','#ffffff','#ffffff','#ffffff','#ffffff'];       // per 
 const RD_CASE=['#eccd7d','#d8d3c7','#dbd6ca','#ddd8cc','#dfdace'];       // casing colors, matched to each fill
 const RD_CASEW=[3.5,3,2.6,2.4,2.2];                                     // casing overhang (px) per class — thinner than the old flat +4
 const MAP_LAND='#ecebe3', MAP_WATER='#a9d9f2', MAP_OUTSIDE='#d4d5d1';   // warm city land, Apple water blue, muted beyond-city area
-const SIGN_BG='#ffffff', SIGN_FG='#1b1f26', SIGN_EDGE='rgba(0,0,0,.12)', SIGN_SUB='#7c828c', SIGN_ACTIVE='#1f6ff0'; // shared map/3D street-sign palette: white face, dark lettering, muted block line, Apple-blue active pill
+const SIGN_BG='#d12b2b', SIGN_FG='#ffffff', SIGN_EDGE='rgba(0,0,0,.22)', SIGN_SUB='#ffd8d8', SIGN_ACTIVE='#1f6ff0'; // v19z: the 3D street callouts are the mockup's red bubbles — red face, white lettering
+/* ⚠ A WRONG-WAY CALLOUT USED TO BE 'THE RED ONE'. Now that every callout is red, red alone cannot carry
+   that warning any more, so a wrong-way sign keeps the red body and gains a gold hazard bar across its
+   top plus a gold edge. Do not drop the bar: it is the whole distinction, and the hundred block stays on
+   a wrong-way sign exactly as on every other one (owner's rule). */
+const CALLOUT_WRONG_BG='#7d1a12', CALLOUT_WRONG_EDGE='#f4b950';
 const WB={ minX:RB.b[0], minZ:RB.b[1], maxX:RB.b[2], maxZ:RB.b[3] };
 const DATA={ landmarks:[
   { id:'mifflin', name:'Thomas Mifflin School', zone:'EAST FALLS · 19129', dispatch:'Structure fire near THOMAS MIFFLIN SCHOOL on Conrad St! Move!',
@@ -2221,11 +2298,17 @@ function labelTex(name,block,wrong){ const bl=blockLine(block), key=name+'|'+bl+
   const tw=Math.max(nw,Math.ceil(mc.measureText(bl).width)),w=tw+pad*2,bh=Math.round(fs+bfs+pad*1.25),h=bh+ptr;
   const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const c=cv.getContext('2d'); c.textAlign='center'; c.textBaseline='middle';
   c.shadowColor='rgba(0,0,0,0.42)'; c.shadowBlur=8*S; c.shadowOffsetY=3*S;
-  c.fillStyle=wrong?'#d0342c':SIGN_BG; roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.fill();
+  c.fillStyle=wrong?CALLOUT_WRONG_BG:SIGN_BG; roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.fill();
   c.beginPath(); c.moveTo(w/2-ptr,bh-1); c.lineTo(w/2+ptr,bh-1); c.lineTo(w/2,bh+ptr-1); c.closePath(); c.fill();
-  c.shadowColor='transparent'; c.strokeStyle=wrong?'#8f1d14':SIGN_EDGE; c.lineWidth=1.5*S; roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.stroke();
-  c.shadowColor='rgba(0,0,0,.38)'; c.shadowBlur=2*S; c.shadowOffsetY=1*S; c.fillStyle=wrong?'#ffffff':SIGN_FG;
-  c.font=bfnt; c.fillText(bl,w/2,bh*0.4); c.font=fnt; c.fillText(name,w/2,bh*0.78); c.shadowColor='transparent';
+  c.shadowColor='transparent';
+  if(wrong){ c.save(); roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.clip();                    // gold hazard bar across the top: what tells a wrong-way sign from an ordinary red one
+    c.fillStyle='#f4b950'; c.fillRect(3*S,3*S,w-6*S,5*S);
+    c.fillStyle='#20293b'; for(let x=-6*S;x<w;x+=8*S){ c.beginPath(); c.moveTo(x,3*S); c.lineTo(x+4*S,3*S); c.lineTo(x+4*S-5*S,8*S); c.lineTo(x-5*S,8*S); c.closePath(); c.fill(); }
+    c.restore(); }
+  c.strokeStyle=wrong?CALLOUT_WRONG_EDGE:SIGN_EDGE; c.lineWidth=(wrong?2.5:1.5)*S; roundRect(c,3*S,3*S,w-6*S,bh-3*S,r); c.stroke();
+  c.shadowColor='rgba(0,0,0,.38)'; c.shadowBlur=2*S; c.shadowOffsetY=1*S; c.fillStyle=SIGN_FG;
+  c.fillStyle=wrong?'#ffe6b3':SIGN_SUB; c.font=bfnt; c.fillText(bl,w/2,bh*(wrong?0.47:0.4));
+  c.fillStyle=SIGN_FG; c.font=fnt; c.fillText(name,w/2,bh*(wrong?0.81:0.78)); c.shadowColor='transparent';
   const t=new THREE.CanvasTexture(cv); t.anisotropy=4; t.minFilter=THREE.LinearFilter; t.generateMipmaps=false;
   return (LBL.cache[key]={tex:t,aspect:w/h}); }
 (function initLabels(){ for(let i=0;i<LBL.cap;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthTest:false,depthWrite:false,opacity:0}));
@@ -3423,7 +3506,8 @@ function updateCamera(dt){ const C=CONFIG.camera; let d=truck.theta-camTheta; wh
     camera.position.set(truck.x-afx*C.topBack+sx,truck.y+h,truck.z-afz*C.topBack+sy); camera.lookAt(truck.x+afx*C.topAhead,truck.y,truck.z+afz*C.topAhead); } }
 function updateAudio(dt){ sfx.tick(GT,Math.hypot(truck.vx,truck.vz),state.siren&&state.running); }
 const elTimer=document.getElementById('timer'), elTimerN=elTimer.querySelector('.num'), elCash=document.getElementById('cash'), elCombo=document.getElementById('combo'),
-      elSaves=document.getElementById('saves'), elStreet=document.getElementById('streetN'), elZone=document.getElementById('zoneN'), elSpeed=document.querySelector('#speed .num'),
+      elSaves=document.getElementById('saves'), elSavesN=document.getElementById('savesN'),
+      elBestN=document.getElementById('bestN'), elVerTag=document.getElementById('verTag'), elStreet=document.getElementById('streetN'), elZone=document.getElementById('zoneN'), elSpeed=document.querySelector('#speed .num'),
       elRadio=document.getElementById('radioTxt'), elDouse=document.getElementById('douse'), elDouseF=document.getElementById('douseFill'),
       elTurn=document.getElementById('turnBanner');
 const elStreetText=elStreet.querySelector('.street'),elStreetBlock=elStreet.querySelector('.block');
@@ -3527,7 +3611,9 @@ function updateHUD(dt){
     if(e&&!DRIVE.parked){ if(e.name){curStreet=e.name;curBlock=currentHundredBlock(rp[0],rp[1],curStreet);}
       else {curStreet=rampDestName()||'Connecting ramp';curBlock='RAMP';} } // name the actual driven level, not the avenue passing overhead
     const hb=hwyHudBlock(e,DRIVE.fromN,rp[0],rp[1]); if(hb) curBlock=hb; }   // 🛣️ freeway: 'I-76 EAST · MILE 340.6 · APPROX'
-  elSaves.innerHTML='SAVES '+state.saves+' · BEST '+best.saves+'<b class="ver">'+BUILD+(FPSM.avg?' · '+(FPSM.avg|0)+' FPS · dip '+((FPSM.shownMin===999?FPSM.avg:FPSM.shownMin)|0):'')+'</b>'; elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
+  elSavesN.textContent=state.saves; elBestN.textContent=best.saves;
+  elVerTag.textContent=BUILD+(FPSM.avg?(' · '+(FPSM.avg|0)+' FPS'):'');   // v## · FPS — the BUILD tag is the owner's cache check and LEADS, so if this line ever has to truncate it loses a frame rate, never the tag
+  elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
   { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = '📻 DISPATCH » '; }   // boundary/training mode is not a live call
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
@@ -5645,6 +5731,7 @@ document.getElementById('btnCall').addEventListener('click',e=>{ e.preventDefaul
   newDispatch(); });
 document.getElementById('radio').addEventListener('click',e=>{ if(RADIO.open) return;                     // only the collapsed pill is a target
   e.preventDefault(); rdSet(true); });
+document.getElementById('dispatchPill').addEventListener('click',e=>{ e.preventDefault(); if(!RADIO.open) rdSet(true); });   // a tap only ever OPENS — folding stays automatic and stays refused in Career and on a live box (v19t)
 freeSet(false);
 /* 🎯 DIFFICULTY — how fast the other companies run. The player's own truck does 15 u/s by default and can be
    pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
@@ -7426,7 +7513,8 @@ let radioQueue='', radioShown='', radioT=0, lastIdx=-1;
    tap toggles it by hand. A live box holds it open — that is the one thing this must never hide. */
 const RADIO={ t:0, hold:5, open:true };
 function rdSet(open){ RADIO.open=!!open; RADIO.t=0;
-  const el=document.getElementById('radio'); if(el) el.classList.toggle('mini',!RADIO.open); }
+  const el=document.getElementById('radio'); if(el) el.classList.toggle('mini',!RADIO.open);
+  const pill=document.getElementById('dispatchPill'); if(pill) pill.classList.toggle('open',RADIO.open); }   // the bar's pill is the banner's handle: lit when the banner is open, outlined when it is folded away
 function rdCollapse(dt){ const el=document.getElementById('radio'); if(!el) return;
   if(!FREE.on||state.target){ if(!RADIO.open) rdSet(true); return; }                  // Career, or a live box: always the full banner
   if(!RADIO.open||radioShown.length<radioQueue.length) return;                        // still typing: let it finish
