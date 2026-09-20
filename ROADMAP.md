@@ -1,6 +1,19 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 20, 2026. **v19x is public**, service-worker cache `local-shell-v35`.
+Planning snapshot: September 20, 2026. **v19y is public**, service-worker cache `local-shell-v36`.
+
+- [x] **Smaller controls, and the arrows stop arguing with the cards (v19y, September 20, 2026):** the
+  pad crowded the screen on a phone, so everything shrank by about a quarter — without any button
+  becoming harder to hit, because only the paint got smaller, not the area that responds to a thumb.
+  The bigger change is underneath: the arrows and the street cards now look at the road the same way,
+  so a turn the cards offer can never be a turn the arrow denies. When the street you want is there but
+  on the other side, the game says so by name rather than telling you there is nothing.
+
+- [x] **Driving the wrong way is your call (v19y, September 20, 2026):** apparatus goes against traffic
+  when the job needs it, so the game no longer refuses the turn. It warns you while you are on the
+  wrong side and stops warning when you are back with it. It only costs you points if you stay wrong-way
+  past a whole intersection — a short stretch around a blocked street is free, and every new stretch
+  starts free again.
 
 - [x] **The controller works now (v19x, September 20, 2026):** the pad shipped with only the U-turn
   really wired — the turn arrows did nothing once you were out of the firehouse, and holding the speed
