@@ -1,6 +1,12 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 20, 2026. **v19v is public**, service-worker cache `local-shell-v33`.
+Planning snapshot: September 20, 2026. **v19w is public**, service-worker cache `local-shell-v34`.
+
+- [x] **A controller, for anyone who would rather have buttons (v19w, September 20, 2026):** tapping
+  the road still works and is still the default, but Settings now offers a second scheme — a cross
+  pad bottom-left for straight, left, right and U-turn, two big round buttons bottom-right for speed,
+  a re-centre compass, and the street you are on named in a panel between them. It is the same driving
+  underneath: every button pulls the same lever the taps already did.
 
 - [x] **Free play is a switch now, not a decision you make at the door (v19v, September 19–20,
   2026):** riding without rivals meant choosing it before the shift started and going back to the
