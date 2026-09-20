@@ -1,6 +1,13 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 20, 2026. **v19w is public**, service-worker cache `local-shell-v34`.
+Planning snapshot: September 20, 2026. **v19x is public**, service-worker cache `local-shell-v35`.
+
+- [x] **The controller works now (v19x, September 20, 2026):** the pad shipped with only the U-turn
+  really wired — the turn arrows did nothing once you were out of the firehouse, and holding the speed
+  buttons changed nothing at all. Pressing left or right now books a turn at the next junction and
+  lights the arrow until it happens, straight cancels it, and the speed buttons work while you hold
+  them. It is the same turn system the street cards have always used; only the way you ask for it is
+  new.
 
 - [x] **A controller, for anyone who would rather have buttons (v19w, September 20, 2026):** tapping
   the road still works and is still the default, but Settings now offers a second scheme — a cross
