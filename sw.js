@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v32';  // v19u: US 1 follows its route designation across the name change at Broad and 9th, reading the trunk side table.
+const CACHE = 'local-shell-v33';  // v19v: FREE DRIVE switches both ways mid-shift from Settings, locked while a box is live.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

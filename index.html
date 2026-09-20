@@ -111,6 +111,7 @@
     display:flex; flex-direction:row; flex-wrap:wrap; gap:6px; justify-content:center; align-items:flex-start; pointer-events:auto; z-index:14; position:absolute; }
   .abtn { background:rgba(10,10,25,.72); border:2px solid #444; border-radius:10px; color:#ccc;
     font-size:clamp(9px,2.3vw,12px); font-weight:800; letter-spacing:.5px; padding:6px 9px; cursor:pointer; font-family:inherit; text-shadow:0 1px 2px #000; touch-action:none; white-space:nowrap; }
+  .abtn[disabled] { opacity:.38; cursor:default; }                 /* the mid-shift FREE DRIVE toggle while a box is live */
   .abtn.on { border-color:#ff3b30; color:#fff; background:rgba(160,20,20,.8); box-shadow:0 0 14px rgba(255,60,40,.7); animation:sirGlow .5s steps(2) infinite; }
   @keyframes sirGlow { 50% { box-shadow:0 0 22px rgba(80,120,255,.9); border-color:#4d7dff; } }
   #cornerBtns { justify-content:flex-end; }
@@ -631,6 +632,7 @@
   <button class="abtn" id="btnSiren">🚨 SIREN</button>
   <button class="abtn on" id="btnGuide">🔵 GUIDE</button>
   <button class="abtn on" id="btnDue">🚒 DUE: 1ST</button>
+  <button class="abtn" id="btnFreeLive">🧭 FREE DRIVE</button>
   <button class="abtn" id="btnCall" style="display:none">📟 GET A CALL</button>
   <button class="abtn" id="btnRivals">🚑 RIVALS</button>
   <button class="abtn" id="btnDrill">🎓 KNOW YOUR LOCAL</button>
@@ -829,7 +831,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19u";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19v";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3402,7 +3404,7 @@ function updateHUD(dt){
   document.getElementById('btnRecenter').style.display = state.running?'block':'none';   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
   if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; }
-  rdCollapse(dt); }
+  rdCollapse(dt); freeLiveBtn(); }
 // On-screen dispatch marker: projects the target to the screen, sticks to the edge with an arrow when off-screen, always shows distance.
 const _wpV=new THREE.Vector3(), _wpF=new THREE.Vector3();
 const elWp=document.getElementById('wp'), elWpPin=elWp.querySelector('.pin'), elWpArr=elWp.querySelector('.arr'), elWpDist=elWp.querySelector('.dist');
@@ -5429,6 +5431,33 @@ function freeSet(on){ FREE.arm=!!on;
    patrol actually uses, and the labelled button inside Settings is where it is discoverable and what
    the radio line points at. The icon forwards its click, so there is still ONE handler. */
 function freeCallBtn(){ for(const id of ['btnCall','btnCallIcon']){ const b=document.getElementById(id); if(b) b.style.display=FREE.on?'':'none'; } }
+/* 🧭 SWITCHING MODE MID-SHIFT, BOTH WAYS. The picker arms FREE.arm and startShift consumes it once;
+   this is the same decision taken again without going back to the home screen. It sets exactly the
+   state the picker path sets — setRivals() is still the ONLY writer of RIVALS.on, clearRivals() still
+   the only thing that empties the strip and the pool — so there is one way into a patrol, not two.
+     WHILE A BOX IS LIVE THE TOGGLE IS DISABLED. That is the whole safety argument: the loss/win
+   recording invariants (missedDue records ONCE, OVER_BUSY latches the card, profileRun is the single
+   career door) all assume the mode cannot change underneath a run. Flipping to free mid-race would
+   suppress a loss that was already going to be recorded; flipping to career mid-patrol would record a
+   run that started with no rivals. So the question never arises: resolve the box first. */
+function freeLiveLocked(){ return !state.running||!!state.target||state.over; }
+function freeLiveBtn(){ const b=document.getElementById('btnFreeLive'); if(!b) return;
+  const lock=freeLiveLocked();
+  b.disabled=lock; b.classList.toggle('on',FREE.on);
+  b.textContent=FREE.on?'🧭 FREE DRIVE: ON':'🧭 FREE DRIVE';
+  b.title=lock?'Finish the box you are on first':(FREE.on?'Go back on the career board':'Ride without rivals'); }
+function freeLive(on){
+  if(freeLiveLocked()){ popup('🧭 FINISH THIS BOX FIRST','red'); return false; }
+  if(!!on===FREE.on){ freeLiveBtn(); return false; }
+  FREE.on=!!on; FREE.arm=FREE.on;                                               // keep the picker in step with what is actually being ridden
+  setRivals(!FREE.on); clearRivals();                                           // the picker path's own two calls, in the same order
+  freeSet(FREE.arm); freeCallBtn(); freeLiveBtn();
+  if(FREE.on) radio('🧭 FREE DRIVE — in service, no rivals, nothing counts. ⚙ SETTINGS › 📟 GET A CALL for a box.');
+  else { radio('🛒 BACK ON THE BOARD — rivals are running and this one goes on your record. Stand by…');
+    try{ closeSettings(); }catch(err){}
+    if(!state.target) setTimeout(newDispatch,700); }                            // leaving a patrol hands you back to the dispatcher
+  return true; }
+document.getElementById('btnFreeLive').addEventListener('click',e=>{ e.preventDefault(); freeLive(!FREE.on); });
 document.getElementById('btnCallIcon').addEventListener('click',e=>{ e.preventDefault(); document.getElementById('btnCall').click(); });
 document.getElementById('btnFreeMode').addEventListener('click',e=>{ e.preventDefault(); freeSet(!FREE.arm); });
 document.getElementById('hcFree').addEventListener('click',e=>{ e.preventDefault(); freeSet(!FREE.arm); });
