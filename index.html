@@ -798,6 +798,7 @@
 <script src="data/navgeo.js"></script>
 <script src="data/landcover.js"></script>
 <script src="data/btype.js"></script>
+<script src="data/rref.js"></script>
 <script>
 /* ================================================================================
    PHILLY FIRE DISPATCH  —  v9 · Round B (real OpenStreetMap streets)
@@ -828,7 +829,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19t";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19u";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1881,7 +1882,13 @@ function gradeSeparatedCrossing(A,B,X,Z){
     b.adj.push({to:a,w,name:nm,wrong: sw===1,hw:hw||0,ref,dst,drf}); };   // hw: 1 freeway carriageway, 2 freeway ramp, 0 street  // ref/dst/drf: the baked OSM route designation, guide-sign destination and destination:ref, freeway records only  // and b->a is wrong-way when the legal direction is forward (a->b)
   const TH=4.5;
   for(let si=0; si<RB.st.length; si++){ const pts=RB.st[si][2], snm=RB.st[si][0], sow=RB.st[si][3]||0, shw=RB.st[si][4]||0;
-    const sref=RB.st[si][6]||'', sdst=RB.st[si][7]||'', sdrf=RB.st[si][8]||'';                 // only freeway/ramp records carry these; every other record leaves them ''
+    let sref=RB.st[si][6]||'', sdst=RB.st[si][7]||'', sdrf=RB.st[si][8]||'';                   // freeway/ramp records carry these INLINE at 6/7/8
+    /* TRUNK reads its designation from the SIDE TABLE instead. A trunk way bakes as an ordinary street
+       record and an ordinary street record must never gain a field, so RREF.rec[si] sits beside it,
+       one entry per record in the same order. Guarded exactly the way BTYPE is: a missing or
+       mis-locked file degrades to the behaviour we had before it existed, silently and safely. */
+    if(!shw && typeof RREF!=='undefined' && RREF && RREF.rec && RREF.rec.length===RB.st.length){
+      const t=RREF.rec[si]; if(t){ sref=t[0]||''; sdst=t[1]||''; sdrf=t[2]||''; } }
     for(let i=1;i<pts.length;i++){ const ax=pts[i-1][0],az=pts[i-1][1],bx=pts[i][0],bz=pts[i][1];
     const a=gnodeFor(ax,az,shw), b=gnodeFor(bx,bz,shw), dx=bx-ax,dz=bz-az, L2=dx*dx+dz*dz;
     if(L2<1){ edge(a,b,snm,sow,shw,sref,sdst,sdrf); continue; }
@@ -2581,7 +2588,10 @@ function updateStreetLabels(dt){
       // end of the Roosevelt Expressway this is what distinguishes two otherwise identical ramps: one
       // reads US 1 South / Valley Forge, the other I 76 East / Central Philadelphia. The guess below
       // still handles every ramp OSM leaves untagged.
-      if(!nm&&e.hw===2&&(e.dst||e.drf)){ const j=t=>t.split(';').map(x=>x.trim()).filter(Boolean).join(' · ');
+      // Since September 19, 2026 a TRUNK link can carry these too, from the RREF side table, so the
+      // test is "an unnamed branch with baked destination tags" rather than "a freeway ramp". A named
+      // branch still captions with its name — that is what a driver reads on the sign.
+      if(!nm&&(e.dst||e.drf)){ const j=t=>t.split(';').map(x=>x.trim()).filter(Boolean).join(' · ');
         nm=e.dst?j(e.dst):j(e.drf); ramp=true; if(e.drf) exitBlock='RAMP TO '+j(e.drf); }
       if(!nm){ const guess=streetName((node.x+e.to.x)/2,(node.z+e.to.z)/2);        // unnamed edge: a noding stub of the street whose band it sits in — OR a ramp/connector chain.
         let dest=null,destEdge=null,destFrom=null,pa2=node,pb2=e.to,walked=Math.hypot(e.to.x-node.x,e.to.z-node.z),g=0;   // walk the chain to the first REALLY-named street: that's where the ramp factually leads
@@ -3706,9 +3716,43 @@ function sameRouteOn(a,b){
     if(hit) return null;                                                          // two ways carry this route on: a real split, stop and ask
     hit=e; }
   return hit?hit.to:null; }
+/* ROUTE CONTINUATION ON AN ORDINARY ROAD (Release B part 2, September 19, 2026). US 1 changes NAME at
+   Broad and 9th — Roosevelt Expressway becomes Roosevelt Boulevard — so sameStreetOn finds nothing and
+   the truck stopped to ask a question with only one answer. It follows the baked route designation
+   instead, and ONLY here:
+     • the road we are ON must carry a ref and must NOT be a freeway record. sameRouteOn above owns
+       every freeway arrival and comes out of this release unchanged; this one cannot reach them.
+     • an ordinary street is untouchable BY CONSTRUCTION: refs exist only on freeway records (inline)
+       and trunk records (side table), so a street with no designation fails the first test and the
+       loop never runs. Manual turns and the v18z street-choice rules are safe by shape, not by luck.
+     • EXACTLY ONE forward branch may match. Zero behaves as today; TWO OR MORE behaves as today, and
+       that is not a limitation — the Boulevard's inner and outer drives are both US 1, and choosing
+       between them is a real decision, not a name change.
+     • refs INTERSECT as token sets, so the multiplexed "US 1;US 13" carries either route on. */
+function sameRouteOnRoad(a,b){
+  const ce=a.adj.find(e=>e.to===b); if(!ce||ce.hw||!ce.ref) return null;
+  const hx=b.x-a.x, hz=b.z-a.z, hl=Math.hypot(hx,hz)||1;
+  const fwd=e=>{ const dx=e.to.x-b.x, dz=e.to.z-b.z, l=Math.hypot(dx,dz)||1; return (hx*dx+hz*dz)/(hl*l); };
+  let hit=null, hitF=0, straightest=-2;
+  for(const e of b.adj){ if(e.to===a) continue;
+    const f=fwd(e);
+    if(!(e.wrong&&!ce.wrong) && f>straightest) straightest=f;                     // the straightest road a driver could legally take from here
+    if(!e.ref) continue;
+    if(e.wrong&&!ce.wrong) continue;                                              // never auto-continue the wrong way (the rule sameStreetOn uses)
+    if(!routeRefsMeet(ce.ref,e.ref)) continue;
+    if(hit) return null;                                                          // two ways carry this route on: a real split, stop and ask
+    hit=e; hitF=f; }
+  /* AND THE ROUTE HAS TO BE THE ROAD AHEAD. A route number is a weaker signal than a street name, so
+     following one across a name change is allowed only when it is also what a driver would call
+     straight on: at least 0.5 forward (sameStreetOn needs only 0.1 to follow a NAME), and no legal
+     branch straighter than it. Without this the rule turned the truck 90 degrees off North 34th Street
+     onto West Girard because both carry US 30 while the road ran straight on as Lansdowne Drive, and
+     it followed City Avenue and Old York Road BACK THE WAY THEY CAME across a divided-road twin. */
+  return (hit&&hitF>0.5&&hitF>=straightest) ? hit.to : null; }
 function roadContinuation(a,b){ if(!b) return null;
   const same=sameStreetOn(a,b); if(same) return same;
   const route=sameRouteOn(a,b); if(route) return route;
+  const onRoute=sameRouteOnRoad(a,b); if(onRoute) return onRoute;
   const fwd=b.adj.filter(e=>e.to!==a);                                          // every physical branch (incl. wrong-way carriageways)
   const ceR=a.adj.find(e=>e.to===b), curWrongR=!!(ceR&&ceR.wrong);
   const legalDepth=(n0,n1,H)=>{ let pa=n0,pb=n1,d=1;                              // how far an unnamed connector can be driven LEGALLY before it dead-ends (or reaches a named street = far enough)
