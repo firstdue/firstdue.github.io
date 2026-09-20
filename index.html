@@ -431,34 +431,50 @@
   #ctlPad, #ctlSpeed { position:absolute; z-index:14; pointer-events:auto; display:none; touch-action:none; }
   body.ctl #ctlPad, body.ctl #ctlSpeed { display:block; }
   /* the Game Boy cross, on its concentric dark backing */
-  /* 132px of cross = three 44px cells, the minimum touch target, and it has to share 375px with the
-     street panel and the speed buttons. The concentric backing is drawn behind it, larger, by ::before. */
+  /* SMALLER VISUALS, FULL-SIZE TARGETS (v19y). On the phone the 132px cross and 80px circles crowded
+     the street panel and the callouts. Each control's BOX stays >=44px — the tap target is the box —
+     while the thing you see is drawn ~27% smaller by ::before inside it, so the padding is transparent
+     and hittable. Cross: 32px cells on a 32px pitch = a 96px visual inside a 108px pad. */
   #ctlPad { left:max(8px,env(safe-area-inset-left)); bottom:max(10px,env(safe-area-inset-bottom));
-    width:132px; height:132px; }
-  #ctlPad::before { content:""; position:absolute; left:-11px; top:-11px; width:154px; height:154px; border-radius:50%;
+    width:108px; height:108px; }
+  #ctlPad::before { content:""; position:absolute; left:-13px; top:-13px; width:134px; height:134px; border-radius:50%;
     background:radial-gradient(circle at 50% 50%, rgba(150,170,205,.20) 0 44%, rgba(150,170,205,.10) 44% 70%, rgba(150,170,205,.05) 70% 100%); }
-  #ctlPad .dp { position:absolute; width:44px; height:44px; border:0; padding:0; cursor:pointer;
-    background:#2b3038; color:#e8edf5; font-size:17px; line-height:1; display:flex; align-items:center; justify-content:center;
+  #ctlPad .dp { position:absolute; width:44px; height:44px; border:0; padding:0; cursor:pointer; z-index:1;
+    background:transparent; color:#e8edf5; font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; }
+  #ctlPad .dp::before { content:""; position:absolute; inset:6px; background:#2b3038; z-index:-1;
     box-shadow:0 3px 7px rgba(0,0,0,.45); }
-  #ctlPad .dp.up    { left:44px; top:0;   border-radius:9px 9px 0 0; }
-  #ctlPad .dp.down  { left:44px; top:88px; border-radius:0 0 9px 9px; }
-  #ctlPad .dp.left  { left:0;   top:44px; border-radius:9px 0 0 9px; }
-  #ctlPad .dp.right { left:88px; top:44px; border-radius:0 9px 9px 0; }
-  #ctlPad .hub { position:absolute; left:44px; top:44px; width:44px; height:44px; background:#2b3038; }
-  #ctlPad .dp:active, #ctlPad .dp.held { background:#171a1f; transform:scale(.94); }
+  #ctlPad .dp.up    { left:32px; top:0;   }
+  #ctlPad .dp.down  { left:32px; top:64px; }
+  #ctlPad .dp.left  { left:0;   top:32px; }
+  #ctlPad .dp.right { left:64px; top:32px; }
+  #ctlPad .dp.up::before    { border-radius:8px 8px 0 0; }
+  #ctlPad .dp.down::before  { border-radius:0 0 8px 8px; }
+  #ctlPad .dp.left::before  { border-radius:8px 0 0 8px; }
+  #ctlPad .dp.right::before { border-radius:0 8px 8px 0; }
+  /* the hub fills the centre so the arms read as one cross rather than four spaced keys; it is not a
+     control, so it must never swallow a tap meant for an arm */
+  #ctlPad .hub { position:absolute; left:38px; top:38px; width:32px; height:32px; background:#2b3038; pointer-events:none; }
+  #ctlPad .dp:active::before, #ctlPad .dp.held::before { background:#171a1f; }
+  #ctlPad .dp:active, #ctlPad .dp.held { transform:scale(.94); }
   /* an armed turn stays lit until it applies or is cleared — the pad is the only turn indicator in this mode */
-  #ctlPad .dp.armed { background:#f2c14e; color:#231a08; box-shadow:0 0 13px rgba(242,193,78,.85); }
+  #ctlPad .dp.armed { color:#231a08; }
+  #ctlPad .dp.armed::before { background:#f2c14e; box-shadow:0 0 13px rgba(242,193,78,.85); }
   /* the two big round speed buttons */
-  #ctlSpeed { right:max(8px,env(safe-area-inset-right)); bottom:max(10px,env(safe-area-inset-bottom)); width:104px; height:150px; }
-  #ctlSpeed button { position:absolute; width:80px; height:80px; border-radius:50%; border:3px solid rgba(255,255,255,.55);
-    font:900 32px "Arial Black",sans-serif; color:#fff; cursor:pointer; text-shadow:0 2px 3px rgba(0,0,0,.5);
-    box-shadow:0 5px 14px rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; }
-  #ctlSpeed #ctlGas   { right:24px; top:0;   background:linear-gradient(180deg,#f2c14e,#c8922a); }
-  #ctlSpeed #ctlBrake { right:0;    top:68px; background:linear-gradient(180deg,#e04b46,#b02722); }
-  #ctlSpeed button:active, #ctlSpeed button.held { transform:scale(.93); filter:brightness(.86); }
+  #ctlSpeed { right:max(8px,env(safe-area-inset-right)); bottom:max(10px,env(safe-area-inset-bottom)); width:92px; height:128px; }
+  #ctlSpeed button { position:absolute; width:80px; height:80px; border:0; padding:0; background:transparent; z-index:1;
+    font:900 24px "Arial Black",sans-serif; color:#fff; cursor:pointer; text-shadow:0 2px 3px rgba(0,0,0,.5);
+    display:flex; align-items:center; justify-content:center; }
+  #ctlSpeed button::before { content:""; position:absolute; inset:11px; border-radius:50%; z-index:-1;
+    border:3px solid rgba(255,255,255,.55); box-shadow:0 5px 14px rgba(0,0,0,.45); }
+  #ctlSpeed #ctlGas   { right:12px; top:0;   }
+  #ctlSpeed #ctlBrake { right:0;    top:48px; }
+  #ctlSpeed #ctlGas::before   { background:linear-gradient(180deg,#f2c14e,#c8922a); }
+  #ctlSpeed #ctlBrake::before { background:linear-gradient(180deg,#e04b46,#b02722); }
+  #ctlSpeed button:active, #ctlSpeed button.held { transform:scale(.93); }
+  #ctlSpeed button:active::before, #ctlSpeed button.held::before { filter:brightness(.86); }
   /* RE-CENTER becomes the round compass above the pad side */
   body.ctl #btnRecenter { display:flex !important; flex-direction:column; align-items:center; justify-content:center;
-    left:max(14px,env(safe-area-inset-left)); bottom:clamp(168px,30vh,208px); width:72px; height:72px; border-radius:50%;
+    left:max(14px,env(safe-area-inset-left)); bottom:clamp(146px,27vh,186px); width:56px; height:56px; border-radius:50%;
     background:#2b3444; color:#dbe6f5; border:2px solid rgba(255,255,255,.28); font-size:9px; font-weight:800; letter-spacing:.6px;
     box-shadow:0 5px 14px rgba(0,0,0,.42); padding:0; }
   /* The dark street panel, bottom centre. It sits BETWEEN the pad and the speed buttons, so it is
@@ -891,7 +907,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v19x";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
+const BUILD="v19y";   // shown in the HUD next to SAVES — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3164,8 +3180,11 @@ function ctlStraight(){ if(!state.running) return;
 function ctlTurn(dir){ if(!state.running) return;
   if(DRIVE.parked){ pullOut(dir); return; }                                                    // at the bay: unchanged
   if(DRIVE.atChoice){ chooseAtT(dir); return; }                                                // stopped at a junction: unchanged
-  const had=DRIVE.pending; pickTurn(dir);
-  if(DRIVE.pending===had) popup(dir<0?'← NO LEFT AHEAD':'→ NO RIGHT AHEAD','red'); }   // nothing on that side within look-ahead: say so rather than arm silently
+  const r=pickTurn(dir);
+  if(r&&r.armed) return;
+  if(r&&r.other&&r.other.name&&r.other.name!=='—')                                             // it exists, just not on that side: say which, rather than "there is none"
+    popup(r.other.name.toUpperCase()+' IS ON YOUR '+(dir<0?'RIGHT':'LEFT'),'red');
+  else popup(dir<0?'← NO LEFT AHEAD':'→ NO RIGHT AHEAD','red'); }
 document.getElementById('ctlUp').addEventListener('click',e=>{ e.preventDefault(); ctlStraight(); });
 document.getElementById('ctlLeft').addEventListener('click',e=>{ e.preventDefault(); ctlTurn(-1); });
 document.getElementById('ctlRight').addEventListener('click',e=>{ e.preventDefault(); ctlTurn(1); });
@@ -3664,14 +3683,48 @@ for(let i=0;i<LBL.cap;i++){ const b=document.createElement('button'); b.type='bu
     if(DRIVE.parked){ if(takeParkedStreet(sp)){ const p=sp._pick; PARK_UI.selected={name:sp._name,block:sp._block,x,y,pick:p,at:p.at,next:p.next,direct:!DRIVE.pending,until:GT+2.2}; } }
     else toggleStreetChoice(sp,x,y); });
   PARK_UI.root.appendChild(b); PARK_UI.buttons.push(b); }
-function pickTurn(sign){ const j=nextJunction(); if(!j.node||!j.from) return;                       // sign: -1 = left, +1 = right
-  const hx=j.node.x-j.from.x, hz=j.node.z-j.from.z, hl=Math.hypot(hx,hz)||1;
-  const branches=j.node.adj.filter(e=>e.to!==j.from); if(!branches.length) return;
-  let best=null,bd=0.12,bc=0;                                                                        // require a REAL branch toward the tapped side; else no-op (truck keeps straight)
-  for(const e of branches){ const dx=e.to.x-j.node.x,dz=e.to.z-j.node.z,l=Math.hypot(dx,dz)||1; const cross=(hx*dz-hz*dx)/(hl*l);   // cross>0 = right
-    const sc=sign*cross-(e.wrong?0.6:0);                                               // wrong-way is a CHOICE now, not a wall: a legal branch on the tapped side still wins, but a lone one-way (red sign) is taken — the WRONG WAY banner warns after
-    if(sc>bd){ bd=sc; best=e.to; bc=cross; } }
-  if(best){ DRIVE.pending={at:j.node,next:best}; DRIVE.arrow=bc>0?1:-1; DRIVE.arrowT=4; } }
+/* ONE SOURCE OF TRUTH FOR "WHAT CAN I TURN ONTO" (v19y).
+   The pad and the street cards used to answer from different walks, and on Henry Avenue at West
+   Abbottsford they disagreed: the card offered the turn, the pad said NO LEFT AHEAD. Measured, both
+   were telling the truth — from that approach Abbottsford is a RIGHT — but the cards are side-blind
+   and the pad is side-aware, so the player saw a contradiction.
+     turnCandidates() now walks exactly what the card stack walks: keepStreet(), the path the truck
+   will actually take, offering at every node with more than one forward branch, to the same
+   LBL.junctionCap depth. That kills two latent divergences by construction as well — the old
+   nextJunction() stopped at the first node whose forward count was not 1 (counting WRONG-WAY edges)
+   and then followed fwd[0] rather than the real continuation, and it only ever looked one junction
+   ahead where the cards look two. */
+function turnCandidates(){
+  const out=[], far=(typeof LBL!=='undefined'&&LBL._far)||450;
+  let a=DRIVE.fromN, b=DRIVE.toN, guard=0, junctions=0;
+  while(b && guard++<40){
+    if(Math.hypot(b.x-truck.x,b.z-truck.z)>far) break;
+    const branches=b.adj.filter(e=>e.to!==a), before=out.length;
+    if(branches.length>1 && a){
+      const hx=b.x-a.x, hz=b.z-a.z, hl=Math.hypot(hx,hz)||1;
+      const cont=keepStreet(a,b);
+      for(const e of branches){
+        if(e.to===cont) continue;                                                    // straight on is not a turn
+        const dx=e.to.x-b.x, dz=e.to.z-b.z, l=Math.hypot(dx,dz)||1;
+        out.push({at:b,next:e.to,cross:(hx*dz-hz*dx)/(hl*l),                          // cross>0 = right
+          name:e.name||edgeName(b,e.to)||'', wrong:!!e.wrong}); }
+    }
+    if(out.length>before && ++junctions>=((typeof LBL!=='undefined'&&LBL.junctionCap)||2)) break;
+    const nx=keepStreet(a,b); if(!nx) break; a=b; b=nx; }
+  return out; }
+/* sign: -1 = left, +1 = right. Returns {armed} or {armed:false, other} so the caller can say WHICH
+   side the turn is actually on instead of claiming there is none.
+   WRONG-WAY IS NOT PENALISED HERE ANY MORE. Real apparatus opposes traffic when it has to; the game
+   permits it in both input paths and warns with the WRONG WAY chip while it lasts. */
+function pickTurn(sign){
+  const cands=turnCandidates();
+  let best=null,bd=0.12;                                                              // still a REAL branch toward that side, not a kink
+  for(const c of cands){ const sc=sign*c.cross; if(sc>bd){ bd=sc; best=c; } }
+  if(best){ DRIVE.pending={at:best.at,next:best.next}; DRIVE.arrow=best.cross>0?1:-1; DRIVE.arrowT=4;
+    return {armed:true,pick:best}; }
+  let other=null,od=0.12;
+  for(const c of cands){ const sc=-sign*c.cross; if(sc>od){ od=sc; other=c; } }
+  return {armed:false,other}; }
 function takeParkedStreet(sp){ const p=sp&&sp._pick; if(!p||!p.root||!p.next||INTRO.active) return false;
   DRIVE.parked=false; DRIVE.going=true; DRIVE.atChoice=false; DRIVE.t=0; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.pending=null;
   DRIVE.fromN=p.root;
@@ -7251,10 +7304,24 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
    invented tactics — no hydrants, construction, water supply; the game doesn't model them. */
 const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0,usedGuide:false,uturns:0};
 function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0; COACH.uturns=0;
+  COACH.wwBlocks=0; COACH._wwNode=null;                                                  // the free block resets with the run as well as with each stretch
   COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; COACH.usedGuide=false; COACH.trail.push([truck.x,truck.z]); }
 function updateCoach(dt){ if(!state.target||!state.running||DRILL.on) return;
   if(MAP.guide) COACH.usedGuide=true;                                          // used the blue line at all → run doesn't count on the board
-  if(DRIVE.wrongWay&&DRIVE.going) COACH.ww+=dt;
+  /* ⚠️ WRONG-WAY: ONE BLOCK FREE (v19y, owner's scoring rule). Opposing traffic is allowed and
+     warned about, never blocked. It only costs points once a SINGLE CONTINUOUS stretch has gone past
+     a junction — one block. A stretch that ends before that contributes nothing, and each new stretch
+     gets its own free block. The seconds before that first junction are never counted retroactively,
+     so "at or under one block, no penalty" is literally true rather than nearly true.
+     COACH.ww therefore now holds PENALISED wrong-way seconds; cleanRun() and the qualification gate
+     read it unchanged in form. A junction is a node the drive advanced onto with more than two
+     adjacencies — an actual intersection, not one of the many shape nodes along a block. */
+  if(DRIVE.wrongWay&&DRIVE.going){
+    if(DRIVE.fromN!==COACH._wwNode){
+      if(COACH._wwNode&&DRIVE.fromN&&DRIVE.fromN.adj.length>2) COACH.wwBlocks++;
+      COACH._wwNode=DRIVE.fromN; }
+    if(COACH.wwBlocks>=1) COACH.ww+=dt;
+  } else { COACH.wwBlocks=0; COACH._wwNode=null; }
   if(!DRIVE.going&&!DRIVE.parked&&!state.onScene) COACH.stop+=dt;               // sat still mid-run (turnout + douse don't count)
   if(state.onScene&&!COACH.arriveT) COACH.arriveT=GT;
   COACH.acc+=dt; const m=Math.hypot(truck.x-COACH.lx,truck.z-COACH.lz);        // breadcrumb: every ~15m, or ~1s while crawling
