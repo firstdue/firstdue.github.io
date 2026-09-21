@@ -377,6 +377,18 @@ New Local Knowledge work (including D4–D7) waits until after this graphics pha
 
 ## Online follow-through
 
+- [ ] **"Continue with Google" sign-in — specified, blocked on the owner's console work (September 20,
+      2026).** Supabase's own OAuth: the button navigates to `/auth/v1/authorize?provider=google` with the
+      same redirect the magic link uses, and `authInit`'s existing redirect parsing handles the return.
+      Magic link stays; free play still needs no account. The two console tasks are written out in
+      `SUPABASE-SETUP.md` Step 9. **Two gates before code:** re-check that the provider is actually live
+      (it reported `"google": false` when specified), and settle whether `/authorize` returns the implicit
+      `#access_token` this game already parses or a PKCE `?code=` that would need a token exchange.
+      **Identity safety is a stop condition** — a magic-link account and a Google sign-in on the same
+      e-mail must resolve to the same Supabase user id, proved on a throwaway before a real account is
+      touched, or careers orphan.
+- [ ] Facebook sign-in — **future option only**, logged September 20, 2026. Not in scope, no console work
+      and no code; revisit only if the owner asks.
 - [ ] Confirm Supabase setup step 7 and verify OVR/weekly/box leaderboard views. Current notes report the migration as outstanding; retain the legacy fallback until verified.
 - [ ] Stripe one-time unlock: owner creates the account first, then implement hosted checkout, verified server-side webhooks, and entitlements.
 - [ ] Preserve the agreed product split: full single-player stays free; the proposed paid layer covers social/persistent services. Free leaderboard access is read-only. Payment enforcement is planned, not implemented.
