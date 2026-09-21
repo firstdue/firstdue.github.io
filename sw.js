@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v37';  // v19z: the unified top bar, red cross-street bubbles, and the dark street panel in both control schemes.
+const CACHE = 'local-shell-v38';  // v20a: everyday callouts back to white, no siren on ACCOUNT, the full due status readable, one icon treatment.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
