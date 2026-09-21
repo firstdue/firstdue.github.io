@@ -1013,13 +1013,13 @@ const CONFIG = {
   traffic:{ count:14, countMobile:9, scatter:50, bump:3.4 },
   particles:{ smoke:90, sparks:60, water:140, scaleMobile:0.7 },
   world:{ buildingCap:2200, treeCap:600, buildStep:28, sidewalk:4 },
-  env:{ nightBg:0x0a1130, dayHemi:0.95, nightHemi:0.32, daySun:1.05, nightSun:0.18, nightFogFar:640, lerp:2.4 },   // Round D: day/night
+  env:{ nightBg:0x0a1130, dayHemi:0.60, nightHemi:0.32, daySun:1.02, nightSun:0.18, nightFogFar:640, lerp:2.4 },   // Round D: day/night
   ped:{ count:26, countMobile:14, spawnMin:24, spawnMax:100, recycle:150, flee:34, speed:1.5, fleeSpeed:6 },
   fire:{ rate:34, smokeRate:16, light:2.6 },
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20a";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20c";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2248,14 +2248,42 @@ document.getElementById('wrap').appendChild(renderer.domElement);
 const GL={lost:false};
 renderer.domElement.addEventListener('webglcontextlost',()=>{ GL.lost=true; });
 renderer.domElement.addEventListener('webglcontextrestored',()=>{ GL.lost=false; last=performance.now(); });
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0xb9d3e8);
-scene.fog=new THREE.Fog(0xb9d3e8,CONFIG.render.fogNear,CONFIG.render.fogFar);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0xc2ddf0);   // fog + fallback = the sky dome's HORIZON band (below), so distant geometry fades into the skyline colour
+scene.fog=new THREE.Fog(0xc2ddf0,CONFIG.render.fogNear,CONFIG.render.fogFar);
 const camera=new THREE.PerspectiveCamera(CONFIG.render.fov,innerWidth/innerHeight,0.5,2400);
 function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
 addEventListener('resize',onResize); addEventListener('orientationchange',()=>setTimeout(onResize,120));
-const hemi=new THREE.HemisphereLight(0xeaf2f6,0x8d8e86,0.78); scene.add(hemi);   // brighter sky bounce + lighter ground bounce = the soft, evenly-lit look of a nav map
-const sun=new THREE.DirectionalLight(0xfff3de,0.62); sun.position.set(-240,300,-160); scene.add(sun);   // gentler key so pale map-style surfaces shade softly instead of harsh-contrasting
-const DAYBG=new THREE.Color(0xb9d3e8), NIGHTBG=new THREE.Color(CONFIG.env.nightBg);   // soft map-style daylight / night targets
+const hemi=new THREE.HemisphereLight(0xeaf2f6,0x8d8e86,0.60); scene.add(hemi);   // Phase-1 look: fill LOWERED (0.78->0.60) so the stronger sun below carries form -- free depth without shadow maps
+const sun=new THREE.DirectionalLight(0xfff1cf,1.02); sun.position.set(-300,270,-120); scene.add(sun);   // Phase-1 look: warmer + stronger key from a steeper side angle -> the bright, high-contrast sunny concept
+const DAYBG=new THREE.Color(0xc2ddf0), NIGHTBG=new THREE.Color(CONFIG.env.nightBg);   // day target = sky horizon; the (latent) day/night lerp drives fog+lights+sky between these
+/* ☀️ Phase-1 look pass: a camera-following sky dome (vertical gradient + a small cloud cap) replaces the
+   flat single-colour background. Its HORIZON colour matches scene.fog, so distant geometry fades into the same
+   colour the sky shows at the skyline -- no seam. Day/night is honoured: updateSky tints the dome and fades the
+   clouds by state.envT, the same 0..1 the (latent) day/night lerp drives. Built once, static: ~2 draw calls and
+   one 256² cloud texture, nothing per-rebuild. Wrapped so a headless/stub load just keeps the flat background. */
+const SKY={group:null,dome:null,cloudMat:null,cloudTex:null,top:new THREE.Color(0x3f83d4),hz:new THREE.Color(0xc2ddf0)};
+(function buildSky(){ try{
+  const g=new THREE.Group();
+  const dg=new THREE.SphereGeometry(1600,24,16), pos=dg.getAttribute('position'), col=[], c=new THREE.Color();
+  for(let i=0;i<pos.count;i++){ let t=(pos.getY(i)/1600+1)/2; t=t<0?0:t>1?1:t; t=t*t*(3-2*t); c.copy(SKY.hz).lerp(SKY.top,t); col.push(c.r,c.g,c.b); }
+  dg.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  const dome=new THREE.Mesh(dg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));
+  dome.renderOrder=-3; g.add(dome);
+  const cv=document.createElement('canvas'); cv.width=cv.height=256; const x=cv.getContext('2d'); x.clearRect(0,0,256,256);
+  for(let k=0;k<26;k++){ const px=Math.random()*256, py=Math.random()*256, r=18+Math.random()*46, a=0.18+Math.random()*0.5;
+    const rg=x.createRadialGradient(px,py,0,px,py,r); rg.addColorStop(0,'rgba(255,255,255,'+a+')'); rg.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=rg; x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill(); }                       // soft white puffs, drawn in code, tiny footprint
+  const tex=new THREE.CanvasTexture(cv); tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(3,2);
+  const cloudMat=new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:0.85,side:THREE.BackSide,fog:false,depthWrite:false});
+  const clouds=new THREE.Mesh(new THREE.SphereGeometry(1520,24,12,0,6.2832,0,Math.PI*0.55),cloudMat); clouds.renderOrder=-2; g.add(clouds);
+  scene.add(g); SKY.group=g; SKY.dome=dome; SKY.cloudMat=cloudMat; SKY.cloudTex=tex;
+}catch(e){} })();
+const _skyTint=new THREE.Color();
+function updateSky(dt){ if(!SKY.group) return;
+  SKY.group.position.copy(camera.position);                                                  // follow the camera; world-fixed orientation (NOT parented, so clouds don't swing with head-turns)
+  const t=(typeof state!=='undefined'&&state.envT)||0;                                        // 0 day .. 1 night (latent path; day-only in the live tilt view today)
+  if(SKY.dome){ _skyTint.setRGB(1-0.78*t,1-0.72*t,1-0.55*t); SKY.dome.material.color.copy(_skyTint); }   // white at day (no change) -> night-blue
+  if(SKY.cloudMat){ SKY.cloudMat.opacity=0.85*(1-t*0.94); SKY.cloudTex.offset.x=(SKY.cloudTex.offset.x+dt*0.0025)%1; } }
 const lambert=c=>new THREE.MeshLambertMaterial({color:c});
 function box(w,h,d,c,x,y,z,grp){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),lambert(c)); m.position.set(x,y,z); (grp||scene).add(m); return m; }
 function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
@@ -2294,7 +2322,12 @@ function ribbonGeo(polys,widthFn,yAt){ const pos=[],nor=[], STEP=TOUCH?30:18;   
         for(let k=0;k<6;k++) nor.push(0,1,0); } } }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3)); return g; }
 const sidewalkY=(x,z)=>groundHeight(x,z)+0.14, roadY=(x,z)=>groundHeight(x,z)+0.24, markY=(x,z)=>groundHeight(x,z)+0.28;
-const sidewalkMat=lambert(0xddd9cd), roadMat=lambert(0x969ca6), markMat=lambert(0xffffff);   // map-style but CONTRASTED: grey asphalt clearly darker than the cream sidewalks + white centerlines
+const sidewalkMat=lambert(0xddd9cd), roadMat=lambert(0x969ca6), markMat=lambert(0xffffff);
+/* ⚠ roadMat / sidewalkMat above belong to the CHASE world, built by build3D(), which is LAZY and never
+   runs in TILT — the only live view. Recolouring them changes nothing a player sees. The roadway TILT
+   actually renders is the FLATCITY ribbon below; it used to carry raw hex literals, which is exactly how
+   that mislabel survived a release. Named here so the live surface is greppable and the dead one is labelled. */
+const TILT_ROAD=0x4b545d, TILT_ROAD_FLAT=0x5f6e82;   // immersive / plain roadway seen in TILT   // map-style but CONTRASTED: grey asphalt clearly darker than the cream sidewalks + white centerlines
 __b3d.push(function(){ const CH=1800, chunks=new Map();
   for(const [name,cls,pts] of RB.st) for(let i=1;i<pts.length;i++){
     const a=pts[i-1],b=pts[i], k=Math.floor(((a[0]+b[0])/2)/CH)+':'+Math.floor(((a[1]+b[1])/2)/CH);
@@ -4526,7 +4559,7 @@ function tiledMaterial(tex){ const mat=new THREE.MeshLambertMaterial({color:0xff
 // lawns get scattered instanced trees on the existing forest-tree mechanism, capped separately from street trees.
 // The park ground sits 6–10 cm over the terrain sample: below the road (+22 cm) and the kerb slabs, above the
 // terrain mesh (−60 cm). Cemeteries and rail electrification are the NEXT phase (they need a re-fetch).
-const PARKS={on:true, lift:{park:0.06,wood:0.08,open:0.10,cemetery:0.07}, colors:{park:0xb7d3a0,wood:0x9dbb8a,open:0xc3dcab,cemetery:0xa8c398}, fenceMax:400, fenceR:0.6, treeMax:70, subdiv:32, subdivFar:48, farR:0.5, openR:0.7,
+const PARKS={on:true, lift:{park:0.06,wood:0.08,open:0.10,cemetery:0.07}, colors:{park:0x59a343,wood:0x45803c,open:0x68b342,cemetery:0x559744}, fenceMax:400, fenceR:0.6, treeMax:70, subdiv:32, subdivFar:48, farR:0.5, openR:0.7,
   cemSubdiv:40, cemSubdivFar:64, wallMax:300, stoneMax:600, stoneR:0.35, stoneRow:3.4, stoneGap:2.1, mastGap:55, mastR:0.6};   // stoneR: headstones only within 0.35·R, so the cap fills real rows near the truck instead of a sprinkle across the block
 // treeMax 70: each tree is ~300 triangles (three canopy lobes), and Fairmount beside the interchange sits at the 330k budget.
 // Distance level of detail (owner's rule for the interchange: trim, never raise the budget): triangles whose centre is
@@ -5079,7 +5112,7 @@ function photoCorridorBuild(J,dummy){
 }
 function buildFlatCity(){ if(FLATCITY.built) return; FLATCITY.built=true;
   const gw=(WB.maxX-WB.minX)+1600, gd=(WB.maxZ-WB.minZ)+1600, gcx=(WB.minX+WB.maxX)/2, gcz=(WB.minZ+WB.maxZ)/2;   // base ground under everything so the horizon isn't empty past the live tiles
-  const grd=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),new THREE.MeshBasicMaterial({color:0xe7e3d8})); grd.rotation.x=-Math.PI/2; grd.position.set(gcx,-0.06,gcz); grd.renderOrder=-1; FLATCITY.group.add(grd);
+  const grd=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),new THREE.MeshLambertMaterial({color:0x9eb78a})); grd.rotation.x=-Math.PI/2; grd.position.set(gcx,-0.06,gcz); grd.renderOrder=-1; FLATCITY.group.add(grd);
   FLATCITY.rebuild(truck.x,truck.z); }
 FLATCITY.parts=[];
 /* ROAD_PAINT_BEGIN */
@@ -5427,7 +5460,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
               if(rw._ml){ const l=rw._ml, dx=px-l.x, dz=pz-l.z, d=Math.hypot(dx,dz); if(d>8&&d<90) wire.push({x:(px+l.x)/2,y:(top+l.y)/2+5.4,z:(pz+l.z)/2,w:0.06,h:0.06,l:d,ang:Math.atan2(dx,dz),pitch:-Math.atan2(top-l.y,d)}); }
               rw._ml={x:px,y:top,z:pz}; } }
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
-    for(const [list,color,name] of [[deck,0x828b8c],[rails,0xd0cdc4],[piers,0x91958b],[truss,0xdcded9],[para,0xbdbab1],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961],[mastPost,0x6d7276,'rail-mast'],[mastArm,0x6d7276,'rail-mast-arm'],[wire,0x3a3d40,'rail-wire']]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
+    for(const [list,color,name] of [[deck,0x9aa0a0],[rails,0xd0cdc4],[piers,0xaba79c],[truss,0xdcded9],[para,0xccc7bb],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961],[mastPost,0x6d7276,'rail-mast'],[mastArm,0x6d7276,'rail-mast-arm'],[wire,0x3a3d40,'rail-wire']]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
       list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;if(name)m.name=name;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
   }
   if(NAVGEO.active){
@@ -5438,7 +5471,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     for(let x=x0;x<J.cx+r;x+=step)for(let z=z0;z<J.cz+r;z+=stepZ){                                     //    linear DEM samples with zero cut depth, so they meet the coarse neighbours without a crack
       if(cutCell(x,z)){const N=8,sx=step/N,sz=stepZ/N;for(let i=0;i<N;i++)for(let j=0;j<N;j++)cell(x+sx*i,z+sz*j,sx,sz);} else cell(x,z,step,stepZ); }
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();
-    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0xc5c9ad}));FLATCITY.group.add(m);FLATCITY.parts.push(m);
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x9eb78a}));FLATCITY.group.add(m);FLATCITY.parts.push(m);   // DEM terrain = the filler ground TILT actually renders (NOT a ramp embankment)
   }
   // Restore missing multipart rivers; island holes are retained.
   for(const w of NAVGEO.water)for(const ring of w.outer){const bb=ring.bounds;if(J.cx+LOCAL.R<bb[0]||J.cx-LOCAL.R>bb[2]||J.cz+LOCAL.R<bb[1]||J.cz-LOCAL.R>bb[3])continue;
@@ -5451,7 +5484,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       for(const p of [a,b,c])out.push(p[0],navGroundY(...p)+0.25,p[1]);};
     for(let i=0;i<pos.count;i+=3)triangle([pos.getX(i),pos.getZ(i)],[pos.getX(i+1),pos.getZ(i+1)],[pos.getX(i+2),pos.getZ(i+2)]);
     raw.dispose();flat.dispose();const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(out,3));
-    g.computeVertexNormals();const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x5d99ac,side:THREE.DoubleSide}));FLATCITY.group.add(m);FLATCITY.parts.push(m);
+    g.computeVertexNormals();const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x3f9fd6,side:THREE.DoubleSide}));FLATCITY.group.add(m);FLATCITY.parts.push(m);
   }
   // 🛣️ ROAD SURFACE — the live tiles render streets nearly white, so they vanish against the sidewalks. Lay the
   // REAL street geometry over them as dark quads (one merged mesh, 2 tris per segment) so the roadway reads first.
@@ -5460,7 +5493,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   if(J.road){ const {rp,mk,my}=J.road;
     FLATCITY.guideSurfaces=J.gsi||guideSurfaceIndex(J.road.guideSurfaces);                        // the ramp ribbon step may already have built the index under the frame budget
     if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));
-      const rd=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:J.immersive?0x697582:0x8896a8})); rd.renderOrder=1; FLATCITY.group.add(rd); FLATCITY.parts.push(rd); }
+      const rd=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:J.immersive?TILT_ROAD:TILT_ROAD_FLAT})); rd.renderOrder=1; FLATCITY.group.add(rd); FLATCITY.parts.push(rd); }
     if(mk.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(mk,3));
       const ml=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xf5f6f8})); ml.renderOrder=2; FLATCITY.group.add(ml); FLATCITY.parts.push(ml); }
     if(my.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(my,3));
@@ -5476,7 +5509,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     if(wp.length){ const sw=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xf3f0e8}),wp.length);   // kerb slabs sit proud of the darker roadway
       wp.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.11,p.z); dummy.scale.set(p.w,0.22,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); sw.setMatrixAt(i,dummy.matrix); });
       sw.instanceMatrix.needsUpdate=true; FLATCITY.group.add(sw); FLATCITY.parts.push(sw); }
-    if(mp2.length){ const gm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xc8dcb0}),mp2.length);   // 🌿 grass median between divided-road carriageways
+    if(mp2.length){ const gm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x6eb643}),mp2.length);   // 🌿 grass median between divided-road carriageways
       mp2.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
       gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
   // 🧰 v2 KIT MODULES (v19o): RailTerminal and GoreAttenuator are fixed real-world objects, so they are
@@ -5492,7 +5525,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       m.name=name; m.userData.highwayKit=kind;
       list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch||0,p.ang,0,'YXZ');dummy.scale.set(1,1,1);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);});
       m.instanceMatrix.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
-  if(J.hws) for(const [list,color,name,wbeam] of [[J.hws.med,0xb9b6ad,'hwy-median'],[J.hws.grass,0xc8dcb0,'hwy-median-grass'],[J.hws.guard.concat(vGuard),0xb6bcc0,'hwy-guard',true],[J.hws.post.concat(vPost),0x6f7477,'hwy-post'],[J.hws.wall,0x8f8b82,'hwy-wall']]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail (W-beam tiles, v19f) / end posts / retaining wall
+  if(J.hws) for(const [list,color,name,wbeam] of [[J.hws.med,0xcac4b6,'hwy-median'],[J.hws.grass,0x6eb643,'hwy-median-grass'],[J.hws.guard.concat(vGuard),0xc3c7cc,'hwy-guard',true],[J.hws.post.concat(vPost),0x6f7477,'hwy-post'],[J.hws.wall,0xb4aea1,'hwy-wall']]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail (W-beam tiles, v19f) / end posts / retaining wall
     if(wbeam&&highwayKitMesh(list,color,name,'RailPanel',J,dummy))continue;
     const hb=new THREE.InstancedMesh(wbeam?hwyWBeamGeo():new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color,side:wbeam?THREE.DoubleSide:THREE.FrontSide}),list.length); hb.name=name;
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
@@ -5608,7 +5641,7 @@ function __oldBuildFlatCity(){ genCityData(); if(!buildData.length) return;
   const dummy=new THREE.Object3D(), col=new THREE.Color();
   // base ground plane under the whole city so distant buildings (beyond the live tiles) sit on ground, not floating over the horizon
   const gw=(WB.maxX-WB.minX)+1600, gd=(WB.maxZ-WB.minZ)+1600, gcx=(WB.minX+WB.maxX)/2, gcz=(WB.minZ+WB.maxZ)/2;
-  const grd=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),new THREE.MeshBasicMaterial({color:0xe7e3d8})); grd.rotation.x=-Math.PI/2; grd.position.set(gcx,-0.06,gcz); grd.renderOrder=-1; FLATCITY.group.add(grd);
+  const grd=new THREE.Mesh(new THREE.PlaneGeometry(gw,gd),new THREE.MeshLambertMaterial({color:0x9eb78a})); grd.rotation.x=-Math.PI/2; grd.position.set(gcx,-0.06,gcz); grd.renderOrder=-1; FLATCITY.group.add(grd);
   const wallPal=[0xe4e2da,0xd7d5cc,0xdedcd2,0xcfd2d6,0xe0ded4,0xd2d0c6,0xd9dce0], roofPal=[0xb9b6ad,0xc2bfb5,0xadb0b6,0xc6c3b9,0xb2b5ba];   // more contrast: light-grey walls, distinctly darker roofs
   const bm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),Math.max(1,buildData.length));
   buildData.forEach((b,i)=>{ const bh=b.h*1.35+2; dummy.position.set(b.x,bh/2,b.z); dummy.scale.set(b.w,bh,b.d); dummy.rotation.set(0,0,0); dummy.updateMatrix(); bm.setMatrixAt(i,dummy.matrix); bm.setColorAt(i,col.setHex(wallPal[i%wallPal.length])); });
@@ -8206,6 +8239,7 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
     if(tw>2 && th>2 && (renderer.domElement.width!==tw || renderer.domElement.height!==th)) onResize(); }
   if(state.running&&!duedPaused()){ acc+=dt; let guard=0; while(acc>=CONFIG.step && guard++<5){ for(const s of SIM) s(CONFIG.step); acc-=CONFIG.step; } } else acc=0;
   for(const s of PRESENT) s(dt);
+  updateSky(dt);
   if(BOXD.pending&&!INTRO.active) newDispatch();
   if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateRivalTrucks(); updateTiltMap(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
   else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
