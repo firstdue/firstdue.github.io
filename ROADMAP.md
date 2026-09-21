@@ -1,6 +1,20 @@
 # Philly Fire Dispatch — Roadmap
 
-Planning snapshot: September 20, 2026. **v19z is public**, service-worker cache `local-shell-v37`.
+Planning snapshot: September 20, 2026. **v20a is public**, service-worker cache `local-shell-v38`.
+
+- [x] **The street signs go back to white (v20a, September 20, 2026):** the red callouts did not read
+  well on a phone, so the everyday cross-street sign is the pale one it always was. A street you would
+  be entering the wrong way keeps the look it was given — darker, edged in gold, with a hazard stripe
+  along the top — so the warning is now the only red thing ahead of you, which is the point of it.
+
+- [x] **The account button stopped blinking (v20a, September 20, 2026):** being signed in was quietly
+  switching on the same pulsing alert the game uses for urgent things, which in the new bar left a
+  light flashing around nothing. It is a small green dot now.
+
+- [x] **You can read where you are again (v20a, September 20, 2026):** driving outside your own
+  district, the status in the bar was cut off after "OUT OF". The bar now keeps only what it can show
+  whole, and anything longer — including whose district you have crossed into — gets its own line
+  underneath it, with everything else on screen moving down to make room.
 
 - [x] **One bar across the top, instead of things scattered in the corners (v19z, September 20, 2026):**
   your saves, your best, how due you are where you are standing, settings, your account and the radio
