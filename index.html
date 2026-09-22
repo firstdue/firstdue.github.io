@@ -1019,7 +1019,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20d";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20e";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4436,20 +4436,53 @@ function nearFadeMaterial(mat){
   };
   return mat; }
 function hash2(x,z){ let h=(x*73856093)^(z*19349663); h=Math.imul(h^h>>>13,1274126177); return ((h^h>>>16)>>>0)/4294967296; }
+/* 🧭 WORLD-ANCHORED JUNCTION TABLE (v20e). The junction trim cuts a block face, and the block face is
+   what positions every TYPED building, so this table decides where houses stand. It used to be built
+   from the JOB LIST - the segments that happened to fall in the rebuild's bbox - which made it a
+   function of the rebuild CENTRE: drive 380 m, rebuild, and a junction counted last time could be
+   missed this time, moving the whole block face and every house on it by up to 30 m. Measured: every
+   jittering building was TYPED and none was generic, because the generic pass was already
+   world-anchored. Now each endpoint is resolved from the GLOBAL segment grid (segNear) and cached by
+   world coordinate, so it answers the same from any centre. Pure geography: never cleared. */
+const ENDS=new Map(), endKey=(x,z)=>(Math.round(x/2))+','+(Math.round(z/2));
+function endAt(x,z){ const k=endKey(x,z); let e=ENDS.get(k); if(e) return e;
+  let n=0,hw=0,ramp=false; const names=[], share=[];
+  /* ⚠ segNear() concatenates NINE grid cells WITHOUT de-duplicating, so a segment that spans cells
+     comes back two to four times. Counting those occurrences inflated the junction degree (4 and 5
+     where the drive graph has 2), which over-trimmed block faces and cost 64 sidewalk slabs at the
+     interchange. The old list-derived table never hit this because its list came from a Set. */
+  const uniq=new Set(segNear(x,z));
+  for(const o of uniq){ if(o.cls>4) continue;
+    if(Math.hypot(o.ax-x,o.az-z)<3||Math.hypot(o.bx-x,o.bz-z)<3){ share.push(o); names.push(o.name||''); } }
+  for(const o of share){ n++; const h=segHalf(o); if(h>hw)hw=h; if(!o.name)ramp=true; }
+  if(n&&n<3){ for(const o of uniq){ if(o.cls>4||share.includes(o)) continue;          // a T mouth touches this point mid-segment: no shared endpoint to count
+      if(names.includes(o.name||'')) continue;                                                //   the same street continuing through is not a junction
+      const oh=segHalf(o);
+      if(closestSeg(x,z,o).d<oh+2){ n=3; if(oh>hw)hw=oh; if(!o.name)ramp=true; break; } } }
+  e={n,hw,ramp}; ENDS.set(k,e); return e; }
+/* A stable identity for a placed building, from its ANCHOR - the street segment it belongs to, how far
+   along that segment it sits, and which side - never from its final x/z. That distinction is the whole
+   point: an id derived from the position cannot tell a building that MOVED from one that was replaced,
+   because a moved building simply hashes to a new id and stops matching. Anchored here, the id survives
+   a move, so the jitter probe can still see one. Segments carry ri/si from the baked road table, so
+   this is world-anchored data, and it closes the probe's own honest limit - many rowhomes in a run share
+   a shape signature, which is why a house paired with its neighbour used to read as a 28 m move. */
+function bldId(seg,t,side,kind){
+  let h=(((seg&&seg.ri)|0)*73856093)^(((seg&&seg.si)|0)*19349663)^(Math.round(t*4)*83492791)^((side>0?1:2)*2654435761)^((kind||'g').charCodeAt(0)*40503);
+  h=Math.imul(h^h>>>13,1274126177); return (h^h>>>16)>>>0; }
 function startLocalCity(cx,cz){ const R=LOCAL.R;                                          // resumable job: gather the streets once, then chew through them a few ms per frame
   const segs=new Set(), c0=Math.floor((cx-R)/SEGCELL), c1=Math.floor((cx+R)/SEGCELL), d0=Math.floor((cz-R)/SEGCELL), d1=Math.floor((cz+R)/SEGCELL);
   for(let a=c0;a<=c1;a++) for(let b=d0;b<=d1;b++){ const l=segGrid.get(a+':'+b); if(l) for(const s of l) segs.add(s); }
   const list=[...segs].filter(s=>s.cls<=4);                                     // cls4 = OSM 'unclassified' = real minor public streets (Conshohocken Ave 4000 blk) — they're drivable, so draw them; true alleys/service ways never reach the bake
-  list.sort((p,q)=>((p.ax-cx)**2+(p.az-cz)**2)-((q.ax-cx)**2+(q.az-cz)**2));   // nearest streets first so the caps fill the view around the truck
-  const ends=new Map(), ek=(x,z)=>(Math.round(x/2))+','+(Math.round(z/2));     // junction map: how many segments share the endpoint + the widest street's half-width there
-  for(const s of list){ const hwv=segHalf(s);
-    for(const k of [ek(s.ax,s.az),ek(s.bx,s.bz)]){ const e=ends.get(k); if(e){ e.n++; if(hwv>e.hw)e.hw=hwv; if(!s.name)e.ramp=true; } else ends.set(k,{n:1,hw:hwv,ramp:!s.name}); } }
-  for(const s of list){ for(const q of [[s.ax,s.az],[s.bx,s.bz]]){ const e=ends.get(ek(q[0],q[1]));   // T-junctions: the side street's endpoint touches the through street MID-segment, so no endpoint is shared — probe for it (the missed case let sidewalks bar across Ridge at every T)
-    if(!e||e.n>=3) continue;
-    for(const o of segNear(q[0],q[1])){ if(o===s||o.name===s.name) continue;
-      if(Math.hypot(o.ax-q[0],o.az-q[1])<3||Math.hypot(o.bx-q[0],o.bz-q[1])<3) continue;             // shares an endpoint — the first pass already counted it
-      const ohw=segHalf(o);
-      if(closestSeg(q[0],q[1],o).d<ohw+2){ e.n=3; if(ohw>e.hw)e.hw=ohw; if(!o.name)e.ramp=true; break; } } } }
+  list.sort((p,q)=>(p.ri-q.ri)||(p.si-q.si)||(p.ax-q.ax)||(p.az-q.az));       // 🧭 WORLD ORDER (v20e), not nearest-first. The occupancy grid is claimed first-come, so a
+                                                                              // distance sort made every contested cell a function of the rebuild CENTRE - which is what
+                                                                              // moved houses by up to 30 m on a rebuild. Measured: world order removes the difference
+                                                                              // entirely (23/15/12 differing buildings -> 0 at three spots). The cap this sort used to
+                                                                              // feed is handled below: trees are culled to the nearest maxT AFTER generation, so the view
+                                                                              // around the truck still fills first while the cell claims stay centre-independent.
+  const ends=new Map(), ek=endKey;                                            // junction map, now WORLD-ANCHORED: every value comes from endAt(), which reads the global
+  for(const s of list) for(const q of [[s.ax,s.az],[s.bx,s.bz]]){             // segment grid, so the same endpoint answers the same from any rebuild centre. ENDS caches
+    const k=ek(q[0],q[1]); if(!ends.has(k)) ends.set(k,endAt(q[0],q[1])); }   // across rebuilds, so a re-drive costs a Map hit instead of the segNear walk.
   return {cx,cz,list,ends,ek,detail:STREET_DETAIL.enabled&&DRIVE.stationId===STREET_DETAIL.companyId,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[],term:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
 }
 // ===== 🏘️ TYPED BUILDINGS — graphics step 6B (v19g), residential codes only =====
@@ -4473,7 +4506,7 @@ function footprintClearsRoadAt(cx,cz,w,d,ang){ const hw=w/2,hd=d/2,ca=Math.cos(a
 function typedBuildings(J,s,code,dx,dz,nx,nz,sl,rh,EV){ const {cx,cz,B,grid}=J, R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const walk=s.cls<=1?4.2:3.2, ang=-Math.atan2(dz,dx), ca=Math.cos(ang), sa=Math.sin(ang);        // same frame as the generic immersive box: local x along the street, local z toward side +1
   const cells=(x,z,w,d)=>{ const out=[]; for(let ox=-w/2+2;ox<w/2;ox+=5.5) for(let oz=-d/2+2;oz<d/2;oz+=5.5) out.push(gk(x+ox*ca+oz*sa,z-ox*sa+oz*ca)); return out; };
-  const place=(tc,off,side,w,d,extra)=>{ if(B.length>=LOCAL.maxB) return false;
+  const place=(tc,off,side,w,d,extra)=>{ if(B.length>=LOCAL.maxB) return false; const off2=tc;   // off2: distance ALONG the segment, the building's anchor for bldId
     const x=s.ax+dx*tc+nx*off*side, z=s.az+dz*tc+nz*off*side; if((x-cx)**2+(z-cz)**2>R2) return false;
     const reach=Math.hypot(w/2,d/2);
     if(inWater(x,z)||landBlocksBuilding(x,z,reach*0.6)||railNear(x,z,reach+4)||navSpan(x,z,null,reach+22)?.b.bridge) return false;
@@ -4485,7 +4518,7 @@ function typedBuildings(J,s,code,dx,dz,nx,nz,sl,rh,EV){ const {cx,cz,B,grid}=J, 
     if(extra.pad){ const px=x+fx*(d/2+BTYPED.stripPark/2), pz=z+fz*(d/2+BTYPED.stripPark/2), pw=w+6, pd=BTYPED.stripPark-1.5;   // the strip mall's parking pad is part of the footprint: off every roadway and on free cells too
       if(!footprintClearsRoadAt(px,pz,pw,pd,ang)) return false; ks.push(...cells(px,pz,pw,pd)); }
     for(const k of ks) if(grid.has(k)) return false; for(const k of ks) grid.set(k,1);
-    B.push(Object.assign({x,z,w,d,ang,roof:false,roofH:0,fx,fz,unitsV:1},extra)); return true; };
+    B.push(Object.assign({x,z,w,d,ang,roof:false,roofH:0,fx,fz,unitsV:1,id:bldId(s,off2,side,extra.kind)},extra)); return true; };
   for(const side of [1,-1]){
     for(const [a0,a1] of blockFacePieces(J,s,EV,side,walk,sl)){ const L=a1-a0-2; if(L<6) continue;
       const seed=hash2(Math.round(s.ax+dx*a0)*2+(side>0?1:0),Math.round(s.az+dz*a0));
@@ -4742,7 +4775,10 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
     for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
       if((px-cx)**2+(pz-cz)**2>R2) continue;
       for(const side of [1,-1]){ const rv=hash2(Math.round(px)*2+ (side>0?1:0), Math.round(pz));
-        if(rv<0.11){ if(T.length>=LOCAL.maxT) continue;                                    // street tree on the planting strip just past the sidewalk — a neat kerb-line like a nav map, not scatter
+        if(rv<0.11){ if(T.length>=LOCAL.maxT*3) continue;                                  // street tree on the planting strip just past the sidewalk — a neat kerb-line like a nav map, not scatter
+          // v20e: this is a GENERATION guard only (3x, never reached - the densest spot wants ~510 of
+          // 1260). The real cap is applied by DISTANCE in trimTrees() once the job is complete, so
+          // which trees survive no longer depends on the order the grid happened to be claimed in.
           const walk=s.cls<=1?4.2:3.2, to=rh+walk+1.3, tx=Math.round(px+nx*to*side), tz=Math.round(pz+nz*to*side), tk=gk(tx,tz);
           if(grid.has(tk)||inWater(tx,tz)||landKind(tx,tz)==='open'||railNear(tx,tz,3.5)) continue;
           if(nearRoadEdge(tx,tz)<1.0) continue;                                            // probe EVERY road — near a junction the offset clears this street but can land in the crossing one
@@ -4762,7 +4798,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
         if(!clear) continue;
         grid.set(k,1);
         const tall=hash2(bx,bz*3), h = s.cls<=1 ? (7+tall*7+(tall>0.9?tall*12:0)) : (5+tall*4+(tall>0.94?tall*6:0));   // lower-rise: nav maps read as streetscape, not canyon
-        B.push({x:bx,z:bz,w,d,h,ang:J.immersive?-Math.atan2(dz,dx):0,roof:!J.immersive&&h<12.5&&tall<0.62,roofH:2.2+tall*2.2}); } } }
+        B.push({x:bx,z:bz,w,d,h,ang:J.immersive?-Math.atan2(dz,dx):0,roof:!J.immersive&&h<12.5&&tall<0.62,roofH:2.2+tall*2.2,id:bldId(s,t,side,'g')}); } } }
   if(!J.forestSites){J.forestSites=[];J.fi=0;J.forestCount=0;
     for(let x=Math.floor((cx-LOCAL.R)/24)*24;x<cx+LOCAL.R;x+=24)for(let z=Math.floor((cz-LOCAL.R)/24)*24;z<cz+LOCAL.R;z+=24){if((x-cx)**2+(z-cz)**2>R2)continue;J.forestSites.push([x,z]);}
     J.forestSites.sort((a,b)=>(a[0]-cx)**2+(a[1]-cz)**2-(b[0]-cx)**2-(b[1]-cz)**2);}
@@ -4786,8 +4822,25 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   if(!rampRibbonStep(J,t0,budgetMs))return false;
   if(!parkGroundStep(J,t0,budgetMs))return false;                                            // 🌳 park / wood / open ground, fences and lawn trees (v19i): one landcover feature per resume check                                            // 🎀 interchange ramp edge ribbon (v19f): needs the finished road surfaces, generated here not in commit
   if(!densityGridStep(J,t0,budgetMs))return false;   // 🛣️ paved-ground density field (v20d): built here, uploaded in commit
+  trimTrees(J);                                      // 🌳 nearest-first tree cap (v20e), applied once the set is complete
   return true;
 }
+/* The street-tree cap used to be enforced by the ORDER segments were visited, which is exactly what
+   made the occupancy grid centre-dependent. Generation now runs in world order and the cap is applied
+   here instead: keep the maxT nearest the job centre. Trees are scatter, so a centre-dependent SUBSET
+   is fine - what must not depend on the centre is which CELLS were claimed, and those no longer do. */
+function trimTrees(J){
+  /* Only the STREET trees were ever capped: the woodland pass adds on top of maxT and always has,
+     so capping the whole array cut ~90 woodland trees at Engine 35 and took 24,588 triangles with
+     them - caught by the gate, which is what the gate is for. Partition, cap the street trees by
+     distance, keep every forest tree. */
+  const street=[], forest=[];
+  for(const t of J.T) (t.forest?forest:street).push(t);
+  if(street.length>LOCAL.maxT){
+    street.sort((a,b)=>((a.x-J.cx)**2+(a.z-J.cz)**2)-((b.x-J.cx)**2+(b.z-J.cz)**2));
+    street.length=LOCAL.maxT; }
+  else if(!forest.length) return;
+  J.T.length=0; J.T.push(...street,...forest); }
 function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCity(J,1e9)); return J; }   // synchronous (first build only)
 /* ============ RAMP DETAIL — City Ave / Lincoln Dr / Kelly Dr interchange (owner choice, Sep 13 2026) ============
    From the render study in notes/immersive-ramp-study.md, in the spirit of Google Maps' Immersive Navigation.
