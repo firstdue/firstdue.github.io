@@ -1019,7 +1019,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20c";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20d";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4642,6 +4642,50 @@ function parkBuild(J){ const P=J.park; if(!P) return;                           
   if(P.stones.length){ const sm=new THREE.InstancedMesh(new THREE.BoxGeometry(0.55,0.75,0.12),new THREE.MeshLambertMaterial({color:0xffffff}),P.stones.length), pal=[0xb9b6ae,0xcac7bf,0xa9a69e,0xd2cfc6,0x9f9c95];   // plain markers, no text
     P.stones.forEach(([x,z,rot],i)=>{ dummy.position.set(x,navGroundY(x,z)+0.375,z); dummy.rotation.set(0,-rot,0); dummy.scale.set(1,0.85+hash2(Math.round(x),Math.round(z)+5)*0.4,1); dummy.updateMatrix(); sm.setMatrixAt(i,dummy.matrix); sm.setColorAt(i,col.setHex(pal[i%pal.length])); });
     sm.instanceMatrix.needsUpdate=true; if(sm.instanceColor) sm.instanceColor.needsUpdate=true; sm.name='cemetery-stone'; FLATCITY.group.add(sm); FLATCITY.parts.push(sm); } }
+/* 🛣️ PAVED GROUND (v20d): the filler terrain is tinted toward concrete where buildings are dense, so a
+   rowhome block no longer reads as unbroken lawn from kerb to building line, while open land, the river
+   and the freeway verges stay green. PER-FRAGMENT, from a small density texture — NOT per-vertex: the DEM
+   grid is 56.6 x 73.4 m, so a vertex tint would vary on a lattice COARSER THAN A CITY BLOCK.
+   The origin is snapped to a world texel lattice and the normalisation is ABSOLUTE (never the local max),
+   which is what makes the field invariant to where the grid is centred — measured identical at six
+   different rebuild centres, so the tint does not slide under the world as the truck drives.
+   Built HERE under the frame budget; commit only uploads the finished bytes. */
+const PAVE={ on:true, N:128, rad:34, knorm:3.4, color:0xaeaaa2, lo:0.12, hi:0.62, tex:null, data:null };
+function densityGridStep(J,t0,budgetMs){ if(!PAVE.on) return true;
+  if(!J.dens){ const N=PAVE.N, EXT=LOCAL.R+60, SIZE=EXT*2, TEXEL=SIZE/N;
+    J.dens={N,SIZE,TEXEL,ox:Math.floor((J.cx-EXT)/TEXEL)*TEXEL,oz:Math.floor((J.cz-EXT)/TEXEL)*TEXEL,
+            g:new Float32Array(N*N), i:0, data:null}; }
+  const D=J.dens, N=D.N, rc=Math.ceil(PAVE.rad/D.TEXEL);
+  while(D.i<J.B.length){ if(performance.now()-t0>budgetMs) return false;                  // resumable, like every other phase
+    const end=Math.min(J.B.length,D.i+120);
+    for(;D.i<end;D.i++){ const b=J.B[D.i];
+      const gx=Math.round(((b.x-D.ox)/D.SIZE)*N), gz=Math.round(((b.z-D.oz)/D.SIZE)*N);   // lattice-aligned: same world cell from any centre
+      for(let dz=-rc;dz<=rc;dz++) for(let dx=-rc;dx<=rc;dx++){
+        const ix=gx+dx, iz=gz+dz; if(ix<0||iz<0||ix>=N||iz>=N) continue;
+        const d=Math.hypot(dx,dz)/(rc+1e-3); if(d>1) continue; D.g[iz*N+ix]+=(1-d*d); } } }
+  if(!D.data){ D.data=new Uint8Array(N*N);
+    for(let k=0;k<D.g.length;k++) D.data[k]=Math.min(255,(D.g[k]/PAVE.knorm)*255)|0; }     // ABSOLUTE divisor, never the local max
+  return true; }
+/* commit-side: upload only. ONE persistent DataTexture, reused — a per-rebuild texture would leak,
+   because a texture held in a uniform is not disposed with the material. */
+function paveTerrain(mesh,J){ if(!PAVE.on||!J.dens||!J.dens.data) return;
+  const D=J.dens;
+  if(!PAVE.tex){ PAVE.data=new Uint8Array(D.N*D.N);
+    PAVE.tex=new THREE.DataTexture(PAVE.data,D.N,D.N,THREE.RedFormat);
+    PAVE.tex.wrapS=PAVE.tex.wrapT=THREE.ClampToEdgeWrapping;   // past the grid the RIM value continues — no green fringe, no seam
+    PAVE.tex.minFilter=PAVE.tex.magFilter=THREE.LinearFilter; } // bilinear = the gradual transition, with nothing to band on
+  PAVE.data.set(D.data); PAVE.tex.needsUpdate=true;
+  const m=mesh.material;
+  m.onBeforeCompile=sh=>{ sh.uniforms.uDens={value:PAVE.tex};
+    sh.uniforms.uOrig={value:new THREE.Vector2(D.ox,D.oz)}; sh.uniforms.uSize={value:D.SIZE};
+    sh.uniforms.uPaved={value:new THREE.Color(PAVE.color)};
+    sh.uniforms.uLo={value:PAVE.lo}; sh.uniforms.uHi={value:PAVE.hi};
+    sh.vertexShader='varying vec2 vPaveUv;\nuniform vec2 uOrig;\nuniform float uSize;\n'+
+      sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n  vPaveUv=(position.xz-uOrig)/uSize;');
+    sh.fragmentShader='varying vec2 vPaveUv;\nuniform sampler2D uDens;\nuniform vec3 uPaved;\nuniform float uLo;\nuniform float uHi;\n'+
+      sh.fragmentShader.replace('#include <color_fragment>',
+        '#include <color_fragment>\n  diffuseColor.rgb=mix(diffuseColor.rgb,uPaved,smoothstep(uLo,uHi,texture2D(uDens,vPaveUv).r));'); };
+  m.needsUpdate=true; }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
   while(J.i<J.list.length){
@@ -4741,6 +4785,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   while(J.ri<J.list.length){if(performance.now()-t0>budgetMs)return false;roadGeomSeg(J,J.list[J.ri++]);}
   if(!rampRibbonStep(J,t0,budgetMs))return false;
   if(!parkGroundStep(J,t0,budgetMs))return false;                                            // 🌳 park / wood / open ground, fences and lawn trees (v19i): one landcover feature per resume check                                            // 🎀 interchange ramp edge ribbon (v19f): needs the finished road surfaces, generated here not in commit
+  if(!densityGridStep(J,t0,budgetMs))return false;   // 🛣️ paved-ground density field (v20d): built here, uploaded in commit
   return true;
 }
 function genLocalCity(cx,cz){ const J=startLocalCity(cx,cz); while(!stepLocalCity(J,1e9)); return J; }   // synchronous (first build only)
@@ -5471,7 +5516,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     for(let x=x0;x<J.cx+r;x+=step)for(let z=z0;z<J.cz+r;z+=stepZ){                                     //    linear DEM samples with zero cut depth, so they meet the coarse neighbours without a crack
       if(cutCell(x,z)){const N=8,sx=step/N,sz=stepZ/N;for(let i=0;i<N;i++)for(let j=0;j<N;j++)cell(x+sx*i,z+sz*j,sx,sz);} else cell(x,z,step,stepZ); }
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();
-    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x9eb78a}));FLATCITY.group.add(m);FLATCITY.parts.push(m);   // DEM terrain = the filler ground TILT actually renders (NOT a ramp embankment)
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x9eb78a}));paveTerrain(m,J);FLATCITY.group.add(m);FLATCITY.parts.push(m);   // DEM terrain = the filler ground TILT actually renders (NOT a ramp embankment)
   }
   // Restore missing multipart rivers; island holes are retained.
   for(const w of NAVGEO.water)for(const ring of w.outer){const bb=ring.bounds;if(J.cx+LOCAL.R<bb[0]||J.cx-LOCAL.R>bb[2]||J.cz+LOCAL.R<bb[1]||J.cz-LOCAL.R>bb[3])continue;
