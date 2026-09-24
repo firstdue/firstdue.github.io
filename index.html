@@ -1019,7 +1019,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20e";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20h";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2803,6 +2803,19 @@ function updateStreetLabels(dt){
   if(!FLAGS.streetLabels || !state.running){ for(const sp of LBL.pool) sp.visible=false; return; }
   const spd=Math.max(8,DRIVE.speed||15);                                              // look further ahead the faster you drive, so a name still has time to read
   LBL._far=Math.min(340, 100+spd*5); LBL._near=Math.min(LBL._far*0.72, 70+spd*3);   // solid well before the junction — you need time to tap a card and take that street (owner, phone: was 70+4.5v / 55+3v — at 15 m/s that read as "almost past it")
+  /* ⚠ ON A RAMP YOU ARE NOT ON THE STREET YET, YOU ARE JOINING IT. streetName() returns the street
+     whose BAND the ramp sits in, so at the foot of an off-ramp every branch of the street you are about
+     to join looks like "your own street". That fed TWO suppressions: the sameRoadTurn guard dropped the
+     candidates (v18v/v18y), and the per-frame fade below hid whatever survived. At I-76 -> Montgomery
+     Drive that left three legal branches, no cards, and a truck that could not be told which way to go
+     while the pad could. Scoped to the unnamed-ramp-edge case; on a named road both rules are untouched. */
+  /* ⚠ AND IT MUST BE A RAMP, NOT MERELY UNNAMED. The filter's own trigger is `!de.name`, but the
+     graph holds 1,175 unnamed NON-ramp street edges (noding stubs of ordinary roads) against 177
+     unnamed ramp edges. Keyed on unnamed alone, this scoping leaked onto ordinary streets and added
+     cards at 21 of 160 sampled readings - including three 'West Tabor Road' and four 'South Northbank
+     Place' twins at one spot, which is the same-road clutter sameRoadTurn exists to stop. hw===2. */
+  const onRampEdge=(()=>{ if(DRIVE.parked||!DRIVE.fromN||!DRIVE.toN) return false;
+    const de=DRIVE.fromN.adj.find(e=>e.to===DRIVE.toN); return !!(de&&!de.name&&de.hw===2); })();
   LBL.acc-=dt;
   if(LBL.acc<=0){ LBL.acc=0.12;                                                     // ~8x/sec: label ONLY the cross streets at junctions actually ahead on your road —
     const cand=[], seen={}, cur=streetName(truck.x,truck.z), curKey=canonStreet((DRIVE.parked&&DRIVE.faces)||cur); // a street you can't turn onto (parallel, unconnected) must never get a callout.
@@ -2843,17 +2856,31 @@ function updateStreetLabels(dt){
           const route=destEdge&&destEdge.hw===1?hwyRouteLabel(destEdge,destFrom):null;
           if(route) exitBlock='RAMP TO '+route; }
         else nm=guess; }                                                           // plain stub → keep the band name as before
-      if(ramp&&e.wrong) return;                                                    // derived ramps follow the same rule as gantry ones: a wrong-way ramp gets no card
+      if((ramp||e.hw)&&e.wrong) return;                                            // ⚠ e.hw too: a NAMED hw===1 carriageway is not flagged `ramp`, so it could still raise a red wrong-way card. derived ramps follow the same rule as gantry ones: a wrong-way ramp gets no card
       if(!nm||nm==='—') return;
-      const sameRoadTurn=!ramp&&canonStreet(nm)===curKey;
+      const sameRoadTurn=!ramp&&!onRampEdge&&canonStreet(nm)===curKey;
       if(sameRoadTurn){ if(!from) return; const kp=keepStreet(from,node); if(kp===e.to) return;   // our own street: a card only for a GENUINE fork of it (Ridge keeps left / Main keeps right) —
         if(branchForwardness(from,node,e.to)<=-0.25) return;                                     // not a stub that runs back the way we came (a 6m twin edge at Ridge × Calumet offered "4200 Ridge Ave" while ON the 4200 block of Ridge — owner, phone, v18v/v18y; reversing is the U-TURN button's job)
         if(kp){ const reach=(n0,n1)=>{ const s=new Set([n1]); let pa=n0,pb=n1; for(let g=0;g<8;g++){ const nx=straightest(pa,pb); if(!nx) break; s.add(nx); pa=pb; pb=nx; } return s; };
           const A=reach(node,e.to), B=reach(node,kp); for(const n of A) if(B.has(n)) return; } }   // and not a lane split / divided twin that rejoins the road within a few hops
       const dx=e.to.x-node.x,dz=e.to.z-node.z,l=Math.hypot(dx,dz)||1;
       const off=Math.min(DRIVE.parked?7:15,l*(DRIVE.parked?0.3:0.5));             // at the house keep the sign close to the corner, inside the Chase frame
-      const lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=ramp?(exitBlock||'RAMP'):(e.hw===1?hwyRouteLabel(e,node):hundredBlock(lx,lz,nm)),key=canonStreet(nm)+'|'+block;   // a carriageway card reads 'I-76 EAST', never a fabricated block
+      let lx=node.x+dx/l*off,lz=node.z+dz/l*off,block=ramp?(exitBlock||'RAMP'):(e.hw===1?hwyRouteLabel(e,node):hundredBlock(lx,lz,nm)),key=canonStreet(nm)+'|'+block+(ramp&&e.hw===2?'|'+Math.round(e.to.x)+','+Math.round(e.to.z):'');   /* ⚠ v19e: two ramp branches deriving the SAME name and block shared a card key and the second was deduped away. At a FORK both branches are unnamed ramp edges, so the TARGET NODE goes in the ramp key - otherwise fixing the fork silently loses one of its two exits. Gated on e.hw===2, NOT on the `ramp` flag: an unnamed STREET stub whose chain leads to a different road is flagged ramp too, and keying those by node un-merged genuine duplicates - three 'West Tabor Road' cards where there had been one. */   // a carriageway card reads 'I-76 EAST', never a fabricated block
       const pick=DRIVE.parked?{root:DRIVE.stationNode,first,from,at:node,next:e.to}:(from?{from,at:node,next:e.to}:null);
+      /* v20h: at Ridge x Spring Garden a 13 m westward link and the eastbound carriageway, at two different nodes of ONE
+         intersection, both read 'Spring Garden Street 1100 BLOCK', so the LEFT turn was deduped away and only rights were
+         offered (owner, phone). Split the key only for THAT shape: a different node AND the opposite side. Keying every card
+         by side instead doubled 51 of 674 cards in a 400-site census — a cross street's left and right often share a block. */
+      { const pc=seen[key]!==undefined?cand[seen[key]]:null, pp=pc&&pc.pick;
+        if(pp&&pp.from&&from&&pp.at!==node&&!ramp&&!e.wrong){ const sd=(f,n,t)=>((n.x-f.x)*(t.z-n.z)-(n.z-f.z)*(t.x-n.x))>0;
+          if(sd(pp.from,pp.at,pp.next)!==sd(from,node,e.to)){                              // opposite turns from two nodes of one junction: read each block 30 m down its branch
+            const out30=(n0,n1)=>{ let pa=n0,pb=n1,w=Math.hypot(n1.x-n0.x,n1.z-n0.z),g=0; while(w<30&&g++<8){ const nx=straightest(pa,pb); if(!nx) break; w+=Math.hypot(nx.x-pb.x,nx.z-pb.z); pa=pb; pb=nx; } return pb; };
+            const po=out30(pp.at,pp.next), no=out30(node,e.to), bo=hundredBlock(po.x,po.z,nm), bn=hundredBlock(no.x,no.z,nm);
+            if(bo!==bn){ const slot=seen[key], kOld=canonStreet(nm)+'|'+bo, kNew=canonStreet(nm)+'|'+bn;
+              if(kNew===key){                                                              // THIS branch really is the labelled block; the earlier card leads onto block bo
+                if(seen[kOld]!==undefined){ cand[slot]={name:nm,block:bn,x:lx,z:lz,pick,wrong:false,sameRoadTurn}; return; }   // ...which is already carded: the earlier one was a junction link, this branch takes its slot
+                cand[slot].block=bo; delete seen[key]; seen[kOld]=slot; }                  // ...otherwise relabel it, and this card is added below under its own key
+              else if(seen[kNew]===undefined){ block=bn; key=kNew; } } } } }
       const prev=seen[key];                                                       // one card per street+block: a two-way road's split one-way ramps (Falls Bridge south end) were doubling it
       if(prev!==undefined){                                                       // with a red twin. If both a legal and a wrong-way branch exist, the LEGAL one is the card;
         if(cand[prev]&&cand[prev].wrong&&!e.wrong) cand[prev]={name:nm,block,x:lx,z:lz,pick,wrong:false,sameRoadTurn};   // red only survives where the street truly has no legal entry
@@ -2875,12 +2902,14 @@ function updateStreetLabels(dt){
           const nx=sameStreetOn(pa,nb); if(!nx) break;
           walked+=Math.hypot(nx.x-nb.x,nx.z-nb.z); pa=nb; nb=nx; } }
       a=null; b=null; }
-    let junctions=0;                                                                       // 🃏 how DEEP the preview goes, counted in junctions that actually produced a card — not in cards.
+    let junctions=0, lastJ=null, lastNames=null, capHit=false;                                           // v20h: nodes within JCLUSTER of the last junction ARE that junction (see turnCandidates)
+    // 🃏 how DEEP the preview goes, counted in junctions that actually produced a card — not in cards.
     while(b && guard++<40 && cand.length<LBL.cap){                                          // Ridge through East Falls stacked four junctions' cards (20m to 176m out) into one screen and the
       if(Math.hypot(b.x-truck.x,b.z-truck.z)>LBL._far) break;                               // owner could not read them (phone, v18y). Two junctions keeps BOTH turn options at each one — a
+      const grouped=sameJunction(lastJ,lastNames,b,a); if(capHit&&!grouped) break;
       const branches=b.adj.filter(e=>e.to!==a), before=cand.length;                         // 4-way's left and right are different moves and must stay separately tappable — and drops the rest.
       if(branches.length>1) for(const e of branches){ addBranch(b,e,null,a); if(cand.length>=LBL.cap) break; } // every visible driving sign stores its exact junction + branch
-      if(cand.length>before && ++junctions>=LBL.junctionCap) break;
+      if(cand.length>before){ if(!grouped){ junctions++; lastNames=junctionNames(b,a); } else for(const nm of junctionNames(b,a)) lastNames.add(nm); lastJ=b; if(junctions>=LBL.junctionCap) capHit=true; }
       const nx=keepStreet(a,b); if(!nx) break; a=b; b=nx; }                                 // preview the same path the truck will actually take
     { const legal=new Set(); if(!DRIVE.parked&&curKey&&cur!=='—') legal.add(curKey);             // the street under the truck is legally present by definition — its divided-twin/opposite-
                                                                                                    // carriageway red cards are noise, so those go. Every OTHER wrong-way street keeps its red card even when
@@ -2889,8 +2918,21 @@ function updateStreetLabels(dt){
       for(let i=cand.length-1;i>=0;i--) if(cand[i].wrong&&legal.has(canonStreet(cand[i].name))) cand.splice(i,1); }   // one-way ramp fragments, or a divided twin in the next block) — red survives only for streets with no legal entry
     if(!DRIVE.parked&&DRIVE.fromN&&DRIVE.toN){ const de=DRIVE.fromN.adj.find(e=>e.to===DRIVE.toN);   // 🛣️ highway rules ON a ramp (owner): you're committed — no cross-street callouts (Kelly Dr under
       if(de&&!de.name){ const dn=canonStreet(rampDestName()||'');                                    // the deck), no cards for other ramps (Ridge, Lincoln). Only the sign for where THIS ramp
+        /* ⚠ A RAMP CAN FORK, and the blanket splice below left NOTHING to tap. 16 of the 17 nodes
+           reached on a ramp with more than one legal way onward showed zero cards, and the drive HARD-
+           STALLED at six of them — four at the street junction at the FOOT of an off-ramp, which is
+           exactly where you are trying to get off. The CONTROLLER pad was unaffected throughout
+           (pickTurn walks the graph, not the cards), so TAP and the pad disagreed. Keep the destination
+           sign AND the branches legally takeable from the node the truck is at or approaching; suppress
+           everything else exactly as before. Mid-ramp with no fork this is a no-op — a non-forking node
+           produces no candidates, and controlled access means a ramp shares a node with a street ONLY
+           at a real hj join, which IS the foot of the off-ramp. */
+        const at=DRIVE.toN, nxt=new Set();                                                     // a node with ONE legal way on is not a fork: nothing to choose, so nothing survives (keeping it
+        for(const e2 of at.adj) if(!e2.wrong&&e2.to!==DRIVE.fromN) nxt.add(e2.to);
         for(let i=cand.length-1;i>=0;i--){ const c=cand[i];                                          // leads survives; exits reappear once you're on the named road itself.
-          if(!(c.block==='RAMP'&&dn&&canonStreet(c.name)===dn)) cand.splice(i,1); } } }
+          const isDest=c.block==='RAMP'&&dn&&canonStreet(c.name)===dn;
+          const isHere=onRampEdge&&nxt.size>1&&!!(c.pick&&c.pick.at===at&&nxt.has(c.pick.next));           // put a fake same-road block card mid-ramp at 5 places, which is the clutter this filter exists to stop)
+          if(!isDest&&!isHere) cand.splice(i,1); } } }
     if(cand.some(c=>c.sign)) cand.sort((p,q)=>(q.sign?1:0)-(p.sign?1:0));        // sourced gantry cards survive the cap (stable sort keeps the rest in walk order)
     if(cand.length>LBL.showCap) cand.length=LBL.showCap;                         // nearest choices only: prevent a stack of future-intersection signs
     LBL.last=cand;                                                                // the candidate list, inspectable (tests / console)
@@ -2901,7 +2943,7 @@ function updateStreetLabels(dt){
       sp.position.set(cd.x,groundHeight(cd.x,cd.z)+LBL.float,cd.z); sp.visible=true; } }
   const curNow=streetName(truck.x,truck.z);                                            // hide the street you're on every frame (no throttle-lag flash when you turn onto it)
   for(const sp of LBL.pool){ if(!sp.visible) continue;                                 // smooth per-frame fade: near = solid, far = gone
-    if(sp._name===curNow&&!sp._sameRoadTurn){ sp.visible=false; continue; }
+    if(sp._name===curNow&&!sp._sameRoadTurn&&!onRampEdge){ sp.visible=false; continue; }
     const d=Math.hypot(truck.x-sp.position.x,truck.z-sp.position.z);
     if(d>LBL._far){ sp.visible=false; continue; }
     let op=Math.max(0,Math.min(1,(LBL._far-d)/Math.max(1,LBL._far-LBL._near)*1.9));   // ramps to full opacity about halfway in, not at the last moment
@@ -3593,6 +3635,13 @@ document.getElementById('btnGuide').addEventListener('click',e=>{ e.preventDefau
   routeMeshFlat.visible = routeEdgeFlat.visible = MAP.guide && state.cam===3 && state.route && !!routePts && routePts.length>1;
   popup(MAP.guide?'🔵 NAVIGATION ROUTE ON':'NAVIGATION ROUTE OFF'); });   // GUIDE hides only the drawn line — the destination, dispatch and scoring are untouched
 (function loadGuidePref(){ try{ const v=localStorage.getItem('pfd_guide'); if(v==='0'){ MAP.guide=false; const b=document.getElementById('btnGuide'); if(b) b.classList.remove('on'); } }catch(e){} })();   // default ON
+/* THE stopped-at-junction commit. chooseAtT (GO LEFT/GO RIGHT), chooseStraight (tap the truck)
+   and a tapped street card all release the truck the same way, so they share this and nothing else
+   grows a second copy. DRIVE.pending is cleared deliberately: pending is what a turn armed for a
+   node the truck has yet to REACH means, and this is the turn happening now. */
+function commitChoice(next){ const b=DRIVE.toN; if(!b||!next) return false;
+  DRIVE.fromN=b; DRIVE.toN=next; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0;
+  DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return true; }
 function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     // held at a T: turn LEFT/RIGHT onto the cross street
   const b=DRIVE.toN, a=DRIVE.fromN; if(!b) return false;
   const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(hx,hz)||1;                         // approach heading — left/right is judged against it
@@ -3603,6 +3652,7 @@ function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     /
   const cands=[];                                                              // {toN, viaN|null, wrong, name, cross}
   const addFrom=(pivot,viaN)=>{ for(const e of pivot.adj){ const back=viaN?viaN:a; if(e.to===back) continue; if(pivot!==b && e.to===b) continue;
       const dx=e.to.x-pivot.x,dz=e.to.z-pivot.z,l=Math.hypot(dx,dz)||1;
+      if(hwWrong(e)) continue;                                                       // ⚠ dropped, not merely penalised: a -0.6 score still picks it when it is the only branch on that side
       cands.push({toN:e.to, viaN:pivot===b?null:pivot, wrong:!!e.wrong, name:e.name, cross:(hx*dz-hz*dx)/(hl*l)}); } };
   addFrom(b,null);
   for(const e of b.adj){ if(Math.hypot(e.to.x-b.x,e.to.z-b.z)<55) addFrom(e.to,b); }   // step across a short connector to a sibling carriageway — INCLUDING the node we came from (a): on a divided road the correct carriageway is often back across the short median connector we just drove through
@@ -3615,10 +3665,9 @@ function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     /
     if(c.viaN) s-=0.15;                                                        // ...slight preference for a direct turn over a jog to a sibling carriageway
     if(s>bd){ bd=s; best=c; } }
   if(!best) return false;
-  DRIVE.fromN=b; DRIVE.t=0; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true;
-  if(best.viaN){ DRIVE.toN=best.viaN; DRIVE.pending={at:best.viaN,next:best.toN}; }   // jog to the sibling node, then turn onto its carriageway
-  else { DRIVE.toN=best.toN; DRIVE.pending=null; }
-  driveOrient(); return true; }
+  if(best.viaN){ DRIVE.fromN=b; DRIVE.toN=best.viaN; DRIVE.t=0; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true;
+    DRIVE.pending={at:best.viaN,next:best.toN}; driveOrient(); return true; }   // jog to the sibling node, then turn onto its carriageway
+  return commitChoice(best.toN); }
 function chooseStraight(){ if(!DRIVE.atChoice) return false; const b=DRIVE.toN, a=DRIVE.fromN; if(!b) return false;   // held at a fork: keep going the straightest legal way
   let best=null,bd=-1e9, bestAny=null,ba=-1e9;
   const ceS=a&&a.adj.find(e=>e.to===b), curWrongS=!!(ceS&&ceS.wrong);
@@ -3626,7 +3675,7 @@ function chooseStraight(){ if(!DRIVE.atChoice) return false; const b=DRIVE.toN, 
     if(f>ba){ ba=f; bestAny=e.to; }
     if((!e.wrong||curWrongS) && f>bd){ bd=f; best=e.to; } }                    // straightest LEGAL branch; wrong ones count too when already deliberately wrong-way
   const pick=best||bestAny; if(!pick) return false;
-  DRIVE.fromN=b; DRIVE.toN=pick; DRIVE.t=0; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; DRIVE.atChoice=false; DRIVE.going=true; driveOrient(); return true; }
+  return commitChoice(pick); }
 document.getElementById('btnLeft').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(-1)) pullOut(-1); });
 document.getElementById('btnRight').addEventListener('click',e=>{ e.preventDefault(); if(!chooseAtT(1)) pullOut(1); });
 function setDriveSpeed(v,quiet){ DRIVE.speed=Math.max(6,Math.min(70,v));                                  // world u/s ≈ m/s → mph; cap ~156 mph
@@ -3696,7 +3745,8 @@ function updateHUD(dt){
       sa.classList.toggle('show', show); } }
   if(DRIVE.pending && DRIVE.arrowT>0){ const jn=DRIVE.pending.at, nx=DRIVE.pending.next;                 // next-turn banner
     elTurn.style.display='flex'; elTurn.querySelector('.dir').textContent=DRIVE.arrow>0?'→':'←';
-    elTurn.querySelector('.st').textContent=DRIVE.pending.label||streetName((jn.x+nx.x)/2,(jn.z+nx.z)/2); }   // a gantry card names its destination; an unnamed ramp otherwise borrows the band name (read 'Ridge Ave' — owner)
+    const pe=jn.adj.find(e=>e.to===nx);   // v20h: the BRANCH's name — the band read 'Henry Avenue' while turning off Henry Avenue (owner)
+    elTurn.querySelector('.st').textContent=DRIVE.pending.label||(pe&&pe.name)||(pe&&pe.hw?(String(pe.dst||'').split(';')[0]||'RAMP'):streetName((jn.x+nx.x)/2,(jn.z+nx.z)/2)); }   // a gantry card names its destination; an unnamed ramp otherwise borrows the band name (read 'Ridge Ave' — owner)
   else if(DRIVE.atChoice){ elTurn.style.display='flex'; elTurn.querySelector('.dir').textContent='↕'; elTurn.querySelector('.st').textContent='TAP TRUCK = STRAIGHT · ←/→ TO TURN'; }
   else elTurn.style.display='none';
   { const ww=DRIVE.wrongWay && DRIVE.going && state.running; const el=document.getElementById('wrongWay');   // one-way wrong-way warning
@@ -3854,32 +3904,62 @@ for(let i=0;i<LBL.cap;i++){ const b=document.createElement('button'); b.type='bu
    nextJunction() stopped at the first node whose forward count was not 1 (counting WRONG-WAY edges)
    and then followed fwd[0] rather than the real continuation, and it only ever looked one junction
    ahead where the cards look two. */
+/* v20h: ONE INTERSECTION CAN BE SEVERAL NODES. Ridge Avenue x Spring Garden (divided) x N 12th Street is
+   six graph nodes inside 30 m, and counting each as its own junction spent the whole LBL.junctionCap
+   before the walk reached the legal left: the cards offered only rights and the pad armed a wrong-way
+   left that stopped the truck mid-intersection (owner, phone). A node within JCLUSTER of the last
+   junction that produced options belongs to the SAME junction. Shared by the card walk and this one. */
+const JCLUSTER=30;
+// The cross streets a junction offers, minus the road we are driving. Two nodes are ONE junction only when they are
+// within JCLUSTER AND share a cross street - the two roadways of a divided road. Distance alone also merged separate
+// small streets (Spruce then Delancey Place 25 m on) and grew the card stack at 14 of 400 sampled approaches.
+function junctionNames(b,a){ const ce=a&&a.adj.find(e=>e.to===b), own=canonStreet((ce&&(ce.name||edgeName(a,b)))||''), s=new Set();
+  for(const e of b.adj){ if(e.to===a) continue; const nm=canonStreet(e.name||edgeName(b,e.to)||''); if(nm&&nm!==own) s.add(nm); } return s; }
+function sameJunction(lastJ,names,b,a){ if(!lastJ||!names||Math.hypot(b.x-lastJ.x,b.z-lastJ.z)>JCLUSTER) return false;
+  for(const nm of junctionNames(b,a)) if(names.has(nm)) return true; return false; }
 function turnCandidates(){
   const out=[], far=(typeof LBL!=='undefined'&&LBL._far)||450;
-  let a=DRIVE.fromN, b=DRIVE.toN, guard=0, junctions=0;
+  let a=DRIVE.fromN, b=DRIVE.toN, guard=0, junctions=0, lastJ=null, lastNames=null, capHit=false;
   while(b && guard++<40){
     if(Math.hypot(b.x-truck.x,b.z-truck.z)>far) break;
     const branches=b.adj.filter(e=>e.to!==a), before=out.length;
+    const grouped=sameJunction(lastJ,lastNames,b,a);
+    if(capHit && !grouped) break;                                                     // the cap is spent, but the rest of THAT intersection still counts
     if(branches.length>1 && a){
       const hx=b.x-a.x, hz=b.z-a.z, hl=Math.hypot(hx,hz)||1;
-      const cont=keepStreet(a,b);
+      const cont=keepStreet(a,b), ce=a.adj.find(e=>e.to===b);
+      const cx=cont?cont.x-b.x:0, cz=cont?cont.z-b.z:0, cl=Math.hypot(cx,cz)||1;
       for(const e of branches){
         if(e.to===cont) continue;                                                    // straight on is not a turn
+        if(hwWrong(e)) continue;                                                     // ⚠ a freeway/ramp against its direction is never turnable: this is the one that fed pickTurn
         const dx=e.to.x-b.x, dz=e.to.z-b.z, l=Math.hypot(dx,dz)||1;
-        out.push({at:b,next:e.to,cross:(hx*dz-hz*dx)/(hl*l),                          // cross>0 = right
-          name:e.name||edgeName(b,e.to)||'', wrong:!!e.wrong}); }
+        // an EXIT peels off the mainline at a few degrees (exit 338: cross 0.09 against the approach), under
+        // pickTurn's 0.12 'real branch' floor, so the pad said NO RIGHT AHEAD beside a tappable exit card.
+        // Measure it against the mainline it leaves instead, and let pickTurn use a lower floor for it.
+        const exit=!!(ce&&ce.hw&&e.hw===2&&cont);
+        out.push({at:b,next:e.to,cross:exit?(cx*dz-cz*dx)/(cl*l):(hx*dz-hz*dx)/(hl*l),   // cross>0 = right
+          name:e.name||edgeName(b,e.to)||'', wrong:!!e.wrong, exit, j:junctions+(grouped?0:1)}); }
     }
-    if(out.length>before && ++junctions>=((typeof LBL!=='undefined'&&LBL.junctionCap)||2)) break;
+    if(out.length>before){ if(!grouped){ junctions++; lastNames=junctionNames(b,a); } else for(const nm of junctionNames(b,a)) lastNames.add(nm); lastJ=b;
+      if(junctions>=((typeof LBL!=='undefined'&&LBL.junctionCap)||2)) capHit=true; }
     const nx=keepStreet(a,b); if(!nx) break; a=b; b=nx; }
   return out; }
 /* sign: -1 = left, +1 = right. Returns {armed} or {armed:false, other} so the caller can say WHICH
    side the turn is actually on instead of claiming there is none.
    WRONG-WAY IS NOT PENALISED HERE ANY MORE. Real apparatus opposes traffic when it has to; the game
    permits it in both input paths and warns with the WRONG WAY chip while it lasts. */
+/* v20h ORDER: a LEGAL street before a wrong-way one, then the NEAREST junction, then the sharpest turn
+   there. It used to take the sharpest turn anywhere in the look-ahead, so it passed Gates Street for
+   Hermitage 120 m on, and in a 22,164-press sample skipped the nearest junction 25.9% of the time and
+   chose a wrong-way street over a legal one on the same side 11.0% (owner: "it would skip the correct
+   way"). Wrong-way is still offered when it is the ONLY thing on that side — the street rule stands. */
 function pickTurn(sign){
   const cands=turnCandidates();
-  let best=null,bd=0.12;                                                              // still a REAL branch toward that side, not a kink
-  for(const c of cands){ const sc=sign*c.cross; if(sc>bd){ bd=sc; best=c; } }
+  const side=cands.filter(c=>sign*c.cross>(c.exit?0.03:0.12));                      // still a REAL branch toward that side, not a kink (an exit is measured against its mainline)
+  const legal=side.filter(c=>!c.wrong), pool=legal.length?legal:side;
+  let best=null,bd=-1;
+  if(pool.length){ const j0=Math.min(...pool.map(c=>c.j));
+    for(const c of pool){ const sc=sign*c.cross; if(c.j===j0&&sc>bd){ bd=sc; best=c; } } }
   if(best){ DRIVE.pending={at:best.at,next:best.next}; DRIVE.arrow=best.cross>0?1:-1; DRIVE.arrowT=4;
     return {armed:true,pick:best}; }
   let other=null,od=0.12;
@@ -3900,6 +3980,20 @@ function toggleStreetChoice(sp,x,y){ const p=sp&&sp._pick; if(!p||!p.at||!p.next
     if(DRIVE.pending&&DRIVE.pending.at===p.at&&DRIVE.pending.next===p.next){ DRIVE.pending=null; DRIVE.arrow=0; DRIVE.arrowT=0; }
     DRIVE.plan=null; PARK_UI.selected=null; popup('STREET DESELECTED'); return false; }
   if(!p.from) return false;                                                          // a direct-from-bay choice can be deselected visually, but cannot queue a new driving turn without an approach
+  /* ⚠ STOPPED AT THAT VERY NODE -> TAKE IT NOW. DRIVE.pending is read on ARRIVAL at a node, so a
+     truck already sitting on the node never consumes it: the handler returned true and the world
+     moved 0 m. That was invisible until v20f put cards at ramp forks, where the truck DOES stop -
+     tapping the card you were just given would have looked broken. Same release the pad and GO
+     LEFT/GO RIGHT use (commitChoice), not a second mechanism. A card for a node further ahead still
+     just arms pending, which is what it has always meant. */
+  if(DRIVE.atChoice && p.at===DRIVE.toN && DRIVE.toN.adj.some(e=>e.to===p.next)){
+    if(sp._dest){ const r=routeNodes(p.next.x,p.next.z,sp._dest[0],sp._dest[1]);
+      if(r&&r.length>1){ DRIVE.plan=r.slice(1); DRIVE.planWait=false; } }   // the turn is firing now, so the plan starts now too (planWait is for a turn still ahead)
+    else DRIVE.plan=null;
+    PARK_UI.selected=null;
+    const took=commitChoice(p.next);
+    if(took) popup(DRIVE.plan?'TO '+sp._name.toUpperCase()+' · ROUTE SET':'TAKING '+sp._name);
+    return took; }
   DRIVE.pending={at:p.at,next:p.next}; DRIVE.plan=null;
   if(sp._dest){ const r=routeNodes(p.next.x,p.next.z,sp._dest[0],sp._dest[1]);         // a gantry card with a destination: plan the legal route from the ramp so the whole
     if(r&&r.length>1){ DRIVE.plan=r.slice(1); DRIVE.planWait=true; DRIVE.pending.label=sp._name; } }   // interchange rides through without a stop (owner: 'select one before getting on'); planWait = the plan sleeps until the ramp turn fires (junctions passed BEFORE the ramp must not drop it)
@@ -4005,6 +4099,18 @@ function straightest(a,b){ if(!b) return null; const hx=b.x-a.x,hz=b.z-a.z,hl=Ma
   for(const e of b.adj){ if(e.to===a) continue; const dx=e.to.x-b.x,dz=e.to.z-b.z,l=Math.hypot(dx,dz)||1; const dot=(hx*dx+hz*dz)/(hl*l); if(dot>bd){bd=dot;best=e.to;} } return best; }
 // Stay on the road you're actually driving. straightest() alone follows raw geometry, so where Ridge Ave bends and a
 // side street (Acorn) runs straight on, it silently carried you off Ridge. Prefer a branch with the SAME street name.
+/* ⚠ A FREEWAY OR RAMP IS STRICTLY ONE-WAY - no heads-up exception, unlike a street (owner).
+   The street rule stands: wrong-way is allowed, warned with the WRONG WAY chip and scored by
+   COACH.ww past the first junction (v19y, 'real apparatus opposes traffic when it has to'). But
+   v19y also dropped the wrong-way penalty from turnCandidates, and pickTurn has no wrong-way or hw
+   test at all, so the CONTROLLER pad could arm an off-ramp backwards: measured, 8 junctions citywide
+   where the truck actually LANDS on a wrong-way hw edge, two of them the freeway carriageway itself,
+   and 92 such offers across 47 junctions. Worse, the captions read as street names ('Belmont Avenue')
+   because edgeName() falls back to the band. Once on one there was no way back: U-turn correctly
+   refuses on an hw edge, so the guard that protects the freeway sealed the trap.
+   EVERY CLAUSE BELOW GATES ON e.hw, WHICH IS 0 FOR EVERY STREET EDGE, so street behaviour is
+   untouched by construction. */
+const hwWrong=e=>!!(e&&e.hw&&e.wrong);
 function edgeName(a,b){ if(!a||!b) return null;
   for(const e of a.adj) if(e.to===b) return e.name||streetName((a.x+b.x)/2,(a.z+b.z)/2);
   return streetName((a.x+b.x)/2,(a.z+b.z)/2); }
@@ -4020,7 +4126,7 @@ function sameStreetOn(a,b){ if(!b) return null;
   const hx=b.x-a.x,hz=b.z-a.z,hl=Math.hypot(hx,hz)||1;
   let same=null,sd=-2;
   for(const e of b.adj){ if(e.to===a) continue;
-    if(e.wrong&&!curWrong) continue;                                            // divided arterial: the same-named continuation on the OPPOSITE carriageway is wrong-way — never follow it (this was the Henry Ave false WRONG-WAY)
+    if(e.wrong&&(!curWrong||e.hw)) continue;                                    // ⚠ e.hw: the same-street continuation of a freeway is never followed against its direction                                            // divided arterial: the same-named continuation on the OPPOSITE carriageway is wrong-way — never follow it (this was the Henry Ave false WRONG-WAY)
     const dx=e.to.x-b.x,dz=e.to.z-b.z,l=Math.hypot(dx,dz)||1, dot=(hx*dx+hz*dz)/(hl*l);
     let nm=e.name||(e.hw?'':streetName((b.x+e.to.x)/2,(b.z+e.to.z)/2));   // a freeway ramp never borrows the carriageway's name from the band: an exit that leaves straighter than the bend would read as the same street and take the truck off the freeway
     if(l<3){ const nx=straightest(b,e.to); if(nx) nm=edgeName(e.to,nx)||nm; }   // 1m fragment → judge by what lies beyond it
@@ -4088,7 +4194,36 @@ function sameRouteOnRoad(a,b){
      onto West Girard because both carry US 30 while the road ran straight on as Lansdowne Drive, and
      it followed City Avenue and Old York Road BACK THE WAY THEY CAME across a divided-road twin. */
   return (hit&&hitF>0.5&&hitF>=straightest) ? hit.to : null; }
-function roadContinuation(a,b){ if(!b) return null;
+/* ⚠ AT A RAMP FOOT YOU ARE JOINING THE STREET, NOT CONTINUING ALONG IT. edgeName() falls back to
+   streetName() for an unnamed edge, so an off-ramp borrows the name of the BAND it sits in - which at
+   the foot IS the street being joined. sameStreetOn() then matches a branch of that street and the
+   truck 'continues' onto it, having actually turned: 14 of the 16 ramp feet citywide picked a direction
+   unasked, two of them through roughly 80 degrees onto Belmont Avenue. Because sameStreetOn runs FIRST
+   the angle rules below never got a say. (sameStreetOn already guards the BRANCH against borrowing a
+   band name - `e.name||(e.hw?'':streetName(...))` - but not the edge being driven. One side only.)
+   HOLD ONLY WHEN THERE IS A REAL CHOICE: two or more edges legal in the direction of travel, not
+   counting wrong-way ones and not counting reversals. A ramp merging onto a one-way carriageway or
+   one side of a divided road has ONE legal way on, so stopping to ask would be pure friction - the
+   same lesson as v20f's nxt.size>1. Measured: 7 of 16 feet hold, 9 keep flowing. Streets cannot be
+   touched by this at all, because the ARRIVING edge must be hw===2. */
+function rampFootHold(a,b){ if(!a||!b) return false;
+  const e=a.adj.find(q=>q.to===b);
+  if(!(e&&e.hw===2&&!e.name)) return false;                       // must ARRIVE on an unnamed ramp edge
+  if(!b.adj.some(q=>!q.hw)) return false;                         // ...at a node that carries street edges
+  let n=0;
+  for(const q of b.adj){ if(q.to===a||q.wrong) continue;          // never the way we came, never a wrong-way option
+    if(branchForwardness(a,b,q.to)<=-0.25) continue;              // nor a reversal (the same threshold the card walk uses)
+    if(++n>1) return true; }
+  return false; }
+/* v20h: the continuation must not roll ACROSS a real junction into a dead-end scrap. Gay Street crosses
+   Cresson into a 7.2 m stub; the truck stopped at its end with the Cresson turns already behind it and
+   both arrows answering NO ... AHEAD (owner, phone). 10 such spots citywide. Stop at the junction and ask. */
+function roadContinuation(a,b){ const c=roadContinuation0(a,b);
+  if(c&&c.adj.length===1&&Math.hypot(c.x-b.x,c.z-b.z)<=15&&!(b.adj.find(e=>e.to===c)||{}).hw
+     &&b.adj.some(e=>e.to!==a&&e.to!==c&&!e.wrong)) return null;   // any other legal way on makes it a real choice
+  return c; }
+function roadContinuation0(a,b){ if(!b) return null;
+  if(rampFootHold(a,b)) return null;                                            // joining a street off a ramp with a real choice: the player picks the direction, never the drive
   const same=sameStreetOn(a,b); if(same) return same;
   const route=sameRouteOn(a,b); if(route) return route;
   const onRoute=sameRouteOnRoad(a,b); if(onRoute) return onRoute;
@@ -4099,7 +4234,7 @@ function roadContinuation(a,b){ if(!b) return null;
       const hx=pb.x-pa.x,hz=pb.z-pa.z,hl=Math.hypot(hx,hz)||1; let best=null,bd=-2;
       for(const e of cont){ const dx=e.to.x-pb.x,dz=e.to.z-pb.z,l=Math.hypot(dx,dz)||1,dot=(hx*dx+hz*dz)/(hl*l); if(dot>bd){bd=dot;best=e.to;} }
       pa=pb; pb=best; d++; } return d; };
-  const choices=fwd.filter(e=>(!e.wrong||curWrongR)&&(e.name||legalDepth(b,e.to,6)>=5));   // never auto-continue the WRONG way — unless already deliberately wrong-way; and an unnamed stub that turns wrong-way within a few hops
+  const choices=fwd.filter(e=>(!e.wrong||(curWrongR&&!e.hw))&&(e.name||legalDepth(b,e.to,6)>=5));   // ⚠ !e.hw: being deliberately wrong-way on a STREET must never carry you onto a freeway backwards   // never auto-continue the WRONG way — unless already deliberately wrong-way; and an unnamed stub that turns wrong-way within a few hops
                                                                                             // (an off-ramp's mouth tagged two-way — the Ridge on-ramp split) is not a real choice, so it must not stop the truck
   // a street present on 2+ branches here PASSES THROUGH this node — an arterial's two directions, or a divided
   // road's legal + opposite carriageway. Reaching it means we're T-ing ONTO a through road, so never auto-turn:
@@ -4141,7 +4276,9 @@ function updateDrive(dt){ if(!state.running){ return; }
     else { dist-=remain; let next=null;
       if(DRIVE.pending && DRIVE.pending.at===b && b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; DRIVE.planWait=false; }
       if(!next && DRIVE.pending && DRIVE.pending.at!==b && Math.hypot(DRIVE.pending.at.x-b.x,DRIVE.pending.at.z-b.z)<40){   // fragmented junction cluster (Ridge x Lincoln x City Ave ramps): the drive threads a TWIN node metres from
-        if(b.adj.some(e=>e.to===DRIVE.pending.next)){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; DRIVE.planWait=false; }   // the one the tapped sign anchored to — take the selected branch from here,
+        const pe=DRIVE.pending.at.adj.find(e=>e.to===DRIVE.pending.next), be=b.adj.find(e=>e.to===DRIVE.pending.next);   // v20h: only the SAME road from here — at Ridge x Spring Garden the 12th Street node
+        const sameRd=!!(pe&&be&&(pe.hw||0)===(be.hw||0)&&canonStreet(pe.name||edgeName(DRIVE.pending.at,DRIVE.pending.next))===canonStreet(be.name||edgeName(b,DRIVE.pending.next)));   // also reaches the card's next node, and a Spring Garden tap drove down N 12th St
+        if(sameRd){ next=DRIVE.pending.next; DRIVE.pending=null; DRIVE.arrow=0; DRIVE.atChoice=false; DRIVE.planWait=false; }   // the one the tapped sign anchored to — take the selected branch from here,
         else { const jog=b.adj.find(e=>e.to===DRIVE.pending.at); if(jog){ next=jog.to; DRIVE.atChoice=false; } } }             // or jog across to the anchor node first (pending stays armed) — before, the selection silently never fired
       if(DRIVE.plan && DRIVE.planWait && !DRIVE.pending){ DRIVE.plan=null; DRIVE.planWait=false; }                                  // the ramp turn was cancelled before it fired — its route goes with it
       if(!next && DRIVE.plan && DRIVE.plan.length && !DRIVE.planWait){ const P=DRIVE.plan; let idx=-1;                             // a tapped destination card planned the legal route: follow it node by node (cluster twins may skip a step)
@@ -4189,7 +4326,8 @@ function carriagewayToward(nm,hx,hz,px,pz){
       if(nm && (e.name||edgeName(n,e.to))!==nm) continue;                      // same street only
       const dx=e.to.x-n.x, dz=e.to.z-n.z, l=Math.hypot(dx,dz)||1;
       if((dx*hx+dz*hz)/(l*hl) < 0.7) continue;                                 // must run the way we WANT to go
-      const d=closestSeg(px,pz,{ax:n.x,az:n.z,bx:e.to.x,bz:e.to.z}).d;
+      const q=closestSeg(px,pz,{ax:n.x,az:n.z,bx:e.to.x,bz:e.to.z}), d=q.d;
+      if(Math.hypot(e.to.x-q.cx,e.to.z-q.cz)<3) continue;                      // v20h: landing on the END of an edge leaves nothing ahead — it stopped the truck mid-intersection at Spring Garden
       if(d<bd){ bd=d; best={n,to:e.to}; } } }
   return (best&&bd<45)?best:null;
 }
@@ -4206,7 +4344,17 @@ function slideToCarriageway(c){
 }
 function uTurn(){ if(DRIVE.parked) return; if(!DIFF.uturn[DIFF.level]){ popup('↩ NO U-TURNS ON '+DIFF.names[DIFF.level]); return; }
   const a=DRIVE.fromN,b=DRIVE.toN; if(!a||!b) return;
-  { const ce=a.adj.find(e=>e.to===b); if(ce&&ce.hw&&!(!DRIVE.going&&HWY_ENDS.has(b.x+','+b.z))){ popup(ce.hw===1?'↩ NO U-TURN ON THE EXPRESSWAY — TAKE AN EXIT':'↩ NO U-TURN ON A RAMP'); return; } }   // a freeway has a barrier, not a median to cross; the "opposite carriageway" hop must never fire here
+  /* ⚠ STRANDING SAFETY NET. The freeway refusal is right, but it is also what seals a trap: stopped
+     on an hw edge with NOTHING legal ahead, U-turn was the only way out and it said no. That is the
+     same situation HWY_ENDS already excepts, so the exception is widened to the condition rather than
+     the list: stopped, on an hw edge, zero legal onward. 319 nodes in the graph can strand a truck
+     this way, every one of them reachable only by having been on a wrong-way hw edge - which the
+     hwWrong guards now prevent. This is belt and braces for anything that ever lands there anyway,
+     and it includes the Broad Street ramp that simply ends in open ground (rec 24298). Everywhere
+     else on a freeway or ramp the refusal is unchanged, with the same two messages. */
+  { const ce=a.adj.find(e=>e.to===b);
+    const stranded=!DRIVE.going&&b&&!b.adj.some(e=>e.to!==a&&!e.wrong);            // nothing legal ahead from where we are stopped
+    if(ce&&ce.hw&&!(!DRIVE.going&&HWY_ENDS.has(b.x+','+b.z))&&!stranded){ popup(ce.hw===1?'↩ NO U-TURN ON THE EXPRESSWAY — TAKE AN EXIT':'↩ NO U-TURN ON A RAMP'); return; } }   // a freeway has a barrier, not a median to cross; the "opposite carriageway" hop must never fire here
   if(state.target&&!state.onScene) COACH.uturns++;                            // 🧮 scored: a U-turn mid-run costs Clean Driving points
   if(uTurnEdgeIsWrong(a,b)){
     const t=Math.max(0,Math.min(1,DRIVE.t||0)), px=a.x+(b.x-a.x)*t, pz=a.z+(b.z-a.z)*t;
