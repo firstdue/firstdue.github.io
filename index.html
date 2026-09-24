@@ -29,7 +29,11 @@
 <meta name="apple-mobile-web-app-title" content="Local">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+/* 📲 INSTALL APP (v20j). Chromium fires beforeinstallprompt once, possibly before the big data scripts finish, so it is
+   caught HERE and parked on window; the home-screen button replays it. iOS Safari never fires it (Apple allows no prompt). */
+addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__installEvt=e;if(window.__installSync)window.__installSync();});
+addEventListener('appinstalled',function(){window.__installEvt=null;window.__installed=true;if(window.__installSync)window.__installSync();});</script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { width:100%; height:100%; overflow:hidden; background:#000;
@@ -693,6 +697,18 @@
     text-align:center; pointer-events:none; background:linear-gradient(180deg,rgba(7,11,22,.94) 42%,rgba(7,11,22,0)); }
   #homeHud h1 { font-family:"Arial Black",sans-serif; font-size:clamp(17px,4.6vw,27px); letter-spacing:1px; color:#ffe14d;
     text-shadow:0 0 16px rgba(255,180,0,.55), 0 3px 0 #7a4a00; margin:0; }
+  #btnInstall { pointer-events:auto; margin-top:9px; display:inline-flex; align-items:center; gap:7px; min-height:44px; box-sizing:border-box;
+    background:#ffe14d; color:#1a1400; border:0; border-radius:22px; padding:0 18px; font-weight:900; font-size:12.5px; letter-spacing:1px;
+    box-shadow:0 0 16px rgba(255,200,0,.35); cursor:pointer; }
+  #btnInstall[hidden] { display:none; }
+  #installSheet { position:absolute; inset:0; z-index:9; display:none; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.55); }
+  #installSheet.show { display:flex; }
+  #installSheet .card { width:min(430px,94vw); margin-bottom:calc(14px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,#161b31,#0d1122);
+    border:2px solid #ffe14d; border-radius:16px; padding:15px 16px 16px; color:#e8eefa; box-shadow:0 18px 44px rgba(0,0,0,.65); text-align:left; }
+  #installSheet h2 { margin:0 0 8px; font-size:16px; color:#ffe14d; letter-spacing:.5px; }
+  #installSheet ol { margin:0 0 12px; padding-left:22px; font-size:14px; line-height:1.55; }
+  #installSheet .url { font-size:12px; color:#9fc6e8; margin-bottom:12px; word-break:break-all; }
+  #installSheet button { width:100%; min-height:44px; border:0; border-radius:11px; background:#333a55; color:#fff; font-weight:900; letter-spacing:1px; }
   #homeHud .tag { color:#9fc6e8; font-size:clamp(10px,2.6vw,12.5px); font-weight:800; letter-spacing:2px; margin-top:5px; }
   #homeLegend { position:absolute; left:12px; bottom:calc(12px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:5px;
     background:rgba(9,14,26,.82); border:1px solid rgba(255,255,255,.13); border-radius:11px; padding:8px 10px; pointer-events:none; }
@@ -941,8 +957,15 @@
     <div id="homeHud">
       <h1>🚒 PHILLY FIRE DISPATCH</h1>
       <div class="tag">TAP A FIREHOUSE TO RIDE OUT</div>
+      <button id="btnInstall" hidden>📲 INSTALL APP ON YOUR PHONE</button>
     </div>
     <div id="homeLegend"></div>
+    <div id="installSheet" role="dialog" aria-modal="true" aria-labelledby="installTitle"><div class="card">
+      <h2 id="installTitle">Add Philly Fire Dispatch to your home screen</h2>
+      <ol id="installSteps"></ol>
+      <div class="url">https://firstdue.github.io</div>
+      <button id="installClose">GOT IT</button>
+    </div></div>
     <button id="btnFirstDueHome">🏆 LEADERBOARD</button>
     <button id="btnListView">☰ LIST VIEW</button>
     <div id="houseCard">
@@ -1019,7 +1042,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20i";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20j";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -8162,6 +8185,24 @@ function gameOver(title,why){ boxdClear('game-over'); qualClear('game-over'); st
 function resetRun(){ state.cash=0; state.saves=0; state.timeLeft=CONFIG.timer.start; state.over=false; state.target=null; state.combo=1;
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=0; truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; state.running=true; newDispatch(); }
 /* -- Round B2 (+POST-B2): HOME → PLAYING → SHIFT OVER → HOME; picking a station starts the shift immediately -- */
+/* 📲 INSTALL APP (v20j). The button on the home map: Android/Chromium replays the parked beforeinstallprompt (the phone's
+   own install dialog); iPhone/iPad get Share → Add to Home Screen steps, because Safari offers no prompt at all; anything
+   else gets the browser-menu route. Hidden when already running from the home screen, and after an install. */
+(function(){ const btn=document.getElementById('btnInstall'), sheet=document.getElementById('installSheet'), steps=document.getElementById('installSteps');
+  if(!btn||!sheet) return;
+  const standalone=()=>{ try{ return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true; }catch(e){ return false; } };
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  window.__installSync=()=>{ btn.hidden=standalone()||!!window.__installed; };
+  window.__installSync();
+  const show=items=>{ steps.innerHTML=''; for(const t of items){ const li=document.createElement('li'); li.textContent=t; steps.appendChild(li); } sheet.classList.add('show'); };
+  btn.addEventListener('click',async()=>{
+    const evt=window.__installEvt;
+    if(evt){ try{ evt.prompt(); const r=await evt.userChoice; if(r&&r.outcome==='accepted'){ window.__installEvt=null; window.__installed=true; window.__installSync(); } }catch(e){} return; }
+    if(ios) show(['Open this page in Safari.','Tap the Share button (the square with the arrow pointing up).','Scroll down and tap “Add to Home Screen”, then “Add”.']);
+    else show(['Open your browser’s menu (⋮ at the top or bottom right).','Tap “Install app” or “Add to Home screen”.','Confirm, then open Philly Fire Dispatch from its new icon.']); });
+  document.getElementById('installClose').addEventListener('click',()=>sheet.classList.remove('show'));
+  sheet.addEventListener('click',e=>{ if(e.target===sheet) sheet.classList.remove('show'); });
+})();
 const homeEl=document.getElementById('home');
 (function buildStationList(){ const list=document.getElementById('stationList');
   const byDiv={}; for(const st of stations){ const d=st.div||0; (byDiv[d]=byDiv[d]||[]).push(st); }   // Division → Battalion → Engine, matching the official PFD apparatus chart
