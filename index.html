@@ -334,6 +334,14 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     pointer-events:auto; background:rgba(20,24,30,.9); color:#fff; border:2px solid #6e7781; border-radius:999px; padding:11px 15px;
     font-size:clamp(11px,2.8vw,14px); font-weight:800; box-shadow:0 3px 10px rgba(0,0,0,.35); cursor:pointer; font-family:inherit; }
   #btnRecenter:active { transform:scale(.95); }
+  /* 🧭 MINIMAP (v20m): a round, heading-up map under the bar - up is always the way the camera looks - with N/E/S/W
+     riding the rim so a driver who is turned around can see which way is north. Seated by JS below whatever
+     banner currently reaches into the top-right corner, so it never covers the rivals strip or the dispatch. */
+  #miniMap { position:absolute; right:max(8px,env(safe-area-inset-right)); top:calc(var(--barBot) + 48px); width:108px; height:108px;
+    z-index:13; display:none; pointer-events:none; border-radius:50%; box-shadow:0 3px 12px rgba(0,0,0,.45); }
+  #miniMap.on { display:block; }
+  #miniMap canvas { width:100%; height:100%; display:block; border-radius:50%; }
+  body #btnRecenter.off, body.ctl #btnRecenter.off { display:none !important; }   /* v20k: hidden until the view is dragged; outranks the CONTROLLER seat's display:flex !important */
   #satAttr { position:absolute; z-index:12; right:max(6px,env(safe-area-inset-right)); bottom:max(4px,env(safe-area-inset-bottom)); display:none; pointer-events:none;
     color:rgba(255,255,255,.58); font-size:8.5px; font-weight:600; letter-spacing:.2px; padding:2px 5px;
     text-shadow:0 1px 2px rgba(0,0,0,.75), 0 0 3px rgba(0,0,0,.5); }   /* required OSM/CARTO credit for the tilt basemap — kept legible but quiet, no pill */
@@ -823,6 +831,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   <button class="abtn" id="btnBoundaryMap">🗺️ RUN MAP</button>
   <button class="abtn" id="btnNight">🌙 NIGHT</button>
   <button class="abtn on" id="btnRoute">🧭 ROUTE</button>
+  <button class="abtn on" id="btnMiniMap">🗺 MINIMAP: ON</button>
   <button class="abtn" id="btnSiren">🚨 SIREN</button>
   <button class="abtn on" id="btnGuide">🔵 GUIDE</button>
   <button class="abtn on" id="btnDue">🚒 DUE: 1ST</button>
@@ -932,6 +941,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <div id="wrongWay">⚠️ WRONG WAY · ONE-WAY STREET</div>
 <button id="btnUturn">↩ U-TURN</button>
 <button id="btnRecenter">&#127919; RE-CENTER</button>
+<div id="miniMap" aria-hidden="true"><canvas></canvas></div>
 <div id="pullOut"><button id="btnLeft">⬅ GO LEFT</button><button id="btnRight">GO RIGHT ➡</button></div>
 <div id="ctlPad" aria-label="Drive pad">
   <div class="hub"></div>
@@ -1042,7 +1052,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20j";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20m";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2241,6 +2251,23 @@ const SEAM=new Set();
 const HWY_ENDS=new Map();
 for(const n of gnodes.values()){ if(n.adj.length!==1||!n.adj[0].hw) continue; const e=n.adj[0],dx=n.x-e.to.x,dz=n.z-e.to.z,l=Math.hypot(dx,dz)||1;
   HWY_ENDS.set(n.x+','+n.z,{x:n.x,z:n.z,ux:dx/l,uz:dz/l,name:e.name,hw:e.hw}); }
+/* ⭕ ROUNDABOUTS (v20l). OSM leaves a roundabout ring UNNAMED and one-way (the bake now honours junction=roundabout),
+   so a ring is found here as a short loop of unnamed one-way street edges: 3+ edges, at most 320 m round, and ROUND
+   (every node within 2x of the others' distance from the centre - which rejects long thin loops like ramps). The
+   one-way city block is also a short one-way loop, but it runs along 3-4 NAMED streets; a loop court ("... Place")
+   is named too. Citywide this finds 6. roadContinuation stops at each EXIT of a ring - a real choice - instead of
+   auto-taking whichever exit looks straightest (Walnut Ln from the east was dropped onto Cliveden St). */
+const RING_EDGES=new Set(), RING_REV=new Set();   // RING_REV: the same ring edges driven BACKWARDS (the wrong-way twins)
+(function findRings(){ const oneWay=(a,e)=>!e.hw&&!e.wrong&&!e.name&&e.to.adj.some(r=>r.to===a&&r.wrong);
+  for(const s of gnodes.values()) for(const e0 of s.adj){ if(!oneWay(s,e0)||RING_EDGES.has(e0)) continue;
+    let best=null; const stack=[[e0.to,[s,e0.to],Math.hypot(e0.to.x-s.x,e0.to.z-s.z)]];
+    while(stack.length){ const [n,path,len]=stack.pop(); if(path.length>15||(best&&len>=best.len)) continue;
+      for(const e of n.adj){ if(!oneWay(n,e)) continue; const L=len+Math.hypot(e.to.x-n.x,e.to.z-n.z); if(L>320) continue;
+        if(e.to===s){ if(path.length>=3&&(!best||L<best.len)) best={len:L,path}; continue; }
+        if(!path.includes(e.to)) stack.push([e.to,[...path,e.to],L]); } }
+    if(!best) continue; const P=best.path, cx=P.reduce((a,n)=>a+n.x,0)/P.length, cz=P.reduce((a,n)=>a+n.z,0)/P.length;
+    const r=P.map(n=>Math.hypot(n.x-cx,n.z-cz)); if(Math.min(...r)<0.5*Math.max(...r)) continue;
+    for(let i=0;i<P.length;i++){ const a=P[i], b=P[(i+1)%P.length], e=a.adj.find(q=>q.to===b), r=b.adj.find(q=>q.to===a&&q.wrong); if(e) RING_EDGES.add(e); if(r) RING_REV.add(r); } } })();
 const NCELL=90, ngrid=new Map();
 for(const n of gnodes.values()){ const k=Math.floor(n.x/NCELL)+':'+Math.floor(n.z/NCELL); let a=ngrid.get(k); if(!a){a=[];ngrid.set(k,a);} a.push(n); }
 function nearestNode(x,z){ let best=null,bd=1e18; const gx=Math.floor(x/NCELL),gz=Math.floor(z/NCELL);
@@ -2292,11 +2319,19 @@ const SKY={group:null,dome:null,cloudMat:null,cloudTex:null,top:new THREE.Color(
   dg.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
   const dome=new THREE.Mesh(dg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false}));
   dome.renderOrder=-3; g.add(dome);
-  const cv=document.createElement('canvas'); cv.width=cv.height=256; const x=cv.getContext('2d'); x.clearRect(0,0,256,256);
-  for(let k=0;k<26;k++){ const px=Math.random()*256, py=Math.random()*256, r=18+Math.random()*46, a=0.18+Math.random()*0.5;
-    const rg=x.createRadialGradient(px,py,0,px,py,r); rg.addColorStop(0,'rgba(255,255,255,'+a+')'); rg.addColorStop(1,'rgba(255,255,255,0)');
-    x.fillStyle=rg; x.beginPath(); x.arc(px,py,r,0,6.2832); x.fill(); }                       // soft white puffs, drawn in code, tiny footprint
-  const tex=new THREE.CanvasTexture(cv); tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(3,2);
+  /* v20k: the cloud texture is COMPUTED, not drawn on a 2D canvas. iPhone Safari's fingerprinting protection adds
+     random noise to canvas pixels when they are read back (and a WebGL upload is a read), and on this texture's
+     transparent pixels that noise un-premultiplies into bright coloured confetti across the sky (owner photo,
+     iPhone, v20j). Same 26 soft white puffs, same falloff and 'source-over' stacking; RGB is white everywhere,
+     so filtering can never pull in a colour or a dark fringe. */
+  const N=256, px=new Uint8Array(N*N*4), A=new Float32Array(N*N);
+  for(let k=0;k<26;k++){ const cx=Math.random()*N, cy=Math.random()*N, r=18+Math.random()*46, a=0.18+Math.random()*0.5;
+    const x0=Math.max(0,Math.floor(cx-r)), x1=Math.min(N-1,Math.ceil(cx+r)), y0=Math.max(0,Math.floor(cy-r)), y1=Math.min(N-1,Math.ceil(cy+r));
+    for(let y=y0;y<=y1;y++) for(let xx=x0;xx<=x1;xx++){ const d=Math.hypot(xx+0.5-cx,y+0.5-cy); if(d>=r) continue;
+      const s=a*(1-d/r), i=y*N+xx; A[i]=s+A[i]*(1-s); } }                                   // radial gradient a -> 0, composited 'source-over'
+  for(let i=0;i<N*N;i++){ px[i*4]=px[i*4+1]=px[i*4+2]=255; px[i*4+3]=Math.round(A[i]*255); }
+  const tex=new THREE.DataTexture(px,N,N,THREE.RGBAFormat); tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(3,2);
+  tex.magFilter=THREE.LinearFilter; tex.minFilter=THREE.LinearMipmapLinearFilter; tex.generateMipmaps=true; tex.flipY=true; tex.needsUpdate=true;
   const cloudMat=new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:0.85,side:THREE.BackSide,fog:false,depthWrite:false});
   const clouds=new THREE.Mesh(new THREE.SphereGeometry(1520,24,12,0,6.2832,0,Math.PI*0.55),cloudMat); clouds.renderOrder=-2; g.add(clouds);
   scene.add(g); SKY.group=g; SKY.dome=dome; SKY.cloudMat=cloudMat; SKY.cloudTex=tex;
@@ -2851,6 +2886,7 @@ function updateStreetLabels(dt){
           cand.push({name:label,block:'RAMP',x:lx,z:lz,pick,wrong:!!e.wrong,sameRoadTurn:false,sign:true,stack:i,dest:sn.dest||null}); });   // each card selects the ramp AND plans the legal route to its destination
         return; }
       let nm=e.name, ramp=false, exitBlock=null;
+      if(RING_EDGES.has(e)){ nm='Roundabout'; ramp=true; exitBlock='KEEP GOING AROUND'; }   // v20l: an unnamed ring edge borrowed the band name - two 'Cliveden Street' cards, one of them the ring
       if(!nm&&e.hw===2){ const ex=hwyExitCard(node); if(ex){ nm=ex.name; ramp=true; exitBlock=ex.block; } }   // 🪧 a freeway exit reads its real sign: 'EXIT 340B / US 1 NORTH · Roosevelt Blvd' (sourced in HWY_SIGNS)
       // 🪧 TAG-SOURCED RAMP CARD. Failing a HWY_SIGNS entry, caption the ramp from the tags the bake now
       // carries instead of walking the chain to guess a street: `destination:ref` names the movement
@@ -2879,7 +2915,7 @@ function updateStreetLabels(dt){
           const route=destEdge&&destEdge.hw===1?hwyRouteLabel(destEdge,destFrom):null;
           if(route) exitBlock='RAMP TO '+route; }
         else nm=guess; }                                                           // plain stub → keep the band name as before
-      if((ramp||e.hw)&&e.wrong) return;                                            // ⚠ e.hw too: a NAMED hw===1 carriageway is not flagged `ramp`, so it could still raise a red wrong-way card. derived ramps follow the same rule as gantry ones: a wrong-way ramp gets no card
+      if((ramp||e.hw||RING_REV.has(e))&&e.wrong) return;                                            // ⚠ e.hw too: a NAMED hw===1 carriageway is not flagged `ramp`, so it could still raise a red wrong-way card. derived ramps follow the same rule as gantry ones: a wrong-way ramp gets no card
       if(!nm||nm==='—') return;
       const sameRoadTurn=!ramp&&!onRampEdge&&canonStreet(nm)===curKey;
       if(sameRoadTurn){ if(!from) return; const kp=keepStreet(from,node); if(kp===e.to) return;   // our own street: a card only for a GENUINE fork of it (Ridge keeps left / Main keeps right) —
@@ -2940,7 +2976,7 @@ function updateStreetLabels(dt){
                                                                                                    // the owner wants to SEE and be able to take the wrong way deliberately; the same street+block is still one card (the legal one wins)
       for(let i=cand.length-1;i>=0;i--) if(cand[i].wrong&&legal.has(canonStreet(cand[i].name))) cand.splice(i,1); }   // one-way ramp fragments, or a divided twin in the next block) — red survives only for streets with no legal entry
     if(!DRIVE.parked&&DRIVE.fromN&&DRIVE.toN){ const de=DRIVE.fromN.adj.find(e=>e.to===DRIVE.toN);   // 🛣️ highway rules ON a ramp (owner): you're committed — no cross-street callouts (Kelly Dr under
-      if(de&&!de.name){ const dn=canonStreet(rampDestName()||'');                                    // the deck), no cards for other ramps (Ridge, Lincoln). Only the sign for where THIS ramp
+      if(de&&!de.name&&!RING_EDGES.has(de)){ const dn=canonStreet(rampDestName()||'');   /* v20l: a roundabout ring is unnamed but it is a STREET - its exits keep their cards */                                    // the deck), no cards for other ramps (Ridge, Lincoln). Only the sign for where THIS ramp
         /* ⚠ A RAMP CAN FORK, and the blanket splice below left NOTHING to tap. 16 of the 17 nodes
            reached on a ramp with more than one legal way onward showed zero cards, and the drive HARD-
            STALLED at six of them — four at the street junction at the FOOT of an off-ramp, which is
@@ -3658,6 +3694,7 @@ function chooseAtT(dir){ if(!DRIVE.atChoice) return false;                     /
 function chooseStraight(){ if(!DRIVE.atChoice) return false; const b=DRIVE.toN, a=DRIVE.fromN; if(!b) return false;   // held at a fork: keep going the straightest legal way
   let best=null,bd=-1e9, bestAny=null,ba=-1e9;
   const ceS=a&&a.adj.find(e=>e.to===b), curWrongS=!!(ceS&&ceS.wrong);
+  if(ceS&&RING_EDGES.has(ceS)){ const ring=b.adj.find(e=>e.to!==a&&RING_EDGES.has(e)); if(ring) return commitChoice(ring.to); }   // v20l: in a roundabout STRAIGHT means keep going round - the exit is a turn
   for(const e of b.adj){ if(e.to===a) continue; const f=branchForwardness(a,b,e.to);
     if(f>ba){ ba=f; bestAny=e.to; }
     if((!e.wrong||curWrongS) && f>bd){ bd=f; best=e.to; } }                    // straightest LEGAL branch; wrong ones count too when already deliberately wrong-way
@@ -3719,6 +3756,7 @@ function updateHUD(dt){
   let curStreet=streetName(rp[0],rp[1]), curBlock=currentHundredBlock(rp[0],rp[1],curStreet);
   { const e=DRIVE.fromN&&DRIVE.toN?DRIVE.fromN.adj.find(a=>a.to===DRIVE.toN):null;
     if(e&&!DRIVE.parked){ if(e.name){curStreet=e.name;curBlock=currentHundredBlock(rp[0],rp[1],curStreet);}
+      else if(RING_EDGES.has(e)){curStreet='Roundabout';curBlock='PICK YOUR EXIT';}   // v20l: a ring is not a ramp
       else {curStreet=rampDestName()||'Connecting ramp';curBlock='RAMP';} } // name the actual driven level, not the avenue passing overhead
     const hb=hwyHudBlock(e,DRIVE.fromN,rp[0],rp[1]); if(hb) curBlock=hb; }   // 🛣️ freeway: 'I-76 EAST · MILE 340.6 · APPROX'
   elSavesN.textContent=state.saves; elBestN.textContent=best.saves;
@@ -3741,7 +3779,8 @@ function updateHUD(dt){
   document.getElementById('pullOut').style.display = (state.running&&(DRIVE.parked||DRIVE.atChoice)&&!INTRO.active)?'flex':'none';   // also becomes manual junction controls when a street ends
   document.getElementById('zoomBtns').style.display = state.running?'flex':'none';
   { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(mayMarkHydrants()&&state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving, and only for an account on HYDRANT_SCOUTS   //
-  document.getElementById('btnRecenter').style.display = state.running?'block':'none';   // 3D camera control
+  { const rc=document.getElementById('btnRecenter'), away=Math.abs(CAMLOOK.yaw)>0.03||Math.abs(CAMLOOK.pitch)>0.03;   // v20k: only once the view has been dragged (owner)
+    rc.style.display = state.running&&away?'block':'none'; rc.classList.toggle('off',!(state.running&&away)); }   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
   if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; }
   rdCollapse(dt); freeLiveBtn(); ctlArmed(); }
@@ -3918,14 +3957,15 @@ function turnCandidates(){
       const cx=cont?cont.x-b.x:0, cz=cont?cont.z-b.z:0, cl=Math.hypot(cx,cz)||1;
       for(const e of branches){
         if(e.to===cont) continue;                                                    // straight on is not a turn
+        if(ce&&RING_EDGES.has(ce)&&RING_EDGES.has(e)) continue;                     // v20l: on a roundabout, going round is STRAIGHT (tap the truck); the arrows take the exit
         if(hwWrong(e)) continue;                                                     // ⚠ a freeway/ramp against its direction is never turnable: this is the one that fed pickTurn
         const dx=e.to.x-b.x, dz=e.to.z-b.z, l=Math.hypot(dx,dz)||1;
         // an EXIT peels off the mainline at a few degrees (exit 338: cross 0.09 against the approach), under
         // pickTurn's 0.12 'real branch' floor, so the pad said NO RIGHT AHEAD beside a tappable exit card.
         // Measure it against the mainline it leaves instead, and let pickTurn use a lower floor for it.
-        const exit=!!(ce&&ce.hw&&e.hw===2&&cont);
+        const exit=!!(ce&&ce.hw&&e.hw===2&&cont), ringExit=!!(ce&&RING_EDGES.has(ce));   // v20l: a roundabout exit also leaves at a shallow angle
         out.push({at:b,next:e.to,cross:exit?(cx*dz-cz*dx)/(cl*l):(hx*dz-hz*dx)/(hl*l),   // cross>0 = right
-          name:e.name||edgeName(b,e.to)||'', wrong:!!e.wrong, exit, j:junctions+(grouped?0:1)}); }
+          name:RING_EDGES.has(e)?'Roundabout':(e.name||edgeName(b,e.to)||''), wrong:!!e.wrong, exit:exit||ringExit, ring:ringExit, j:junctions+(grouped?0:1)}); }   // v20l: the ring never borrows a street's name
     }
     if(out.length>before){ if(!grouped){ junctions++; lastNames=junctionNames(b,a); } else for(const nm of junctionNames(b,a)) lastNames.add(nm); lastJ=b;
       if(junctions>=((typeof LBL!=='undefined'&&LBL.junctionCap)||2)) capHit=true; }
@@ -3942,7 +3982,8 @@ function turnCandidates(){
    way"). Wrong-way is still offered when it is the ONLY thing on that side — the street rule stands. */
 function pickTurn(sign){
   const cands=turnCandidates();
-  const side=cands.filter(c=>sign*c.cross>(c.exit?0.03:0.12));                      // still a REAL branch toward that side, not a kink (an exit is measured against its mainline)
+  const side=cands.filter(c=>sign*c.cross>(c.ring?-0.12:c.exit?0.03:0.12));        // still a REAL branch toward that side, not a kink (an exit is measured against its mainline).
+                                                                                    // v20l: off a ROUNDABOUT going round is straight, so an exit that runs nearly dead ahead answers EITHER arrow
   const legal=side.filter(c=>!c.wrong), pool=legal.length?legal:side;
   let best=null,bd=-1;
   if(pool.length){ const j0=Math.min(...pool.map(c=>c.j));
@@ -4097,7 +4138,7 @@ function straightest(a,b){ if(!b) return null; const hx=b.x-a.x,hz=b.z-a.z,hl=Ma
    refuses on an hw edge, so the guard that protects the freeway sealed the trap.
    EVERY CLAUSE BELOW GATES ON e.hw, WHICH IS 0 FOR EVERY STREET EDGE, so street behaviour is
    untouched by construction. */
-const hwWrong=e=>!!(e&&e.hw&&e.wrong);
+const hwWrong=e=>!!(e&&e.wrong&&(e.hw||RING_REV.has(e)));   // v20l: a roundabout is strictly one-way too - never backwards round it
 function edgeName(a,b){ if(!a||!b) return null;
   for(const e of a.adj) if(e.to===b) return e.name||streetName((a.x+b.x)/2,(a.z+b.z)/2);
   return streetName((a.x+b.x)/2,(a.z+b.z)/2); }
@@ -4205,7 +4246,9 @@ function rampFootHold(a,b){ if(!a||!b) return false;
 /* v20h: the continuation must not roll ACROSS a real junction into a dead-end scrap. Gay Street crosses
    Cresson into a 7.2 m stub; the truck stopped at its end with the Cresson turns already behind it and
    both arrows answering NO ... AHEAD (owner, phone). 10 such spots citywide. Stop at the junction and ask. */
-function roadContinuation(a,b){ const c=roadContinuation0(a,b);
+function roadContinuation(a,b){ const ae=a&&b&&a.adj.find(e=>e.to===b);
+  if(ae&&RING_EDGES.has(ae)&&b.adj.some(e=>e.to!==a&&!e.wrong&&!RING_EDGES.has(e))) return null;   // v20l: a roundabout EXIT is a choice - stop and ask
+  const c=roadContinuation0(a,b);
   if(c&&c.adj.length===1&&Math.hypot(c.x-b.x,c.z-b.z)<=15&&!(b.adj.find(e=>e.to===c)||{}).hw
      &&b.adj.some(e=>e.to!==a&&e.to!==c&&!e.wrong)) return null;   // any other legal way on makes it a real choice
   return c; }
@@ -5590,7 +5633,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   FLATCITY.detail=!!J.detail;
   for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); o.geometry.dispose(); o.material.dispose(); }
   FLATCITY.parts=[];
-  const B=J.B, T=J.T, S=J.S;
+  const B=J.B, T=J.T, S=J.S; FLATCITY.mmB=B;   // v20m: the minimap draws these footprints
   if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[],roadGirder=[];
     const stByName=new Map();for(const s of J.list)if(s.name&&!stByName.has(s.name))stByName.set(s.name,s);   // first match, exactly what the per-bridge find() did — 818 finds × the segment list was ~10ms
     for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=b.name?stByName.get(b.name):hwySegForSpan(b,J);if(!street)continue;const hw=segHalf(street);let along=0;
@@ -7820,7 +7863,74 @@ function coachDone(keep){ coachHide(); if(!state.running) return;
 document.getElementById('btnCoachNext').addEventListener('click',()=>coachDone(false));
 document.getElementById('btnCoachKeep').addEventListener('click',()=>coachDone(true));
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDrill,updateBoxDrill,updateCoach];             // road-follow + arrive-to-douse + rival engines
-const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip];                 // frame() renders the Tilt view
+/* 🧭 MINIMAP (v20m, owner: "when I drove in an area I didn't know I got turned around a lot"). Drawn from the SAME data the
+   game drives on - RB road segments (segGrid), LANDCOVER parks (landGrid), RB.wa water, and the buildings of the last
+   FLATCITY commit - plus the route to the call (blue) and the call (red). Heading-up: screen-up is the direction the
+   camera looks (truck -> away from camera), so the map turns with the view and drag-to-look; the orange arrow is the
+   truck's own heading. N (red), E, S, W ride the rim. Redrawn at ~8 Hz, and only while a shift is running. */
+const MINIMAP={on:true, t:0, R:230, cv:null, el:null, wa:null};
+try{ if(localStorage.getItem('pfd_minimap')==='off') MINIMAP.on=false; }catch(e){}
+function mmToggleBtn(){ const b=document.getElementById('btnMiniMap'); if(b){ b.classList.toggle('on',MINIMAP.on); b.textContent='🗺 MINIMAP: '+(MINIMAP.on?'ON':'OFF'); } }
+function updateMiniMap(dt){ const el=MINIMAP.el||(MINIMAP.el=document.getElementById('miniMap')); if(!el) return;
+  const show=MINIMAP.on&&state.running&&!homeEl.classList.contains('show');
+  el.classList.toggle('on',show); const tb=document.getElementById('turnBanner');
+  if(!show){ if(tb) tb.style.top=''; return; }
+  MINIMAP.t-=dt; if(MINIMAP.t>0) return; MINIMAP.t=0.12;
+  // seat: below anything visible that reaches into the top-right corner
+  el.style.top=''; const er=el.getBoundingClientRect(); let top=null;
+  for(const id of ['rivals','radio','drillHUD','boxdHUD','qualChip','areaChip']){ const o=document.getElementById(id); if(!o) continue;
+    const cs=getComputedStyle(o); if(cs.display==='none'||cs.visibility==='hidden') continue; const r=o.getBoundingClientRect();
+    if(r.width<2||r.height<2||r.top>innerHeight*0.45||r.right<er.left-4) continue; top=Math.max(top||0,r.bottom+6); }
+  if(top&&top>er.top) el.style.top=top+'px';
+  if(tb){ tb.style.top=''; const tr=tb.getBoundingClientRect(), mb=el.getBoundingClientRect().bottom+6; if(tr.top<mb) tb.style.top=mb+'px'; }   // the turn banner spans the width: seat it below the map
+  const cv=MINIMAP.cv||(MINIMAP.cv=el.querySelector('canvas')); const dpr=Math.min(2,devicePixelRatio||1), W=Math.round(108*dpr);
+  if(cv.width!==W){ cv.width=cv.height=W; }
+  const x=cv.getContext('2d'), c=W/2, rad=c-3*dpr, s=(rad-9*dpr)/MINIMAP.R, tx=truck.x, tz=truck.z;
+  let fx=tx-camera.position.x, fz=tz-camera.position.z, fl=Math.hypot(fx,fz); if(fl<0.5){ fx=-Math.sin(truck.theta); fz=-Math.cos(truck.theta); fl=1; } fx/=fl; fz/=fl;
+  const a=-fz*s, b=-fx*s, cc=fx*s, d=-fz*s, e=c-(a*tx+cc*tz), f=c-(b*tx+d*tz);    // world (x,z) -> screen, heading-up
+  x.setTransform(1,0,0,1,0,0); x.clearRect(0,0,W,W);
+  x.save(); x.beginPath(); x.arc(c,c,rad,0,6.2832); x.clip(); x.fillStyle='#dedede'; x.fillRect(0,0,W,W);
+  x.setTransform(a,b,cc,d,e,f); const R=MINIMAP.R*1.1;
+  const poly=pts=>{ x.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) x.lineTo(pts[i][0],pts[i][1]); x.closePath(); };
+  // parks
+  const seenF=new Set(); x.fillStyle='#9fc07a'; x.beginPath();
+  for(let gx=Math.floor((tx-R)/LANDCELL);gx<=Math.floor((tx+R)/LANDCELL);gx++) for(let gz=Math.floor((tz-R)/LANDCELL);gz<=Math.floor((tz+R)/LANDCELL);gz++){
+    const l=landGrid.get(gx+':'+gz); if(!l) continue; for(const F of l){ if(seenF.has(F)||F.kind==='open') continue; seenF.add(F); for(const ring of F.outer||[]) if(ring.length>2) poly(ring); } }
+  x.fill();
+  // water
+  if(!MINIMAP.wa&&RB.wa) MINIMAP.wa=RB.wa.map(p=>{ let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9; for(const q of p){ x0=Math.min(x0,q[0]); x1=Math.max(x1,q[0]); z0=Math.min(z0,q[1]); z1=Math.max(z1,q[1]); } return {p,bb:[x0,z0,x1,z1]}; });
+  x.fillStyle='#63b3e0'; x.beginPath();
+  for(const w of MINIMAP.wa||[]){ if(w.bb[2]<tx-R||w.bb[0]>tx+R||w.bb[3]<tz-R||w.bb[1]>tz+R) continue; poly(w.p); } x.fill();
+  // buildings from the last local-city commit
+  const BB=FLATCITY.mmB; if(BB){ x.fillStyle='#b4b4b4';
+    for(const q of BB){ if(!q||Math.abs(q.x-tx)>R||Math.abs(q.z-tz)>R) continue; x.save(); x.translate(q.x,q.z); x.rotate(-(q.ang||0)); x.fillRect(-q.w/2,-q.d/2,q.w,q.d); x.restore(); } }
+  // roads
+  const seenS=new Set(), byW=new Map(), CW=[13,11,8,7,6,6,6];
+  for(let gx=Math.floor((tx-R)/SEGCELL);gx<=Math.floor((tx+R)/SEGCELL);gx++) for(let gz=Math.floor((tz-R)/SEGCELL);gz<=Math.floor((tz+R)/SEGCELL);gz++){
+    const l=segGrid.get(gx+':'+gz); if(!l) continue; for(const g of l){ if(seenS.has(g)) continue; seenS.add(g);
+      const w=g.hw===1?18:g.hw===2?9:(CW[g.cls]||6); let arr=byW.get(w); if(!arr){ arr=[]; byW.set(w,arr); } arr.push(g); } }
+  x.strokeStyle='#ffffff'; x.lineCap='round';
+  for(const [w,arr] of [...byW].sort((p,q)=>p[0]-q[0])){ x.lineWidth=Math.max(w,1.6/s); x.beginPath(); for(const g of arr){ x.moveTo(g.ax,g.az); x.lineTo(g.bx,g.bz); } x.stroke(); }
+  // route to the call, and the call
+  if(routePts&&routePts.length>1){ x.strokeStyle='#2f6fe0'; x.lineWidth=Math.max(6,3/s); x.lineJoin='round'; x.beginPath(); x.moveTo(routePts[0].x,routePts[0].z); for(let i=1;i<routePts.length;i++) x.lineTo(routePts[i].x,routePts[i].z); x.stroke(); }
+  x.setTransform(1,0,0,1,0,0);
+  if(state.target){ const px=a*state.target.x+cc*state.target.z+e, pz=b*state.target.x+d*state.target.z+f, dx=px-c, dz=pz-c, dl=Math.hypot(dx,dz), lim=rad-9*dpr;
+    const k=dl>lim?lim/dl:1; x.fillStyle='#e0322b'; x.strokeStyle='#fff'; x.lineWidth=1.5*dpr; x.beginPath(); x.arc(c+dx*k,c+dz*k,4.2*dpr,0,6.2832); x.fill(); x.stroke(); }
+  x.restore();
+  // rim + compass letters
+  x.lineWidth=5*dpr; x.strokeStyle='#7d7d7d'; x.beginPath(); x.arc(c,c,rad-1*dpr,0,6.2832); x.stroke();
+  const nx=-cc, nz=-d, nl=Math.hypot(nx,nz)||1, ex=a, ez=b, el2=Math.hypot(ex,ez)||1;          // screen directions of world north (0,-1) and east (1,0)
+  MINIMAP.nDir=[nx/nl,nz/nl];                                                          // where N was drawn (screen unit vector) - read by tests/minimap.browser.cjs
+  x.font='900 '+Math.round(11*dpr)+'px -apple-system,"Helvetica Neue",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
+  for(const [t,ux,uz,col] of [['N',nx/nl,nz/nl,'#d9261c'],['S',-nx/nl,-nz/nl,'#222'],['E',ex/el2,ez/el2,'#222'],['W',-ex/el2,-ez/el2,'#222']]){
+    const px=c+ux*(rad-10*dpr), pz=c+uz*(rad-10*dpr); x.fillStyle='rgba(255,255,255,.88)'; x.beginPath(); x.arc(px,pz,7*dpr,0,6.2832); x.fill(); x.fillStyle=col; x.fillText(t,px,pz+0.5*dpr); }
+  // the truck: orange arrow at the centre, pointing along the truck's own heading
+  const hx=-Math.sin(truck.theta), hz=-Math.cos(truck.theta), ax=a*hx+cc*hz, az=b*hx+d*hz, ang=Math.atan2(ax,-az);
+  x.save(); x.translate(c,c); x.rotate(ang); x.beginPath(); x.moveTo(0,-9*dpr); x.lineTo(7*dpr,7*dpr); x.lineTo(0,3.5*dpr); x.lineTo(-7*dpr,7*dpr); x.closePath();
+  x.fillStyle='#f5a623'; x.fill(); x.lineWidth=1.4*dpr; x.strokeStyle='#5a3a00'; x.stroke(); x.restore(); }
+document.getElementById('btnMiniMap').addEventListener('click',e=>{ e.preventDefault(); MINIMAP.on=!MINIMAP.on; mmToggleBtn(); try{ localStorage.setItem('pfd_minimap',MINIMAP.on?'on':'off'); }catch(err){} });
+mmToggleBtn();
+const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip,updateMiniMap];                 // frame() renders the Tilt view
 
 state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
