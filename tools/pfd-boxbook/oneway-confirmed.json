@@ -1,0 +1,12 @@
+[
+  {
+    "street": "Carpenter Street",
+    "from": [39.93927, -75.168192],
+    "to": [39.939061, -75.166456],
+    "between": "S 15th St - S Broad St",
+    "oneway": 0,
+    "by": "owner",
+    "date": "2026-10-07",
+    "note": "Two-way, as the game has it. The E01 book's travel arrows here read one-way westbound; the owner's ground truth wins."
+  }
+]

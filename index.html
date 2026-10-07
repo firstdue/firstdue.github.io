@@ -1951,12 +1951,15 @@ const HYDRANTS=[[3116,5869,1],[2713,6285,1],[2568,5932,1],[4547,6184,1],[2850,62
 0],[16557,-6978,0],[16614,-6926,0],[16733,-6927,0],[16676,-6510,0],[16531,-6615,0],[16387,-6719,0],[16248,-6820,0],[16292,-6887,0],[16337,-6967,0],[16582,-7240,0],
 [16686,-7005,0],[16758,-6957,0],[16807,-6814,0],[16963,-6629,0],[16567,-6702,0],[16709,-6599,0],[16732,-6582,0],[16904,-6566,0],[-2714,-3540,0],[-2593,-3779,0],[-2886,
 -3444,0],[-3024,-3552,0],[3265,6965,0],[3150,6960,0],[-2945,-3678,0],[-3023,-3654,0]];
-/* 📦🧯 PFD BOX MAPS (data/pfdbox.js) — real box polygons + hydrants from the PFD GIS box-breakdown GeoPDFs (E01 so far).
+/* 📦🧯 PFD BOX MAPS (data/pfdbox.js) — real box polygons + hydrants from the PFD GIS box-breakdown GeoPDFs (tools/pfd-boxbook).
    Hydrants are src 3. An official point within 8m of one is the same hydrant (dropped), and inside a mapped box the PFD
    layer is complete, so any OSM point left there is dropped too. A missing file degrades to the old data. */
 const PFD_BOXES=(function(){ if(typeof PFDBOX==='undefined') return [];
-  return PFDBOX.boxes.map(b=>{ const poly=b.ring.map(p=>{ const w=ll2world(p[0],p[1]); return [w.x,w.z]; }); return { box:b.b, e:b.e, poly }; }); })();
-function pfdBoxAt(x,z){ for(const b of PFD_BOXES) if(ptInRing(x,z,b.poly)) return b; return null; }
+  return PFDBOX.boxes.map(b=>{ const poly=b.ring.map(p=>{ const w=ll2world(p[0],p[1]); return [w.x,w.z]; });
+    let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9; for(const p of poly){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<z0)z0=p[1]; if(p[1]>z1)z1=p[1]; }
+    return { box:b.b, e:b.e, poly, bb:[x0,z0,x1,z1] }; }); })();
+const inBoxBB=(b,x,z)=>x>=b.bb[0]&&x<=b.bb[2]&&z>=b.bb[1]&&z<=b.bb[3];
+function pfdBoxAt(x,z){ for(const b of PFD_BOXES) if(inBoxBB(b,x,z)&&ptInRing(x,z,b.poly)) return b; return null; }
 (function mergePfdHydrants(){ if(typeof PFDBOX==='undefined') return;
   const P=PFDBOX.hyd.map(h=>{ const w=ll2world(h[0],h[1]); return [Math.round(w.x),Math.round(w.z),3]; });
   const C=16, g=new Map(); for(const p of P){ const k=Math.floor(p[0]/C)+':'+Math.floor(p[1]/C); let a=g.get(k); if(!a){a=[];g.set(k,a);} a.push(p); }
@@ -7648,7 +7651,7 @@ function computeResponders(x,z,companyId=DRIVE.stationId){                      
 // gets a generated number: first 2 digits = the first-due engine, last 2 = how far into that engine's area the fire is
 // (…01 next to the firehouse → …99 out at the polygon edge).  e.g. a fire in Engine 66's first-due → 6601..6699
 function realBoxFor(e,x,z){ let best=null, bd=1e18;
-  for(const b of PFD_BOXES){ if(b.e!==e) continue; if(ptInRing(x,z,b.poly)) return b.box;
+  for(const b of PFD_BOXES){ if(b.e!==e) continue; if(inBoxBB(b,x,z)&&ptInRing(x,z,b.poly)) return b.box;
     const p=b.poly; for(let i=0,j=p.length-1;i<p.length;j=i++){ const ax=p[j][0],az=p[j][1],dx=p[i][0]-ax,dz=p[i][1]-az, L=dx*dx+dz*dz||1;
       const t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/L)), d=(ax+t*dx-x)**2+(az+t*dz-z)**2; if(d<bd){ bd=d; best=b.box; } } }
   return best; }
