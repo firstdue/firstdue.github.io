@@ -7647,14 +7647,17 @@ function computeResponders(x,z,companyId=DRIVE.stationId){                      
   return out;
 }
 // 🔔 BOX NUMBER: an engine with a PFD box map (PFD_BOXES) gets the REAL box — the polygon holding the point, or the nearest of
-// that engine's boxes for a point in the thin slivers between the box map and the first-due zone. Every other engine still
+// that engine's boxes within 60m (the thin slivers between the box map and the first-due zone). Further out, the game's
+// first-due zone is older than the 2026 books: ground another book now boxes gets THAT box (the real one for the spot), and
+// ground no loaded book covers yet keeps the nearest of the engine's own boxes. Every other engine still
 // gets a generated number: first 2 digits = the first-due engine, last 2 = how far into that engine's area the fire is
 // (…01 next to the firehouse → …99 out at the polygon edge).  e.g. a fire in Engine 66's first-due → 6601..6699
 function realBoxFor(e,x,z){ let best=null, bd=1e18;
   for(const b of PFD_BOXES){ if(b.e!==e) continue; if(inBoxBB(b,x,z)&&ptInRing(x,z,b.poly)) return b.box;
     const p=b.poly; for(let i=0,j=p.length-1;i<p.length;j=i++){ const ax=p[j][0],az=p[j][1],dx=p[i][0]-ax,dz=p[i][1]-az, L=dx*dx+dz*dz||1;
       const t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/L)), d=(ax+t*dx-x)**2+(az+t*dz-z)**2; if(d<bd){ bd=d; best=b.box; } } }
-  return best; }
+  if(best&&bd<=3600) return best;
+  const other=pfdBoxAt(x,z); return other?other.box:best; }
 function computeBox(firstDue,x,z){ const eng=engNum(firstDue.id).padStart(2,'0');
   const real=realBoxFor(+eng,x,z); if(real) return real;
   const dSt=Math.hypot(firstDue.x-x,firstDue.z-z);
