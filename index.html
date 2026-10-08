@@ -1022,6 +1022,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/landcover.js"></script>
 <script src="data/btype.js"></script>
 <script src="data/rref.js"></script>
+<script src="data/pfdbox.js"></script>
 <script>
 /* ================================================================================
    PHILLY FIRE DISPATCH  —  v9 · Round B (real OpenStreetMap streets)
@@ -1052,7 +1053,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20m";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20n";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1064,13 +1065,13 @@ const LANDCELL=240,landGrid=new Map();
 for(const f of LANDCOVER.features){for(const p of [...f.outer,...f.inner])p.bb=[Math.min(...p.map(q=>q[0])),Math.min(...p.map(q=>q[1])),Math.max(...p.map(q=>q[0])),Math.max(...p.map(q=>q[1]))];
   f.bb=[Math.min(...f.outer.map(p=>p.bb[0])),Math.min(...f.outer.map(p=>p.bb[1])),Math.max(...f.outer.map(p=>p.bb[2])),Math.max(...f.outer.map(p=>p.bb[3]))];
   for(let x=Math.floor(Math.max(-8500,f.bb[0]-20)/LANDCELL);x<=Math.floor(Math.min(22000,f.bb[2]+20)/LANDCELL);x++)for(let z=Math.floor(Math.max(-17000,f.bb[1]-20)/LANDCELL);z<=Math.floor(Math.min(18500,f.bb[3]+20)/LANDCELL);z++){const key=x+':'+z;if(!landGrid.has(key))landGrid.set(key,[]);landGrid.get(key).push(f);}}
-function landContains(f,x,z){const hit=p=>x>=p.bb[0]&&z>=p.bb[1]&&x<=p.bb[2]&&z<=p.bb[3]&&pip(x,z,p);return f.outer.some(hit)&&!f.inner.some(hit);}
+function landContains(f,x,z){const hit=p=>x>=p.bb[0]&&z>=p.bb[1]&&x<=p.bb[2]&&z<=p.bb[3]&&pipIx(x,z,p);return f.outer.some(hit)&&!f.inner.some(hit);}
 function landNear(x,z){return landGrid.get(Math.floor(x/LANDCELL)+':'+Math.floor(z/LANDCELL))||[];}
 function landKind(x,z){let kind=null;for(const f of landNear(x,z)){if(!landContains(f,x,z))continue;if(f.kind==='open')return 'open';if(f.kind==='wood')kind='wood';else if(!kind)kind='park';}return kind;}
 function landBlocksBuilding(x,z,r=0){if(typeof cemAt==='function'&&LANDCOVER.cemeteries&&cemAt(x,z))return true;for(const f of landNear(x,z)){if(x+r<f.bb[0]||x-r>f.bb[2]||z+r<f.bb[1]||z-r>f.bb[3])continue;if(landContains(f,x,z))return true;
     // A bounding circle protects the complete rotated footprint, including park edges.
     if(r)for(const p of [...f.outer,...f.inner]){if(x+r<p.bb[0]||x-r>p.bb[2]||z+r<p.bb[1]||z-r>p.bb[3])continue;
-      for(let i=1;i<p.length;i++){const a=p[i-1],b=p[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));if(Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)<r)return true;}}}return false;}
+      if(ringWithin(x,z,r,p))return true;}}return false;}
 const NAVCELL=120, navBridgeGrid=new Map();
 function navTerrain(x,z){const g=NAVGEO.terrain,u=Math.max(0,Math.min(g.nx-1.001,(x-g.minX)/g.dx)),v=Math.max(0,Math.min(g.nz-1.001,(z-g.minZ)/g.dz)),i=u|0,j=v|0,a=u-i,b=v-j,k=j*g.nx+i;
   const h=g.h,A=h[k],B=h[k+1],C=h[k+g.nx],D=h[k+g.nx+1];return Math.max(0,a>=b?A+(B-A)*a+(D-B)*b:A+(C-A)*b+(D-C)*a);}
@@ -1171,7 +1172,7 @@ for(const w of NAVGEO.water){for(const p of [...w.outer,...w.inner]){let a=1e9,b
   let a=1e9,b=1e9,c=-1e9,d=-1e9;for(const p of w.outer){if(p.bounds[0]<a)a=p.bounds[0];if(p.bounds[1]<b)b=p.bounds[1];if(p.bounds[2]>c)c=p.bounds[2];if(p.bounds[3]>d)d=p.bounds[3];}w.bb=[a,b,c,d];}
 const WATCELL=520,navWaterGrid=new Map();
 for(const w of NAVGEO.water)for(let x=Math.floor(Math.max(-7900,w.bb[0])/WATCELL);x<=Math.floor(Math.min(20600,w.bb[2])/WATCELL);x++)for(let z=Math.floor(Math.max(-14300,w.bb[1])/WATCELL);z<=Math.floor(Math.min(16500,w.bb[3])/WATCELL);z++){const k=x+':'+z;if(!navWaterGrid.has(k))navWaterGrid.set(k,[]);navWaterGrid.get(k).push(w);}
-function navWater(x,z){const hit=p=>x>=p.bounds[0]&&z>=p.bounds[1]&&x<=p.bounds[2]&&z<=p.bounds[3]&&pip(x,z,p);const L=navWaterGrid.get(Math.floor(x/WATCELL)+':'+Math.floor(z/WATCELL));return L?L.some(w=>w.outer.some(hit)&&!w.inner.some(hit)):false;}
+function navWater(x,z){const hit=p=>x>=p.bounds[0]&&z>=p.bounds[1]&&x<=p.bounds[2]&&z<=p.bounds[3]&&pipIx(x,z,p);const L=navWaterGrid.get(Math.floor(x/WATCELL)+':'+Math.floor(z/WATCELL));return L?L.some(w=>w.outer.some(hit)&&!w.inner.some(hit)):false;}
 const ELEV={ riverY:3, low:4, ridge:113, d0:50, d1:850, slopeK:620 };   // slopeK is for a SQUARED grade term (nonlinear)
 let HM=null;
 function height(x,z){ if(!HM) return 0; const nx=HM.nx,nz=HM.nz;
@@ -1282,6 +1283,8 @@ function segNear(x,z){ const o=[],gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCE
   for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=segGrid.get(a+':'+b); if(l) o.push(...l); } return o; }
 function closestSeg(x,z,s){ const dx=s.bx-s.ax,dz=s.bz-s.az,L=dx*dx+dz*dz||1; let t=((x-s.ax)*dx+(z-s.az)*dz)/L; t=Math.max(0,Math.min(1,t));
   const cx=s.ax+dx*t,cz=s.az+dz*t; return {cx,cz,d:Math.hypot(x-cx,z-cz)}; }
+function segDistTo(x,z,s){ const dx=s.bx-s.ax,dz=s.bz-s.az,L=dx*dx+dz*dz||1; let t=((x-s.ax)*dx+(z-s.az)*dz)/L; t=Math.max(0,Math.min(1,t));   // == closestSeg(x,z,s).d, same arithmetic, no object — for the hot generation probes
+  const cx=s.ax+dx*t,cz=s.az+dz*t; return Math.hypot(x-cx,z-cz); }
 function streetName(x,z){ let bn='—',bd=22; for(const s of segNear(x,z)){ if(!s.name) continue; const c=closestSeg(x,z,s); const e=c.d-segHalf(s); if(e<bd){ bd=e; bn=s.name; } } return bn; }
 function roadSegAt(x,z,dx,dz){ let best=null,bs=Infinity;                       // the road under a point, judged by distance AND heading — (dx,dz) is the direction of travel, so a ramp beside
   for(const s of segNear(x,z)){ const sx=s.bx-s.ax,sz=s.bz-s.az,sl=Math.hypot(sx,sz)||1,hl=Math.hypot(dx,dz)||1;   // a carriageway, or a road passing over another, resolves to the one actually being driven
@@ -1357,7 +1360,37 @@ function bbox(p){ let a=1e18,b=1e18,c=-1e18,d=-1e18; for(const q of p){ a=Math.m
 const waB=RB.wa.map(p=>({p,bb:bbox(p)}));
 function pip(x,z,poly){ let ins=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const xi=poly[i][0],zi=poly[i][1],xj=poly[j][0],zj=poly[j][1];
   if(((zi>z)!==(zj>z))&&(x<(xj-xi)*(z-zi)/((zj-zi)||1e-9)+xi)) ins=!ins; } return ins; }
-function inWater(x,z){ if(navWater(x,z))return true;for(const f of waB){ const b=f.bb; if(x<b[0]||x>b[2]||z<b[1]||z>b[3]) continue; if(pip(x,z,f.p)) return true; } return false; }
+/* ⚡ RING INDEXES (October 2026), for the long static outlines only (landcover, water). The interchange sits in Fairmount
+   Park, whose rings run to thousands of edges, and landBlocksBuilding walked every one of them per building candidate.
+   Both helpers return EXACTLY what the full walk returns: an edge is filed in every row/cell its extent touches, so a
+   lookup can hand back extra edges (the same test then rejects them) but never miss one. Built lazily, once per ring, packed into two typed arrays (a
+   per-row/per-cell offset table and one flat edge list) — the first cut used a Map of arrays per ring and cost 1.7 MB of heap. */
+function pipIx(x,z,poly){ const ix=poly._rows||(poly._rows=ringRows(poly)), r=Math.floor(z/16)-ix.r0;   // == pip(x,z,poly): the same edge (i, i-1 wrapping) and the same test, only edges whose z-span holds the row
+  if(r<0||r>=ix.nr) return false; let ins=false; const n=poly.length, off=ix.off, idx=ix.idx;               // outside every row = outside the ring's z-extent, where no edge can cross
+  for(let k=off[r];k<off[r+1];k++){ const i=idx[k], j=i?i-1:n-1, xi=poly[i][0],zi=poly[i][1],xj=poly[j][0],zj=poly[j][1];
+    if(((zi>z)!==(zj>z))&&(x<(xj-xi)*(z-zi)/((zj-zi)||1e-9)+xi)) ins=!ins; } return ins; }
+function ringRows(poly){ const ROW=16, n=poly.length; let z0=Infinity,z1=-Infinity; for(const q of poly){ if(q[1]<z0)z0=q[1]; if(q[1]>z1)z1=q[1]; }   // packed: per-row offsets + one flat edge list
+  const r0=Math.floor(z0/ROW), nr=Math.floor(z1/ROW)-r0+1, off=new Int32Array(nr+1), span=(i,j)=>[Math.floor(Math.min(poly[i][1],poly[j][1])/ROW)-r0,Math.floor(Math.max(poly[i][1],poly[j][1])/ROW)-r0];
+  for(let i=0,j=n-1;i<n;j=i++){ const [a,b]=span(i,j); for(let r=a;r<=b;r++) off[r+1]++; }
+  for(let r=0;r<nr;r++) off[r+1]+=off[r];
+  const idx=new Int32Array(off[nr]), fill=off.slice(0,nr);
+  for(let i=0,j=n-1;i<n;j=i++){ const [a,b]=span(i,j); for(let r=a;r<=b;r++) idx[fill[r]++]=i; }
+  return {r0,nr,off,idx}; }
+function ringWithin(x,z,r,p){ const g=p._cells||(p._cells=ringCells(p)), C=g.C;                    // == "any edge (i-1, i), i>=1, closer than r": the loop landBlocksBuilding used to run over the whole ring
+  const ax=Math.max(0,Math.floor((x-r)/C)-g.cx0), bx=Math.min(g.nx-1,Math.floor((x+r)/C)-g.cx0), az=Math.max(0,Math.floor((z-r)/C)-g.cz0), bz=Math.min(g.nz-1,Math.floor((z+r)/C)-g.cz0);
+  for(let cx=ax;cx<=bx;cx++) for(let cz=az;cz<=bz;cz++){ const c=cx*g.nz+cz;
+    for(let k=g.off[c];k<g.off[c+1];k++){ const i=g.idx[k], a=p[i-1],b=p[i],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));if(Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)<r)return true; } }
+  return false; }
+function ringCells(p){ let x0=Infinity,z0=Infinity,x1=-Infinity,z1=-Infinity; for(const q of p){ if(q[0]<x0)x0=q[0]; if(q[0]>x1)x1=q[0]; if(q[1]<z0)z0=q[1]; if(q[1]>z1)z1=q[1]; }
+  const C=Math.max(24,Math.ceil(Math.sqrt((x1-x0+1)*(z1-z0+1)/16384))), cx0=Math.floor(x0/C), cz0=Math.floor(z0/C), nx=Math.floor(x1/C)-cx0+1, nz=Math.floor(z1/C)-cz0+1;   // <= ~16k cells, however big the park
+  const off=new Int32Array(nx*nz+1), each=(i,f)=>{ const a=p[i-1],b=p[i];
+    for(let cx=Math.floor(Math.min(a[0],b[0])/C)-cx0;cx<=Math.floor(Math.max(a[0],b[0])/C)-cx0;cx++) for(let cz=Math.floor(Math.min(a[1],b[1])/C)-cz0;cz<=Math.floor(Math.max(a[1],b[1])/C)-cz0;cz++) f(cx*nz+cz); };
+  for(let i=1;i<p.length;i++) each(i,c=>off[c+1]++);
+  for(let c=0;c<nx*nz;c++) off[c+1]+=off[c];
+  const idx=new Int32Array(off[nx*nz]), fill=off.slice(0,nx*nz);
+  for(let i=1;i<p.length;i++) each(i,c=>{ idx[fill[c]++]=i; });
+  return {C,cx0,cz0,nx,nz,off,idx}; }
+function inWater(x,z){ if(navWater(x,z))return true;for(const f of waB){ const b=f.bb; if(x<b[0]||x>b[2]||z<b[1]||z>b[3]) continue; if(pipIx(x,z,f.p)) return true; } return false; }
 const BRW=12;
 function bridgeAt(x,z){ for(const br of RB.br){ const p=br.pts; for(let i=1;i<p.length;i++){ if(closestSeg(x,z,{ax:p[i-1][0],az:p[i-1][1],bx:p[i][0],bz:p[i][1]}).d<BRW+5) return br; } } return null; }
 function onBridge(x,z){ return !!bridgeAt(x,z); }
@@ -1803,7 +1836,8 @@ const PFD_ZONES=[{"e":1,"bn":1,"poly":[[2495,7018],[2642,7086],[2628,7169],[2963
 [-2470,15168],[-3542,14986],[-3734,15095],[-3774,15208],[-4090,15516],[-4566,15266],[-4803,15065],[-5172,15128],[-4653,14867],[-4492,14702],[-4296,14232],[-4197,
 14276],[-4170,14240],[-4146,13952],[-4215,13894],[-3998,13575],[-3648,13344],[-3518,13600]]}];
 const PFD_ZONE_BY_E=(function(){ const m=new Map(); for(const z of PFD_ZONES) m.set(z.e,z.poly); return m; })();
-function pfdZoneAt(x,z){ for(const zn of PFD_ZONES){ if(ptInRing(x,z,zn.poly)) return zn.e; } return null; }   // engine number whose REAL first-due zone holds the point
+function pfdZoneAt(x,z){ const b=pfdBoxAt(x,z); if(b) return b.e;   // a PFD box decides first: its book IS that engine's first-due area
+  for(const zn of PFD_ZONES){ if(ptInRing(x,z,zn.poly)) return zn.e; } return null; }   // else the zone ring (Engine 78, which has no book, and ground outside every box)
 function ordinalBn(n){ const s=["th","st","nd","rd"],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
 // Official PFD apparatus chart — Division → Battalion → Engine (authoritative for the picker grouping)
 const PFD_BN={1:1,3:1,10:1,24:1,53:1,60:1, 51:2,61:2,63:2,72:2,73:2, 13:3,27:3,29:3,45:3, 8:4,11:4,20:4,43:4, 22:5,56:5,58:5,62:5, 40:6,47:6,49:6,69:6, 41:7,54:7,57:7,68:7, 2:8,35:8,50:8,55:8,59:8, 9:9,12:9,19:9,37:9,39:9,66:9, 6:10,7:10,25:10,28:10,33:10, 5:11,16:11,34:11,44:11, 14:12,52:12,64:12,70:12,71:12, 18:13,36:13,38:13,46:13};
@@ -1828,7 +1862,7 @@ const PFD_DROP=new Set([15,32,78]);   // marine (E15, E32 fireboats) + airport (
   }
 })();
 
-/* ---- FIRE HYDRANTS: 338 real PWD (user shapefile, Fairmount area) + 923 OpenStreetMap citywide, projected to world coords. Each [x,z,src], src 1=real PWD, 0=OSM. Extend HYDRANTS with more real selections anytime. ---- */
+/* ---- FIRE HYDRANTS: 338 real PWD (user shapefile, Fairmount area) + 923 OpenStreetMap citywide, projected to world coords. Each [x,z,src], src 1=real PWD, 0=OSM, 3=PFD box map (merged in below from data/pfdbox.js). Extend HYDRANTS with more real selections anytime. ---- */
 /* 🌍 shared lat/lon ↔ world projection (equirectangular, same origin the whole bake uses).
    The inverse only existed inside makeTileLayer before — hoisted here for hydrant submissions. */
 const GEO={ lat0:40.0127, lon0:-75.1924, cos:Math.cos(40.0127*Math.PI/180) };
@@ -1950,6 +1984,34 @@ const HYDRANTS=[[3116,5869,1],[2713,6285,1],[2568,5932,1],[4547,6184,1],[2850,62
 0],[16557,-6978,0],[16614,-6926,0],[16733,-6927,0],[16676,-6510,0],[16531,-6615,0],[16387,-6719,0],[16248,-6820,0],[16292,-6887,0],[16337,-6967,0],[16582,-7240,0],
 [16686,-7005,0],[16758,-6957,0],[16807,-6814,0],[16963,-6629,0],[16567,-6702,0],[16709,-6599,0],[16732,-6582,0],[16904,-6566,0],[-2714,-3540,0],[-2593,-3779,0],[-2886,
 -3444,0],[-3024,-3552,0],[3265,6965,0],[3150,6960,0],[-2945,-3678,0],[-3023,-3654,0]];
+/* 📦🧯 PFD BOX MAPS (data/pfdbox.js) — real box polygons + hydrants from the PFD GIS box-breakdown GeoPDFs (tools/pfd-boxbook).
+   Hydrants are src 3. An official point within 8m of one is the same hydrant (dropped), and inside a mapped box the PFD
+   layer is complete, so any OSM point left there is dropped too. A missing file degrades to the old data. */
+const PFD_BOXES=(function(){ if(typeof PFDBOX==='undefined') return [];
+  return PFDBOX.boxes.map(b=>{ const poly=b.ring.map(p=>{ const w=ll2world(p[0],p[1]); return [w.x,w.z]; });
+    let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9; for(const p of poly){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<z0)z0=p[1]; if(p[1]>z1)z1=p[1]; }
+    let A=0; for(let i=0,j=poly.length-1;i<poly.length;j=i++) A+=(poly[j][0]-poly[i][0])*(poly[j][1]+poly[i][1]);
+    return { box:b.b, e:b.e, poly, bb:[x0,z0,x1,z1], area:Math.abs(A)/2 }; }).sort((a,b)=>a.area-b.area); })();
+// SMALLEST FIRST: a ring carries no holes, so a box drawn as an island inside another (6937 in 6936, 6932 in 6931) is also
+// inside its surround's ring. pfdBoxAt and realBoxFor take the first box that contains the point — sorted, that is the island.
+const inBoxBB=(b,x,z)=>x>=b.bb[0]&&x<=b.bb[2]&&z>=b.bb[1]&&z<=b.bb[3];
+function pfdBoxAt(x,z){ for(const b of PFD_BOXES) if(inBoxBB(b,x,z)&&ptInRing(x,z,b.poly)) return b; return null; }
+(function mergePfdHydrants(){ if(typeof PFDBOX==='undefined') return;
+  const P=PFDBOX.hyd.map(h=>{ const w=ll2world(h[0],h[1]); return [Math.round(w.x),Math.round(w.z),3]; });
+  const C=16, g=new Map(); for(const p of P){ const k=Math.floor(p[0]/C)+':'+Math.floor(p[1]/C); let a=g.get(k); if(!a){a=[];g.set(k,a);} a.push(p); }
+  const dup=(x,z)=>{ const gx=Math.floor(x/C), gz=Math.floor(z/C);
+    for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const arr=g.get(a+':'+b); if(arr) for(const p of arr) if(Math.hypot(p[0]-x,p[1]-z)<8) return true; } return false; };
+  for(let i=HYDRANTS.length-1;i>=0;i--){ const h=HYDRANTS[i]; if(h[2]!==2&&(dup(h[0],h[1])||(h[2]===0&&pfdBoxAt(h[0],h[1])))) HYDRANTS.splice(i,1); }
+  for(const p of P) HYDRANTS.push(p);
+  for(const b of PFDBOX.boxes) b.ring=null; PFDBOX.hyd=null; })();
+/* 🗺 FIRST-DUE ZONES FROM THE BOX BOOKS (October 2026). Each engine with a book gets its zone replaced by the union of its own
+   boxes (baked in tools/pfd-boxbook/bake_pfdbox.py), because the public ArcGIS zones of v14k are older than the 05/26/26 books —
+   up to 1.8 km2 had moved between companies (E28->E33, E62->E22). This ring is for drawing, drills and the play area; WHO is
+   first due is pfdZoneAt's box test, so the ring's 2 m simplification never decides a call. Engine 78 has no book and keeps v14k. */
+(function pfdZonesFromBoxes(){ if(typeof PFDBOX==='undefined'||!PFDBOX.zones) return;
+  for(const zn of PFDBOX.zones){ const poly=zn.ring.map(p=>{ const w=ll2world(p[0],p[1]); return [w.x,w.z]; });
+    const z=PFD_ZONES.find(q=>q.e===zn.e); if(z) z.poly=poly; else PFD_ZONES.push({e:zn.e,bn:0,poly});
+    PFD_ZONE_BY_E.set(zn.e,poly); zn.ring=null; } })();   // the lat/lon copies are spent (PFD_BOXES and HYDRANTS hold the projected ones); ~2,000 rings is heap the gate counts
 (function snapHydrants(){                                                                  // OSM hydrant points are noisy — some sit IN the roadway (user saw one mid-lane on Ridge). Snap those to the kerb.
   for(let pass=0; pass<3; pass++){ let moved=0;                                            // multi-pass: at a corner, escaping one street can land inside the wider cross street
     for(const h of HYDRANTS){ let best=null,worst=1e18;
@@ -3015,7 +3077,10 @@ function updateStreetLabels(dt){
     sp.material.opacity=op; } }
 const buildData=[], treeData=[];
 // nearest-road-edge distance; used to keep buildings out of the roadway (any road, incl. crossings)
-function nearRoadEdge(x,z){ let best=1e9; for(const s of segNear(x,z)){ const e=closestSeg(x,z,s).d-segHalf(s); if(e<best) best=e; } return best; }
+function nearRoadEdge(x,z){ let best=1e9; const gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCELL);   // == min over segNear(x,z) of closestSeg(x,z,s).d-segHalf(s), the same arithmetic,
+  for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=segGrid.get(a+':'+b); if(!l) continue;   // without the 9-cell array and an object per segment — a min ignores order and duplicates (October 2026, interchange genMs)
+    for(const s of l){ const e=segDistTo(x,z,s)-segHalf(s); if(e<best) best=e; } }
+  return best; }
 function footprintClearsRoad(cx,cz,w,d){ const hw=w/2,hd=d/2;   // every corner + center must be off the asphalt
   return [[0,0],[hw,hd],[-hw,hd],[hw,-hd],[-hw,-hd]].every(o=>nearRoadEdge(cx+o[0],cz+o[1])>0.5); }
 function genCityData(){ if(buildData.length) return; const rng=mulberry(19129),   // idempotent: procedural building/tree data, reused by both the Chase city and the flat tilt-map city
@@ -4539,6 +4604,7 @@ const FLATCITY={ group:new THREE.Group(), built:false }; FLATCITY.group.visible=
 // it moves, so anywhere in Philadelphia looks like a real street. Placement is hashed off rounded coordinates,
 // so the same corner always grows the same building/tree (no popping when the block is rebuilt).
 const LOCAL={ R:760, step:17, maxB:1400, maxT:420, maxS:1100 };
+const TREE_LOD={ R:520 };   // canopy level of detail: past R from the rebuild centre a tree is >=140 m from the truck; see the canopy block in commit
 // First visual sample: Engine 35 only. These remain illustrative procedural buildings.
 /* The immersive streetscape (facades, street-aligned buildings, richer palettes, three-lobe trees,
    road contrast) ran at Engine 35 only while it was being proven out. `all` opens it citywide;
@@ -5585,7 +5651,8 @@ function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOC
   }
   if(RAMP_DETAIL.paint && rampDetailSeg(s) && l>6 && mk.length<240000){                  // 🛣️ RAMP EDGE LINES: yellow left, white right — a ramp is a one-way carriageway (owner's Kelly Dr / Lincoln Dr photos).
     const off=hw-RAMP_DETAIL.edgeOff;                                                     // Ramps had no paint at all before this, which is why they read as bare slabs.
-    const onNamed=(x,z)=>{ for(const o of segNear(x,z)){ if(!o.name) continue; if(closestSeg(x,z,o).d<segHalf(o)+0.4) return true; } return false; };   // an edge line runs the WHOLE ramp and breaks only where it crosses a NAMED street's pavement, so it never paints over Ridge / Kelly / City Ave
+    const onNamed=(x,z)=>{ const gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCELL);   // == any named segNear(x,z) within its half-width + 0.4, walked in place (a yes/no ignores order and duplicates)
+      for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=segGrid.get(a+':'+b); if(!l) continue; for(const o of l){ if(!o.name) continue; if(segDistTo(x,z,o)<segHalf(o)+0.4) return true; } } return false; };   // an edge line runs the WHOLE ramp and breaks only where it crosses a NAMED street's pavement, so it never paints over Ridge / Kelly / City Ave
     const quad=(arr,t,t2,o,hwm)=>{ const p0x=s.ax+dx*t-dz*o, p0z=s.az+dz*t+dx*o, p1x=s.ax+dx*t2-dz*o, p1z=s.az+dz*t2+dx*o, mxn=-dz*hwm, mzn=dx*hwm;
       arr.push(p0x+mxn,MARK_Y,p0z+mzn, p1x+mxn,MARK_Y,p1z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x+mxn,MARK_Y,p0z+mzn, p1x-mxn,MARK_Y,p1z-mzn, p0x-mxn,MARK_Y,p0z-mzn); };
     const clear=(t,t2,o)=>{ for(const k of [t,(t+t2)/2,t2]){ if(onNamed(s.ax+dx*k-dz*o,s.az+dz*k+dx*o)) return false; } return true; };   // probe the LINE itself, at both ends and the middle — a midpoint-only check let the ends bleed onto Ridge Ave and Kelly Dr (caught by tests/ramp-detail.browser.cjs)
@@ -5631,7 +5698,14 @@ FLATCITY.rebuild=function(cx,cz){ FLATCITY.job=null; FLATCITY.cx=cx; FLATCITY.cz
 FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Color(), vGuard=[], vPost=[];   // vGuard/vPost: the viaduct's W-beam tiles, built here in commit and kept OFF J.hws so committing the same job twice never doubles them
   FLATCITY.companyId=DRIVE.stationId; FLATCITY.immersive=J.immersive;
   FLATCITY.detail=!!J.detail;
-  for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); o.geometry.dispose(); o.material.dispose(); }
+  // Old MATERIALS are disposed one rebuild late (October 2026). Disposing the last material on a shader destroys the program,
+  // and disposing every part's material here, before the new ones existed, destroyed 11 of the city's 21 programs on every
+  // rebuild: the first render after the commit recompiled them all — 85 ms of the interchange's 110 ms commit frame, a hitch
+  // any phone GPU pays too. Now the replaced parts' materials wait in oldMats (geometry is still freed at once), so the new
+  // materials hit the program cache, and the generation before THAT is disposed here, sharing programs with the one waiting.
+  const staleMats=FLATCITY.oldMats||[]; FLATCITY.oldMats=[];
+  for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); if(o.userData.keep){ o.dispose(); continue; } o.geometry.dispose(); FLATCITY.oldMats.push(o.material); }   // keep: shared kit (hydrants) — free only the instance buffer
+  for(const m of staleMats) m.dispose();
   FLATCITY.parts=[];
   const B=J.B, T=J.T, S=J.S; FLATCITY.mmB=B;   // v20m: the minimap draws these footprints
   if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[],roadGirder=[];
@@ -5876,10 +5950,19 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       gables.count=gi; porch.count=pi; add(walls,'bld-td'); add(gables,'bld-gable'); add(porch,'bld-porch'); } }
   // 🚒 FIRE HYDRANTS — simple low-poly kerbside pieces (body + bonnet + side outlet) so they sit in the same
   // world as the buildings and trees. Only the ones inside the current block are instanced, so this is nearly free.
-  { const HY=hydrantsNear(J.cx,J.cz,LOCAL.R);
-    if(HY.length){ const HH=1.5, body=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.26,0.30,HH*0.62,7),new THREE.MeshLambertMaterial({color:0xd8382a,flatShading:true}),HY.length);
-      const bonnet=new THREE.InstancedMesh(new THREE.ConeGeometry(0.34,HH*0.3,7),new THREE.MeshLambertMaterial({color:0xc22e22,flatShading:true}),HY.length);
-      const outlet=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15,0.15,0.8,6),new THREE.MeshLambertMaterial({color:0xe4503c,flatShading:true}),HY.length);
+  // Drawn to 520m, not LOCAL.R: the box books took the city from ~1,300 hydrants to ~26,000, which put the interchange over
+  // its triangle budget. 520m still covers 140m around the truck at the 380m rebuild threshold (the RAMP_DETAIL rule), so
+  // none appears late; past that a 1.5m hydrant is below a pixel.
+  // The three geometries and materials are made ONCE (HYD_KIT) and marked userData.keep so the parts disposal skips them:
+  // disposing the last material on a shader frees the program, and with hydrants now at every spot that recompile cost
+  // every rebuild's commit frame ~10-15ms on the perf gate. Only each mesh's instance buffer is per-commit.
+  { const HY=hydrantsNear(J.cx,J.cz,520);
+    if(HY.length){ const HH=1.5, K=FLATCITY.hydKit||(FLATCITY.hydKit={
+        body:[new THREE.CylinderGeometry(0.26,0.30,HH*0.62,7),new THREE.MeshLambertMaterial({color:0xd8382a,flatShading:true})],
+        bonnet:[new THREE.ConeGeometry(0.34,HH*0.3,7),new THREE.MeshLambertMaterial({color:0xc22e22,flatShading:true})],
+        outlet:[new THREE.CylinderGeometry(0.15,0.15,0.8,6),new THREE.MeshLambertMaterial({color:0xe4503c,flatShading:true})] });
+      const body=new THREE.InstancedMesh(K.body[0],K.body[1],HY.length), bonnet=new THREE.InstancedMesh(K.bonnet[0],K.bonnet[1],HY.length), outlet=new THREE.InstancedMesh(K.outlet[0],K.outlet[1],HY.length);
+      for(const m of [body,bonnet,outlet]) m.userData.keep=true;
       HY.forEach((h,i)=>{ const rot=hash2(h[0],h[1])*6.28;
         dummy.position.set(h[0],navGroundY(h[0],h[1])+HH*0.31,h[1]); dummy.rotation.set(0,rot,0); dummy.scale.set(1,1,1); dummy.updateMatrix(); body.setMatrixAt(i,dummy.matrix);
         dummy.position.set(h[0],navGroundY(h[0],h[1])+HH*0.74,h[1]); dummy.updateMatrix(); bonnet.setMatrixAt(i,dummy.matrix);
@@ -5893,24 +5976,34 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
           if(Math.abs(dx*c-dz*s)<b.w/2+margin&&Math.abs(dx*s+dz*c)<b.d/2+margin){ hit=true; break; } } }
       if(hit) T.splice(i,1); } }
   if(T.length){ const leafPal=J.immersive?[0x658c57,0x7a9d62,0x88aa6a,0x5f885c,0x94ac70]:[0x9ccb8b,0x8fc07f,0xa9d69a,0x97c688,0xb0dba1];
-    const cano=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true})),T.length*(J.immersive?3:1));
+    // 🌳 CANOPY LOD (October 2026, interchange triangle headroom): a tree more than TREE_LOD.R from the rebuild centre is at
+    // least 140 m from the truck (the 380 m rebuild threshold — the RAMP_DETAIL rule), so its blobs use the 20-triangle
+    // icosahedron instead of the 80. Same instances, matrices and colours in the same order; only the facet count changes.
+    // Trees were 45% of the interchange's drawn triangles. TREE_LOD.R=Infinity restores the old canopy exactly.
+    const per=J.immersive?3:1, R2=TREE_LOD.R*TREE_LOD.R, far=t=>(t.x-J.cx)**2+(t.z-J.cz)**2>R2, nFar=T.reduce((n,t)=>n+(far(t)?1:0),0);
+    const canoMat=nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}));
+    const cano=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),canoMat,(T.length-nFar)*per);
+    const canoFar=nFar?new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),canoMat,nFar*per):null; let iN=0,iF=0;
     const trunk=new THREE.InstancedMesh(J.immersive?new THREE.CylinderGeometry(0.5,0.7,1,6):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?0x75624d:0x9b7d5d}),T.length);
     const pad=new THREE.InstancedMesh(J.immersive?new THREE.CylinderGeometry(1,1,1,10):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?0x93a574:0xcfe6bb}),T.length);
     T.forEach((t,i)=>{ const s=t.s*2.2, th=s*1.15;
       const seed=J.immersive?Math.floor(hash2(t.x,t.z)*10000):i;
+      const isFar=!!canoFar&&far(t), cm=isFar?canoFar:cano, ci=isFar?iF:iN; if(isFar) iF++; else iN++;
       if(J.immersive){for(let k=0;k<3;k++){
         const a=seed*1.7+k*2.094,offset=k?s*0.36:0;
         dummy.position.set(t.x+Math.cos(a)*offset,navGroundY(t.x,t.z)+th+s*(k?0.65:1.05),t.z+Math.sin(a)*offset);
         const narrow=J.detail&&seed%3===0,wide=J.detail&&seed%3===1;
         dummy.scale.set(s*(k?0.68:0.76)*(narrow?0.82:wide?1.04:1),s*(k?0.8:0.95)*(narrow?1.3:wide?0.9:1),s*(k?0.68:0.76)*(narrow?0.82:1));dummy.rotation.set(0,a,0);dummy.updateMatrix();
-        cano.setMatrixAt(i*3+k,dummy.matrix);cano.setColorAt(i*3+k,col.setHex(leafPal[(seed+k)%leafPal.length]));
-      }}else{dummy.position.set(t.x,th+s*0.62,t.z); dummy.scale.set(s,s*0.98,s); dummy.rotation.set(0,seed*1.7,0); dummy.updateMatrix(); cano.setMatrixAt(i,dummy.matrix); cano.setColorAt(i,col.setHex(leafPal[seed%leafPal.length]));}
+        cm.setMatrixAt(ci*3+k,dummy.matrix);cm.setColorAt(ci*3+k,col.setHex(leafPal[(seed+k)%leafPal.length]));
+      }}else{dummy.position.set(t.x,th+s*0.62,t.z); dummy.scale.set(s,s*0.98,s); dummy.rotation.set(0,seed*1.7,0); dummy.updateMatrix(); cm.setMatrixAt(ci,dummy.matrix); cm.setColorAt(ci,col.setHex(leafPal[seed%leafPal.length]));}
       dummy.position.set(t.x,navGroundY(t.x,t.z)+th/2,t.z); dummy.scale.set(s*0.18,th,s*0.18); dummy.rotation.set(0,0,0); dummy.updateMatrix(); trunk.setMatrixAt(i,dummy.matrix);
       dummy.position.set(t.x,navGroundY(t.x,t.z)+(J.immersive?0.09:0.045),t.z);
       const bed=J.immersive?Math.min(s*0.8,Math.max(0.4,nearRoadEdge(t.x,t.z)-0.3)):s;
       dummy.scale.set(J.immersive?bed:s*1.5,J.immersive?0.12:0.09,J.immersive?bed:s*2.1); dummy.updateMatrix(); pad.setMatrixAt(i,dummy.matrix); });
-    cano.instanceMatrix.needsUpdate=true; if(cano.instanceColor)cano.instanceColor.needsUpdate=true; trunk.instanceMatrix.needsUpdate=true; pad.instanceMatrix.needsUpdate=true;
-    FLATCITY.group.add(pad); FLATCITY.group.add(trunk); FLATCITY.group.add(cano); FLATCITY.parts.push(pad,trunk,cano); }
+    for(const m of canoFar?[cano,canoFar]:[cano]){ m.instanceMatrix.needsUpdate=true; if(m.instanceColor)m.instanceColor.needsUpdate=true; }
+    trunk.instanceMatrix.needsUpdate=true; pad.instanceMatrix.needsUpdate=true;
+    FLATCITY.group.add(pad); FLATCITY.group.add(trunk); FLATCITY.group.add(cano); FLATCITY.parts.push(pad,trunk,cano);
+    if(canoFar){ FLATCITY.group.add(canoFar); FLATCITY.parts.push(canoFar); } }
   if(routePts?.length>1)setRouteGeom(); // refresh the guide when its nearby pavement triangles are rebuilt
 };
 function __oldBuildFlatCity(){ genCityData(); if(!buildData.length) return;
@@ -6565,7 +6658,7 @@ function boxUniverse(companyId,scope){                                         /
     const r=computeResponders(a[2],a[3],companyId); const s=r[due-1];
     if(!s||s.id!==companyId) continue;
     const box=computeBox(r[0],a[2],a[3]);
-    /* ⚠️ computeBox derives numbers from DISTANCE RINGS, so ~10% of boxes are angularly ambiguous —
+    /* ⚠️ computeBox derives numbers from DISTANCE RINGS (except engines with a PFD box map), so ~10% of boxes are angularly ambiguous —
        e35 box 3540 covers two real places 1871m apart. Every address that computes to the box is a
        legitimate answer, so we keep them ALL as anchors and accept arrival at any one. */
     if(!seen.has(box)) seen.set(box,{ key:box, box:box, x:a[2], z:a[3], street:a[1], anchors:[] });
@@ -7621,7 +7714,7 @@ function computeResponders(x,z,companyId=DRIVE.stationId){                      
   const roster=stations; const byDist=roster.slice().sort((a,b)=>stDist(a,x,z)-stDist(b,x,z));
   let fdE=pfdZoneAt(x,z);                                                                             // whose real first-due zone holds the fire
   const playerH=roster.find(s=>s.id===companyId);                                               // your selected house — always shown on the board
-  if(playerH){ const pn=+engNum(playerH.id); const pz=PFD_ZONE_BY_E.get(pn); if(pz&&ptInRing(x,z,pz)) fdE=pn; }   // a fire in YOUR own first-due zone makes you first-due (resolves border overlaps from the simplified polygons)
+  if(playerH&&!pfdBoxAt(x,z)){ const pn=+engNum(playerH.id); const pz=PFD_ZONE_BY_E.get(pn); if(pz&&ptInRing(x,z,pz)) fdE=pn; }   // outside every box only: a fire in YOUR own first-due zone makes you first-due (resolves border overlaps from the simplified polygons)
   let firstDue=fdE!=null?roster.find(s=>s.num===fdE):null;
   if(!firstDue) firstDue=byDist[0];                                                                   // outside every known zone → nearest house is first-due
   const out=[firstDue];
@@ -7629,9 +7722,21 @@ function computeResponders(x,z,companyId=DRIVE.stationId){                      
   if(playerH&&out.indexOf(playerH)<0) out.push(playerH);
   return out;
 }
-// 🔔 BOX NUMBER: first 2 digits = the first-due engine, last 2 = how far into that engine's area the fire is
+// 🔔 BOX NUMBER: an engine with a PFD box map (PFD_BOXES) gets the REAL box — the polygon holding the point, or the nearest of
+// that engine's boxes within 60m (unboxed pockets inside the zone, and its 2 m outline simplification). Since first due is decided
+// by the box itself (pfdZoneAt), the two fallbacks below rarely fire: ground another book boxes gets THAT box, and anything
+// else keeps the nearest of the engine's own boxes. Every other engine still
+// gets a generated number: first 2 digits = the first-due engine, last 2 = how far into that engine's area the fire is
 // (…01 next to the firehouse → …99 out at the polygon edge).  e.g. a fire in Engine 66's first-due → 6601..6699
-function computeBox(firstDue,x,z){ const eng=engNum(firstDue.id).padStart(2,'0'); const dSt=Math.hypot(firstDue.x-x,firstDue.z-z);
+function realBoxFor(e,x,z){ let best=null, bd=1e18;
+  for(const b of PFD_BOXES){ if(b.e!==e) continue; if(inBoxBB(b,x,z)&&ptInRing(x,z,b.poly)) return b.box;
+    const p=b.poly; for(let i=0,j=p.length-1;i<p.length;j=i++){ const ax=p[j][0],az=p[j][1],dx=p[i][0]-ax,dz=p[i][1]-az, L=dx*dx+dz*dz||1;
+      const t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/L)), d=(ax+t*dx-x)**2+(az+t*dz-z)**2; if(d<bd){ bd=d; best=b.box; } } }
+  if(best&&bd<=3600) return best;
+  const other=pfdBoxAt(x,z); return other?other.box:best; }
+function computeBox(firstDue,x,z){ const eng=engNum(firstDue.id).padStart(2,'0');
+  const real=realBoxFor(+eng,x,z); if(real) return real;
+  const dSt=Math.hypot(firstDue.x-x,firstDue.z-z);
   const poly=duePolygon(firstDue.id); let maxR=0;
   if(poly&&poly.length){ for(const p of poly){ const d=Math.hypot(firstDue.x-p[0],firstDue.z-p[1]); if(d>maxR) maxR=d; } }
   const scale = maxR>1 ? dSt/maxR : Math.min(dSt,3000)/3000;                                           // fraction of the way to the far edge
