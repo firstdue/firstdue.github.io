@@ -1053,7 +1053,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20n";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20o";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -7636,7 +7636,10 @@ document.getElementById('authSend').addEventListener('click',async ()=>{ const e
   document.getElementById('authMsg').textContent='Sending…'; const ok=await authSendLink(em);
   document.getElementById('authMsg').textContent=ok?('✉️ Link sent to '+em+'. Open it on this device to finish signing in.'):'Could not send — check your connection and try again.'; });
 authInit();
-(function replayPlayerHydrants(){ for(const h of PROFILE.hyd){ if(h&&typeof h.x==='number') addHydrant(h.x,h.z,2); } })();   // stored coords were curb-snapped at add time; runs after snapHydrants so official points untouched
+// 🧯 Player-marked hydrants (PROFILE.hyd) are NOT drawn any more (v20o, owner's request): the PFD box books put every
+// hydrant on the map citywide, so a hand-marked one only ever doubled a real one (two at Lawnton St & Pedley Rd).
+// The saved list is left untouched in the profile — restoring the old replay is this one line:
+//   for(const h of PROFILE.hyd){ if(h&&typeof h.x==='number') addHydrant(h.x,h.z,2); }
 function playerAddHydrant(){ if(!state.running||DRIVE.going) return;
   let best=null,bd=1e18; for(const sg of segNear(truck.x,truck.z)){ const c=closestSeg(truck.x,truck.z,sg); if(c.d<bd){bd=c.d;best={c,sg};} }
   if(!best){ popup('🧯 NO STREET HERE'); return; }

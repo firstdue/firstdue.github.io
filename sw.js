@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v51';  // v20n: real PFD box numbers, hydrants and first-due zones (data/pfdbox.js); interchange headroom.
+const CACHE = 'local-shell-v52';  // v20o: player-marked hydrants no longer drawn (the PFD book hydrants cover the city).
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
