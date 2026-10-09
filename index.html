@@ -1023,6 +1023,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/btype.js"></script>
 <script src="data/rref.js"></script>
 <script src="data/pfdbox.js"></script>
+<script src="data/clearance.js"></script>
 <script>
 /* ================================================================================
    PHILLY FIRE DISPATCH  —  v9 · Round B (real OpenStreetMap streets)
@@ -1053,7 +1054,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20o";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20p";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -5686,6 +5687,54 @@ function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOC
       for(const sgn of [-1,1]){ const tt=ev.t+sgn*(ev.hw+2.2); if(tt<3||tt>l-3) continue;
         if(ok(tt)) zeb(s.ax+dx*tt, s.az+dz*tt, dx, dz); } } }
 }
+/* 📏 RAIL BRIDGE CLEARANCES (October 2026) — data/clearance.js, baked by bake_clearances.py from OSM maxheight (the posted
+   sign, matched to a rail-bridge x road crossing by road name within 12 m). A rail deck used to be ESTIMATED: terrain at the
+   way's ends, floored at ground + 6 m, so every underpass looked ~16 ft or more. Where the street under it is signed, the
+   deck underside now sits at the posted figure + CLEARANCE.margin (0.1 m: signs are posted ~4 in under the measured
+   clearance — +0.37 ft median against FHWA NBI on 81 road bridges) above the finished pavement, and blends back to the
+   estimate over RAIL_BLEND m, starting RAIL_HOLD m beyond its outermost signed crossing (so the deck stays level across the
+   street itself — a 24 m deck piece averages its two ends). Unsigned rail bridges are unchanged. */
+const RAIL_HOLD=15, RAIL_BLEND=60, CLEAR_RAIL=(function(){ const m=new Map(); if(typeof CLEARANCE==='undefined') return m;
+  for(const e of CLEARANCE.rail){ if(e[5]==null) continue; let a=m.get(e[0]); if(!a){ a=[]; m.set(e[0],a); } a.push(e); } return m; })();
+function railDeckControls(rw){ if(rw._clr!==undefined) return rw._clr; const es=CLEAR_RAIL.get(rw.id); if(!es) return rw._clr=null;
+  const ctl=[];
+  for(const e of es){ let best=1e18,al=0,acc=0;                                          // distance along the way to the crossing
+    for(let i=1;i<rw.p.length;i++){ const a=rw.p[i-1],q=rw.p[i],dx=q[0]-a[0],dz=q[1]-a[1],L=Math.hypot(dx,dz)||1,t=Math.max(0,Math.min(1,((e[1]-a[0])*dx+(e[2]-a[1])*dz)/(L*L))),d=Math.hypot(a[0]+dx*t-e[1],a[1]+dz*t-e[2]);
+      if(d<best){ best=d; al=acc+t*L; } acc+=L; }
+    ctl.push({al,top:clearPave(e[1],e[2],e[3],e[4])+e[5]+CLEARANCE.margin+1.2}); }   // deck TOP: the rail deck is 1.2 m thick
+  ctl.sort((a,b)=>a.al-b.al); return rw._clr=ctl; }
+function clearPave(x,z,road,ang){ return navRoadY(x,z,road||null,Math.sin(ang),Math.cos(ang))+0.22; }   // finished pavement is 0.22 over navRoadY (ROAD_Y + the 0.16 lift)
+function railDeckAt(ctl,al,est){ const a=ctl[0],b=ctl[ctl.length-1];
+  if(al<=a.al){ const t=Math.min(1,Math.max(0,a.al-al-RAIL_HOLD)/RAIL_BLEND); return a.top+(est-a.top)*t; }
+  if(al>=b.al){ const t=Math.min(1,Math.max(0,al-b.al-RAIL_HOLD)/RAIL_BLEND); return b.top+(est-b.top)*t; }
+  for(let i=1;i<ctl.length;i++) if(al<=ctl[i].al){ const p=ctl[i-1],q=ctl[i],t=(al-p.al)/((q.al-p.al)||1); return p.top+(q.top-p.top)*t; }
+  return b.top; }
+// One yellow panel per approach on the deck face, text = the OSM value verbatim (a sign must trace to a tag). One merged
+// mesh per commit over ONE opaque atlas built once (opaque on purpose: iPhone Safari's canvas-read noise only showed on
+// transparent pixels, v20k) — never disposed per rebuild, like PAVE.tex.
+const CLEAR_SIGN={ at:null, W:2.2, H:0.8 };
+function clearSignAtlas(){ if(CLEAR_SIGN.at) return CLEAR_SIGN.at;
+  const texts=[...new Set(CLEARANCE.signs.map(s=>s[5]))].sort(), CW=256, CH=96, cols=8, rows=Math.max(1,Math.ceil(texts.length/cols));
+  const cv=document.createElement('canvas'); cv.width=CW*cols; cv.height=CH*rows; const c=cv.getContext('2d'); const cell=new Map();
+  c.fillStyle='#f2c01e'; c.fillRect(0,0,cv.width,cv.height); c.textAlign='center'; c.textBaseline='middle';
+  texts.forEach((t,i)=>{ const x=(i%cols)*CW, y=Math.floor(i/cols)*CH;
+    c.strokeStyle='#111'; c.lineWidth=6; c.strokeRect(x+5,y+5,CW-10,CH-10); c.fillStyle='#111';
+    c.font='800 22px -apple-system,"Helvetica Neue",Arial'; c.fillText('LOW CLEARANCE',x+CW/2,y+28);
+    c.font='900 44px -apple-system,"Helvetica Neue",Arial'; c.fillText(t,x+CW/2,y+66);
+    cell.set(t,{u0:x/cv.width,u1:(x+CW)/cv.width,v0:1-(y+CH)/cv.height,v1:1-y/cv.height}); });   // CanvasTexture flips Y: canvas top = v 1
+  const tex=new THREE.CanvasTexture(cv); tex.generateMipmaps=false; tex.minFilter=THREE.LinearFilter; tex.anisotropy=4;
+  return CLEAR_SIGN.at={tex,cell}; }
+function clearanceSigns(J){ if(typeof CLEARANCE==='undefined'||!CLEARANCE.signs.length) return;
+  const R2=LOCAL.R*LOCAL.R, pos=[], uv=[];
+  for(const s of CLEARANCE.signs){ if((s[0]-J.cx)**2+(s[1]-J.cz)**2>R2) continue;
+    const at=clearSignAtlas(), c=at.cell.get(s[5]); if(!c) continue;
+    const nx=s[2], nz=s[3], rx=nz, rz=-nx, hw=CLEAR_SIGN.W/2, hh=CLEAR_SIGN.H/2;             // right, as seen facing the panel = (nz, -nx)
+    const yc=clearPave(s[8],s[9],s[7],s[4])+s[6]+CLEARANCE.margin+0.6, cx=s[0]+nx*0.03, cz=s[1]+nz*0.03;   // centred on the 1.2 m deck face
+    const BL=[cx-rx*hw,yc-hh,cz-rz*hw], BR=[cx+rx*hw,yc-hh,cz+rz*hw], TR=[cx+rx*hw,yc+hh,cz+rz*hw], TL=[cx-rx*hw,yc+hh,cz-rz*hw];
+    pos.push(...BL,...BR,...TR,...BL,...TR,...TL); uv.push(c.u0,c.v0,c.u1,c.v0,c.u1,c.v1,c.u0,c.v0,c.u1,c.v1,c.u0,c.v1); }
+  if(!pos.length) return;
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:clearSignAtlas().tex})); m.name='clearance-signs'; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
 // Refresh the block WITHOUT a frame hitch: generation runs a few ms per frame while the old scenery stays up,
 // and the meshes are swapped in one go when it finishes. (A full synchronous rebuild cost ~20-90ms = a visible stutter.)
 FLATCITY.tick=function(){ if(!FLATCITY.job) return;
@@ -5759,6 +5808,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     const ballast=[],railBars=[],rDeck=[],rWall=[],rPier=[],rAbut=[],rGirder=[],rTie=[],rCutWall=[],mastPost=[],mastArm=[],wire=[];   // mast/arm/wire: catenary on el:'c' ways (v19j)
     for(const rw of (NAVGEO.rail||[])){ if(rw.tunnel)continue; rw._mk=-1; rw._ml=null;                      // catenary bookkeeping is per commit: last mast index / position on this way
       let len=0;for(let i=1;i<rw.p.length;i++)len+=Math.hypot(rw.p[i][0]-rw.p[i-1][0],rw.p[i][1]-rw.p[i-1][1]);
+      const ctl=rw.bridge?railDeckControls(rw):null;                                                      // 📏 real posted clearances over the streets it crosses (CLEARANCE, October 2026)
       const sY=navTerrain(...rw.p[0]),eY=navTerrain(...rw.p[rw.p.length-1]);let along=0;
       // Stone abutments (owner Street View reference, Falls Rd underpass, Sep 6 2026): a rail span's
       // deck ends rest on ground-to-deck masonry walls, which also mask the DEM-blind embankment step.
@@ -5768,7 +5818,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
           let ax=null,az=null;
           for(const off of [1.2,2.8,4.5,6.5]){const tx=pe[0]-uxA*off,tz=pe[1]-uzA*off;if(!onAsphalt(tx,tz)){ax=tx;az=tz;break;}}
           if(ax===null)continue;
-          const g=navGroundY(ax,az),deckTopY=Math.max(navTerrain(pe[0],pe[1]),g+6),under=deckTopY-1.2,H=under-g+0.4;
+          const g=navGroundY(ax,az),est=Math.max(navTerrain(pe[0],pe[1]),g+6),deckTopY=ctl?railDeckAt(ctl,pe===rw.p[0]?0:len,est):est,under=deckTopY-1.2,H=under-g+0.4;
           if(H>2)rAbut.push({x:ax,y:g+H/2-0.2,z:az,w:7.2,h:H,l:3.0,ang:Math.atan2(dxA,dzA),pitch:0});}}
       for(let i=1;i<rw.p.length;i++){const a=rw.p[i-1],q=rw.p[i],dx=q[0]-a[0],dz=q[1]-a[1],l=Math.hypot(dx,dz);
         if(!l){continue;}
@@ -5784,6 +5834,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             // clear the streets they cross (estimate, like all deck heights here).
             const g0=navGroundY(px-ux*pl/2,pz-uz*pl/2)+6,g1=navGroundY(px+ux*pl/2,pz+uz*pl/2)+6;
             if(y0<g0)y0=g0;if(y1<g1)y1=g1;
+            if(ctl){y0=railDeckAt(ctl,segAlong+o-pl/2,y0);y1=railDeckAt(ctl,segAlong+o+pl/2,y1);}   // a signed crossing sets the deck; the estimate above is only the fallback away from it
             if(rw.id===42705851||rw.id===98619777){y0=Math.max(y0,photoRailFloor(px-ux*pl/2,pz-uz*pl/2));y1=Math.max(y1,photoRailFloor(px+ux*pl/2,pz+uz*pl/2));}}
           else{y0=navTerrain(px-ux*pl/2,pz-uz*pl/2)-navRailCutDepth(px-ux*pl/2,pz-uz*pl/2);y1=navTerrain(px+ux*pl/2,pz+uz*pl/2)-navRailCutDepth(px+ux*pl/2,pz+uz*pl/2);}
           const y=(y0+y1)/2,pitch=-Math.atan2(y1-y0,pl),pll=pl*1.06;
@@ -5813,6 +5864,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     for(const [list,color,name] of [[deck,0x9aa0a0],[rails,0xd0cdc4],[piers,0xaba79c],[truss,0xdcded9],[para,0xccc7bb],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961],[mastPost,0x6d7276,'rail-mast'],[mastArm,0x6d7276,'rail-mast-arm'],[wire,0x3a3d40,'rail-wire']]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
       list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;if(name)m.name=name;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
   }
+  clearanceSigns(J);                                                                                    // 📏 LOW CLEARANCE panels on signed rail bridges
   if(NAVGEO.active){
     const p=[],gx=NAVGEO.terrain,step=gx.dx,stepZ=gx.dz,r=LOCAL.R+60,x0=gx.minX+Math.floor((J.cx-r-gx.minX)/step)*step,z0=gx.minZ+Math.floor((J.cz-r-gx.minZ)/stepZ)*stepZ;
     const vertex=(x,z)=>p.push(x,navGroundY(x,z)-0.6-navRailCutDepth(x,z)-navRoadCutDepth(x,z,null),z);

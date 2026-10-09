@@ -57,7 +57,7 @@ test('extracted data loads before the game script that reads it', () => {
     if (src && /^(?:data|vendor)\//.test(src)) assert.ok(i < gameScript, `${src} must precede the game script`);
   }
   // Each extracted global is declared exactly once, in its own file, and no longer in index.html.
-  for (const name of ['ADDR', 'RB', 'AB', 'LMKS', 'NAVGEO', 'LANDCOVER', 'PFDBOX']) {
+  for (const name of ['ADDR', 'RB', 'AB', 'LMKS', 'NAVGEO', 'LANDCOVER', 'PFDBOX', 'CLEARANCE']) {
     const file = `data/${name.toLowerCase()}.js`;
     if (!srcs.includes(file)) continue;
     assert.doesNotMatch(html, new RegExp(`^const ${name}\\s*=`, 'm'), `${name} should live in ${file}`);
