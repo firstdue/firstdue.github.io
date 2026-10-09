@@ -322,6 +322,9 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     max-width:calc(100vw - 24px); background:#2b6df6; color:#fff; padding:6px 14px 6px 11px; border-radius:13px; box-shadow:0 2px 9px rgba(0,0,0,.3); white-space:nowrap; }
   #turnBanner .dir { font-size:21px; font-weight:900; line-height:1; }
   #turnBanner .st { font-size:clamp(13px,3.1vw,16px); font-weight:700; overflow:hidden; text-overflow:ellipsis; }
+  #narrowSt { position:absolute; top:calc(max(8px,env(safe-area-inset-top)) + 196px); left:50%; transform:translateX(-50%); z-index:16; display:none;   /* 🚧 PFD 4.11.7 — amber, below the WRONG WAY chip so both can show */
+    background:#f2a516; color:#1a1300; padding:7px 14px; border-radius:13px; box-shadow:0 2px 12px rgba(242,165,22,.55); white-space:nowrap; font-weight:900;
+    font-size:clamp(11px,3vw,15px); letter-spacing:.3px; }
   #wrongWay { position:absolute; top:calc(max(8px,env(safe-area-inset-top)) + 156px); left:50%; transform:translateX(-50%); z-index:16; display:none;
     background:#d8261c; color:#fff; padding:7px 16px; border-radius:13px; box-shadow:0 2px 12px rgba(216,38,28,.55); white-space:nowrap; font-weight:900;
     font-size:clamp(13px,3.3vw,17px); letter-spacing:.4px; animation:wwFlash .6s steps(2) infinite; }
@@ -939,6 +942,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <div id="mini" class="hud"><canvas id="miniC"></canvas></div>
 <div id="turnBanner"><span class="dir">→</span><span class="st"></span></div>
 <div id="wrongWay">⚠️ WRONG WAY · ONE-WAY STREET</div>
+<div id="narrowSt">⚠️ NARROW STREET · <span class="ft"></span> FT · STRETCH FROM THE CORNER</div>
 <button id="btnUturn">↩ U-TURN</button>
 <button id="btnRecenter">&#127919; RE-CENTER</button>
 <div id="miniMap" aria-hidden="true"><canvas></canvas></div>
@@ -1024,6 +1028,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/rref.js"></script>
 <script src="data/pfdbox.js"></script>
 <script src="data/clearance.js"></script>
+<script src="data/narrow.js"></script>
 <script>
 /* ================================================================================
    PHILLY FIRE DISPATCH  —  v9 · Round B (real OpenStreetMap streets)
@@ -1054,7 +1059,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20p";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20q";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2164,14 +2169,23 @@ function gradeSeparatedCrossing(A,B,X,Z){
     if(t<=0.004||t>=0.996||u<=0.004||u>=0.996) continue;                     // ignore near-endpoint hits (the 4.5m weld handles those)
     const X=A.ax+r1x*t, Z=A.az+r1z*t; if(gradeSeparatedCrossing(A,B,X,Z)) continue;
     add(A,t,X,Z); add(B,u,X,Z); } })();
+/* 🚧 NARROW STREETS — PFD directive Sec. 4.11.7: on a street 14 ft wide or less apparatus (medic units included) are too
+   large to drive down it; stretch in or operate from the nearest corner. data/narrow.js (bake_narrow.py, from the City's
+   curb polygons measured by measure_street_widths.py): every street segment 15 ft or less curb to curb — the owner
+   counts the 14-15 ft borderline too, the measurement being +/-1 ft — except major roads and the one-way half of a divided
+   street. Index-locked to RB.st like BTYPE/RREF: a table of the wrong length is ignored. Each edge carries nw (metres,
+   0 = not narrow); the router keeps apparatus off it, a call on one is answered from the nearest corner, and driving
+   down one is flagged (chip + coach), never blocked. */
+const NARROW_SEG=(function(){ const m=new Map(); if(typeof NARROW==='undefined'||!NARROW||NARROW.n!==RB.st.length) return m;
+  for(const [ri,si,cm] of NARROW.seg) m.set(ri*100000+si,cm/100); return m; })();
 (function buildGraph(){ const GS=48, gi=new Map();
   for(const n of gnodes.values()){ const k=Math.floor(n.x/GS)+':'+Math.floor(n.z/GS); let a=gi.get(k); if(!a){a=[];gi.set(k,a);} a.push(n); }
   const near=(x,z,out)=>{ const gx=Math.floor(x/GS),gz=Math.floor(z/GS); for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=gi.get(a+':'+b); if(l) for(const n of l) out.add(n); } };
-  const edge=(a,b,nm,ow,hw,ref,dst,drf)=>{ if(a===b) return; const w=Math.hypot(a.x-b.x,a.z-b.z); const sw = w<3 ? 0 : ow;   // ignore one-way only on sub-3m stubs (noding artifacts — and the 3m weld now eats those anyway). Was <8m,
+  const edge=(a,b,nm,ow,hw,ref,dst,drf,nw)=>{ if(a===b) return; const w=Math.hypot(a.x-b.x,a.z-b.z); const sw = w<3 ? 0 : ow;   // ignore one-way only on sub-3m stubs (noding artifacts — and the 3m weld now eats those anyway). Was <8m,
                                                                                                               // which stripped the flags off REAL 4-8m one-way ramp fragments: at the City Ave interchange that opened a
                                                                                                               // legal crossover from the northbound roadway into Ramp H (to Kelly Dr) that doesn't exist on the ground (owner)
-    a.adj.push({to:b,w,name:nm,wrong: sw===-1,hw:hw||0,ref,dst,drf});   // one-way flag on the edge: travelling a->b is wrong-way when the legal direction is the reverse
-    b.adj.push({to:a,w,name:nm,wrong: sw===1,hw:hw||0,ref,dst,drf}); };   // hw: 1 freeway carriageway, 2 freeway ramp, 0 street  // ref/dst/drf: the baked OSM route designation, guide-sign destination and destination:ref, freeway records only  // and b->a is wrong-way when the legal direction is forward (a->b)
+    a.adj.push({to:b,w,name:nm,wrong: sw===-1,hw:hw||0,ref,dst,drf,nw:nw||0});   // one-way flag on the edge: travelling a->b is wrong-way when the legal direction is the reverse
+    b.adj.push({to:a,w,name:nm,wrong: sw===1,hw:hw||0,ref,dst,drf,nw:nw||0}); };   // hw: 1 freeway carriageway, 2 freeway ramp, 0 street  // ref/dst/drf: the baked OSM route designation, guide-sign destination and destination:ref, freeway records only  // and b->a is wrong-way when the legal direction is forward (a->b)
   const TH=4.5;
   for(let si=0; si<RB.st.length; si++){ const pts=RB.st[si][2], snm=RB.st[si][0], sow=RB.st[si][3]||0, shw=RB.st[si][4]||0;
     let sref=RB.st[si][6]||'', sdst=RB.st[si][7]||'', sdrf=RB.st[si][8]||'';                   // freeway/ramp records carry these INLINE at 6/7/8
@@ -2182,8 +2196,8 @@ function gradeSeparatedCrossing(A,B,X,Z){
     if(!shw && typeof RREF!=='undefined' && RREF && RREF.rec && RREF.rec.length===RB.st.length){
       const t=RREF.rec[si]; if(t){ sref=t[0]||''; sdst=t[1]||''; sdrf=t[2]||''; } }
     for(let i=1;i<pts.length;i++){ const ax=pts[i-1][0],az=pts[i-1][1],bx=pts[i][0],bz=pts[i][1];
-    const a=gnodeFor(ax,az,shw), b=gnodeFor(bx,bz,shw), dx=bx-ax,dz=bz-az, L2=dx*dx+dz*dz;
-    if(L2<1){ edge(a,b,snm,sow,shw,sref,sdst,sdrf); continue; }
+    const a=gnodeFor(ax,az,shw), b=gnodeFor(bx,bz,shw), dx=bx-ax,dz=bz-az, L2=dx*dx+dz*dz, snw=shw?0:(NARROW_SEG.get(si*100000+i-1)||0);
+    if(L2<1){ edge(a,b,snm,sow,shw,sref,sdst,sdrf,snw); continue; }
     const cand=new Set(), steps=Math.max(1,Math.ceil(Math.sqrt(L2)/40));
     for(let s=0;s<=steps;s++) near(ax+dx*s/steps, az+dz*s/steps, cand);
     const chain=[{n:a,t:0},{n:b,t:1}];
@@ -2201,7 +2215,7 @@ function gradeSeparatedCrossing(A,B,X,Z){
     const xc=XCUT.get(si+':'+i);                                                                      // + true crossings with other roads (shared node → the turn exists)
     if(xc) for(const c of xc) chain.push({n:gnode(c.X,c.Z), t:c.t});
     chain.sort((p,q)=>p.t-q.t);
-    for(let k=1;k<chain.length;k++) edge(chain[k-1].n, chain[k].n, snm, sow, shw, sref, sdst, sdrf); } } })();
+    for(let k=1;k<chain.length;k++) edge(chain[k-1].n, chain[k].n, snm, sow, shw, sref, sdst, sdrf, snw); } } })();
 // WELD NEAR-DUPLICATE NODES. The bake rounds coordinates to whole metres and the crossing pass adds its own nodes,
 // so an intersection often ends up as two or three nodes 0.7–1.4m apart with edges criss-crossing between them.
 // A street then has no continuation edge at the junction (its far half hangs off the twin), which made the truck
@@ -2227,7 +2241,7 @@ function gradeSeparatedCrossing(A,B,X,Z){
       // silently lost — ref/dst/drf were, and the route-continuation rule then never fired anywhere.
       // Preference between duplicates: a named edge wins; failing that, one that carries a route ref.
       if(!prev||(e.name&&!prev.name)||(!prev.name&&!e.name&&e.ref&&!prev.ref))
-        seen.set(t,{to:t,w:Math.hypot(t.x-r.x,t.z-r.z),name:e.name,wrong:e.wrong,hw:e.hw||0,ref:e.ref||'',dst:e.dst||'',drf:e.drf||''}); } };   // keep the one-way flag through welding
+        seen.set(t,{to:t,w:Math.hypot(t.x-r.x,t.z-r.z),name:e.name,wrong:e.wrong,hw:e.hw||0,ref:e.ref||'',dst:e.dst||'',drf:e.drf||'',nw:e.nw||0}); } };   // keep the one-way flag through welding
     take(r); const c=kids.get(r); if(c) for(const m of c) take(m);
     r.adj=[...seen.values()]; }
   for(const [k,n] of [...gnodes]) if(rep.has(n)) gnodes.delete(k); })();
@@ -2260,7 +2274,7 @@ function gradeSeparatedCrossing(A,B,X,Z){
         let wNM=false, wMN=false;
         if(rev){ if(back.wrong===false && rev.wrong===true) { wNM=true; wMN=false; }    // flow runs n→back, i.e. against the gap
           else if(back.wrong===true && rev.wrong===false){ wNM=false; wMN=true; } }     // flow runs back→n, i.e. along the gap
-        n.adj.push({to:m,w:dist,name:nm,wrong:wNM,hw:back.hw||0}); m.adj.push({to:n,w:dist,name:nm,wrong:wMN,hw:back.hw||0}); added.push(dist);
+        n.adj.push({to:m,w:dist,name:nm,wrong:wNM,hw:back.hw||0,nw:back.nw||0}); m.adj.push({to:n,w:dist,name:nm,wrong:wMN,hw:back.hw||0,nw:back.nw||0}); added.push(dist);
       } } }
   window.__bridged=added.length; })();
 /* 🛣️ CLASS SEAMS — one road, two OSM classes. The Roosevelt Expressway is highway=motorway in the
@@ -2294,7 +2308,7 @@ const SEAM=new Set();
          never create. roadContinuation happening to choose correctly today is NOT a guard. */
       if(e.hw===1&&st.adj.some(q=>q.hw===1&&q.name===e.name&&
         ((q.to.x-st.x)*(e.to.x-st.x)+(q.to.z-st.z)*(e.to.z-st.z))<0)) continue;
-      st.adj.push({to:e.to,w:e.w,name:e.name,wrong:e.wrong,hw:e.hw||0,ref:e.ref||'',dst:e.dst||'',drf:e.drf||''}); }
+      st.adj.push({to:e.to,w:e.w,name:e.name,wrong:e.wrong,hw:e.hw||0,ref:e.ref||'',dst:e.dst||'',drf:e.drf||'',nw:e.nw||0}); }
     gone.set(hw,st); SEAM.add(st); }
   window.__seams=SEAM.size;
   if(!gone.size) return;
@@ -2340,14 +2354,15 @@ MinHeap.prototype.push=function(p,n){ const a=this.a; a.push({p,n}); let i=a.len
 MinHeap.prototype.pop=function(){ const a=this.a, top=a[0], last=a.pop(); if(a.length){ a[0]=last; let i=0; for(;;){ let l=2*i+1,r=2*i+2,m=i; if(l<a.length&&a[l].p<a[m].p)m=l; if(r<a.length&&a[r].p<a[m].p)m=r; if(m===i)break; const t=a[m]; a[m]=a[i]; a[i]=t; i=m; } } return top?top.n:null; };
 Object.defineProperty(MinHeap.prototype,'size',{ get(){ return this.a.length; } });
 function routeNodes(sx,sz,tx,tz){ const s=nearestNode(sx,sz), t=nearestNode(tx,tz); if(!s||!t) return null; if(s===t) return [s];
-  const search=allowWrong=>{                                                            // A* over the road graph
+  const search=(allowWrong,allowNarrow)=>{                                              // A* over the road graph
     const g=new Map([[s,0]]), came=new Map(), closed=new Set(), open=new MinHeap(); open.push(Math.hypot(s.x-t.x,s.z-t.z),s);
     let found=false, guard=0;
     while(open.size && guard++<300000){ const cur=open.pop(); if(cur===t){ found=true; break; } if(closed.has(cur)) continue; closed.add(cur);
       const gc=g.get(cur); for(const e of cur.adj){ if(e.wrong && !allowWrong) continue;   // never route the WRONG way down a one-way street
+        if(e.nw && !allowNarrow) continue;                                               // 🚧 never route apparatus down a street 15 ft or less (PFD 4.11.7)
         const ng=gc+e.w; if(ng<(g.has(e.to)?g.get(e.to):Infinity)){ g.set(e.to,ng); came.set(e.to,cur); open.push(ng+Math.hypot(e.to.x-t.x,e.to.z-t.z),e.to); } } }
     if(!found) return null; const path=[]; let c=t; while(c){ path.push(c); if(c===s) break; c=came.get(c); } path.reverse(); return path; };
-  return search(false) || search(true); }   // legal (one-way-respecting) route first; only fall back to an any-direction path if none exists
+  return search(false,false) || search(true,false) || search(false,true) || search(true,true); }   // legal first, then any direction; a NARROW street only when nothing else connects (the truck is already on one)
 
 /* ============================ 3. ENGINE ============================ */
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
@@ -3842,6 +3857,9 @@ function updateHUD(dt){
   else elTurn.style.display='none';
   { const ww=DRIVE.wrongWay && DRIVE.going && state.running; const el=document.getElementById('wrongWay');   // one-way wrong-way warning
     el.style.display=ww?'block':'none'; if(ww){ elTurn.style.display='none'; } if(ww && !DRIVE._wwLatch){ popup('⚠️ WRONG WAY!','red'); try{ sfx&&sfx.ding&&sfx.ding(); }catch(e){} } DRIVE._wwLatch=ww; }
+  { const nw=!!(DRIVE.narrowW && DRIVE.going && state.running), el=document.getElementById('narrowSt');   // 🚧 narrow-street warning (PFD 4.11.7) — flagged, never blocked
+    if(el){ el.style.display=nw?'block':'none'; if(nw) el.querySelector('.ft').textContent=Math.round(DRIVE.narrowW/0.3048);
+      if(nw && !DRIVE._nwLatch) popup("⚠️ NARROW STREET — APPARATUS DON'T FIT",'red'); DRIVE._nwLatch=nw; } }
   document.getElementById('pullOut').style.display = (state.running&&(DRIVE.parked||DRIVE.atChoice)&&!INTRO.active)?'flex':'none';   // also becomes manual junction controls when a street ends
   document.getElementById('zoomBtns').style.display = state.running?'flex':'none';
   { const hb=document.getElementById('btnHyd'); if(hb) hb.style.display=(mayMarkHydrants()&&state.running&&!DRIVE.going&&!DRIVE.parked&&!state.onScene&&!DRILL.on)?'block':'none'; }   // 🧯 stop beside the plug to mark it — never while driving, and only for an account on HYDRANT_SCOUTS   //
@@ -4387,6 +4405,7 @@ function updateDrive(dt){ if(!state.running){ return; }
         if(end) popup('⛔ ROAD CLOSED — THE MAPPED '+(end.hw===1?'EXPRESSWAY':'RAMP')+' ENDS HERE · U-TURN TO GO BACK'); break; } // a sharp reversing continuation still waits for confirmation; a dead end simply stops
       DRIVE.fromN=b; DRIVE.toN=next; DRIVE.t=0; DRIVE.atChoice=false; } }
   { const e=(DRIVE.going&&DRIVE.fromN&&DRIVE.toN)?DRIVE.fromN.adj.find(x=>x.to===DRIVE.toN):null; DRIVE.wrongWay=!!(e&&e.wrong);
+    DRIVE.narrowW=(e&&e.nw)||0; DRIVE.narrowName=DRIVE.narrowW?(e.name||''):'';      // 🚧 PFD 4.11.7: on a street 15 ft or less right now
     // 🛣️ DIVIDED ROAD SELF-CORRECT: on S Broad / Henry the two directions are separate one-way ways, so
     // heading south on the northbound side is a PATHING artifact, not a decision the player made — the move
     // they chose (go south on Broad) is perfectly legal, just on the other carriageway. Slide across.
@@ -6466,7 +6485,7 @@ function profKnow(id){ id=id||DRIVE.stationId; if(!id) return null; PROFILE.know
   let k=PROFILE.knowledge[id]; if(!k) k=PROFILE.knowledge[id]={boxes:{},landmarks:[],hydrants:0,streets:null,routes:null};
   return k; }
 function heldDue(rv,ok){ return !!(ok&&rv&&rv.due>0&&rv.place>0&&rv.place<=rv.due); }        // THE held-due rule — score, board and career all call this one
-function cleanRun(rv,ok){ return !!(ok&&rv&&rv.optLen>1&&(rv.driven-rv.optLen)/rv.optLen<=0.05&&(rv.ww||0)<3&&(rv.stop||0)<6); }   // the coach's "textbook" test — badge + career share it
+function cleanRun(rv,ok){ return !!(ok&&rv&&rv.optLen>1&&(rv.driven-rv.optLen)/rv.optLen<=0.05&&(rv.ww||0)<3&&(rv.stop||0)<6&&(rv.nar||0)<1); }   // the coach's "textbook" test — badge + career share it
 function qualEvaluate(rv,ok,rules){                                            // 🎖 the exam verdict — pure; every threshold from QUAL_RULES, held rule = THE heldDue()
   rules=rules||QUAL_RULES;
   const r={ pass:false, finished:!!ok, held:heldDue(rv,ok), guideOK:!!(rv&&rv.guide===0), navOK:false, reasons:[] };
@@ -7909,8 +7928,8 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
    Breadcrumb of the actual drive vs the graph-optimal route, reviewed after every FIRE OUT.
    ⚠️ The coach only states MEASURED facts (lengths, wrong-way time, stopped time, due place). Never
    invented tactics — no hydrants, construction, water supply; the game doesn't model them. */
-const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0,usedGuide:false,uturns:0};
-function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0; COACH.uturns=0;
+const COACH={trail:[],t0:0,sx:0,sz:0,ww:0,stop:0,arriveT:0,lx:0,lz:0,acc:0,usedGuide:false,uturns:0,nar:0,narName:'',narFt:0};
+function coachReset(){ COACH.trail.length=0; COACH.t0=GT; COACH.sx=truck.x; COACH.sz=truck.z; COACH.ww=0; COACH.stop=0; COACH.arriveT=0; COACH.uturns=0; COACH.nar=0; COACH.narName=''; COACH.narFt=0;
   COACH.wwBlocks=0; COACH._wwNode=null;                                                  // the free block resets with the run as well as with each stretch
   COACH.lx=truck.x; COACH.lz=truck.z; COACH.acc=0; COACH.usedGuide=false; COACH.trail.push([truck.x,truck.z]); }
 function updateCoach(dt){ if(!state.target||!state.running||DRILL.on) return;
@@ -7929,6 +7948,7 @@ function updateCoach(dt){ if(!state.target||!state.running||DRILL.on) return;
       COACH._wwNode=DRIVE.fromN; }
     if(COACH.wwBlocks>=1) COACH.ww+=dt;
   } else { COACH.wwBlocks=0; COACH._wwNode=null; }
+  if(DRIVE.going&&DRIVE.narrowW){ COACH.nar+=dt; if(!COACH.narName){ COACH.narName=DRIVE.narrowName; COACH.narFt=Math.round(DRIVE.narrowW/0.3048); } }   // 🚧 down a narrow street: no free block — apparatus don't fit
   if(!DRIVE.going&&!DRIVE.parked&&!state.onScene) COACH.stop+=dt;               // sat still mid-run (turnout + douse don't count)
   if(state.onScene&&!COACH.arriveT) COACH.arriveT=GT;
   COACH.acc+=dt; const m=Math.hypot(truck.x-COACH.lx,truck.z-COACH.lz);        // breadcrumb: every ~15m, or ~1s while crawling
@@ -7955,10 +7975,10 @@ function coachCapture(){ const t=state.target; if(!t||COACH.trail.length<2) retu
         let a2=0; for(let k=bi+1;k<opt.length;k++){ a2+=Math.hypot(opt[k].x-opt[k-1].x,opt[k].z-opt[k-1].z); if(a2>=35){ optStreet=streetName(opt[k].x,opt[k].z); break; } }
         break; } } }
   if(divStreet==='—')divStreet=''; if(optStreet==='—'||optStreet===divStreet)optStreet='';
-  const arrStreet=(t.street&&canonStreet(streetName(truck.x,truck.z))===canonStreet(t.street))?1:0;   // finished ON the box's street, or clipped the radius from a cross street?
+  const arrStreet=t.narrow?1:(t.street&&canonStreet(streetName(truck.x,truck.z))===canonStreet(t.street))?1:0;   // a narrow-street box is answered FROM THE CORNER — that is the right street   // finished ON the box's street, or clipped the radius from a cross street?
   return { trail:COACH.trail.slice(), opt, driven, optLen, fx:ax, fz:az, ww:COACH.ww, stop:COACH.stop,
            time:(COACH.arriveT||GT)-COACH.t0, place:RIVALS.playerPlace||0, due:RIVALS.playerDue||0,
-           uturns:COACH.uturns, arrStreet,
+           uturns:COACH.uturns, arrStreet, nar:COACH.nar, narName:COACH.narName, narFt:COACH.narFt,
            guide:COACH.usedGuide?1:0, diff:DIFF.level,                          // captured run state — career + board read THESE, never re-infer
            qual:(QUAL.active&&DRIVE.stationId===QUAL.companyId)?{companyId:QUAL.companyId,due:QUAL.due}:undefined,   // 🎖 structured exam stamp — ONLY while the runtime owns this dispatch (stale/pending QUAL can never stamp)
            box:t.box||'', addr:t.address||t.name||'', divStreet, optStreet }; }
@@ -7972,6 +7992,7 @@ function coachLines(r){ const L=[];                                             
     if(r.optStreet) x+=" I'd have stayed on for "+r.optStreet+'.';
     L.push(x); }
   if(r.ww>=3){ flags++; L.push(Math.round(r.ww)+' seconds head-on against a one-way. That ends careers before you ever reach the fire.'); }
+  if(r.nar>=1){ flags++; L.push('You drove down '+(r.narName||'a narrow street')+' — '+r.narFt+" ft curb to curb. Apparatus don't fit a street that narrow: set up at the corner and stretch in."); }
   if(r.stop>=6){ flags++; L.push('You sat still '+Math.round(r.stop)+" seconds mid-run. The fire didn't."); }
   if(r.due&&r.place){ if(r.place===1&&r.due===1) L.push(flags?"You still took first in on your own box. Clean it up and you're a driver.":"First in on your own box. That's the job.");
     else if(r.place<r.due) L.push('Due '+ordinal(r.due)+', in '+ordinal(r.place)+' — you beat a company to it.');
@@ -8034,7 +8055,8 @@ function mmToggleBtn(){ const b=document.getElementById('btnMiniMap'); if(b){ b.
 function updateMiniMap(dt){ const el=MINIMAP.el||(MINIMAP.el=document.getElementById('miniMap')); if(!el) return;
   const show=MINIMAP.on&&state.running&&!homeEl.classList.contains('show');
   el.classList.toggle('on',show); const tb=document.getElementById('turnBanner');
-  if(!show){ if(tb) tb.style.top=''; return; }
+  const ns=document.getElementById('narrowSt');
+  if(!show){ if(tb) tb.style.top=''; if(ns) ns.style.top=''; return; }
   MINIMAP.t-=dt; if(MINIMAP.t>0) return; MINIMAP.t=0.12;
   // seat: below anything visible that reaches into the top-right corner
   el.style.top=''; const er=el.getBoundingClientRect(); let top=null;
@@ -8043,6 +8065,8 @@ function updateMiniMap(dt){ const el=MINIMAP.el||(MINIMAP.el=document.getElement
     if(r.width<2||r.height<2||r.top>innerHeight*0.45||r.right<er.left-4) continue; top=Math.max(top||0,r.bottom+6); }
   if(top&&top>er.top) el.style.top=top+'px';
   if(tb){ tb.style.top=''; const tr=tb.getBoundingClientRect(), mb=el.getBoundingClientRect().bottom+6; if(tr.top<mb) tb.style.top=mb+'px'; }   // the turn banner spans the width: seat it below the map
+  if(ns){ ns.style.top=''; if(ns.style.display==='block'){ let nt=el.getBoundingClientRect().bottom+6; const tr=tb&&tb.getBoundingClientRect();   // 🚧 the narrow-street chip spans the width too: below the map, and below the turn banner when both show
+    if(tr&&tr.height>2&&tr.bottom+6>nt) nt=tr.bottom+6; if(ns.getBoundingClientRect().top<nt) ns.style.top=nt+'px'; } }
   const cv=MINIMAP.cv||(MINIMAP.cv=el.querySelector('canvas')); const dpr=Math.min(2,devicePixelRatio||1), W=Math.round(108*dpr);
   if(cv.width!==W){ cv.width=cv.height=W; }
   const x=cv.getContext('2d'), c=W/2, rad=c-3*dpr, s=(rad-9*dpr)/MINIMAP.R, tx=truck.x, tz=truck.z;
@@ -8116,7 +8140,7 @@ function addressRoadEdge(x,z,street){ const cn=canonStreet(street),gx=Math.floor
   return best&&bd<120?best:null; }
 function crossStreetFrom(a,b,d,street){ const cn=canonStreet(street); let guard=0; while(a&&b&&guard++<100){ const names=[];
     for(const e of b.adj){ if(e.to===a||e.hw)continue; const nm=e.name||streetName((b.x+e.to.x)/2,(b.z+e.to.z)/2); if(!nm||canonStreet(nm)===cn||names.some(q=>canonStreet(q)===canonStreet(nm)))continue; names.push(nm); }
-    if(names.length)return {name:names[0],d}; const nx=sameStreetOn(a,b); if(!nx)break; d+=Math.hypot(nx.x-b.x,nx.z-b.z); a=b;b=nx; } return null; }
+    if(names.length)return {name:names[0],d,node:b}; const nx=sameStreetOn(a,b); if(!nx)break; d+=Math.hypot(nx.x-b.x,nx.z-b.z); a=b;b=nx; } return null; }
 function addressCrossStreets(x,z,street,edge){ const e=edge||addressRoadEdge(x,z,street); if(!e)return []; const L=Math.hypot(e.b.x-e.a.x,e.b.z-e.a.z)||1;
   const left=crossStreetFrom(e.b,e.a,e.t*L,street),right=crossStreetFrom(e.a,e.b,(1-e.t)*L,street); return [left,right].filter(Boolean); }
 function addressDispatchable(a){ if(!a) return null;                                                     // SHARED validity for normal + qualification dispatches — one source, never forked
@@ -8125,7 +8149,24 @@ function addressDispatchable(a){ if(!a) return null;                            
   if(cross.length<2||canonStreet(cross[0].name)===canonStreet(cross[1].name)) return null;
   return {edge,cross}; }
 function buildAddressTarget(a,edge,cross){ const kind=ADDRESS_INCIDENTS[(Math.random()*ADDRESS_INCIDENTS.length)|0]; lastAddress=a[0];
-  return {isAddress:true,name:a[0],address:a[0],street:a[1],x:edge.cx,z:edge.cz,bx:a[2],bz:a[3],zip:a[4],cross:cross.map(q=>q.name),d:kind+' | '+a[0]+' | Between '+cross[0].name+' and '+cross[1].name+'.',f:'Call cleared.'}; }
+  const t={isAddress:true,name:a[0],address:a[0],street:a[1],x:edge.cx,z:edge.cz,bx:a[2],bz:a[3],zip:a[4],cross:cross.map(q=>q.name),d:kind+' | '+a[0]+' | Between '+cross[0].name+' and '+cross[1].name+'.',f:'Call cleared.'};
+  const ge=edge.a.adj.find(x=>x.to===edge.b);                                                           // 🚧 PFD 4.11.7: the box is on a narrow street — the target is the NEAREST CORNER, never the address
+  if(ge&&ge.nw){ const c=narrowCorner(edge,a[1]);
+    if(c){ t.x=c.node.x; t.z=c.node.z; t.narrow={ft:Math.round(ge.nw/0.3048),at:c.at};
+      t.d+=' Narrow street ('+t.narrow.ft+' ft): set up '+(c.at?'at '+c.at:'where '+a[1]+' widens')+' and stretch in.'; } }
+  return t; }
+/* The corner is defined by the rule, not by the street names: the nearest point — walking ALONG narrow streets from the
+   address, both ways — where a street that is NOT narrow meets them. That is where apparatus can stop. (The 'between X
+   and Y' walk stops at a name change, which can sit in the middle of a narrow stretch: 2951 North Hicks Street, caught
+   by tests/narrow-streets.test.mjs.) at = that wider street's name, or null when it is the same street widening. */
+function narrowCorner(edge,street){ const L=Math.hypot(edge.b.x-edge.a.x,edge.b.z-edge.a.z)||1, cn=canonStreet(street);
+  const dist=new Map([[edge.a,edge.t*L],[edge.b,(1-edge.t)*L]]), open=new MinHeap(), done=new Set();
+  open.push(dist.get(edge.a),edge.a); open.push(dist.get(edge.b),edge.b);
+  while(open.size){ const n=open.pop(); if(done.has(n)) continue; done.add(n); const p=dist.get(n);   // MinHeap.pop returns the node; its distance lives in dist
+    const out=n.adj.filter(e=>!e.nw&&!e.hw);
+    if(out.length){ const other=out.find(e=>e.name&&canonStreet(e.name)!==cn), nm=other?other.name:null; return {node:n,d:p,at:nm}; }
+    for(const e of n.adj){ if(!e.nw||e.hw) continue; const nd=p+e.w; if(nd<(dist.has(e.to)?dist.get(e.to):Infinity)){ dist.set(e.to,nd); open.push(nd,e.to); } } }
+  return null; }
 function makeAddressDispatch(){ if(!ADDR||!ADDR.a||!ADDR.a.length)return null;
   const polys=[]; for(const st of stations){ const p=duePolygon(st.id); if(p) polys.push(p); }           // union of the traced first-due areas (the mapped play area)
   const inMapped=(x,z)=>{ if(!polys.length) return true; for(const p of polys) if(ptInRing(x,z,p)) return true; return false; };
