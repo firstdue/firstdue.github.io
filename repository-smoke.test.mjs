@@ -58,7 +58,7 @@ test('extracted data loads before the game script that reads it', () => {
   }
   // Each extracted global is declared exactly once, in its own file, and no longer in index.html.
   for (const name of ['ADDR', 'RB', 'AB', 'LMKS', 'NAVGEO', 'LANDCOVER', 'PFDBOX', 'CLEARANCE', 'NARROW', 'INST']) {
-    const file = `data/${name.toLowerCase()}.js`;
+    const file = name === 'LANDCOVER' && srcs.includes('data/landcover-packed.js') ? 'data/landcover-packed.js' : `data/${name.toLowerCase()}.js`;   // v20t: the packed land file
     if (!srcs.includes(file)) continue;
     assert.doesNotMatch(html, new RegExp(`^const ${name}\\s*=`, 'm'), `${name} should live in ${file}`);
     assert.match(readFileSync(localAsset(file), 'utf8'), new RegExp(`^const ${name}\\s*=`));

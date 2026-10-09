@@ -1023,7 +1023,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/ab.js"></script>
 <script src="data/lmks.js"></script>
 <script src="data/navgeo.js"></script>
-<script src="data/landcover.js"></script>
+<script src="data/landcover-packed.js"></script>
 <script src="data/btype.js"></script>
 <script src="data/rref.js"></script>
 <script src="data/pfdbox.js"></script>
@@ -1060,7 +1060,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20s";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20t";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1068,11 +1068,36 @@ const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!locatio
 /* NAV_GEO_DATA_END */
 /* LANDCOVER_DATA_BEGIN */
 /* LANDCOVER_DATA_END */
+/* 🗜 LANDCOVER, PACKED (v20t, the memory work). Parsed as nested arrays the land polygons held 17.7 MB of the JS heap on their
+   own — 148,889 points, each its own little array — the biggest single item in a heap that sat at 117-121 MB against its
+   120/125 budgets. data/landcover-packed.js carries every ring as ONE base64 string (pack_landcover.js; exact, 0.1 m) plus
+   each ring's box. A feature unpacks its rings the first time anything reads f.outer / f.inner (the getters below — every
+   reader keeps the [[x,z],...] it always had), and landEvict() drops the least recently used again at each rebuild, so
+   only the land around the truck is ever unpacked. Boxes come from the data, so building the grid unpacks nothing.
+   data/landcover.js stays as it was (nested arrays) so every older backup page still runs against it as a test control. */
+const B64IX=(()=>{ const t=new Uint8Array(128), a='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'; for(let i=0;i<64;i++) t[a.charCodeAt(i)]=i; return t; })();
+function b64Bytes(str,from){ let n=str.length; while(n>from&&str.charCodeAt(n-1)===61) n--;   // no atob: the Node harnesses stub it as UTF-8
+  const out=new Uint8Array(((n-from)*3)>>2); let o=0, acc=0, bits=0;
+  for(let i=from;i<n;i++){ acc=((acc&0x3ffff)<<6)|B64IX[str.charCodeAt(i)]; bits+=6; if(bits>=8){ bits-=8; out[o++]=(acc>>bits)&255; } } return out; }
+function ringUnpack(str){ const wide=str.charCodeAt(0)===126, u=b64Bytes(str,wide?1:0), dv=new DataView(u.buffer), r=[];   // '~' = an all-int32 ring
+  if(wide){ for(let o=0;o+7<u.length;o+=8) r.push([dv.getInt32(o,true)/10,dv.getInt32(o+4,true)/10]); return r; }
+  let x=dv.getInt32(0,true), z=dv.getInt32(4,true); r.push([x/10,z/10]);
+  for(let o=8;o+3<u.length;o+=4){ x+=dv.getInt16(o,true); z+=dv.getInt16(o+2,true); r.push([x/10,z/10]); } return r; }
+const LANDLRU={ cap:1200, keep:900, tick:0, live:new Set(), unpacked:0 };
+const LandFeature={ get outer(){ return landRings(this).outer; }, get inner(){ return landRings(this).inner; } };
+function landRings(f){ f._t=++LANDLRU.tick; let c=f._c; if(c) return c;
+  const rb=f.rb, mk=(s,k)=>{ const r=ringUnpack(s); r.bb=[rb[k*4]/10,rb[k*4+1]/10,rb[k*4+2]/10,rb[k*4+3]/10]; return r; };
+  c=f._c={outer:f.o.map((s,k)=>mk(s,k)),inner:f.i.map((s,k)=>mk(s,f.o.length+k))}; LANDLRU.live.add(f); LANDLRU.unpacked++; return c; }
+function landEvict(){ if(LANDLRU.live.size<=LANDLRU.cap) return;   // at a rebuild: keep the most recently read, drop the rest (and their triangle cache)
+  const L=[...LANDLRU.live].sort((a,b)=>b._t-a._t); for(let k=LANDLRU.keep;k<L.length;k++){ const f=L[k]; f._c=null; delete f._tri; LANDLRU.live.delete(f); } }
+function landAdopt(list){ for(let k=0;k<list.length;k++){ const f=Object.assign(Object.create(LandFeature),list[k]), rb=f.rb;   // box from the outer rings' boxes
+    let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9; for(let j=0;j<f.o.length;j++){ x0=Math.min(x0,rb[j*4]/10); z0=Math.min(z0,rb[j*4+1]/10); x1=Math.max(x1,rb[j*4+2]/10); z1=Math.max(z1,rb[j*4+3]/10); }
+    f.bb=[x0,z0,x1,z1]; f._c=null; f._t=0; list[k]=f; } }
+landAdopt(LANDCOVER.features); landAdopt(LANDCOVER.cemeteries||[]);
 const LANDCELL=240,landGrid=new Map();
-for(const f of LANDCOVER.features){for(const p of [...f.outer,...f.inner])p.bb=[Math.min(...p.map(q=>q[0])),Math.min(...p.map(q=>q[1])),Math.max(...p.map(q=>q[0])),Math.max(...p.map(q=>q[1]))];
-  f.bb=[Math.min(...f.outer.map(p=>p.bb[0])),Math.min(...f.outer.map(p=>p.bb[1])),Math.max(...f.outer.map(p=>p.bb[2])),Math.max(...f.outer.map(p=>p.bb[3]))];
+for(const f of LANDCOVER.features){
   for(let x=Math.floor(Math.max(-8500,f.bb[0]-20)/LANDCELL);x<=Math.floor(Math.min(22000,f.bb[2]+20)/LANDCELL);x++)for(let z=Math.floor(Math.max(-17000,f.bb[1]-20)/LANDCELL);z<=Math.floor(Math.min(18500,f.bb[3]+20)/LANDCELL);z++){const key=x+':'+z;if(!landGrid.has(key))landGrid.set(key,[]);landGrid.get(key).push(f);}}
-function landContains(f,x,z){const hit=p=>x>=p.bb[0]&&z>=p.bb[1]&&x<=p.bb[2]&&z<=p.bb[3]&&pipIx(x,z,p);return f.outer.some(hit)&&!f.inner.some(hit);}
+function landContains(f,x,z){if(x<f.bb[0]||z<f.bb[1]||x>f.bb[2]||z>f.bb[3])return false;const hit=p=>x>=p.bb[0]&&z>=p.bb[1]&&x<=p.bb[2]&&z<=p.bb[3]&&pipIx(x,z,p);return f.outer.some(hit)&&!f.inner.some(hit);}
 function landNear(x,z){return landGrid.get(Math.floor(x/LANDCELL)+':'+Math.floor(z/LANDCELL))||[];}
 function landKind(x,z){let kind=null;for(const f of landNear(x,z)){if(!landContains(f,x,z))continue;if(f.kind==='open')return 'open';if(f.kind==='wood')kind='wood';else if(!kind)kind='park';}return kind;}
 function landBlocksBuilding(x,z,r=0){if(typeof cemAt==='function'&&LANDCOVER.cemeteries&&cemAt(x,z))return true;for(const f of landNear(x,z)){if(x+r<f.bb[0]||x-r>f.bb[2]||z+r<f.bb[1]||z-r>f.bb[3])continue;if(landContains(f,x,z))return true;
@@ -1080,8 +1105,14 @@ function landBlocksBuilding(x,z,r=0){if(typeof cemAt==='function'&&LANDCOVER.cem
     if(r)for(const p of [...f.outer,...f.inner]){if(x+r<p.bb[0]||x-r>p.bb[2]||z+r<p.bb[1]||z-r>p.bb[3])continue;
       if(ringWithin(x,z,r,p))return true;}}return false;}
 const NAVCELL=120, navBridgeGrid=new Map();
+// 🗜 v20t: the 512 x 512 heights live as whole DECIMETRES in an Int16Array (every baked height is exact to 0.1 m; range
+// -32..135.6 m), read back with /10 — the very doubles the JSON parse gave, so every answer is bit-identical. 2 MB -> 0.5 MB.
+(function packTerrain(){ const g=NAVGEO.terrain; if(!g||!g.h||g.hdm) return; const q=new Int16Array(g.h.length);
+  for(let i=0;i<g.h.length;i++){ const d=Math.round(g.h[i]*10); if(d/10!==g.h[i]) return; q[i]=d; }   // any height off the 0.1 m lattice: keep the plain array
+  g.hdm=q; g.h=null; })();
 function navTerrain(x,z){const g=NAVGEO.terrain,u=Math.max(0,Math.min(g.nx-1.001,(x-g.minX)/g.dx)),v=Math.max(0,Math.min(g.nz-1.001,(z-g.minZ)/g.dz)),i=u|0,j=v|0,a=u-i,b=v-j,k=j*g.nx+i;
-  const h=g.h,A=h[k],B=h[k+1],C=h[k+g.nx],D=h[k+g.nx+1];return Math.max(0,a>=b?A+(B-A)*a+(D-B)*b:A+(C-A)*b+(D-C)*a);}
+  const q=g.hdm; let A,B,C,D; if(q){ A=q[k]/10; B=q[k+1]/10; C=q[k+g.nx]/10; D=q[k+g.nx+1]/10; } else { const h=g.h; A=h[k]; B=h[k+1]; C=h[k+g.nx]; D=h[k+g.nx+1]; }
+  return Math.max(0,a>=b?A+(B-A)*a+(D-B)*b:A+(C-A)*b+(D-C)*a);}
 // Chain contiguous bridge fragments of the same street+layer into ONE span before profiling. OSM splits long
 // bridges into little ways, and a fragment whose own endpoint hangs over water profiles its deck from the
 // riverbed — the City Ave eastbound deck sagged 8m below its westbound twin. A full chain's ends sit on land.
@@ -1303,12 +1334,16 @@ function hwySegForSpan(b,J){ const i=(b.p.length/2)|0, m=b.p[i], q=b.p[i?i-1:1];
 // Official Philadelphia Streets Department hundred-block lookup, baked into AB for offline play.
 const BLOCK={cell:180,grid:new Map(),nameId:new Map(AB.n.map((n,i)=>[n,i])),last:{x:1e9,z:1e9,name:'',value:0}};
 function canonStreet(n){ return (n||'').toUpperCase().replace(/&/g,' AND ').replace(/[^A-Z0-9 ]/g,' ').replace(/\bNORTH\b/g,'N').replace(/\bSOUTH\b/g,'S').replace(/\bEAST\b/g,'E').replace(/\bWEST\b/g,'W').replace(/\bSAINT\b/g,'ST').replace(/\bAVENUE\b/g,'AVE').replace(/\bSTREET\b/g,'ST').replace(/\bROAD\b/g,'RD').replace(/\bDRIVE\b/g,'DR').replace(/\bBOULEVARD\b/g,'BLVD').replace(/\bLANE\b/g,'LN').replace(/\bPLACE\b/g,'PL').replace(/\bCOURT\b/g,'CT').replace(/\bCIRCLE\b/g,'CIR').replace(/\bTERRACE\b/g,'TER').replace(/\bPARKWAY\b/g,'PKWY').replace(/\bHIGHWAY\b/g,'HWY').replace(/\bTRAIL\b/g,'TRL').replace(/\s+/g,' ').trim(); }
-(function indexBlocks(){ for(let i=0;i<AB.s.length;i++){ const p=AB.s[i][2]; let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9; for(let k=0;k<p.length;k+=2){ x0=Math.min(x0,p[k]); x1=Math.max(x1,p[k]); z0=Math.min(z0,p[k+1]); z1=Math.max(z1,p[k+1]); }
+// 🗜 v20t: AB.s (39,243 [name, block, [x,z,...]] records, every coordinate an integer) becomes four flat typed arrays —
+// ABP the points, ABO each record's offset into them, ABN its name id, ABB its hundred block — and AB.s is released.
+const ABX=(function(){ let n=0; for(const r of AB.s) n+=r[2].length; const P=new Int32Array(n), O=new Uint32Array(AB.s.length+1), N=new Int32Array(AB.s.length), B=new Int32Array(AB.s.length); let o=0;
+  AB.s.forEach((r,i)=>{ O[i]=o; N[i]=r[0]; B[i]=r[1]; P.set(r[2],o); o+=r[2].length; }); O[AB.s.length]=o; AB.s=null; return {P,O,N,B,n:N.length}; })();
+(function indexBlocks(){ const {P,O}=ABX; for(let i=0;i<ABX.n;i++){ let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9; for(let k=O[i];k<O[i+1];k+=2){ x0=Math.min(x0,P[k]); x1=Math.max(x1,P[k]); z0=Math.min(z0,P[k+1]); z1=Math.max(z1,P[k+1]); }
   for(let gx=Math.floor(x0/BLOCK.cell);gx<=Math.floor(x1/BLOCK.cell);gx++)for(let gz=Math.floor(z0/BLOCK.cell);gz<=Math.floor(z1/BLOCK.cell);gz++){ const key=gx+':'+gz; let a=BLOCK.grid.get(key); if(!a){a=[];BLOCK.grid.set(key,a);} a.push(i); } } })();
 function hundredBlock(x,z,name){ const ni=BLOCK.nameId.get(canonStreet(name)), gx=Math.floor(x/BLOCK.cell),gz=Math.floor(z/BLOCK.cell),seen=new Set(); let best=1e18,value=0,fallback=1e18,fallbackValue=0;
-  for(let ax=gx-1;ax<=gx+1;ax++)for(let az=gz-1;az<=gz+1;az++){ const list=BLOCK.grid.get(ax+':'+az); if(!list) continue; for(const id of list){ if(seen.has(id)) continue; seen.add(id); const f=AB.s[id],p=f[2]; let fd=1e18;
-    for(let k=2;k<p.length;k+=2){ const sx=p[k-2],sz=p[k-1],dx=p[k]-sx,dz=p[k+1]-sz,L=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-sx)*dx+(z-sz)*dz)/L)),cx=sx+dx*t,cz=sz+dz*t,d=(x-cx)**2+(z-cz)**2; if(d<fd) fd=d; }
-    if(f[0]===ni&&fd<best){best=fd;value=f[1];} if(fd<fallback){fallback=fd;fallbackValue=f[1];} } }
+  for(let ax=gx-1;ax<=gx+1;ax++)for(let az=gz-1;az<=gz+1;az++){ const list=BLOCK.grid.get(ax+':'+az); if(!list) continue; for(const id of list){ if(seen.has(id)) continue; seen.add(id); const p=ABX.P, k0=ABX.O[id], k1=ABX.O[id+1], fn=ABX.N[id], fb=ABX.B[id]; let fd=1e18;
+    for(let k=k0+2;k<k1;k+=2){ const sx=p[k-2],sz=p[k-1],dx=p[k]-sx,dz=p[k+1]-sz,L=dx*dx+dz*dz||1,t=Math.max(0,Math.min(1,((x-sx)*dx+(z-sz)*dz)/L)),cx=sx+dx*t,cz=sz+dz*t,d=(x-cx)**2+(z-cz)**2; if(d<fd) fd=d; }
+    if(fn===ni&&fd<best){best=fd;value=fb;} if(fd<fallback){fallback=fd;fallbackValue=fb;} } }
   if(value&&best<450*450) return value; return fallback<28*28?fallbackValue:0; }
 function currentHundredBlock(x,z,name){ const q=BLOCK.last; if(q.name!==name||Math.hypot(x-q.x,z-q.z)>12){ q.x=x;q.z=z;q.name=name;q.value=hundredBlock(x,z,name); } return q.value; }
 function blockLine(v){ if(typeof v==='string'&&v!=='RAMP'&&v) return v;   // a freeway line ('I-76 EAST · MILE 340.6 · APPROX', 'US 1 NORTH') is already the whole caption
@@ -4996,9 +5031,7 @@ const PARKS={on:true, lift:{park:0.06,wood:0.08,open:0.10,cemetery:0.07}, colors
 // metres along `el:'c'` rail within mastR·R (commit's rail loop; third rail stays unmarked).
 let cemGrid=null; const CEMCELL=240;
 function cemIndex(){ if(cemGrid) return cemGrid; cemGrid=new Map();
-  for(const f of (LANDCOVER.cemeteries||[])){ let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9;
-    for(const ring of [...f.outer,...f.inner]){ let a=1e9,b=1e9,c=-1e9,d=-1e9; for(const p of ring){ if(p[0]<a)a=p[0]; if(p[1]<b)b=p[1]; if(p[0]>c)c=p[0]; if(p[1]>d)d=p[1]; } ring.bb=[a,b,c,d]; }
-    for(const ring of f.outer){ x0=Math.min(x0,ring.bb[0]); z0=Math.min(z0,ring.bb[1]); x1=Math.max(x1,ring.bb[2]); z1=Math.max(z1,ring.bb[3]); } f.bb=[x0,z0,x1,z1]; f.kind='cemetery';
+  for(const f of (LANDCOVER.cemeteries||[])){ const [x0,z0,x1,z1]=f.bb; f.kind='cemetery';   // boxes come packed (landAdopt): nothing is unpacked to index
     for(let gx=Math.floor(x0/CEMCELL);gx<=Math.floor(x1/CEMCELL);gx++)for(let gz=Math.floor(z0/CEMCELL);gz<=Math.floor(z1/CEMCELL);gz++){ const k=gx+':'+gz; let a=cemGrid.get(k); if(!a){ a=[]; cemGrid.set(k,a); } a.push(f); } }
   return cemGrid; }
 function cemAt(x,z){ const a=cemIndex().get(Math.floor(x/CEMCELL)+':'+Math.floor(z/CEMCELL)); if(!a) return null; for(const f of a){ if(landContains(f,x,z)) return f; } return null; }   // no house on the graves: landBlocksBuilding asks this too
@@ -6479,7 +6512,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     FLATCITY.group.add(pad); FLATCITY.group.add(trunk); FLATCITY.group.add(cano); FLATCITY.parts.push(pad,trunk,cano); cano.userData.shadeCast='tree';
     if(canoFar){ FLATCITY.group.add(canoFar); FLATCITY.parts.push(canoFar); canoFar.userData.shadeCast='tree'; }
     if(con){ con.name='conifer'; FLATCITY.group.add(con); FLATCITY.parts.push(con); con.userData.shadeCast='cone'; } }
-  FLATCITY.mmInst=null; instBuild(J);
+  FLATCITY.mmInst=null; instBuild(J); landEvict();
   nearFadeRegister(); shadeBuild(J);
   if(routePts?.length>1)setRouteGeom(); // refresh the guide when its nearby pavement triangles are rebuilt
 };

@@ -292,7 +292,7 @@ index.html              game code (~670KB) — HTML, CSS, and the game script
 data/rb.js              baked road geometry + names          (RB)
 data/ab.js              address/street lookup tables         (AB)
 data/addr.js            OPA address points                   (ADDR)
-data/landcover.js       10,678 park/landuse polygons         (LANDCOVER)
+data/landcover-packed.js 10,678 park/landuse polygons        (LANDCOVER, each ring one packed string)
 data/navgeo.js          terrain, rail, bridges, water        (NAVGEO)
 data/lmks.js            2,621 named landmarks                (LMKS)
 vendor/three.147.min.js three.js r147
