@@ -1060,7 +1060,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20r";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20s";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2354,16 +2354,36 @@ function MinHeap(){ this.a=[]; }
 MinHeap.prototype.push=function(p,n){ const a=this.a; a.push({p,n}); let i=a.length-1; while(i>0){ const q=(i-1)>>1; if(a[q].p<=a[i].p) break; const t=a[q]; a[q]=a[i]; a[i]=t; i=q; } };
 MinHeap.prototype.pop=function(){ const a=this.a, top=a[0], last=a.pop(); if(a.length){ a[0]=last; let i=0; for(;;){ let l=2*i+1,r=2*i+2,m=i; if(l<a.length&&a[l].p<a[m].p)m=l; if(r<a.length&&a[r].p<a[m].p)m=r; if(m===i)break; const t=a[m]; a[m]=a[i]; a[i]=t; i=m; } } return top?top.n:null; };
 Object.defineProperty(MinHeap.prototype,'size',{ get(){ return this.a.length; } });
-function routeNodes(sx,sz,tx,tz){ const s=nearestNode(sx,sz), t=nearestNode(tx,tz); if(!s||!t) return null; if(s===t) return [s];
+function routeNodes(sx,sz,tx,tz,goals){ const s=nearestNode(sx,sz), t=goals?null:nearestNode(tx,tz); if(!s||(!goals&&!t)) return null; if(!goals&&s===t) return [s];
+  // goals (callGoals): Map(node -> extra cost on to the destination). The search ends through a virtual SINK on whichever goal
+  // is cheaper overall, instead of at the nearest node to (tx,tz) — which can sit on ANOTHER street (see callGoals).
+  const SINK={};
   const search=(allowWrong,allowNarrow)=>{                                              // A* over the road graph
-    const g=new Map([[s,0]]), came=new Map(), closed=new Set(), open=new MinHeap(); open.push(Math.hypot(s.x-t.x,s.z-t.z),s);
-    let found=false, guard=0;
-    while(open.size && guard++<300000){ const cur=open.pop(); if(cur===t){ found=true; break; } if(closed.has(cur)) continue; closed.add(cur);
-      const gc=g.get(cur); for(const e of cur.adj){ if(e.wrong && !allowWrong) continue;   // never route the WRONG way down a one-way street
+    const g=new Map([[s,0]]), came=new Map(), closed=new Set(), open=new MinHeap(); open.push(Math.hypot(s.x-tx,s.z-tz),s);
+    let found=false, guard=0, sinkG=Infinity, sinkFrom=null;
+    while(open.size && guard++<300000){ const cur=open.pop(); if(cur===SINK||(!goals&&cur===t)){ found=true; break; } if(closed.has(cur)) continue; closed.add(cur);
+      const gc=g.get(cur);
+      if(goals&&goals.has(cur)){ const sg=gc+goals.get(cur); if(sg<sinkG){ sinkG=sg; sinkFrom=cur; open.push(sg,SINK); } }   // reaching a goal offers the sink at its total cost
+      for(const e of cur.adj){ if(e.wrong && !allowWrong) continue;   // never route the WRONG way down a one-way street
         if(e.nw && !allowNarrow) continue;                                               // 🚧 never route apparatus down a street 15 ft or less (PFD 4.11.7)
-        const ng=gc+e.w; if(ng<(g.has(e.to)?g.get(e.to):Infinity)){ g.set(e.to,ng); came.set(e.to,cur); open.push(ng+Math.hypot(e.to.x-t.x,e.to.z-t.z),e.to); } } }
-    if(!found) return null; const path=[]; let c=t; while(c){ path.push(c); if(c===s) break; c=came.get(c); } path.reverse(); return path; };
+        const ng=gc+e.w; if(ng<(g.has(e.to)?g.get(e.to):Infinity)){ g.set(e.to,ng); came.set(e.to,cur); open.push(ng+Math.hypot(e.to.x-tx,e.to.z-tz),e.to); } } }
+    if(!found) return null; const path=[]; let c=goals?sinkFrom:t; while(c){ path.push(c); if(c===s) break; c=came.get(c); } path.reverse(); return path; };
   return search(false,false) || search(true,false) || search(false,true) || search(true,true); }   // legal first, then any direction; a NARROW street only when nothing else connects (the truck is already on one)
+
+/* 🎯 THE LAST BLOCK (v20s). routeNodes used to snap its destination to the NEAREST graph node — and for 304 of the 6,270
+   dispatchable addresses (4.8%) that node is on ANOTHER street: 3691 Calumet Street snapped to Palisades Drive / East Falls
+   Lane, 67 m away. The guide, the rival trucks and the coach all ended there and drew a straight last line through the
+   houses (owner report, October 9, 2026: "the location was on the other side of the road and the guide wanted me to drive
+   through the houses"). A call knows its own road edge (t.edge, set by buildAddressTarget from addressRoadEdge), so the
+   route now ends at whichever END of that edge makes the shorter trip — the straight distance from that end to the call
+   added on — and the appended last point runs ALONG the call's street. An end whose last stretch would be the wrong way
+   down a one-way costs CALL_WRONG_END more: a legal approach wins unless it is a kilometre longer or cannot be reached
+   legally at all (wrong-way is allowed and warned, never blocked — the v19y rule). A far bigger penalty only made A* sweep
+   the whole city before conceding. A narrow-street box targets its corner NODE, which needs none of this. */
+const CALL_WRONG_END=1000;   // metres: a legal approach to the call's block is worth a detour this long
+function callGoals(t){ const e=t&&t.edge; if(!e||t.narrow||!e.a||!e.b) return null; const m=new Map();
+  for(const [E,O] of [[e.a,e.b],[e.b,e.a]]){ const de=E.adj.find(x=>x.to===O); if(!de) continue; m.set(E,Math.hypot(t.x-E.x,t.z-E.z)+(de.wrong?CALL_WRONG_END:0)); }
+  return m.size?m:null; }
 
 /* ============================ 3. ENGINE ============================ */
 const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
@@ -3430,6 +3450,13 @@ function mkPts(n,color,size){ const g=new THREE.BufferGeometry(); g.setAttribute
   const p=new THREE.Points(g,new THREE.PointsMaterial({color,size,transparent:true,opacity:0.85,depthWrite:false})); p.frustumCulled=false; scene.add(p);
   return {p,list:Array.from({length:n},()=>({x:0,y:-999,z:0,vx:0,vy:0,vz:0,life:0})),i:0,n}; }
 const smoke=mkPts((CONFIG.particles.smoke*PSCALE)|0,0xcfd2d6,2.4), sparks=mkPts((CONFIG.particles.sparks*PSCALE)|0,0xffb347,1.5), water=mkPts((CONFIG.particles.water*PSCALE)|0,0x66c8ff,2.1);
+/* 💤 RETIRED SYSTEMS, HIDDEN (v20s). Traffic, pedestrians, the fire and the particle effects have had no updater since they
+   were retired — updateTraffic / updatePeds / updateFire / updateParticles have no caller — but their objects stayed in the
+   scene and were drawn every frame: 14 cars x 2 boxes stacked at the map origin, under the ground in East Falls, cost 28 of
+   East Falls' 134 draw calls; 4 empty particle clouds and the 26 pedestrians cost 5 calls everywhere; and the fire's
+   PointLight, at zero intensity, still made every lit shader loop over it (a light counts while it is visible). Hidden, not
+   deleted: reviving a system means making these visible again where its updater is called. */
+for(const c of cars) c.g.visible=false; pedMesh.visible=false; for(const q of [smoke,sparks,water,fireP]) q.p.visible=false; fireLight.visible=false;
 function emit(s,x,y,z,vx,vy,vz,life){ const q=s.list[s.i]; s.i=(s.i+1)%s.n; q.x=x;q.y=y;q.z=z;q.vx=vx;q.vy=vy;q.vz=vz;q.life=life; }
 function burstSparks(x,y,z,n){ for(let i=0;i<n;i++) emit(sparks,x,y,z,(Math.random()-0.5)*14,Math.random()*8,(Math.random()-0.5)*14,0.5+Math.random()*0.3); }
 function updPts(s,dt,grav){ const a=s.p.geometry.attributes.position.array;
@@ -3960,8 +3987,8 @@ function recomputeRoute(){ routeDirty=false;
   if(!state.target){ routePts=null; setRouteGeom(); return; }
   let anchor={x:truck.x,z:truck.z},path=null,best=1e18;
   if(DRIVE.fromN&&DRIVE.toN){ const a=DRIVE.fromN,b=DRIVE.toN,t=Math.max(0,Math.min(1,DRIVE.t||0)); anchor={x:a.x+(b.x-a.x)*t,z:a.z+(b.z-a.z)*t};
-    for(const end of [a,b]){ const q=routeNodes(end.x,end.z,state.target.x,state.target.z); if(!q) continue; const r=streamRoute(anchor,q),score=routeLength(r); if(score<best){best=score;path=r;} } }
-  if(!path) path=streamRoute(anchor,routeNodes(anchor.x,anchor.z,state.target.x,state.target.z));
+    for(const end of [a,b]){ const q=routeNodes(end.x,end.z,state.target.x,state.target.z,callGoals(state.target)); if(!q) continue; const r=streamRoute(anchor,q),score=routeLength(r); if(score<best){best=score;path=r;} } }
+  if(!path) path=streamRoute(anchor,routeNodes(anchor.x,anchor.z,state.target.x,state.target.z,callGoals(state.target)));
   routePts=path; const p=routePts[routePts.length-1]; if(!p||Math.hypot(state.target.x-p.x,state.target.z-p.z)>.2) routePts.push({x:state.target.x,z:state.target.z});
   setRouteGeom(); }
 function distToRoute(){ if(!routePts||routePts.length<2) return 1e9; let bd=1e9;
@@ -8207,7 +8234,7 @@ function spawnRivals(){ clearRivals();
   RIVALS.responders=resp.map((s,i)=>({ id:s.id, num:engNum(s.id), isPlayer:s.id===DRIVE.stationId, firstDue:i===0 }));
   { const pi=RIVALS.responders.findIndex(r=>r.isPlayer); RIVALS.playerDue = pi<0?0:pi+1; }   // the slot you are expected to fill on this box
   for(const st of resp){ if(st.id===DRIVE.stationId) continue;                                        // that responder is the human player
-    const path=streamRoute({x:st.x,z:st.z}, routeNodes(st.x,st.z,tx,tz)); if(!path||path.length<2) continue;
+    const path=streamRoute({x:st.x,z:st.z}, routeNodes(st.x,st.z,tx,tz,callGoals(state.target))); if(!path||path.length<2) continue;
     const last=path[path.length-1]; if(Math.hypot(tx-last.x,tz-last.z)>1) path.push({x:tx,z:tz});
     RIVALS.list.push({ id:st.id, num:engNum(st.id), path, seg:0, t:0, x:st.x, z:st.z, d0:Math.max(1,Math.hypot(st.x-tx,st.z-tz)),
       total:routeLength(path)||1, traveled:0, speed:DIFF.spd[DIFF.level][0]+Math.random()*DIFF.spd[DIFF.level][1], arrived:false, arriveT:0 }); }   // per-engine variation, scaled by difficulty
@@ -8342,7 +8369,7 @@ function coachPolyDist(x,z,poly){ let bd=1e18; for(let i=1;i<poly.length;i++){ c
 function coachCapture(){ const t=state.target; if(!t||COACH.trail.length<2) return null;   // no trail → nothing honest to say
   { const l=COACH.trail[COACH.trail.length-1]; if(Math.hypot(truck.x-l[0],truck.z-l[1])>1) COACH.trail.push([truck.x,truck.z]); }
   const ax=state.arriveX||t.x, az=state.arriveZ||t.z;
-  let opt=null; const nodes=routeNodes(COACH.sx,COACH.sz,ax,az);
+  let opt=null; const nodes=routeNodes(COACH.sx,COACH.sz,ax,az,Math.hypot(ax-t.x,az-t.z)<10?callGoals(t):null);
   if(nodes&&nodes.length>1){ opt=streamRoute({x:COACH.sx,z:COACH.sz},nodes); const l=opt[opt.length-1]; if(Math.hypot(ax-l.x,az-l.z)>1) opt.push({x:ax,z:az}); }
   let driven=0; for(let i=1;i<COACH.trail.length;i++) driven+=Math.hypot(COACH.trail[i][0]-COACH.trail[i-1][0],COACH.trail[i][1]-COACH.trail[i-1][1]);
   const optLen=opt?routeLength(opt):0;
@@ -8531,6 +8558,7 @@ function addressDispatchable(a){ if(!a) return null;                            
   return {edge,cross}; }
 function buildAddressTarget(a,edge,cross){ const kind=ADDRESS_INCIDENTS[(Math.random()*ADDRESS_INCIDENTS.length)|0]; lastAddress=a[0];
   const t={isAddress:true,name:a[0],address:a[0],street:a[1],x:edge.cx,z:edge.cz,bx:a[2],bz:a[3],zip:a[4],cross:cross.map(q=>q.name),d:kind+' | '+a[0]+' | Between '+cross[0].name+' and '+cross[1].name+'.',f:'Call cleared.'};
+  Object.defineProperty(t,'edge',{value:{a:edge.a,b:edge.b},enumerable:false,writable:true});            // 🎯 the call's own block, for callGoals
   const ge=edge.a.adj.find(x=>x.to===edge.b);                                                           // 🚧 PFD 4.11.7: the box is on a narrow street — the target is the NEAREST CORNER, never the address
   if(ge&&ge.nw){ const c=narrowCorner(edge,a[1]);
     if(c){ t.x=c.node.x; t.z=c.node.z; t.narrow={ft:Math.round(ge.nw/0.3048),at:c.at};

@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v55';  // v20r: the street look - see-through near fade, ground shadows, brick/stone facades, tree variety, park fix, real churches/schools/fields (data/inst.js).
+const CACHE = 'local-shell-v56';  // v20s: the guide's last block runs along the call's own street; retired cars/pedestrians/particles no longer drawn.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
