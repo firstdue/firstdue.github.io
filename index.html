@@ -1060,7 +1060,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20t";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20u";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2542,7 +2542,7 @@ __b3d.push(function(){ // decks + rails at fixed deck height (do NOT conform to 
   if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(rn,3));
     scene.add(new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x3d6b52,side:THREE.DoubleSide}))); } });
 /* ---- floating street-name callout labels (Apple-Maps style; the cross street fades in as you approach it) ---- */
-const LBL={ pool:[], cache:{}, last:null, cap:16, showCap:4, junctionCap:2, rNear:55, rFar:130, float:1.4, H:1.35, acc:0, pastFade:20, refDist:55, maxGrow:1.9 };   // sixteen pooled candidates; at most FOUR street-choice cards on screen, from at most TWO junctions ahead.
+const LBL={ pool:[], cache:new Map(), keep:8, blank:null, last:null, cap:16, showCap:4, junctionCap:2, rNear:55, rFar:130, float:1.4, H:1.35, acc:0, pastFade:20, refDist:55, maxGrow:1.9 };   // sixteen pooled candidates; at most FOUR street-choice cards on screen, from at most TWO junctions ahead.
 // The depth limit (junctionCap) is the one that matters: six cards from four junctions, 20 m to 176 m out, was
 // unreadable on the phone (owner, v18y). Two junctions still shows BOTH turns at each — a 4-way's left and right
 // are different moves and stay separately tappable. The look-ahead DISTANCES (_far/_near below) are untouched:
@@ -2556,7 +2556,7 @@ const LBL_DIR=[[/^West\b/,'W'],[/^East\b/,'E'],[/^North\b/,'N'],[/^South\b/,'S']
 function abbrevStreet(n){ let s=String(n||'');
   if(s.split(' ').length>=3) for(const [re,to] of LBL_DIR) s=s.replace(re,to);   // 'South Broad Street'→'S Broad St', but SOUTH STREET keeps its name ('S St' was nonsense)
   for(const [re,to] of LBL_ABBR) s=s.replace(re,to); return s; }
-function labelTex(name,block,wrong){ const bl=blockLine(block), key=name+'|'+bl+(wrong?'|W':''); if(LBL.cache[key]) return LBL.cache[key];   // a wrong-way sign stays RED but keeps its hundred block like every other sign (owner: the red alone says it)
+function labelTex(name,block,wrong){ const bl=blockLine(block), key=name+'|'+bl+(wrong?'|W':''); const hit=LBL.cache.get(key); if(hit){ LBL.cache.delete(key); LBL.cache.set(key,hit); return hit; }   // a wrong-way sign stays RED but keeps its hundred block like every other sign (owner: the red alone says it)
   name=abbrevStreet(name);                                                         // shorten long names so the pill stays small (W School House Ln)
   const S=2,pad=9*S,ptr=5*S,fs=15*S,bfs=8.5*S,r=8*S;                               // two-line sign: hundred block above the street name (compact)
   const fnt='600 '+fs+'px -apple-system,"Helvetica Neue",Arial,sans-serif', bfnt='800 '+bfs+'px -apple-system,"Helvetica Neue",Arial,sans-serif';
@@ -2576,7 +2576,13 @@ function labelTex(name,block,wrong){ const bl=blockLine(block), key=name+'|'+bl+
   c.fillStyle=wrong?'#ffe6b3':SIGN_SUB; c.font=bfnt; c.fillText(bl,w/2,bh*(wrong?0.47:0.4));
   c.fillStyle=wrong?'#ffffff':SIGN_FG; c.font=fnt; c.fillText(name,w/2,bh*(wrong?0.81:0.78)); c.shadowColor='transparent';
   const t=new THREE.CanvasTexture(cv); t.anisotropy=4; t.minFilter=THREE.LinearFilter; t.generateMipmaps=false;
-  return (LBL.cache[key]={tex:t,aspect:w/h}); }
+  labelTrim(); const info={tex:t,aspect:w/h}; LBL.cache.set(key,info); return info; }
+// 🗜 v20u: the card cache is BOUNDED. It used to keep every name|block card ever drawn — and its texture on the GPU — for
+// the whole shift: 66 of 88 GPU textures after a 4.5 km patrol, measured, and still climbing. Now only the LBL.keep most
+// recently used stay; older ones are disposed (never one a card sprite still holds), and a card that comes back is simply
+// drawn again. A sprite with no card points at LBL.blank, so it stops pinning the last card it showed.
+function labelTrim(){ if(LBL.cache.size<LBL.keep) return; const held=new Set(); for(const sp of LBL.pool) held.add(sp.material.map);
+  for(const [k,v] of LBL.cache){ if(LBL.cache.size<LBL.keep) break; if(held.has(v.tex)) continue; v.tex.dispose(); LBL.cache.delete(k); } }
 (function initLabels(){ for(let i=0;i<LBL.cap;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthTest:false,depthWrite:false,opacity:0}));
   s.center.set(0.5,0); s.renderOrder=20; s.visible=false; scene.add(s); LBL.pool.push(s); } })();
 // Sourced ramp signage: where the real overhead gantry names destinations the map data cannot derive, the
@@ -2902,7 +2908,7 @@ function hwyDrawArrow(c,kind,x,y,s,ink){ c.save(); c.strokeStyle=ink; c.fillStyl
   const ang={up:-Math.PI/2,down:Math.PI/2,exit:-Math.PI/4,exit2:-Math.PI/4,right:-Math.PI/4,left:-3*Math.PI/4,split:-Math.PI/2}[kind]||-Math.PI/2;
   const hx=Math.cos(ang), hz=Math.sin(ang); c.beginPath(); c.moveTo(x-hx*s*0.45,y-hz*s*0.45); c.lineTo(x+hx*s*0.25,y+hz*s*0.25); c.stroke();
   c.beginPath(); c.moveTo(x+hx*s*0.5,y+hz*s*0.5); c.lineTo(x+hx*s*0.15-hz*s*0.22,y+hz*s*0.15+hx*s*0.22); c.lineTo(x+hx*s*0.15+hz*s*0.22,y+hz*s*0.15-hx*s*0.22); c.closePath(); c.fill(); c.restore(); }
-function hwySignFace(kind,panel,opts){ const key=kind+'|'+JSON.stringify(panel)+'|'+JSON.stringify(opts||{}); const hit=HWY_SIGN_TEX.get(key); if(hit) return hit;
+function hwySignFace(kind,panel,opts){ const key=kind+'|'+JSON.stringify(panel)+'|'+JSON.stringify(opts||{}); const hit=HWY_SIGN_TEX.get(key); if(hit){ hit.gen=HWY_SIGN_GEN; return hit; }
   const S=160, W=Math.round((opts.w||HWY_ID_SPEC.panelW)*S), H=Math.round((opts.h||HWY_ID_SPEC.panelH)*S);
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const c=cv.getContext('2d'); c.textBaseline='middle';
   const green=kind!=='shield', ink=green?'#ffffff':HWY_INK;
@@ -2926,10 +2932,16 @@ function hwySignFace(kind,panel,opts){ const key=kind+'|'+JSON.stringify(panel)+
     if(panel.arrow&&panel.arrow!=='down'){ const k=panel.arrow==='right'||panel.arrow==='left'?panel.arrow:(panel.arrow==='exit2'?(opts.side2==='left'?'left':'exit'):(opts.side==='left'?'left':panel.arrow)); hwyDrawArrow(c,k,W-S*0.55,(top+bottom)/2,S*0.62,ink); }
     else if(panel.arrow==='down'&&!panel.exitOnly){ hwyDrawArrow(c,'down',W-S*0.55,bottom-S*0.35,S*0.5,ink); } }
   const tex=new THREE.CanvasTexture(cv); tex.anisotropy=4; tex.minFilter=THREE.LinearMipmapLinearFilter; tex.magFilter=THREE.LinearFilter; tex.generateMipmaps=true;
-  const face={tex,w:W/S,h:H/S}; HWY_SIGN_TEX.set(key,face); return face; }
+  const face={tex,w:W/S,h:H/S,gen:HWY_SIGN_GEN}; HWY_SIGN_TEX.set(key,face); return face; }
+// 🗜 v20u: a sign face is a big canvas (a 6.2 m gantry panel is 992 x 384 px, ~2 MB on the GPU with its mipmaps) and the
+// cache kept every face ever drawn for the whole shift. FLATCITY.commit now calls this after hwyIdentityBuild: a face that
+// neither this build nor the one before used is disposed and forgotten (drawn again if the truck comes back). The shared
+// light-pool texture stays. hwyIdentityBuild itself never evicts, so building twice still reuses every face.
+let HWY_SIGN_GEN=0;
+function hwySignEvict(){ for(const [k,f] of HWY_SIGN_TEX){ if(k==='pool'||f.gen>=HWY_SIGN_GEN-1) continue; f.tex.dispose(); HWY_SIGN_TEX.delete(k); } }
 // Build the identity scenery for one local build: sign panels (textured planes, front face toward the traffic),
 // grey backing plates, posts, cantilever gantry beams, gore markers, delineators, light masts and light pools.
-function hwyIdentityBuild(J,boxes,dummy){ const R=LOCAL.R, P=hwySignPlacements(), stats={signs:0,panels:0,gantries:0,posts:0,gores:0,delineators:0,mileposts:0,mileRealPosts:0,masts:0,pools:0,textures:HWY_SIGN_TEX.size,dynamicLights:0};
+function hwyIdentityBuild(J,boxes,dummy){ HWY_SIGN_GEN++; const R=LOCAL.R, P=hwySignPlacements(), stats={signs:0,panels:0,gantries:0,posts:0,gores:0,delineators:0,mileposts:0,mileRealPosts:0,masts:0,pools:0,textures:HWY_SIGN_TEX.size,dynamicLights:0};
   const grey=[], beam=[], yellow=[], mast=[], lamp=[], pool=[];
   const panelMesh=(face,cx,cy,cz,dx,dz,tilt)=>{ const g=new THREE.PlaneGeometry(face.w,face.h); const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:face.tex,side:THREE.FrontSide}));
     m.position.set(cx,cy,cz); m.rotation.y=Math.atan2(-dx,-dz); m.renderOrder=4; FLATCITY.group.add(m); FLATCITY.parts.push(m);   // front (+z) faces AGAINST travel: the approaching driver reads it, never mirrored
@@ -3130,7 +3142,7 @@ function updateStreetLabels(dt){
     if(cand.length>LBL.showCap) cand.length=LBL.showCap;                         // nearest choices only: prevent a stack of future-intersection signs
     LBL.last=cand;                                                                // the candidate list, inspectable (tests / console)
     for(let i=0;i<LBL.pool.length;i++){ const sp=LBL.pool[i], cd=cand[i];
-      if(!cd){ sp.visible=false; sp._name=null; sp._key=null; sp._block=null; sp._pick=null; continue; }
+      if(!cd){ sp.visible=false; sp._name=null; sp._key=null; sp._block=null; sp._pick=null; if(sp.material.map){ if(!LBL.blank) LBL.blank=new THREE.DataTexture(new Uint8Array(4),1,1); sp.material.map=LBL.blank; } continue; }
       const key=cd.name+'|'+cd.block+(cd.wrong?'|W':''); if(sp._key!==key){ const info=labelTex(cd.name,cd.block,cd.wrong); sp.material.map=info.tex; sp.material.needsUpdate=true; sp._key=key; sp._name=cd.name; sp._aspect=info.aspect; }
       sp._block=cd.block; sp._pick=cd.pick||null; sp._wrong=cd.wrong; sp._sameRoadTurn=cd.sameRoadTurn; sp._dest=cd.dest||null;
       sp.position.set(cd.x,groundHeight(cd.x,cd.z)+LBL.float,cd.z); sp.visible=true; } }
@@ -3289,7 +3301,27 @@ function colsNear(x,z){ const out=[],gx=Math.floor(x/40),gz=Math.floor(z/40);
 
 /* ============================ 5. ENTITIES ============================ */
 // cab + rear engine-number decals — canvas textures rebuilt for whichever engine the player selects (setTruckEngine)
-const truckDecal={cab:null, rear:null};
+// 🗜 v20u: the truck's two ENGINE-number pictures — the cab-side decal (drawn on both sides) and the rear E## — share ONE
+// 512 x 256 canvas texture and ONE mesh, where they were two textures and three see-through double-sided quads that three
+// r147 draws TWICE each (6 draw calls -> 1). Each picture keeps its own pixels: it is copied in at 1:1 and its edge texels
+// are repeated one pixel outward, so linear filtering at a region's border reads exactly what clamp-to-edge read on its own
+// texture (both were LinearFilter, no mipmaps — so the atlas is too). Regions are [x, y, w, h] in canvas pixels.
+// The hose-bed NET stays on its own texture: it is mipmapped, and in the atlas it lost its mips and read as a crisp grid.
+const TRUCK_ATLAS={W:512,H:256,cv:null,tex:null,reg:{cab:[0,0,320,100],rear:[0,112,220,120]}};
+function truckAtlasPut(name,src){ const A=TRUCK_ATLAS;
+  if(!A.cv){ A.cv=document.createElement('canvas'); A.cv.width=A.W; A.cv.height=A.H;
+    A.tex=new THREE.CanvasTexture(A.cv); A.tex.anisotropy=4; A.tex.minFilter=THREE.LinearFilter; A.tex.generateMipmaps=false; }
+  const [x,y,w,h]=A.reg[name], c=A.cv.getContext('2d'); c.clearRect(x-1,y-1,w+2,h+2);
+  c.drawImage(src,0,0,1,h,x-1,y,1,h); c.drawImage(src,w-1,0,1,h,x+w,y,1,h);                    // edge columns, once each onto cleared gutter
+  c.drawImage(src,0,0,w,1,x,y-1,w,1); c.drawImage(src,0,h-1,w,1,x,y+h,w,1);                    // edge rows
+  c.drawImage(src,0,0,1,1,x-1,y-1,1,1); c.drawImage(src,w-1,0,1,1,x+w,y-1,1,1); c.drawImage(src,0,h-1,1,1,x-1,y+h,1,1); c.drawImage(src,w-1,h-1,1,1,x+w,y+h,1,1);   // corners
+  c.drawImage(src,x,y); A.tex.needsUpdate=true; }
+// One quad: a w x h plane under matrix m, its UVs remapped into atlas region `name` (null: the whole texture); back=true
+// reverses the winding, which is what a DoubleSide plane showed from behind (same UVs, facing the other way).
+function truckAtlasQuad(Q,name,w,h,m,back){ const A=TRUCK_ATLAS, [rx,ry,rw,rh]=name?A.reg[name]:[0,0,A.W,A.H], v=new THREE.Vector3(), b=Q.pos.length/3;
+  for(const [px,py,u,t] of [[-w/2,h/2,0,1],[w/2,h/2,1,1],[-w/2,-h/2,0,0],[w/2,-h/2,1,0]]){ v.set(px,py,0).applyMatrix4(m); Q.pos.push(v.x,v.y,v.z);
+    Q.uv.push((rx+u*rw)/A.W,1-(ry+(1-t)*rh)/A.H); }
+  Q.idx.push(...(back?[b,b+1,b+2,b+2,b+1,b+3]:[b,b+2,b+1,b+2,b+3,b+1])); }
 function maltese(c,cx,cy,r,fill,stroke){ c.save(); c.translate(cx,cy); c.fillStyle=fill; if(stroke){c.strokeStyle=stroke; c.lineWidth=2.2; c.lineJoin='round';}
   for(let k=0;k<4;k++){ c.rotate(Math.PI/2); c.beginPath(); c.moveTo(0,0);
     c.lineTo(r*0.30,-r*0.26); c.lineTo(r*0.92,-r*0.52); c.lineTo(r*0.70,0); c.lineTo(r*0.92,r*0.52); c.lineTo(r*0.30,r*0.26); c.closePath(); c.fill(); if(stroke)c.stroke(); }
@@ -3302,8 +3334,7 @@ function drawTruckDecal(num){ const cv=document.createElement('canvas'); cv.widt
 function drawRearDecal(num){ const cv=document.createElement('canvas'); cv.width=220; cv.height=120; const c=cv.getContext('2d'); c.clearRect(0,0,220,120);
   c.textAlign='center'; c.textBaseline='middle'; c.font='bold 74px Arial'; c.lineWidth=7; c.strokeStyle='#6f5210'; c.strokeText('E'+num,110,62); c.fillStyle='#f2c236'; c.fillText('E'+num,110,62);
   return cv; }
-function upTex(slot,cv){ if(!truckDecal[slot]){ truckDecal[slot]=new THREE.CanvasTexture(cv); truckDecal[slot].anisotropy=4; truckDecal[slot].minFilter=THREE.LinearFilter; } else truckDecal[slot].image=cv; truckDecal[slot].needsUpdate=true; }
-function setTruckEngine(n){ n=(n==null?'':String(n)).trim()||'—'; upTex('cab',drawTruckDecal(n)); upTex('rear',drawRearDecal(n)); }
+function setTruckEngine(n){ n=(n==null?'':String(n)).trim()||'—'; truckAtlasPut('cab',drawTruckDecal(n)); truckAtlasPut('rear',drawRearDecal(n)); }
 const truckG=new THREE.Group();
 // ── PFD Spartan pumper (nose = -Z): white cab top, red body, gold belt stripe, chrome / diamond-plate ──
 { const RED=0xd0342b, REDK=0x9c1f17, WHITE=0xf2f1ec, GOLD=0xf1bd2b, CHROME=0xd7dade, SILVER=0xb7bcc2, GLASS=0x191d27, CHASSIS=0x17191d, LADDER=0xccd0d6, SY=1.5;
@@ -3336,7 +3367,7 @@ const truckG=new THREE.Group();
   { const hose=[0xe6c229,0xd8b41e,0xecca3a,0xd8b41e]; let hi=0; for(let hx=-0.95;hx<=0.96;hx+=0.275){ box(0.24,0.24,3.95,hose[hi%hose.length],hx,2.82,1.5,truckG); hi++; } }
   { const nc=document.createElement('canvas'); nc.width=128; nc.height=96; const nx2=nc.getContext('2d'); nx2.clearRect(0,0,128,96); nx2.strokeStyle='rgba(14,15,17,0.96)'; nx2.lineWidth=6;
     for(let x=8;x<=120;x+=16){ nx2.beginPath(); nx2.moveTo(x,0); nx2.lineTo(x,96); nx2.stroke(); } for(let y=8;y<=88;y+=16){ nx2.beginPath(); nx2.moveTo(0,y); nx2.lineTo(128,y); nx2.stroke(); }
-    const nt=new THREE.CanvasTexture(nc); const net=new THREE.Mesh(new THREE.PlaneGeometry(2.3,1.0), new THREE.MeshBasicMaterial({map:nt,transparent:true,side:THREE.DoubleSide,depthWrite:false})); net.position.set(0,2.95,3.44); net.renderOrder=1; truckG.add(net);   // black cargo net over the rear hose bed
+    TRUCK_ATLAS.net=new THREE.CanvasTexture(nc);   // black cargo net over the rear hose bed: its own (mipmapped) texture, its mesh built below
     for(const sx of [-1.16,1.16]) box(0.1,1.05,0.1,RED,sx,2.98,3.42,truckG); box(2.42,0.1,0.1,CHROME,0,3.46,3.42,truckG); }   // red net frame posts + top bar
   // hard-suction hoses stored on the top outer edges (black corrugated) with chrome couplings
   for(const sx of [-1.13,1.13]){ const h=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,3.7,10),lambert(0x17181b)); h.rotation.x=Math.PI/2; h.position.set(sx,2.83,1.3); truckG.add(h);
@@ -3358,9 +3389,17 @@ const truckG=new THREE.Group();
   box(2.42,1.0,0.12,GOLD,0,1.5,3.58,truckG);
   for(const cx of [-0.72,0.72]){ const cb=box(0.42,1.1,0.14,REDK,cx,1.5,3.63,truckG); cb.rotation.z=Math.PI/4; }
   setTruckEngine('');
-  { const rd=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.66), new THREE.MeshBasicMaterial({map:truckDecal.rear,transparent:true,side:THREE.DoubleSide,depthWrite:false})); rd.position.set(0,1.55,3.67); rd.renderOrder=1; truckG.add(rd); }
-  // cab-side ENGINE-number decals (both sides share one texture; each face reads upright)
-  for(const [sx,ry] of [[-1.245,-Math.PI/2],[1.245,Math.PI/2]]){ const d=new THREE.Mesh(new THREE.PlaneGeometry(1.55,0.5), new THREE.MeshBasicMaterial({map:truckDecal.cab,transparent:true,side:THREE.DoubleSide,depthWrite:false})); d.position.set(sx,1.2,-2.4); d.rotation.y=ry; d.renderOrder=1; truckG.add(d); }
+  // rear "E##" and the cab-side ENGINE-number decals (one picture on both sides; each face reads upright): one mesh on the
+  // atlas, front faces only — the decals face OUT and their backs are against the bodywork. The net is one mesh too, its
+  // front face plus a reversed copy for the back, so it still shows from both sides in ONE draw instead of DoubleSide's two.
+  { const M=(x,y,z,ry)=>new THREE.Matrix4().makeRotationY(ry).setPosition(x,y,z);
+    const mesh=(Q,map,name)=>{ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(Q.pos,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(Q.uv,2)); g.setIndex(Q.idx);
+      const d=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map,transparent:true,depthWrite:false})); d.name=name; d.renderOrder=1; truckG.add(d); };
+    const Q={pos:[],uv:[],idx:[]}; truckAtlasQuad(Q,'rear',1.4,0.66,M(0,1.55,3.67,0));
+    for(const [sx,ry] of [[-1.245,-Math.PI/2],[1.245,Math.PI/2]]) truckAtlasQuad(Q,'cab',1.55,0.5,M(sx,1.2,-2.4,ry));
+    mesh(Q,TRUCK_ATLAS.tex,'truck-decals');
+    const N={pos:[],uv:[],idx:[]}; truckAtlasQuad(N,null,2.3,1.0,M(0,2.95,3.44,0)); truckAtlasQuad(N,null,2.3,1.0,M(0,2.95,3.44,0),true);
+    mesh(N,TRUCK_ATLAS.net,'truck-net'); }
   var wheels=[];
   for(const [wx,wz] of [[-1.24,-2.3],[1.24,-2.3],[-1.24,1.35],[1.24,1.35],[-1.24,2.65],[1.24,2.65]]){
     const w=new THREE.Mesh(new THREE.CylinderGeometry(0.78,0.78,0.55,16),lambert(0x121417)); w.rotation.z=Math.PI/2; w.position.set(wx,0.78,wz); truckG.add(w); wheels.push(w);
@@ -3369,6 +3408,19 @@ const truckG=new THREE.Group();
 truckG.scale.setScalar(1.25);                                                  // +25%: easier to pick out on a phone without covering the roadway
 { const sh=new THREE.Mesh(new THREE.CircleGeometry(1.7,18), new THREE.MeshBasicMaterial({color:0x2a2f38,transparent:true,opacity:0.20,depthWrite:false}));   // contact shadow just larger than the wheelbase (4.6 read as a huge grey pool around the truck)
   sh.rotation.x=-Math.PI/2; sh.position.y=0.30; sh.scale.set(1,2.5,1); sh.renderOrder=4; truckG.add(sh); }
+// 🗜 v20u: the eleven small STATIC lights (roof beacons, amber marker, scene lights, rear beacons, front warning lights, side
+// markers) are ONE mesh with per-vertex colour — 11 draw calls -> 1, the same colours (MeshBasic: white x vertex colour).
+// The lightbar stays its own mesh because the siren animates its colour. Run before PUMPER captures truckG's children, so
+// the merged mesh is one of the MeshBasic overlays the Blender model keeps.
+(function truckMergeLights(){ const L=truckG.children.filter(o=>o.isMesh&&o!==lightbar&&o.material.isMeshBasicMaterial&&!o.material.map&&!o.material.transparent);
+  let nv=0,ni=0; for(const o of L){ const g=o.geometry; nv+=g.attributes.position.count; ni+=g.index?g.index.count:g.attributes.position.count; }
+  const P=new Float32Array(nv*3), C=new Float32Array(nv*3), I=new Uint16Array(ni), v=new THREE.Vector3(); let b=0,k=0;
+  for(const o of L){ o.updateMatrix(); const g=o.geometry, pos=g.attributes.position, c=o.material.color;
+    for(let i=0;i<pos.count;i++){ v.fromBufferAttribute(pos,i).applyMatrix4(o.matrix); P[(b+i)*3]=v.x; P[(b+i)*3+1]=v.y; P[(b+i)*3+2]=v.z; C[(b+i)*3]=c.r; C[(b+i)*3+1]=c.g; C[(b+i)*3+2]=c.b; }
+    if(g.index) for(let i=0;i<g.index.count;i++) I[k++]=b+g.index.getX(i); else for(let i=0;i<pos.count;i++) I[k++]=b+i;
+    b+=pos.count; truckG.remove(o); g.dispose(); o.material.dispose(); }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(P,3)); g.setAttribute('color',new THREE.BufferAttribute(C,3)); g.setIndex(new THREE.BufferAttribute(I,1));
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xffffff,vertexColors:true})); m.name='truck-lights'; m.userData.merged=L.length; truckG.add(m); })();
 scene.add(truckG);
 // PUMPER_MODEL_BEGIN -- the Blender pumper as an ASYNC UPGRADE over the procedural truck above.
 // Visual only: the envelope, the 1.25 group scale, the camera, collision, routing and the HUD are
@@ -3411,9 +3463,9 @@ function pumperLoad(){
 // GPS route line (blue, follows real streets; visible in BOTH camera views)
 const routeMesh=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2b7cff,transparent:true,opacity:0.92,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
 routeMesh.frustumCulled=false; routeMesh.visible=false; routeMesh.renderOrder=2; scene.add(routeMesh);
-const routeEdgeFlat=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2915b8,transparent:true,opacity:0.95,side:THREE.DoubleSide,depthWrite:false}));   // darker border under the route so it reads on grey asphalt
+const routeEdgeFlat=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2915b8,transparent:true,opacity:0.95,side:THREE.BackSide,depthWrite:false}));   // darker border under the route so it reads on grey asphalt
 routeEdgeFlat.frustumCulled=false; routeEdgeFlat.visible=false; routeEdgeFlat.renderOrder=2; scene.add(routeEdgeFlat);
-const routeMeshFlat=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x4424f4,transparent:true,opacity:0.95,side:THREE.DoubleSide,depthWrite:false}));   // FLAT blue-purple GPS route for the tilted map, sitting ON the roadway
+const routeMeshFlat=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x4424f4,transparent:true,opacity:0.95,side:THREE.BackSide,depthWrite:false}));   // FLAT blue-purple GPS route for the tilted map, sitting ON the roadway
 routeMeshFlat.frustumCulled=false; routeMeshFlat.visible=false; routeMeshFlat.renderOrder=3; scene.add(routeMeshFlat);
 // A corridor guide must follow the finished pavement triangles, not only the sampled road height:
 // a coarse bridge triangle can stand over 1m above navRoadY between its vertices and hide the blue line.
@@ -3667,7 +3719,11 @@ function updateTiltMap(dt){                                                    /
     // driving off brings it straight back.
     STHOUSE.group.visible = !(Math.abs(lx)<hw && Math.abs(lz)<hd); }   // the orbit used to force it visible while circling
   const tileZ=Math.max(15,Math.min(19,Math.round(18-Math.log2(tz))));         // sharper base (z18); zoom out → wider/lower detail
-  LIVE3D.update(truck.x, truck.z, tileZ, 340*tz); }
+  // 🛰 v20u: the live CARTO tiles are fetched only when they can be seen. With the 3D ground on (NAVGEO.active — always,
+  // since the terrain bake) the tile group is hidden a few lines up in this same function, so every tile this fetched was
+  // downloaded and decoded and never drawn: phone data and memory for nothing (no tile in any draw list, measured). The
+  // credit no longer waits for a tile to load (updateHUD), so it stays on screen (owner: stop the downloads, keep the credits).
+  if(!NAVGEO.active) LIVE3D.update(truck.x, truck.z, tileZ, 340*tz); }
 function toggleRoute(){ state.route=!state.route; document.getElementById('btnRoute').classList.toggle('on',state.route);
   routeMesh.visible=state.route && MAP.guide && !!routePts && routePts.length>1; }
 function toggleNight(){ if(!FLAGS.night) return; state.night=!state.night; document.getElementById('btnNight').classList.toggle('on',state.night);
@@ -3914,7 +3970,7 @@ function updateHUD(dt){
   { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = '📻 DISPATCH » '; }   // boundary/training mode is not a live call
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
-  { const sa=document.getElementById('satAttr'); if(sa){ const show=state.running&&LIVE3D.st.ok;   // credit whichever real basemap is actually drawing
+  { const sa=document.getElementById('satAttr'); if(sa){ const show=state.running;   // v20u: shown for the whole shift (the OpenStreetMap road and land data is on screen all the time; the CARTO credit stays by the owner's word), no longer only after a tile has loaded
       if(show) sa.textContent = '© OpenStreetMap contributors © CARTO';
       sa.classList.toggle('show', show); } }
   if(DRIVE.pending && DRIVE.arrowT>0){ const jn=DRIVE.pending.at, nx=DRIVE.pending.next;                 // next-turn banner
@@ -3988,6 +4044,14 @@ function updateMinimap(dt){ if(!FLAGS.minimap||!MINI.ctx) return;
   c.fillStyle='rgba(255,255,255,.75)'; c.font='bold 11px sans-serif'; c.textAlign='center'; c.textBaseline='top'; c.fillText('N',P/2,4); }
 // GPS route: A* on the street graph, cached; recompute on new call or when the truck strays off it.
 let routePts=null, routeDirty=false, routeTimer=0;
+// 🗜 v20u: the two flat ribbons draw BackSide in ONE pass, where DoubleSide cost two (three r147 draws a see-through
+// double-sided mesh twice). They are wound to face DOWN — from the camera above, their back — and the few triangles a sharp
+// corner folds over (1-5 in about a third of routes, measured over 300) are re-wound here to match, so exactly the same
+// triangles draw as before; where two overlap they share colour and opacity, so the order they blend in cannot show.
+function ribbonFaceDown(g){ const p=g.attributes.position.array, ix=g.index.array;
+  for(let t=0;t<ix.length;t+=3){ const a=ix[t]*3,b=ix[t+1]*3,c=ix[t+2]*3;
+    if((p[b+2]-p[a+2])*(p[c]-p[a])-(p[b]-p[a])*(p[c+2]-p[a+2])>0){ const k=ix[t+1]; ix[t+1]=ix[t+2]; ix[t+2]=k; } }
+  return g; }
 function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geometry, oldE=routeEdgeFlat.geometry;
   if(!routePts||routePts.length<2){ routeMesh.visible=false; routeMeshFlat.visible=false; routeEdgeFlat.visible=false; routeMesh.geometry=new THREE.BufferGeometry(); routeMeshFlat.geometry=new THREE.BufferGeometry(); routeEdgeFlat.geometry=new THREE.BufferGeometry(); old.dispose(); oldF.dispose(); oldE.dispose(); return; }
   const pts0=routePts.filter((p,i)=>!i||Math.hypot(p.x-routePts[i-1].x,p.z-routePts[i-1].z)>.2),pos=[],posF=[],posE=[],idx=[],hw=.72,hwF=1.55,hwE=2.25;   // wider ribbon on the flat map + a slightly wider border pass
@@ -4011,6 +4075,7 @@ function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geomet
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx); g.computeVertexNormals();
   const gf=new THREE.BufferGeometry(); gf.setAttribute('position',new THREE.Float32BufferAttribute(posF,3)); gf.setIndex(idx.slice());
   const ge=new THREE.BufferGeometry(); ge.setAttribute('position',new THREE.Float32BufferAttribute(posE,3)); ge.setIndex(idx.slice());
+  ribbonFaceDown(gf); ribbonFaceDown(ge);
   routeMesh.geometry=g; routeMeshFlat.geometry=gf; routeEdgeFlat.geometry=ge; old.dispose(); oldF.dispose(); oldE.dispose();
   routeMesh.visible=(state.cam!==3) && state.route && MAP.guide;
   routeMeshFlat.visible=routeEdgeFlat.visible=(state.cam===3)&&state.route&&MAP.guide; }
@@ -6306,8 +6371,16 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
               if(rw._ml){ const l=rw._ml, dx=px-l.x, dz=pz-l.z, d=Math.hypot(dx,dz); if(d>8&&d<90) wire.push({x:(px+l.x)/2,y:(top+l.y)/2+5.4,z:(pz+l.z)/2,w:0.06,h:0.06,l:d,ang:Math.atan2(dx,dz),pitch:-Math.atan2(top-l.y,d)}); }
               rw._ml={x:px,y:top,z:pz}; } }
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
-    for(const [list,color,name] of [[deck,0x9aa0a0],[rails,0xd0cdc4],[piers,0xaba79c],[truss,0xdcded9],[para,0xccc7bb],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961],[mastPost,0x6d7276,'rail-mast'],[mastArm,0x6d7276,'rail-mast-arm'],[wire,0x3a3d40,'rail-wire']]){if(!list.length)continue;const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color}),list.length);
-      list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix)});m.instanceMatrix.needsUpdate=true;if(name)m.name=name;FLATCITY.group.add(m);FLATCITY.parts.push(m);}
+    // 🗜 v20u: every bridge / rail / catenary box is ONE instanced mesh with a colour per instance, where it was one mesh per
+    // colour — up to 19 draw calls, 18 at East Falls, now 1. Same unit box, same plain Lambert (white x instance colour = the
+    // old colour), and the lists keep their order, so every box still draws in exactly the order it did. userData.ranges
+    // keeps each named list's [first, count] (the catenary parts used to be found by mesh name).
+    { const L=[[deck,0x9aa0a0],[rails,0xd0cdc4],[piers,0xaba79c],[truss,0xdcded9],[para,0xccc7bb],[bwalk,0xd9d6cd],[ballast,0x6b655c],[railBars,0x8e8e8e],[rDeck,0x7a7d80],[rWall,0x86827a],[rPier,0x8d887c],[rAbut,0x6f6a61],[rGirder,0x4f5961],[rTie,0x4e4338],[rCutWall,0x70695f],[roadGirder,CORRIDOR_PHOTO.enabled?0x526f58:0x4f5961],[mastPost,0x6d7276,'rail-mast'],[mastArm,0x6d7276,'rail-mast-arm'],[wire,0x3a3d40,'rail-wire']];
+      const n=L.reduce((s,[list])=>s+list.length,0);
+      if(n){ const m=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xffffff}),n), col=new THREE.Color(); let i=0; m.userData.ranges={};
+        for(const [list,color,name] of L){ if(!list.length) continue; if(name) m.userData.ranges[name]=[i,list.length]; col.setHex(color);
+          for(const p of list){ dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch,p.ang,0,'YXZ');dummy.scale.set(p.w,p.h,p.l);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);m.setColorAt(i,col);i++; } }
+        m.instanceMatrix.needsUpdate=true; m.instanceColor.needsUpdate=true; m.name='rail-bridge-boxes'; FLATCITY.group.add(m); FLATCITY.parts.push(m); } }
   }
   clearanceSigns(J);                                                                                    // 📏 LOW CLEARANCE panels on signed rail bridges
   if(NAVGEO.active){
@@ -6377,7 +6450,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     const hb=new THREE.InstancedMesh(wbeam?hwyWBeamGeo():new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color,side:wbeam?THREE.DoubleSide:THREE.FrontSide}),list.length); hb.name=name;
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
     hb.instanceMatrix.needsUpdate=true; FLATCITY.group.add(hb); FLATCITY.parts.push(hb); }
-  hwyIdentityBuild(J,null,dummy);                                                                        // 🪧 highway identity (phase 2b): guide signs, gantries, gore markers, trailblazers, shoulder lighting
+  hwyIdentityBuild(J,null,dummy); hwySignEvict();                                                                        // 🪧 highway identity (phase 2b): guide signs, gantries, gore markers, trailblazers, shoulder lighting
   photoCorridorBuild(J,dummy);
   rampDetailBuild(J); rampRibbonBuild(J); parkBuild(J);                                                                                    // 🛣️ interchange ramp shoulder + embankment (owner choice, Sep 13 2026)
   if(J.hwClose) for(const [list,color] of [[J.hwClose[0],0xe8862c],[J.hwClose[1],0xf2f2ec]]){ if(!list.length) continue;   // ⛔ corridor-end barriers (orange / white stripes)
