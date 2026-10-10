@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v58';  // v20u: street-card texture leak fixed, fewer draw calls (truck, guide, bridges/rail), no more never-drawn map tile downloads.
+const CACHE = 'local-shell-v59';  // v20v: building faces share WebGL2 texture arrays (4 fewer textures, every frame identical).
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

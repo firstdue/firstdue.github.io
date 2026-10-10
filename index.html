@@ -1060,7 +1060,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20u";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20v";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4834,6 +4834,40 @@ function streetscapeFacade(){
   return STREETSCAPE.facade; }
 // Buildings right beside the camera can wall off the roadway. Fade anything very close to the camera on the GPU
 // (free, works with instancing) so the street stays readable while the city still looks dense a block away.
+/* 🧱 FACADE ARRAYS (v20v, owner: "do the build faces next"). Facade textures that share a size AND every sampling setting are
+   one WebGL2 texture ARRAY — one GPU texture instead of several — and each material reads its own layer. That is exact,
+   not an approximation: a layer keeps its own wrapping and its own mip chain, so every texel, every mip level and every
+   filter tap is what the separate texture gave (a plain 2D atlas could not promise that: distant buildings would sample
+   their neighbours). Two groups qualify: the four generic street-detail facades (256 x 256) and the row-house + storefront
+   tiles (128 x 256). The strip-mall (128 x 128, clamped), apartment (128 x 64, repeated per floor) and streetscape
+   (512 x 256) pictures differ in size or wrapping, so each is an array of ONE layer: no saving, but EVERY facade material
+   then compiles the same FACADE_ARRAY program its old 2D-map twin did. That matters: the first cut left those three on 2D
+   maps, which split the shader programs, and wherever a rebuild had no twins/detached houses the program they had shared
+   with the generic walls lapsed and recompiled in the next commit frame (Center City +22 ms, measured). WebGL1 has no
+   texture arrays: there FACADE_ARR.on is false and every facade is its own 2D texture exactly as before. A layer's
+   material carries FACADE_ARRAY + USE_UV instead of a map, the texture's own repeat/offset as uFacadeUv (applied in the
+   fragment shader: the streetscape picture's 0.5 is a power of two, so the result is bit-identical to uvTransform), and
+   userData.facadeArr {set, layer, uv} — JSON-safe, because Material.copy JSON-clones userData. The source textures'
+   bytes are freed once copied (their GPU copy is never made); the array frees its own after upload, as facadeTex does. */
+const FACADE_ARR={ on:null, sets:new Map() };
+const FACADE_SETS={ detail:()=>[0,1,2,3].map(streetDetailFacade), rowshop:()=>[rowFacade(),shopFacade()], strip:()=>[stripFacade()], apt:()=>[aptFacade()], street:()=>[streetscapeFacade()] };
+function facadeArraysOn(){ if(FACADE_ARR.on===null) FACADE_ARR.on=!!(renderer.capabilities.isWebGL2&&typeof THREE.DataArrayTexture==='function'); return FACADE_ARR.on; }
+function facadeArray(set){ let A=FACADE_ARR.sets.get(set); if(A) return A;
+  const members=FACADE_SETS[set](), t0=members[0], w=t0.image.width, h=t0.image.height, n=members.length, data=new Uint8Array(w*h*4*n);
+  const same=['wrapS','wrapT','magFilter','minFilter','generateMipmaps','anisotropy','format','type'];
+  members.forEach((t,i)=>{ if(t.image.width!==w||t.image.height!==h||!t.image.data||t.rotation!==0||same.some(k=>t[k]!==t0[k])) throw new Error('facade array '+set+': layer '+i+' does not match');
+    data.set(t.image.data,i*w*h*4); });
+  const tex=new THREE.DataArrayTexture(data,w,h,n); for(const k of same) tex[k]=t0[k]; tex.needsUpdate=true;
+  tex.onUpdate=()=>{ tex.image={width:w,height:h,depth:n,data:null}; tex.onUpdate=null; };   // once on the GPU the bytes are never read again
+  for(const t of members) facadeFree(t);
+  A={tex,members}; FACADE_ARR.sets.set(set,A); return A; }
+function facadeArrayOf(tex){ if(!tex||!facadeArraysOn()) return null;
+  for(const set in FACADE_SETS){ const i=facadeArray(set).members.indexOf(tex); if(i>=0) return {set,layer:i,uv:[tex.repeat.x,tex.repeat.y,tex.offset.x,tex.offset.y]}; } return null; }
+// A white Lambert carrying a facade: its own 2D map, or (WebGL2, and a texture in a FACADE_SETS group) a layer of the array.
+function facadeLambert(tex,extra){ const fa=facadeArrayOf(tex); if(!fa) return new THREE.MeshLambertMaterial(Object.assign({color:0xffffff,map:tex},extra));
+  const m=new THREE.MeshLambertMaterial(Object.assign({color:0xffffff},extra)); m.defines={USE_UV:'',FACADE_ARRAY:''}; m.userData.facadeArr=fa; return m; }
+function facadeUniforms(sh,mat){ const fa=mat.userData.facadeArr; if(!fa) return; sh.uniforms.uFacades={value:facadeArray(fa.set).tex}; sh.uniforms.uLayer={value:fa.layer};
+  sh.uniforms.uFacadeUv={value:new THREE.Vector4(fa.uv[0],fa.uv[1],fa.uv[2],fa.uv[3])}; }
 function nearFadeMaterial(mat,base){
   // ⚠️ Two hard-won lessons live here. (1) transparent:true put these instanced meshes into the transparent
   // sort pass where the live tile planes painted over them. (2) The obvious `distance(cameraPosition,vWPos)`
@@ -4844,7 +4878,7 @@ function nearFadeMaterial(mat,base){
   // v20r: this pass no longer dithers. It draws only what is NEAR_FADE.b (26 m) or more from the camera; the few
   // instances closer than that are drawn again, see-through, by NEAR_FADE's ghost meshes (below). The old opaque
   // stochastic discard broke a near building's edge into random dots — the "speckled dissolve" of the look review.
-  mat.onBeforeCompile=base?sh=>{ sh.vertexShader=baseVS(nearFadeVS(sh.vertexShader)); sh.fragmentShader=baseFS(nearFadeFS(sh.fragmentShader,false)); }
+  mat.onBeforeCompile=base?sh=>{ facadeUniforms(sh,mat); sh.vertexShader=baseVS(nearFadeVS(sh.vertexShader)); sh.fragmentShader=baseFS(nearFadeFS(sh.fragmentShader,false)); }
                          :sh=>{ sh.vertexShader=nearFadeVS(sh.vertexShader); sh.fragmentShader=nearFadeFS(sh.fragmentShader,false); };
   mat.userData.nearFade=base?3:1; return mat; }
 // 🧱 A darker foot on building walls (v20r, the cheap-shadow pass): the lowest ~2 m of a wall is shaded toward 0.74 — the
@@ -4853,10 +4887,10 @@ function nearFadeMaterial(mat,base){
 // hillside the base is the lowest corner, so the band is buried on the uphill side and shows where the wall meets the
 // lowest ground. Walls only — a cornice or roof is a box too, and its "foot" is in the air.
 function baseVS(vs){ return 'varying float vBaseH;\n'+vs.replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\n  vBaseH=(position.y+0.5)*length(instanceMatrix[1].xyz);\n#else\n  vBaseH=99.0;\n#endif'); }
-function baseFS(fs){ return 'varying float vBaseH;\n'+fs
-  .replace('#include <map_fragment>','#ifdef USE_MAP\n  { vec4 _fx=texture2D(map,vUv);\n#ifdef USE_COLOR\n    vec3 _wc=vColor;\n#else\n    vec3 _wc=vec3(1.0);\n#endif\n'+   // the facade masks (FACADES, above): wall, trim, glass
+function baseFS(fs){ return 'varying float vBaseH;\n#ifdef FACADE_ARRAY\nuniform highp sampler2DArray uFacades;\nuniform float uLayer;\nuniform vec4 uFacadeUv;\n#endif\n'+fs   // 🧱 v20v: FACADE_ARRAY samples one layer of a shared facade array (FACADE_ARR)
+  .replace('#include <map_fragment>','#if defined(USE_MAP)||defined(FACADE_ARRAY)\n  {\n#ifdef FACADE_ARRAY\n    vec4 _fx=texture(uFacades,vec3(vUv*uFacadeUv.xy+uFacadeUv.zw,uLayer));\n#else\n    vec4 _fx=texture2D(map,vUv);\n#endif\n#ifdef USE_COLOR\n    vec3 _wc=vColor;\n#else\n    vec3 _wc=vec3(1.0);\n#endif\n'+   // the facade masks (FACADES, above): wall, trim, glass
     '    diffuseColor.rgb*=mix(mix(_wc*_fx.r,vec3(0.93,0.91,0.86)*(0.3+0.7*_fx.r),_fx.g),mix(vec3(0.09,0.12,0.16),vec3(0.52,0.62,0.70),_fx.r),_fx.b); }\n#endif')
-  .replace('#include <color_fragment>','#ifndef USE_MAP\n#include <color_fragment>\n#endif')   // with a facade the wall colour is applied by the decode, to the wall only
+  .replace('#include <color_fragment>','#if !defined(USE_MAP)&&!defined(FACADE_ARRAY)\n#include <color_fragment>\n#endif')   // with a facade the wall colour is applied by the decode, to the wall only
   .replace('#include <output_fragment>','#include <output_fragment>\n  gl_FragColor.rgb*=mix(0.74,1.0,smoothstep(0.0,2.0,vBaseH));'); }
 function nearFadeVS(vs){ return 'varying float vCamDist;\n'+vs.replace('#include <fog_vertex>','#include <fog_vertex>\n  vCamDist=length(mvPosition.xyz);'); }
 // The opaque pass cuts at b; the ghost draws from 0 to b+0.25 with alpha smoothstep(a,b) — the old fade curve, as opacity —
@@ -4876,10 +4910,12 @@ function tiledVS(vs){ return 'attribute float aRep; attribute float aRepV; attri
    first time the camera brushes a building. */
 const NEAR_FADE={ a:12, b:26, cap:128, list:[], over:0 };
 function nearFadeGhostMat(src){ const m=src.clone(), kind=src.userData.nearFade; m.transparent=true; m.depthWrite=false;
-  m.onBeforeCompile=kind===2?sh=>{ sh.vertexShader=baseVS(tiledVS(nearFadeVS(sh.vertexShader))); sh.fragmentShader=baseFS(nearFadeFS(sh.fragmentShader,true)); }
-                   :kind===3?sh=>{ sh.vertexShader=baseVS(nearFadeVS(sh.vertexShader)); sh.fragmentShader=baseFS(nearFadeFS(sh.fragmentShader,true)); }
+  m.onBeforeCompile=kind===2?sh=>{ facadeUniforms(sh,m); sh.vertexShader=baseVS(tiledVS(nearFadeVS(sh.vertexShader))); sh.fragmentShader=baseFS(nearFadeFS(sh.fragmentShader,true)); }
+                   :kind===3?sh=>{ facadeUniforms(sh,m); sh.vertexShader=baseVS(nearFadeVS(sh.vertexShader)); sh.fragmentShader=baseFS(nearFadeFS(sh.fragmentShader,true)); }
                             :sh=>{ sh.vertexShader=nearFadeVS(sh.vertexShader); sh.fragmentShader=nearFadeFS(sh.fragmentShader,true); };
-  m.userData={}; return m; }
+  m.userData=src.userData.facadeArr?{facadeArr:src.userData.facadeArr}:{};
+  if(src.defines) m.defines=Object.assign({},src.defines);   // ⚠ three r147's Material.copy does NOT copy defines: without this a facade-array ghost lost FACADE_ARRAY and drew as a plain tinted box
+  return m; }
 function nearFadeRegister(){ const L=NEAR_FADE.list, cap=NEAR_FADE.cap, mats=new Map(); L.length=0;   // one ghost material per part material (the canopy's two LODs share one)
   for(const o of FLATCITY.parts){ const nf=o.material&&o.material.userData&&o.material.userData.nearFade;
     if(nf&&o.isMesh&&!o.isInstancedMesh){ let gm=mats.get(o.material); if(!gm){ gm=nearFadeGhostMat(o.material); mats.set(o.material,gm); }   // a merged mesh (the institutions): its ghost is the same geometry drawn again
@@ -5070,8 +5106,8 @@ function aptFacade(){ if(BTYPED.aptTex) return BTYPED.aptTex;
 function rowGeo(n){ const g=new THREE.BoxGeometry(1,1,1); const f=new Float32Array(24); for(let i=16;i<24;i++) f[i]=1;   // BoxGeometry faces px,nx,py,ny,pz,nz × 4 verts: only the ±z (street-facing) faces tile
   g.setAttribute('faceRep',new THREE.BufferAttribute(f,1)); g.setAttribute('aRep',new THREE.InstancedBufferAttribute(new Float32Array(n).fill(1),1)); g.setAttribute('aRepV',new THREE.InstancedBufferAttribute(new Float32Array(n).fill(1),1)); return g; }
 function rowMaterial(){ return tiledMaterial(rowFacade()); }
-function tiledMaterial(tex){ const mat=new THREE.MeshLambertMaterial({color:0xffffff,map:tex});                    // nearFadeMaterial's view-space fade + the per-instance UV repeat (across per unit, up per floor), in one patch
-  mat.onBeforeCompile=sh=>{ sh.vertexShader=baseVS(tiledVS(nearFadeVS(sh.vertexShader))); sh.fragmentShader=baseFS(nearFadeFS(sh.fragmentShader,false)); };
+function tiledMaterial(tex){ const mat=facadeLambert(tex);                    // nearFadeMaterial's view-space fade + the per-instance UV repeat (across per unit, up per floor), in one patch
+  mat.onBeforeCompile=sh=>{ facadeUniforms(sh,mat); sh.vertexShader=baseVS(tiledVS(nearFadeVS(sh.vertexShader))); sh.fragmentShader=baseFS(nearFadeFS(sh.fragmentShader,false)); };
   mat.userData.nearFade=2; return mat; }   // tiled facades are always walls: the darker foot too
 // ===== 🌳 PARKS — graphics step 4 (v19i): the LANDCOVER polygons drawn, not just used as a mask =====
 // park / wood / open polygons become draped green ground that follows the terrain (the water triangulation
@@ -5466,7 +5502,7 @@ function instBuild(J){ const I=J.inst; FLATCITY.instCut=J.instCut||{b:0,t:0}; if
   const mk=(A,uv)=>{ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(A.p,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(A.n,3));
     g.setAttribute('color',new THREE.Float32BufferAttribute(A.c,3)); if(uv) g.setAttribute('uv',new THREE.Float32BufferAttribute(A.uv,2)); g.computeBoundingBox(); g.computeBoundingSphere(); return g; };
   const boxes=I.bld.filter(e=>e.ymin!==undefined).map(e=>[e.bb[0],e.ymin,e.bb[1],e.bb[2],e.ymax,e.bb[3]]);   // the near fade asks THESE, not the merged mesh's kilometre-wide box
-  if(I.W.p.length){ const m=new THREE.Mesh(mk(I.W,true),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:streetscapeFacade(),vertexColors:true}),true)); m.name='inst-walls'; m.userData.shadeCast='mesh'; m.userData.nfBoxes=boxes; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
+  if(I.W.p.length){ const m=new THREE.Mesh(mk(I.W,true),nearFadeMaterial(facadeLambert(streetscapeFacade(),{vertexColors:true}),true)); m.name='inst-walls'; m.userData.shadeCast='mesh'; m.userData.nfBoxes=boxes; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
   if(I.K.p.length){ const m=new THREE.Mesh(mk(I.K,false),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true}))); m.name='inst-roofs'; m.userData.shadeCast='mesh'; m.userData.nfBoxes=boxes; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
   if(I.G.p.length){ const m=new THREE.Mesh(mk(I.G,false),shadeReceive(new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true})));   // over the land, under the road, no depth: the park-land rule
     m.name='inst-ground'; m.renderOrder=0.55; m.material.depthWrite=false; FLATCITY.group.add(m); FLATCITY.parts.push(m); } }
@@ -6462,7 +6498,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   if(G.length){ const kinds=J.detail?4:1,counts=Array(kinds).fill(0),slots=Array(kinds).fill(0);
     const kindOf=b=>J.detail?Math.floor(hash2(b.x,b.z)*10000)%kinds:0;
     G.forEach(b=>counts[kindOf(b)]++);
-    const walls=counts.map((n,k)=>new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:J.detail?streetDetailFacade(k):J.immersive?streetscapeFacade():null}),true),n));
+    const walls=counts.map((n,k)=>new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(facadeLambert(J.detail?streetDetailFacade(k):J.immersive?streetscapeFacade():null),true),n));
     const caps=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff})),G.length);
     G.forEach((b,i)=>{ const bh=b.h,seed=J.immersive?Math.floor(hash2(b.x,b.z)*10000):i; const gy=navGroundY(b.x,b.z);
       // Hillside foundation: keep the roofline at the centre's ground + height, but extend the walls
@@ -6509,7 +6545,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     if(PADS.length){ const pad=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0x6d727a}),PADS.length);   // the strip mall's parking pad between the kerb and the storefront
       PADS.forEach((b,i)=>{ const px=b.x+b.fx*(b.d/2+BTYPED.stripPark/2), pz=b.z+b.fz*(b.d/2+BTYPED.stripPark/2), gy=navGroundY(px,pz); dummy.position.set(px,gy+0.07,pz); dummy.scale.set(b.w+6,0.14,BTYPED.stripPark-1.5); dummy.rotation.set(0,b.ang,0); dummy.updateMatrix(); pad.setMatrixAt(i,dummy.matrix); }); add(pad,'bld-pad'); }
     if(TD.length){ const GB=TD.filter(b=>b.gable), np=TD.reduce((n,b)=>n+(b.porches||0),0);
-      const walls=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,map:streetscapeFacade()}),true),TD.length);
+      const walls=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(facadeLambert(streetscapeFacade()),true),TD.length);
       const gables=new THREE.InstancedMesh(gableGeo(),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true})),Math.max(1,GB.length));
       const porch=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xefebe2})),Math.max(1,np));
       const tdPal=[0xc9a48a,0xdac7ad,0xb98b73,0xd3c9bd,0xc7ad93,0xe1d7c4], roofPalT=[0x6b5f57,0x5f6a70,0x7a6a5d,0x625b58]; let pi=0, gi=0;
