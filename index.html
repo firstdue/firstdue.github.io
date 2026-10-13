@@ -1060,7 +1060,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20v";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20w";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2364,6 +2364,27 @@ const SEAM=new Set();
 const HWY_ENDS=new Map();
 for(const n of gnodes.values()){ if(n.adj.length!==1||!n.adj[0].hw) continue; const e=n.adj[0],dx=n.x-e.to.x,dz=n.z-e.to.z,l=Math.hypot(dx,dz)||1;
   HWY_ENDS.set(n.x+','+n.z,{x:n.x,z:n.z,ux:dx/l,uz:dz/l,name:e.name,hw:e.hw}); }
+/* 🚧 NARROW CONNECTORS (owner's ruling, October 12, 2026). PFD 4.11.7 keeps apparatus off STREETS 15 ft or less, and the
+   bake measured every segment the City's curb polygons cover — which also caught 26 one-way UNNAMED connector edges: the
+   slip ramps of the Kelly Drive / City Avenue / Ridge interchange, along Roosevelt Boulevard and a few more, 13-15 ft (one
+   traffic lane; one reads 1.8 ft, so the curb data is not reliable there). Freeway ramps were never flagged. The owner's
+   rule: a one-way unnamed connector is NOT narrow when it joins two roads that are not narrow themselves. Walk its unnamed
+   chain to the first nodes where a named street or a freeway attaches; two or more such ends, and no joined road narrow
+   at its end, clears the chain's one-way unnamed edges. 24 of the 26 qualify (18 connectors, 1,421 m); two stubs that reach
+   one road only stay narrow. Two-way unnamed edges and every named street are untouched. Every reader of the flag (router,
+   narrow chip, call targeting, narrowCorner) goes through e.nw, so they all follow. Why it mattered: the signed "City Ave"
+   ramp route ran 1,226 m round Ridge Avenue while its 150 m connector read 14.4 ft — notes/interchange-rail-diagnosis.md. */
+const NARROW_EXEMPT=[];   // one entry per cleared undirected edge: {x, z (midpoint), ft (as baked)} — for the tests
+(function exemptNarrowConnectors(){ const isRoad=e=>!!(e.name||e.hw), back=(n,e)=>e.to.adj.find(r=>r.to===n), oneWay=(n,e)=>{ const b=back(n,e); return !!(e.wrong||(b&&b.wrong)); };
+  const done=new Set();
+  for(const s0 of gnodes.values()) for(const e0 of s0.adj){ if(!e0.nw||isRoad(e0)||!oneWay(s0,e0)||done.has(e0)) continue;
+    const chain=[[s0,e0]], ends=new Map(), seen=new Set([s0,e0.to]), q=[s0,e0.to];
+    while(q.length){ const n=q.pop(), roads=n.adj.filter(isRoad); if(roads.length){ ends.set(n,roads); continue; }   // a road attaches here: an END
+      for(const e of n.adj){ if(isRoad(e)) continue; chain.push([n,e]); if(!seen.has(e.to)){ seen.add(e.to); q.push(e.to); } } }
+    for(const [n,e] of chain){ done.add(e); const b=back(n,e); if(b) done.add(b); }
+    if(ends.size<2||[...ends.values()].some(roads=>roads.some(r=>r.nw>0))) continue;   // joins fewer than two roads, or a narrow one: stays narrow
+    for(const [n,e] of chain){ if(!e.nw||isRoad(e)||!oneWay(n,e)) continue; const b=back(n,e);
+      NARROW_EXEMPT.push({x:Math.round((n.x+e.to.x)/2),z:Math.round((n.z+e.to.z)/2),ft:+(e.nw/0.3048).toFixed(1)}); e.nw=0; if(b) b.nw=0; } } })();
 /* ⭕ ROUNDABOUTS (v20l). OSM leaves a roundabout ring UNNAMED and one-way (the bake now honours junction=roundabout),
    so a ring is found here as a short loop of unnamed one-way street edges: 3+ edges, at most 320 m round, and ROUND
    (every node within 2x of the others' distance from the centre - which rejects long thin loops like ramps). The
