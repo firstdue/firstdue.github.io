@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v60';  // v20w: one-way connector ramps joining two non-narrow roads are no longer narrow streets (owner ruling on PFD 4.11.7).
+const CACHE = 'local-shell-v61';  // v20x: the Broad Street ramps re-baked — the PA 611 exit reaches Broad Street and the US 1 South on-ramp starts at 17th & Cayuga (data/rb.js, btype.js, rref.js, narrow.js).
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
