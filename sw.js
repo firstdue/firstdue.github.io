@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v64';  // v21a: HYDRANTS NEAR ME on the home map — the hydrants nearest the phone's real location (it never leaves the phone).
+const CACHE = 'local-shell-v65';  // v21b: the HYDRANTS NEAR ME map is interactive — pinch, drag, tap a hydrant; zooming out shows every hydrant in view.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
