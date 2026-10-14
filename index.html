@@ -744,17 +744,20 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   /* 🧯 hydrants near the player's REAL location: a compact two-line button in the EMPTY TOP-LEFT of the home map (owner, October 14,
      2026: "move the hydrant button to the top in the empty spot") — under the title, left of the Northeast's arm, where no firehouse
      stands. In a browser that still shows the yellow INSTALL APP button it drops below that button instead of covering it. */
-  #btnHydNearMe { position:absolute; left:12px; top:calc(max(10px,env(safe-area-inset-top)) + 58px); z-index:3; min-height:44px; min-width:44px;
+  #btnHydNearMe, #btnBoxLookup { position:absolute; left:12px; top:calc(max(10px,env(safe-area-inset-top)) + 58px); z-index:3; min-height:44px; min-width:44px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
     background:rgba(9,14,26,.9); color:#9cc4ff; border:1px solid rgba(79,141,255,.6); border-radius:11px;
     padding:7px 11px; font-size:11px; letter-spacing:.8px; cursor:pointer; }
-  #btnHydNearMe b { font-weight:900; } #btnHydNearMe span { font-weight:800; font-size:9.5px; letter-spacing:1.2px; color:#7fa9e6; }
+  #btnHydNearMe b, #btnBoxLookup b { font-weight:900; } #btnHydNearMe span, #btnBoxLookup span { font-weight:800; font-size:9.5px; letter-spacing:1.2px; color:#7fa9e6; }
   #homeHud:has(#btnInstall:not([hidden])) ~ #btnHydNearMe { top:calc(max(10px,env(safe-area-inset-top)) + 112px); }
-  #hydSheet { position:absolute; inset:0; z-index:9; display:none; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.55); }
-  #hydSheet.show { display:flex; }
-  #hydSheet .card { width:min(480px,96vw); max-height:92vh; overflow:auto; text-align:left; background:#141a24; border:1px solid #2a3444; border-radius:16px 16px 0 0;
+  #btnBoxLookup { top:calc(max(10px,env(safe-area-inset-top)) + 111px); }   /* under HYDRANTS NEAR ME */
+  #homeHud:has(#btnInstall:not([hidden])) ~ #btnBoxLookup { top:calc(max(10px,env(safe-area-inset-top)) + 165px); }
+  #btnHydNearMe, #btnBoxLookup { width:126px; padding-left:6px; padding-right:6px; }   /* one width for the pair, whatever the phone's font */
+  #hydSheet, #boxSheet { position:absolute; inset:0; z-index:9; display:none; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.55); }
+  #hydSheet.show, #boxSheet.show { display:flex; }
+  #hydSheet .card, #boxSheet .card { width:min(480px,96vw); max-height:92vh; overflow:auto; text-align:left; background:#141a24; border:1px solid #2a3444; border-radius:16px 16px 0 0;
     padding:14px 14px calc(14px + env(safe-area-inset-bottom)); color:#e9eef7; }
-  #hydSheet h2 { margin:0 0 4px; font-size:16px; font-weight:900; color:#9cc4ff; letter-spacing:.5px; }
+  #hydSheet h2, #boxSheet h2 { margin:0 0 4px; font-size:16px; font-weight:900; color:#9cc4ff; letter-spacing:.5px; }
   #hydSheetStatus { font-size:12px; font-weight:700; color:#9fb3c8; min-height:16px; }
   #hydSheetMap { width:100%; height:300px; border-radius:10px; background:#eceae4; margin-top:8px; display:block; touch-action:none; }   /* the map takes the pinch and the drag */
   .mapWrap { position:relative; }                                   /* the hydrant maps (near-me sheet, senior man's card): ＋ － ◎ over the map */
@@ -768,9 +771,51 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #hydSel { margin-top:6px; font-size:12.5px; font-weight:800; color:#ffd27a; min-height:0; }
   #hydSheetList { margin-top:8px; font-size:13px; font-weight:700; line-height:1.7; color:#dbe8ff; }
   #hydSheetList .n { display:inline-block; width:20px; height:20px; border-radius:10px; background:#2f7bff; color:#fff; text-align:center; font-size:11px; line-height:20px; margin-right:8px; }
-  #hydSheet .fine { margin-top:8px; font-size:10.5px; color:#8a97a8; }
-  #hydSheet .row { display:flex; gap:8px; margin-top:10px; }
-  #hydSheet .row button { flex:1; min-height:44px; border:none; border-radius:10px; font-weight:900; font-size:13px; background:#2b3d5c; color:#fff; }
+  #hydSheet .fine, #boxSheet .fine { margin-top:8px; font-size:10.5px; color:#8a97a8; }
+  #hydSheet .row, #boxSheet .row { display:flex; gap:8px; margin-top:10px; }
+  #hydSheet .row button, #boxSheet .row button { flex:1; min-height:44px; border:none; border-radius:10px; font-weight:900; font-size:13px; background:#2b3d5c; color:#fff; }
+  #boxMode { display:flex; gap:6px; margin:6px 0 4px; }
+  #boxMode button { flex:1; min-height:40px; border-radius:9px; border:1px solid #33435c; background:#1b2536; color:#9fb3c8; font-weight:900; font-size:12px; letter-spacing:.8px; font-family:inherit; }
+  #boxMode button.on { background:#2f7bff; color:#fff; border-color:#2f7bff; }
+  #boxSug { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } #boxSug:empty { display:none; }
+  #boxSug button { min-height:40px; border-radius:9px; border:1px solid #33435c; background:#141f30; color:#dbe8ff; font-weight:800; font-size:12.5px; padding:0 10px; font-family:inherit; }
+  #boxAddr { margin-top:6px; font-size:14px; font-weight:900; color:#fff; } #boxAddr:empty { display:none; } #boxAddr .q { display:block; font-size:11.5px; font-weight:700; color:#ffd27a; margin-top:2px; }
+  #boxForm { display:flex; gap:8px; margin:6px 0 2px; }
+  #boxInput { flex:1; min-width:0; min-height:44px; border-radius:10px; border:1px solid #3a4a63; background:#0d1320; color:#fff; font-size:18px; font-weight:900;
+    letter-spacing:3px; padding:0 12px; font-family:inherit; }
+  #boxInput::placeholder { color:#5d6f88; font-size:13px; font-weight:700; letter-spacing:.3px; }
+  #boxGo { min-height:44px; padding:0 16px; border:none; border-radius:10px; background:#f5b84b; color:#1a1206; font-weight:900; font-size:13px; letter-spacing:.5px; }
+  #boxStatus { font-size:12px; font-weight:700; color:#9fb3c8; min-height:16px; margin-top:4px; }
+  #boxHead { margin-top:2px; } #boxHead .bn, #boxHead .sub { display:block; } #boxHead .sub { margin-top:1px; }
+  #boxHead .bn { font:900 26px "Arial Black",sans-serif; color:#ffd27a; letter-spacing:1px; } #boxHead .sub { font-size:11.5px; font-weight:800; color:#9fb3c8; letter-spacing:.6px; }
+  #boxMap { width:100%; height:260px; border-radius:10px; background:#eceae4; margin-top:8px; display:block; touch-action:none; }
+  #boxSel { margin-top:6px; font-size:12.5px; font-weight:800; color:#ffd27a; }
+  #boxUnits .grp { margin-top:10px; } #boxSheet .ty { font-size:10.5px; font-weight:900; letter-spacing:1.4px; color:#8fa6c4; margin-bottom:2px; }
+  #boxUnits .u.me { background:rgba(255,210,122,.10); box-shadow:inset 3px 0 0 #ffd27a; padding-left:6px; }   /* your company, wherever it shows */
+  #boxFit { margin-top:12px; padding:10px; border:1px solid #2a3444; border-radius:12px; background:#0f1520; }
+  #boxFit .fitRow { display:flex; gap:6px; align-items:center; margin-top:4px; }
+  #boxFit .kinds { display:flex; gap:4px; flex:1; min-width:0; }
+  #boxFit .kinds button { flex:1; min-width:0; min-height:44px; border-radius:9px; border:1px solid #33435c; background:#1b2536; color:#9fb3c8;
+    font-weight:900; font-size:10.5px; letter-spacing:.2px; padding:0 2px; font-family:inherit; }
+  #boxFit .kinds button.on { background:#2f7bff; color:#fff; border-color:#2f7bff; }
+  #boxMine { width:60px; flex:none; min-height:44px; border-radius:9px; border:1px solid #3a4a63; background:#0d1320; color:#fff; font-size:18px; font-weight:900;
+    text-align:center; font-family:inherit; padding:0; }
+  #boxMine::placeholder { color:#5d6f88; font-size:13px; }
+  #boxFitOut { margin-top:8px; font-size:12.5px; font-weight:700; color:#9fb3c8; min-height:16px; }
+  #boxFitOut .pos { display:block; font:900 20px "Arial Black",sans-serif; color:#ffd27a; letter-spacing:.5px; }
+  #boxMore { margin-top:12px; border:1px solid #2a3444; border-radius:12px; background:#0f1520; }
+  #boxMore summary { min-height:44px; display:flex; align-items:center; padding:0 12px; font-size:12px; font-weight:900; letter-spacing:1px; color:#9cc4ff;
+    cursor:pointer; list-style:none; }
+  #boxMore summary::-webkit-details-marker { display:none; } #boxMore summary::after { content:'\25BE'; margin-left:auto; font-size:16px; } #boxMore[open] summary::after { content:'\25B4'; }
+  #boxMoreList { padding:0 12px 10px; } #boxMoreList .chips { display:flex; flex-wrap:wrap; gap:5px; margin:4px 0 10px; }
+  #boxMoreList .chip { font-size:11.5px; font-weight:800; color:#dbe8ff; background:#1b2536; border:1px solid #2a3444; border-radius:7px; padding:3px 6px; }
+  #boxMoreList .chip b { color:#8fa6c4; font-size:10px; margin-right:4px; }
+  #boxMoreList .chip.me { border-color:#ffd27a; color:#ffd27a; background:rgba(255,210,122,.12); }
+  #boxUnits .u { display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid #222c3b; font-size:13px; }
+  #boxUnits .due { flex:none; width:38px; text-align:center; border-radius:6px; padding:3px 0; font-size:10.5px; font-weight:900; color:#0b0f17; }
+  #boxUnits .nm { flex:none; min-width:92px; font-weight:900; color:#fff; letter-spacing:.3px; }
+  #boxUnits .fr { flex:1; min-width:0; color:#9fb3c8; font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #boxUnits .mi { flex:none; color:#c9d6e8; font-size:12px; font-weight:800; }
   #homeLegend, #btnListView, #btnFirstDueHome { transition:opacity .2s, transform .2s; }
   #homeMapWrap.picking #homeLegend, #homeMapWrap.picking #btnListView, #homeMapWrap.picking #btnFirstDueHome {
     opacity:0; transform:translateY(14px); pointer-events:none; }   /* the card owns the bottom edge while a house is selected */
@@ -1021,6 +1066,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <button id="btnFirstDueHome">🏆 LEADERBOARD</button>
     <button id="btnListView">☰ LIST VIEW</button>
     <button id="btnHydNearMe" type="button" aria-label="Hydrants near me"><b>🧯 HYDRANTS</b><span>NEAR ME</span></button>
+    <button id="btnBoxLookup" type="button" aria-label="Look up a box or an address"><b>🔔 LOOK UP</b><span>BOX · ADDRESS</span></button>
     <div id="hydSheet" role="dialog" aria-modal="true" aria-labelledby="hydSheetTitle"><div class="card">
       <h2 id="hydSheetTitle">🧯 HYDRANTS NEAR YOU</h2>
       <div id="hydSheetStatus"></div>
@@ -1029,6 +1075,25 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
       <div id="hydSheetList"></div>
       <div class="fine">From the PFD box books and OpenStreetMap — check a hydrant before you rely on it. Your location stays on your phone.</div>
       <div class="row"><button id="hydSheetClose" type="button">CLOSE</button></div>
+    </div></div>
+    <div id="boxSheet" role="dialog" aria-modal="true" aria-labelledby="boxSheetTitle"><div class="card">
+      <h2 id="boxSheetTitle">🔔 BOX LOOKUP</h2>
+      <div id="boxMode" role="group" aria-label="Look up by"><button type="button" data-m="box" class="on">BOX #</button><button type="button" data-m="addr">ADDRESS</button></div>
+      <form id="boxForm" autocomplete="off"><input id="boxInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Box number, like 3515" aria-label="Box number"><button id="boxGo" type="submit">LOOK UP</button></form>
+      <div id="boxStatus"></div>
+      <div id="boxSug"></div>
+      <div id="boxAddr"></div>
+      <div id="boxHead"></div>
+      <div class="mapWrap" id="boxMapWrap" style="display:none"><canvas id="boxMap"></canvas><div class="mapBtns"><button id="boxZoomIn" type="button" aria-label="Zoom in">＋</button><button id="boxZoomOut" type="button" aria-label="Zoom out">－</button><button id="boxRecenter" type="button" aria-label="Back to the box">◎</button></div></div>
+      <div id="boxSel"></div>
+      <div id="boxUnits"></div>
+      <div id="boxFit" hidden><div class="ty">WHERE DO I FIT?</div>
+        <div class="fitRow"><div class="kinds" role="group" aria-label="Your company"><button type="button" data-k="E" class="on">ENGINE</button><button type="button" data-k="L">LADDER</button><button type="button" data-k="M">MEDIC</button><button type="button" data-k="B">CHIEF</button></div>
+        <input id="boxMine" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="No." aria-label="Your company number" autocomplete="off"></div>
+        <div id="boxFitOut"></div></div>
+      <details id="boxMore" hidden><summary>EVERYONE ELSE, IN ORDER</summary><div id="boxMoreList"></div></details>
+      <div class="fine">Who runs the box, in the order the Fire Department sends each kind of unit — the PFD response-zone list of August 7, 2025. Box outline and hydrants from the PFD box books; miles are straight-line from quarters.</div>
+      <div class="row"><button id="boxSheetClose" type="button">CLOSE</button></div>
     </div></div>
     <div id="houseCard">
       <span class="hcX" id="hcClose">×</span>
@@ -1109,7 +1174,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21d";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21e";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3712,7 +3777,9 @@ let best={saves:0,cash:0}; try{ const s=localStorage.getItem('pfd_ef_best'); if(
 
 /* ============================ 9. INPUT ============================ */
 const keys=Object.create(null);
-addEventListener('keydown',e=>{ if(duedPaused()) return; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault(); keys[e.code]=true;
+addEventListener('keydown',e=>{ if(duedPaused()) return;
+  { const t=e.target; if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable)) return; }   // typing in a field (an address, an e-mail) is not driving: no blocked space, no W/A/S/D/F/N/E
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault(); keys[e.code]=true;
   if(!e.repeat){                                                      // one action per press; auto-repeat would spam turns and popups
     if(e.code==='ArrowLeft' ||e.code==='KeyA'){ ctlTurn(-1); return; }   // ctlTurn -> pickTurn: the same path CONTROLLER's pad arrows use,
     if(e.code==='ArrowRight'||e.code==='KeyD'){ ctlTurn(1);  return; }   // so turns stay inside the protected turn system
@@ -8738,16 +8805,19 @@ function drawHydrantMap(cv,H,ax,az,list,opt){ const c=cv.getContext('2d');
     scale=Math.min((W-20)/(maxX-minX),(H-20)/(maxZ-minZ)); ox=(W-(maxX-minX)*scale)/2; oy=(H-(maxZ-minZ)*scale)/2; }
   const T=(x,z)=>[ox+(x-minX)*scale,oy+(z-minZ)*scale], numbered=new Set(list.map(q=>q.h));
   // every OTHER hydrant inside the frame (the near-me map, so zooming out shows more)
-  const all=opt.all?hydrantsNear((minX+maxX)/2,(minZ+maxZ)/2,Math.hypot(maxX-minX,maxZ-minZ)/2).filter(h=>!numbered.has(h)&&h[0]>=minX&&h[0]<=maxX&&h[1]>=minZ&&h[1]<=maxZ):[];
-  cv._map={minX,minZ,maxX,maxZ,scale,ox,oy,W,H,view:opt.mark==='you'?'nearme':'hydrants',hyd:list.map(q=>[q.h[0],q.h[1]]),all:all.map(h=>[h[0],h[1]]),centre:[ax,az],sel:opt.sel||null};
+  const all=opt.all?hydrantsNear((minX+maxX)/2,(minZ+maxZ)/2,Math.hypot(maxX-minX,maxZ-minZ)/2).filter(h=>!numbered.has(h)&&h[0]>=minX&&h[0]<=maxX&&h[1]>=minZ&&h[1]<=maxZ&&(!opt.allIn||ptInRing(h[0],h[1],opt.allIn))):[];   // allIn: only those inside that ring (BOX LOOKUP)
+  cv._map={minX,minZ,maxX,maxZ,scale,ox,oy,W,H,view:opt.mark==='you'?'nearme':opt.mark==='box'?'box':'hydrants',hyd:list.map(q=>[q.h[0],q.h[1]]),all:all.map(h=>[h[0],h[1]]),centre:[ax,az],sel:opt.sel||null};
   c.setTransform(dpr,0,0,dpr,0,0); c.fillStyle=MAP_LAND; c.fillRect(0,0,W,H);
   c.setTransform(dpr*scale,0,0,dpr*scale,dpr*(ox-minX*scale),dpr*(oy-minZ*scale));    // draw in metres: x east -> right, z south -> down (north up)
   c.fillStyle=MAP_WATER; for(const poly of RB.wa){ if(poly.length<3) continue; let a=1e9,b=-1e9,d=1e9,e=-1e9; for(const q of poly){a=Math.min(a,q[0]);b=Math.max(b,q[0]);d=Math.min(d,q[1]);e=Math.max(e,q[1]);}
     if(b<minX||a>maxX||e<minZ||d>maxZ) continue; c.beginPath(); c.moveTo(poly[0][0],poly[0][1]); for(let i=1;i<poly.length;i++) c.lineTo(poly[i][0],poly[i][1]); c.closePath(); c.fill(); }
+  const ring=p=>{ c.beginPath(); p.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1])); c.closePath(); };
+  if(opt.ring){ c.fillStyle='rgba(230,57,70,.12)'; ring(opt.ring); c.fill(); }      // the box (BOX LOOKUP), under the streets
   if(scale>0.6){ c.fillStyle='#cbc7bd'; for(const q of FLATCITY.mmB||[]){ if(!q||q.x<minX-30||q.x>maxX+30||q.z<minZ-30||q.z>maxZ+30) continue; c.save(); c.translate(q.x,q.z); c.rotate(-(q.ang||0)); c.fillRect(-q.w/2,-q.d/2,q.w,q.d); c.restore(); } }
   const segs=[], seen=new Set(); for(let gx=Math.floor(minX/SEGCELL);gx<=Math.floor(maxX/SEGCELL);gx++) for(let gz=Math.floor(minZ/SEGCELL);gz<=Math.floor(maxZ/SEGCELL);gz++){ const l=segGrid.get(gx+':'+gz); if(l) for(const s of l) if(!seen.has(s)){ seen.add(s); segs.push(s); } }
   c.lineCap='round';
   for(const pass of [0,1]) for(const s of segs){ c.strokeStyle=pass?'#ffffff':'#b9b5ab'; c.lineWidth=Math.max(segHalf(s)*2,2/scale)+(pass?0:2.4/scale); c.beginPath(); c.moveTo(s.ax,s.az); c.lineTo(s.bx,s.bz); c.stroke(); }   // each street at its own width
+  if(opt.ring){ c.strokeStyle='rgba(214,40,57,.95)'; c.lineWidth=2.6/scale; c.lineJoin='round'; ring(opt.ring); c.stroke(); }   // ...and its edge over them
   c.setLineDash([4/scale,3/scale]); c.strokeStyle='rgba(47,123,255,.85)'; c.lineWidth=1.8/scale;
   for(const q of list){ c.beginPath(); c.moveTo(ax,az); c.lineTo(q.h[0],q.h[1]); c.stroke(); }
   if(opt.sel){ c.strokeStyle='rgba(230,150,0,.95)'; c.lineWidth=2.4/scale; c.beginPath(); c.moveTo(ax,az); c.lineTo(opt.sel[0],opt.sel[1]); c.stroke(); }
@@ -8766,7 +8836,14 @@ function drawHydrantMap(cv,H,ax,az,list,opt){ const c=cv.getContext('2d');
   if(opt.mark==='you'){ c.fillStyle='rgba(245,166,35,.18)'; c.beginPath(); c.arc(fx,fy,Math.max(10,(opt.acc||0)*scale),0,6.2832); c.fill();   // how sure the phone is
     c.fillStyle='#fff'; c.beginPath(); c.arc(fx,fy,8,0,6.2832); c.fill(); c.fillStyle='#f5a623'; c.beginPath(); c.arc(fx,fy,5.5,0,6.2832); c.fill();
     c.fillStyle='#4a4f57'; c.font='900 10px -apple-system,Arial,sans-serif'; c.lineWidth=3; c.strokeStyle='rgba(255,255,255,.95)'; c.strokeText('YOU',fx,fy-16); c.fillText('YOU',fx,fy-16); }
+  else if(opt.mark==='box'){ c.font='900 14px -apple-system,Arial,sans-serif'; c.lineWidth=4; c.strokeStyle='rgba(255,255,255,.95)'; c.strokeText(opt.label||'',fx,fy); c.fillStyle='#c62839'; c.fillText(opt.label||'',fx,fy); }
   else { c.font='18px sans-serif'; c.fillText('🔥',fx,fy); }
+  if(opt.pin){ const [px,py]=T(opt.pin[0],opt.pin[1]); c.fillStyle='#2f7bff'; c.strokeStyle='#fff'; c.lineWidth=2.5;   // the looked-up ADDRESS (BOX LOOKUP)
+    c.beginPath(); c.moveTo(px,py); c.bezierCurveTo(px-9,py-12,px-9,py-24,px,py-24); c.bezierCurveTo(px+9,py-24,px+9,py-12,px,py); c.closePath(); c.stroke(); c.fill();
+    c.fillStyle='#fff'; c.beginPath(); c.arc(px,py-17,3.2,0,6.2832); c.fill(); }
+  for(const q of opt.houses||[]){ const [px,py]=T(q.x,q.z); if(px<-30||px>W+30||py<-14||py>H+14) continue;   // the responding firehouses (BOX LOOKUP), when in view
+    c.font='900 10px -apple-system,Arial,sans-serif'; const w=c.measureText(q.t).width+10; c.fillStyle=q.c; c.fillRect(px-w/2,py-8,w,16); c.strokeStyle='#fff'; c.lineWidth=1.5; c.strokeRect(px-w/2,py-8,w,16);
+    c.fillStyle='#0b0f17'; c.fillText(q.t,px,py+0.5); }
   list.forEach((q,i)=>{ const [px,py]=T(q.h[0],q.h[1]); c.fillStyle='#2f7bff'; c.strokeStyle='#fff'; c.lineWidth=2; c.beginPath(); c.arc(px,py,8.5,0,6.2832); c.fill(); c.stroke();
     c.fillStyle='#fff'; c.font='900 10px -apple-system,Arial,sans-serif'; c.fillText(String(i+1),px,py+0.5); });
   if(opt.sel){ const [px,py]=T(opt.sel[0],opt.sel[1]); c.strokeStyle='#f0a000'; c.lineWidth=3; c.beginPath(); c.arc(px,py,12,0,6.2832); c.stroke(); }   // the tapped one
@@ -8868,6 +8945,194 @@ document.getElementById('hydZoomIn').addEventListener('click',e=>{ e.preventDefa
 document.getElementById('hydZoomOut').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(NEARME,1/1.6); });
 document.getElementById('hydRecenter').addEventListener('click',e=>{ e.preventDefault(); hydMapHome(NEARME); });
 hydMapGestures(NEARME);
+/* 🔔 BOX LOOKUP on the home map (owner, October 14, 2026: "can we do a look up of a box on the main page to show who all is on the
+   box and have it nicely laid out", then "show the first due like you have and a dropdown list of extra and or a separate box
+   inside that a member could put his engine or ladder number to find out if they are first in or 9th in"). Type a box number:
+   its outline on the shared north-up map (pinch / ＋－ / drag, tap a hydrant; ◎ back to the box; zoom out to see the engine
+   houses); the FIRST ASSIGNMENT — engines 1st-4th, ladders 1st-2nd, the battalion chief, the medic, the rescue/squad (how many of
+   each is BOXLOOK.show) — with quarters and straight-line miles where PFD_STATIONS knows them; WHERE DO I FIT? — pick ENGINE /
+   LADDER / MEDIC / CHIEF and type your number: your place on this box ("6TH ENGINE IN"), remembered, and your company is
+   highlighted wherever it shows; and EVERYONE ELSE, IN ORDER — the rest of every list, folded. The whole order is
+   data/pfdlook.js (PFDLOOK, the response-zone list of 08/07/25), loaded the first time the lookup opens, never at start-up.
+   Unlike the game's own due order (runOrderAt) this shows units the game has no house for (Engine 78, unit 96): it is the list. */
+const BOXLOOK={box:null,ring:null,bb:null,ax:0,az:0,nHyd:0,houses:[],full:null,pin:null,mode:'box',addrLoading:false,addrWait:[],addrIx:null,view:null,follow:true,sel:null,ptr:new Map(),pinch:null,raf:0,lastTap:0,H:260,MIN:0.15,MAX:12,
+  show:{E:4,L:2,B:1,M:1,S:1},mine:{k:'E',n:''},loading:false,wait:[]};
+const BOX_DUE_C=['#3ddc84','#ffd23b','#ff9f2e','#ff6b4a','#c9a3ff','#8a94a6'];   // 1st..4th as the due chip, then on
+const BOX_KIND={E:'ENGINE',L:'LADDER',B:'BATTALION',M:'MEDIC'}, BOX_SHORT={E:'E',L:'L',B:'B',M:'M'};
+function boxTitle(s){ return String(s||'').toLowerCase().replace(/\b[a-z]/g,m=>m.toUpperCase()); }
+function boxHouse(kind,n){ const h=kind==='E'?PFD_STATIONS.find(q=>q.n===n):kind==='L'?PFD_STATIONS.find(q=>q.l===n):kind==='B'?PFD_STATIONS.find(q=>q.bc===n):null;
+  if(!h) return null; const w=ll2world(h.lat,h.lon), cur=stations.find(s=>s.num===h.n&&s.curated);
+  return { n:h.n, x:w.x, z:w.z, addr:cur?cur.address:boxTitle(h.loc) }; }
+function boxUnitName(kind,v){ if(kind==='S'){ const m=String(v).match(/^(SQ|R)(\d+)$/); return m?(m[1]==='R'?'RESCUE ':'SQUAD ')+m[2]:String(v); } return BOX_KIND[kind]+' '+v; }
+function boxUnitShort(kind,v){ return kind==='S'?String(v):BOX_SHORT[kind]+v; }
+function boxData(cb){ if(typeof PFDLOOK!=='undefined') return cb(true);                           // the whole order loads on first use
+  BOXLOOK.wait.push(cb); if(BOXLOOK.loading) return; BOXLOOK.loading=true;
+  const s=document.createElement('script'), done=ok=>{ BOXLOOK.loading=false; const w=BOXLOOK.wait; BOXLOOK.wait=[]; for(const f of w) f(ok&&typeof PFDLOOK!=='undefined'); };
+  s.src='data/pfdlook.js'; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
+function boxFull(key){ const s=typeof PFDLOOK!=='undefined'&&PFDLOOK.f[key]; if(!s) return null; const parts=s.split('.'), out={};
+  ['E','L','B','M','S'].forEach((t,i)=>{ out[t]=Array.from(parts[i]||'',ch=>PFDLOOK.lg[t][PFDLOOK.a.indexOf(ch)]); }); return out; }
+function boxFit(S){ const W=S.cv.clientWidth||320, H=S.H, bb=S.bb, mpp=Math.min(S.MAX,Math.max(S.MIN,(bb[2]-bb[0]+60)/W,(bb[3]-bb[1]+60)/(H-64)));
+  return { cx:(bb[0]+bb[2])/2, cz:(bb[1]+bb[3])/2+22*mpp, mpp }; }   // the box a little above the middle, clear of ＋ － ◎
+function boxRender(){ const S=BOXLOOK; if(!S.view||!S.ring) return;
+  drawHydrantMap(S.cv,S.H,S.ax,S.az,[],{mark:'box',label:S.box,ring:S.ring,view:S.view,all:true,allIn:S.ring,sel:S.sel,houses:S.houses,pin:S.pin});
+  document.getElementById('boxRecenter').classList.toggle('off',!S.follow);
+  const sl=document.getElementById('boxSel');
+  if(S.sel){ const where=hydStreetLabel(S.sel); sl.textContent='Tapped hydrant'+(where?': '+where:'')+' · in box '+S.box; }
+  else sl.textContent=S.nHyd+' hydrant'+(S.nHyd===1?'':'s')+' in box '+S.box+' · pinch to zoom, drag to move, tap one'; }
+function boxMineLoad(){ try{ const v=localStorage.getItem('pfd_myunit')||''; const m=v.match(/^([ELBM])(\d{1,3})$/); if(m) BOXLOOK.mine={k:m[1],n:m[2]}; }catch(e){} }
+function boxMineSave(){ try{ const m=BOXLOOK.mine; if(m.n) localStorage.setItem('pfd_myunit',m.k+m.n); else localStorage.removeItem('pfd_myunit'); }catch(e){} }
+function boxIsMine(kind,v){ const m=BOXLOOK.mine; return !!m.n&&kind===m.k&&String(v)===String(+m.n); }
+// WHERE DO I FIT? — your place on this box's list for your kind of unit, and your company highlighted wherever it shows
+function boxFitUpdate(){ const S=BOXLOOK, m=S.mine, out=document.getElementById('boxFitOut');
+  document.querySelectorAll('#boxFit .kinds button').forEach(bt=>bt.classList.toggle('on',bt.dataset.k===m.k));
+  document.querySelectorAll('#boxUnits .u, #boxMoreList .chip').forEach(el=>el.classList.toggle('me',boxIsMine(el.dataset.kind,el.dataset.unit)));
+  out.textContent=''; if(!S.full) return;
+  if(!m.n){ out.textContent='Pick your kind of company and type its number.'; return; }
+  const list=S.full[m.k]||[], i=list.indexOf(+m.n), who=BOX_KIND[m.k]+' '+(+m.n);
+  if(i<0){ out.textContent=who+' is not on box '+S.box+"'s list."; return; }
+  const pos=document.createElement('span'); pos.className='pos'; pos.textContent=ordinalBn(i+1).toUpperCase()+' '+(m.k==='B'?'CHIEF':BOX_KIND[m.k])+' IN';
+  out.appendChild(pos); out.appendChild(document.createTextNode(who+' on box '+S.box+' · '+(i<S.show[m.k]?'on the first assignment above':'after the first assignment — see everyone else below'))); }
+function boxLookup(raw,from){ const S=BOXLOOK, st=document.getElementById('boxStatus'), U=document.getElementById('boxUnits'), Hd=document.getElementById('boxHead'), wrap=document.getElementById('boxMapWrap');
+  const digits=String(raw||'').replace(/\D/g,'').slice(0,4), fit=document.getElementById('boxFit'), more=document.getElementById('boxMore'), ML=document.getElementById('boxMoreList');
+  U.textContent=''; Hd.textContent=''; ML.textContent=''; document.getElementById('boxSel').textContent=''; fit.hidden=true; more.hidden=true; more.open=false;
+  S.view=null; S.sel=null; S.ring=null; S.box=null; S.full=null; wrap.style.display='none';
+  S.pin=from&&from.pin||null; if(!from) document.getElementById('boxAddr').textContent='';   // an address search keeps its line and its pin
+  if(!digits){ st.textContent='Type a box number — four digits; the first two are the first-due engine.'; return false; }
+  const key=digits.padStart(4,'0');
+  if(typeof PFDLOOK==='undefined'){ st.textContent='Loading the running orders…'; boxData(ok=>{ if(ok) boxLookup(key,from); else st.textContent='Could not load the running orders — check your connection and try again.'; }); return false; }
+  const full=boxFull(key); if(!full){ st.textContent='No box '+key+' in the PFD list.'; return false; }
+  S.box=key; S.full=full; if(!from) try{ localStorage.setItem('pfd_boxlook',key); }catch(e){}
+  const bx=PFD_BOXES.find(q=>q.box===key), n1=full.E[0];
+  const bn=document.createElement('span'); bn.className='bn'; bn.textContent='BOX '+key; Hd.appendChild(bn);
+  const sub=document.createElement('span'); sub.className='sub'; sub.textContent='ENGINE '+n1+"'S FIRST-DUE AREA"+(PFD_BN[n1]?' · '+ordinalBn(PFD_BN[n1]).toUpperCase()+' BATTALION':''); Hd.appendChild(sub);
+  if(bx){ S.ring=bx.poly; S.bb=bx.bb;
+    let cx=0,cz=0; for(const p of bx.poly){ cx+=p[0]; cz+=p[1]; } cx/=bx.poly.length; cz/=bx.poly.length;   // a label point INSIDE the box, nearest its middle
+    let best=null,bd=1e18; for(let i=0;i<=16;i++) for(let j=0;j<=16;j++){ const x=bx.bb[0]+(bx.bb[2]-bx.bb[0])*i/16, y=bx.bb[1]+(bx.bb[3]-bx.bb[1])*j/16;
+      if(!ptInRing(x,y,bx.poly)) continue; const d=(x-cx)**2+(y-cz)**2; if(d<bd){ bd=d; best=[x,y]; } }
+    [S.ax,S.az]=best||[cx,cz];
+    S.nHyd=hydrantsNear((bx.bb[0]+bx.bb[2])/2,(bx.bb[1]+bx.bb[3])/2,Math.hypot(bx.bb[2]-bx.bb[0],bx.bb[3]-bx.bb[1])/2+5).filter(h=>ptInRing(h[0],h[1],bx.poly)).length;
+    st.textContent=''; }
+  else st.textContent='The box books draw no outline for box '+key+' — here is who runs it.';
+  const K=S.show, seen=new Set(); S.houses=[];
+  const groups=[['ENGINES','E'],['LADDERS','L'],['BATTALION CHIEF','B'],['MEDIC','M'],['RESCUE / SQUAD','S']];
+  for(const [title,kind] of groups){ const list=full[kind].slice(0,K[kind]); if(!list.length) continue;
+    const g=document.createElement('div'); g.className='grp'; const ty=document.createElement('div'); ty.className='ty'; ty.textContent=title; g.appendChild(ty);
+    list.forEach((v,i)=>{ const row=document.createElement('div'); row.className='u'; row.dataset.kind=kind; row.dataset.unit=String(v);
+      const d=document.createElement('span'); d.className='due'; d.textContent=ordinalBn(i+1).toUpperCase(); d.style.background=BOX_DUE_C[Math.min(i,BOX_DUE_C.length-1)];
+      const nm=document.createElement('span'); nm.className='nm'; nm.textContent=boxUnitName(kind,v);
+      const fr=document.createElement('span'); fr.className='fr'; const mi=document.createElement('span'); mi.className='mi'; const h=boxHouse(kind,v);
+      if(h){ if(bx) mi.textContent=(Math.hypot(h.x-S.ax,h.z-S.az)/1609.34).toFixed(1)+' mi';
+        fr.textContent=kind==='E'?h.addr:'with Engine '+h.n;
+        if(kind==='E'&&!seen.has(h.n)){ seen.add(h.n); S.houses.push({x:h.x,z:h.z,t:'E'+h.n,c:BOX_DUE_C[Math.min(i,BOX_DUE_C.length-1)]}); } }
+      row.append(d,nm,fr,mi); g.appendChild(row); });
+    U.appendChild(g); }
+  // EVERYONE ELSE, IN ORDER — the rest of every list, folded
+  for(const [title,kind] of groups){ const rest=full[kind].slice(K[kind]); if(!rest.length) continue;
+    const ty=document.createElement('div'); ty.className='ty'; ty.textContent=title+' '+ordinalBn(K[kind]+1).toUpperCase()+'–'+ordinalBn(full[kind].length).toUpperCase(); ML.appendChild(ty);
+    const ch=document.createElement('div'); ch.className='chips';
+    rest.forEach((v,i)=>{ const c=document.createElement('span'); c.className='chip'; c.dataset.kind=kind; c.dataset.unit=String(v);
+      const o=document.createElement('b'); o.textContent=String(K[kind]+i+1); c.append(o,boxUnitShort(kind,v)); ch.appendChild(c); });
+    ML.appendChild(ch); }
+  fit.hidden=false; more.hidden=!ML.childNodes.length;
+  const mi=document.getElementById('boxMine'); if(mi.value!==BOXLOOK.mine.n) mi.value=BOXLOOK.mine.n;
+  boxFitUpdate();
+  if(bx){ wrap.style.display='block'; S.view=boxFit(S); S.follow=true; boxRender(); }
+  return true; }
+function boxOpen(){ document.getElementById('boxSheet').classList.add('show');
+  let m='box'; try{ m=localStorage.getItem('pfd_lookmode')==='addr'?'addr':'box'; }catch(e){}
+  boxSetMode(m,true); }
+function boxClose(){ document.getElementById('boxSheet').classList.remove('show'); BOXLOOK.ptr.clear(); BOXLOOK.pinch=null; }
+boxMineLoad();
+document.getElementById('btnBoxLookup').addEventListener('click',e=>{ e.preventDefault(); boxOpen(); });
+document.getElementById('boxForm').addEventListener('submit',e=>{ e.preventDefault(); const inp=document.getElementById('boxInput'); document.getElementById('boxSug').textContent='';
+  if(BOXLOOK.mode==='addr') addrLookup(inp.value); else boxLookup(inp.value); try{ inp.blur(); }catch(err){} });
+document.getElementById('boxInput').addEventListener('input',e=>{ if(BOXLOOK.mode==='addr'){ addrSuggest(e.target.value); return; }
+  const v=e.target.value.replace(/\D/g,'').slice(0,4); if(v!==e.target.value) e.target.value=v; });
+document.querySelectorAll('#boxMode button').forEach(bt=>bt.addEventListener('click',e=>{ e.preventDefault(); if(bt.dataset.m!==BOXLOOK.mode) boxSetMode(bt.dataset.m,false); }));
+document.querySelectorAll('#boxFit .kinds button').forEach(bt=>bt.addEventListener('click',e=>{ e.preventDefault(); BOXLOOK.mine.k=bt.dataset.k; boxMineSave(); boxFitUpdate(); }));
+document.getElementById('boxMine').addEventListener('input',e=>{ const v=e.target.value.replace(/\D/g,'').slice(0,3); if(v!==e.target.value) e.target.value=v; BOXLOOK.mine.n=v.replace(/^0+/,''); boxMineSave(); boxFitUpdate(); });
+document.getElementById('boxSheetClose').addEventListener('click',e=>{ e.preventDefault(); boxClose(); });
+document.getElementById('boxSheet').addEventListener('click',e=>{ if(e.target.id==='boxSheet') boxClose(); });   // a tap outside the card closes it
+BOXLOOK.cv=document.getElementById('boxMap'); BOXLOOK.render=()=>boxRender(); BOXLOOK.active=()=>!!BOXLOOK.view&&document.getElementById('boxSheet').classList.contains('show');
+BOXLOOK.home=()=>{ if(!BOXLOOK.bb) return null; const f=boxFit(BOXLOOK); if(BOXLOOK.view) BOXLOOK.view.mpp=f.mpp; return [f.cx,f.cz]; };   // ◎: the whole box again
+document.getElementById('boxZoomIn').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(BOXLOOK,1.6); });
+document.getElementById('boxZoomOut').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(BOXLOOK,1/1.6); });
+document.getElementById('boxRecenter').addEventListener('click',e=>{ e.preventDefault(); hydMapHome(BOXLOOK); });
+hydMapGestures(BOXLOOK);
+/* 📍 ADDRESS LOOKUP — the same sheet, switched to ADDRESS (owner, October 14, 2026: "members can look up an address, find the box
+   and who's on it", then "Download it"; where it sits was left to us: "pick one you feel is best, I'll let you know if I want it
+   moved"). data/pfdaddr.js (PFDADDR, bake_pfdaddr.js) says which box every OPA property address is in: along each side of each
+   street, runs of numbers in one box, with the first and last property's position. It loads only when an address is searched.
+   Typing is forgiving — North/N, Street/St, 23/23rd, no direction, no street type, a unit or ZIP after it; when a street name is
+   in more than one place ("23rd St" is N and S) the sheet asks which, each with its box. A number between two listed properties
+   takes the nearer run (within 20); further off, the sheet says the City has no such number and shows the street's range. */
+function addrData(cb){ const S=BOXLOOK; if(typeof PFDADDR!=='undefined') return cb(true);
+  S.addrWait.push(cb); if(S.addrLoading) return; S.addrLoading=true;
+  const s=document.createElement('script'), done=ok=>{ S.addrLoading=false; const w=S.addrWait; S.addrWait=[]; for(const f of w) f(ok&&typeof PFDADDR!=='undefined'); };
+  s.src='data/pfdaddr.js'; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
+// The City's own form: a direction only FIRST, a street type only LAST — canonStreet shortens every TERRACE / COURT / PLACE
+// wherever it stands, and "Terrace Street" (the street NAMED Terrace) is TERRACE ST to the City, not TER ST.
+const ADDR_DES=/ (ST|AVE|RD|LN|DR|PL|BLVD|SQ|TER|WAY|CT|CIR|PIKE|WALK|PKWY|PLZ|MEWS|ALY|MALL|HTS|PATH|ROW)$/;
+const ADDR_TYPE={STREET:'ST',STR:'ST',AVENUE:'AVE',AV:'AVE',ROAD:'RD',DRIVE:'DR',BOULEVARD:'BLVD',BLV:'BLVD',LANE:'LN',PLACE:'PL',COURT:'CT',CIRCLE:'CIR',TERRACE:'TER',
+  PARKWAY:'PKWY',SQUARE:'SQ',PLAZA:'PLZ',ALLEY:'ALY',HEIGHTS:'HTS'}, ADDR_DIRW={NORTH:'N',SOUTH:'S',EAST:'E',WEST:'W'};
+function addrCanon(t){ const w=String(t||'').toUpperCase().replace(/,?\s*(PHILADELPHIA|PHILA)\b.*$/,'').replace(/\s+\d{5}(-\d{4})?\s*$/,'')
+    .replace(/\s+(APT|APARTMENT|UNIT|STE|SUITE|FL|FLOOR|RM|REAR)\b.*$/,'').replace(/\s*#.*$/,'').replace(/&/g,' AND ').replace(/[^A-Z0-9 ]/g,' ').trim().split(/\s+/).filter(Boolean);
+  if(w.length>1&&ADDR_TYPE[w[w.length-1]]) w[w.length-1]=ADDR_TYPE[w[w.length-1]];
+  if(ADDR_DIRW[w[0]]&&(w.length>2||(w.length===2&&!ADDR_DES.test(' '+w[1])))) w[0]=ADDR_DIRW[w[0]];   // NORTH BROAD ST -> N; SOUTH ST stays the street named South
+  const s=w.map(x=>x==='SAINT'?'ST':x).join(' ');
+  return s.replace(/\b(\d+)\b(?!ST|ND|RD|TH)/g,(m,n)=>{ const v=+n%100, e=+n%10; return n+((v>10&&v<14)?'TH':e===1?'ST':e===2?'ND':e===3?'RD':'TH'); }); }   // 23 -> 23RD
+const ADDR_DIR=/^(N|S|E|W) /;
+const addrNoDir=k=>{ const w=k.split(' '); return (w.length>2&&/^[NSEW]$/.test(w[0]))?w.slice(1).join(' '):k; };   // N 23RD ST -> 23RD ST; E ST stays (the street named E)
+const addrNoDes=k=>k.split(' ').length>1?k.replace(ADDR_DES,''):k;
+function addrIndex(){ const S=BOXLOOK; if(S.addrIx) return S.addrIx; const ix=new Map(), add=(k,v)=>{ if(!ix.has(k)) ix.set(k,[]); const l=ix.get(k); if(!l.includes(v)) l.push(v); };
+  for(const k of Object.keys(PFDADDR.s)){ const nd=addrNoDir(k); add(k,k); add(nd,k); add(addrNoDes(k),k); add(addrNoDes(nd),k); }
+  return S.addrIx=ix; }
+function addrRuns(st){ const v=PFDADDR.s[st]; if(v==null) return null; const A=PFDADDR.a, d=(s,i,w)=>{ let n=0; for(let k=0;k<w;k++) n=n*64+A.indexOf(s[i+k]); return n; };
+  return v.split('|').map(side=>{ const out=[]; for(let i=0;i+20<=side.length;i+=20) out.push({a:d(side,i,3),z:d(side,i+3,3),box:PFDADDR.boxes[d(side,i+6,2)],
+    p0:[(d(side,i+8,3)-65536)*2,(d(side,i+11,3)-65536)*2],p1:[(d(side,i+14,3)-65536)*2,(d(side,i+17,3)-65536)*2]}); return out; }); }
+function addrOn(st,n){ const sides=addrRuns(st); if(!sides) return null; const mine=sides[n%2===1?0:1], all=sides[0].concat(sides[1]);
+  const at=r=>{ const t=r.z>r.a?(n-r.a)/(r.z-r.a):0.5; return [r.p0[0]+(r.p1[0]-r.p0[0])*t, r.p0[1]+(r.p1[1]-r.p0[1])*t]; };
+  for(const r of mine) if(n>=r.a&&n<=r.z) return {st,n,box:r.box,pin:at(r),exact:true};
+  let best=null,bd=1e9; for(const r of mine){ const dd=n<r.a?r.a-n:n-r.z; if(dd<bd){ bd=dd; best=r; } }
+  if(!best||bd>20) for(const r of all){ const dd=n<r.a?r.a-n:n-r.z; if(dd<=40&&dd<bd){ bd=dd; best=r; } }
+  if(best&&bd<=40){ const m=n<best.a?best.a:best.z; return {st,n,box:best.box,pin:n<best.a?best.p0:best.p1,exact:false,near:m}; }
+  let lo=1e9,hi=0; for(const r of all){ lo=Math.min(lo,r.a); hi=Math.max(hi,r.z); } return {st,n,none:true,lo,hi}; }
+function addrParse(t){ const m=String(t||'').trim().match(/^(\d+)(?:\s*-\s*\d+)?[A-Za-z]?\s+(.+)$/); return m?{n:+m[1],street:m[2]}:null; }   // 4005A Main St; 4005 O St is O Street
+function addrCandidates(text){ const ix=addrIndex(), c=addrCanon(text); let l=ix.get(c)||ix.get(addrNoDes(c))||ix.get(addrNoDir(c))||ix.get(addrNoDes(addrNoDir(c)))||[]; return l.slice().sort(); }
+function addrNice(st){ return boxTitle(st).replace(/\b(\d+)(St|Nd|Rd|Th)\b/g,(m,n,s)=>n+s.toLowerCase()); }
+function addrLookup(raw){ const st=document.getElementById('boxStatus'), line=document.getElementById('boxAddr'), sug=document.getElementById('boxSug');
+  const text=String(raw||'').trim(); try{ if(text) localStorage.setItem('pfd_addrlook',text); }catch(e){}
+  boxLookup('',{keep:true}); line.textContent=''; sug.textContent='';
+  if(!text){ st.textContent='Type an address — a house number and the street, like 4208 Ridge Ave.'; return false; }
+  if(typeof PFDADDR==='undefined'){ st.textContent='Loading the address list…'; addrData(ok=>{ if(ok) addrLookup(text); else st.textContent='Could not load the address list — check your connection and try again.'; }); return false; }
+  const q=addrParse(text); if(!q){ st.textContent='Start with the house number — like 4208 Ridge Ave.'; return false; }
+  const cands=addrCandidates(q.street);
+  if(!cands.length){ st.textContent='No street called "'+q.street.trim()+'" in the City\'s property list.'; addrSuggest(text); return false; }
+  const hits=cands.map(c=>addrOn(c,q.n)).filter(r=>r&&!r.none);
+  if(!hits.length){ const r=addrOn(cands[0],q.n); st.textContent='No '+q.n+' '+addrNice(cands[0])+' in the City\'s property list'+(r&&r.hi?' — its numbers run '+r.lo+' to '+r.hi+'.':'.'); return false; }
+  if(hits.length>1){ st.textContent=q.n+' '+q.street.trim()+' is on more than one street — which one?';   // e.g. N and S 23rd St
+    for(const h of hits){ const bt=document.createElement('button'); bt.type='button'; bt.textContent=q.n+' '+addrNice(h.st)+' · box '+h.box;
+      bt.addEventListener('click',e=>{ e.preventDefault(); document.getElementById('boxInput').value=q.n+' '+addrNice(h.st); addrLookup(q.n+' '+h.st); }); sug.appendChild(bt); }
+    return false; }
+  const h=hits[0]; boxLookup(h.box,{pin:h.pin});
+  const a=document.createElement('span'); a.textContent='📍 '+h.n+' '+addrNice(h.st)+' is in box '+h.box; line.appendChild(a);
+  if(!h.exact){ const n=document.createElement('span'); n.className='q'; n.textContent='No property numbered '+h.n+' in the City\'s list — the nearest is '+h.near+', in this box.'; line.appendChild(n); }
+  return h; }
+function addrSuggest(raw){ const sug=document.getElementById('boxSug'); sug.textContent=''; if(typeof PFDADDR==='undefined'){ addrData(ok=>{ if(ok&&BOXLOOK.mode==='addr') addrSuggest(document.getElementById('boxInput').value); }); return; }   // typed before the list landed: suggest once it does
+  const m=String(raw||'').trim().match(/^(\d+)(?:\s*-\s*\d+)?[A-Za-z]?\s+(.+)$/); if(!m||!m[2].trim().length) return;
+  const frag=addrCanon(m[2]).replace(/ (S|ST|STR|A|AV|AVE|R|RD)$/,s=>s), keys=Object.keys(PFDADDR.s), out=[];
+  for(const k of keys){ const nd=addrNoDir(k); if(k.startsWith(frag)||nd.startsWith(frag)) out.push(k); if(out.length>40) break; }
+  out.sort((p,q)=>p.length-q.length||(p<q?-1:1));
+  for(const k of out.slice(0,6)){ const bt=document.createElement('button'); bt.type='button'; bt.textContent=m[1]+' '+addrNice(k);
+    bt.addEventListener('click',e=>{ e.preventDefault(); const v=m[1]+' '+addrNice(k); document.getElementById('boxInput').value=v; sug.textContent=''; addrLookup(v); }); sug.appendChild(bt); } }
+function boxSetMode(m,opening){ const S=BOXLOOK, inp=document.getElementById('boxInput'); S.mode=m; try{ localStorage.setItem('pfd_lookmode',m); }catch(e){}
+  document.querySelectorAll('#boxMode button').forEach(bt=>bt.classList.toggle('on',bt.dataset.m===m));
+  document.getElementById('boxSug').textContent=''; document.getElementById('boxAddr').textContent='';
+  let last=''; try{ last=localStorage.getItem(m==='addr'?'pfd_addrlook':'pfd_boxlook')||''; }catch(e){}
+  if(m==='addr'){ inp.setAttribute('inputmode','text'); inp.removeAttribute('pattern'); inp.maxLength=60; inp.placeholder='Address, like 4208 Ridge Ave'; inp.style.letterSpacing='0'; inp.style.fontSize='16px';
+    inp.value=last; if(last) addrLookup(last); else { boxLookup('',{keep:true}); document.getElementById('boxStatus').textContent='Type an address — a house number and the street, like 4208 Ridge Ave.'; addrData(()=>{}); boxData(()=>{}); if(!opening) try{ inp.focus(); }catch(e){} } }
+  else { inp.setAttribute('inputmode','numeric'); inp.setAttribute('pattern','[0-9]*'); inp.maxLength=4; inp.placeholder='Box number, like 3515'; inp.style.letterSpacing=''; inp.style.fontSize='';
+    inp.value=last; if(last) boxLookup(last); else { boxLookup(''); boxData(()=>{}); if(!opening) try{ inp.focus(); }catch(e){} } } }
 function coachHide(){ const el=document.getElementById('coachCard'); if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); } }
 function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCanvas'); if(!cv) return; const c=cv.getContext('2d');
   const W=Math.max(280,Math.round(cv.clientWidth||320)),H=260,dpr=Math.min(2,devicePixelRatio||1); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); c.setTransform(dpr,0,0,dpr,0,0);

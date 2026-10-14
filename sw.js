@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v67';  // v21d: 2nd/3rd/4th due from the PFD running order for every box (data/pfdrun.js).
+const CACHE = 'local-shell-v68';  // v21e: LOOK UP a box or an address on the home map — who runs it, where you fit (data/pfdlook.js, data/pfdaddr.js, loaded on use).
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
