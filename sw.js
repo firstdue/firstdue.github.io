@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v61';  // v20x: the Broad Street ramps re-baked — the PA 611 exit reaches Broad Street and the US 1 South on-ramp starts at 17th & Cayuga (data/rb.js, btype.js, rref.js, narrow.js).
+const CACHE = 'local-shell-v62';  // v20y: no catenary pole over a street, hydrants on the sidewalk as a real model, none in a roadway, the nearest-hydrant button, 'Terrace St' cards.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

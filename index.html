@@ -625,6 +625,11 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     font-size:clamp(10px,2.4vw,13px); line-height:1.4; color:#5dff7d; text-shadow:0 0 6px rgba(60,255,100,.5); min-height:44px;
     box-shadow:0 0 18px rgba(20,160,60,.25), inset 0 0 30px rgba(0,60,10,.35); }
   #radio .tag { color:#aaffc0; font-weight:700; } #radio .cur { animation:blink .8s steps(1) infinite; }
+  /* 🧯 the nearest-hydrant button rides the run card while a box is live; blue, the colour of a hydrant's road reflector */
+  #radio .hydBtn { float:right; margin:-3px -5px 2px 8px; min-height:40px; min-width:44px; padding:0 10px; border-radius:20px; pointer-events:auto;
+    background:#0d2f6b; color:#dbe8ff; border:2px solid #4f8dff; font:800 11px -apple-system,"Helvetica Neue",Arial,sans-serif; letter-spacing:.5px; text-shadow:none; }
+  #radio .hydBtn.on { background:#2f7bff; color:#fff; border-color:#cfe0ff; }
+  #radio #hydLine { clear:both; margin-top:5px; color:#9cc4ff; font-weight:700; text-shadow:0 0 6px rgba(80,140,255,.45); }
   @keyframes blink { 50% { opacity:0; } }
   body.touch #radio { bottom:auto; top:calc(var(--barBot) + 40px); }   /* below the bar and the responding strip */
   /* 📻 COLLAPSED RADIO. On a patrol the banner has nothing urgent to say and it sits over the road for
@@ -959,7 +964,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <div id="speed" class="hud"><div class="num">0</div><div class="cap">MPH</div></div>
 <div id="popup" class="hud"></div>
 <div id="douse" class="hud"><div class="t">💦 EXTINGUISHING…</div><div class="bar"><div class="fill" id="douseFill"></div></div></div>
-<div id="radio" class="hud"><span class="tag">📻 DISPATCH » </span><span id="radioTxt"></span><span class="cur">▊</span></div>
+<div id="radio" class="hud"><button id="btnNearHyd" class="hydBtn" type="button" hidden aria-label="Show the nearest hydrant to the address">🧯 HYDRANT</button><span class="tag">📻 DISPATCH » </span><span id="radioTxt"></span><span class="cur">▊</span><div id="hydLine" hidden></div></div>
 <div id="touchUI">
   <div id="steer"><span class="lab">STEER</span><span class="arr l">◄</span><span class="arr r">►</span><div id="steerKnob"></div></div>
   <div class="tbtn" id="bGas">GAS</div><div class="tbtn" id="bBrake">BRAKE</div><div class="tbtn" id="bDrift">DRIFT</div><div class="tbtn" id="bJump">JUMP</div>
@@ -1060,7 +1065,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20x";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v20y";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2055,14 +2060,22 @@ function pfdBoxAt(x,z){ for(const b of PFD_BOXES) if(inBoxBB(b,x,z)&&ptInRing(x,
     const z=PFD_ZONES.find(q=>q.e===zn.e); if(z) z.poly=poly; else PFD_ZONES.push({e:zn.e,bn:0,poly});
     PFD_ZONE_BY_E.set(zn.e,poly); zn.ring=null; } })();   // the lat/lon copies are spent (PFD_BOXES and HYDRANTS hold the projected ones); ~2,000 rings is heap the gate counts
 (function snapHydrants(){                                                                  // OSM hydrant points are noisy — some sit IN the roadway (user saw one mid-lane on Ridge). Snap those to the kerb.
-  for(let pass=0; pass<3; pass++){ let moved=0;                                            // multi-pass: at a corner, escaping one street can land inside the wider cross street
-    for(const h of HYDRANTS){ let best=null,worst=1e18;
-      for(const sg of segNear(h[0],h[1])){ const c=closestSeg(h[0],h[1],sg); const e=c.d-segHalf(sg); if(e<worst){worst=e;best={c,sg};} }   // deepest violation, not nearest centreline
-      if(!best || worst>=0.8) continue; const rh=segHalf(best.sg), c=best.c;
-      let nx=h[0]-c.cx, nz=h[1]-c.cz, nl=Math.hypot(nx,nz);
-      if(nl<0.3){ nx=-(best.sg.bz-best.sg.az); nz=best.sg.bx-best.sg.ax; nl=Math.hypot(nx,nz)||1; }   // on the centreline: pick a side from the seg normal
-      h[0]=Math.round(c.cx+nx/nl*(rh+1.7)); h[1]=Math.round(c.cz+nz/nl*(rh+1.7)); moved++; }
-    if(!moved) break; }
+  // October 13, 2026 (owner's phone: a hydrant in the middle of Ridge Avenue, 5100 block): the old rule pushed a hydrant out
+  // from the road it was deepest in, rounded, and repeated three times — where two roads meet at a sharp angle (Ridge Ave and
+  // Main St at Little Cresson) the push lands in the other road and the passes bounce, so 12 citywide ended with their centre
+  // IN a roadway and 11 more within 0.6 m of a kerb. Now ONE pass: the same push first; if that spot is not clear of every road
+  // by 0.8 m, every nearby street's kerb on both sides AND rings out to 16 m — and the nearest clear spot of all of them wins.
+  const clear=(x,z)=>{ let w=1e9; for(const sg of segNear(x,z)){ const e=closestSeg(x,z,sg).d-segHalf(sg); if(e<w) w=e; } return w; };
+  for(const h of HYDRANTS){ let best=null,worst=1e18;
+    for(const sg of segNear(h[0],h[1])){ const c=closestSeg(h[0],h[1],sg); const e=c.d-segHalf(sg); if(e<worst){worst=e;best={c,sg};} }   // deepest violation, not nearest centreline
+    if(!best || worst>=0.8) continue;
+    const out=(sg,c,dir)=>{ let nx=h[0]-c.cx, nz=h[1]-c.cz, nl=Math.hypot(nx,nz); if(nl<0.3){ nx=-(sg.bz-sg.az); nz=sg.bx-sg.ax; nl=Math.hypot(nx,nz)||1; } return [nx/nl*dir,nz/nl*dir]; };   // on the centreline: a side from the seg normal
+    const cand=[], add=(x,z)=>{ x=Math.round(x); z=Math.round(z); const e=clear(x,z); if(e>=0.8&&e<=6) cand.push([x,z,Math.hypot(x-h[0],z-h[1])]); };
+    { const [nx,nz]=out(best.sg,best.c,1), rh=segHalf(best.sg); add(best.c.cx+nx*(rh+1.7),best.c.cz+nz*(rh+1.7)); }
+    if(!cand.length){ for(const sg of new Set(segNear(h[0],h[1]))){ const c=closestSeg(h[0],h[1],sg); if(c.d>20) continue; const rh=segHalf(sg);
+        for(const dir of [1,-1]) for(const off of [1.7,2.6]){ const [nx,nz]=out(sg,c,dir); add(c.cx+nx*(rh+off),c.cz+nz*(rh+off)); } }
+      for(let r=2;r<=16;r++) for(let a=0;a<16;a++) add(h[0]+Math.cos(a*Math.PI/8)*r,h[1]+Math.sin(a*Math.PI/8)*r); }   // the rings compete with the kerbs: the smallest move wins
+    if(cand.length){ cand.sort((p,q)=>p[2]-q[2]); h[0]=cand[0][0]; h[1]=cand[0][1]; } }
 })();
 const HYD_GRID=(function(){ const cell=220, g=new Map(); for(let i=0;i<HYDRANTS.length;i++){ const h=HYDRANTS[i]; const k=Math.floor(h[0]/cell)+":"+Math.floor(h[1]/cell); let a=g.get(k); if(!a){a=[];g.set(k,a);} a.push(i); } return {cell,g}; })();
 function addHydrant(x,z,src){ const i=HYDRANTS.length; HYDRANTS.push([Math.round(x),Math.round(z),src||2]);   // 🧯 runtime insert — a plain push never renders (HYD_GRID is baked once)
@@ -2070,6 +2083,42 @@ function addHydrant(x,z,src){ const i=HYDRANTS.length; HYDRANTS.push([Math.round
   let a=HYD_GRID.g.get(k); if(!a){ a=[]; HYD_GRID.g.set(k,a); } a.push(i); return i; }
 function hydrantsNear(x,z,rad){ const cell=HYD_GRID.cell,g=HYD_GRID.g,out=[],r=Math.ceil(rad/cell),gx=Math.floor(x/cell),gz=Math.floor(z/cell),rr=rad*rad;
   for(let a=gx-r;a<=gx+r;a++)for(let b=gz-r;b<=gz+r;b++){ const arr=g.get(a+":"+b); if(arr)for(const i of arr){ const h=HYDRANTS[i]; if((h[0]-x)*(h[0]-x)+(h[1]-z)*(h[1]-z)<=rr) out.push(h); } } return out; }
+
+// 🚒 THE HYDRANT (owner's phone, October 13, 2026: "make the fire hydrant look better and not so buried in the ground so
+// they're a little bit more noticeable"). ONE merged model with vertex colours: a concrete footing reaching 0.6 m down, a
+// dark flange, the barrel, a collar, the bonnet and its operating nut, two hose nozzles and a pumper nozzle with chrome caps.
+// About 2x a real hydrant (built at 1.5x, then scaled 1.3: 1.55 m above its pad, 1.2 m across the nozzles) so it reads from the TILT camera — the owner asked for them "a little bit more noticeable". y = 0 is the
+// surface it stands on; +Z is the pumper nozzle, turned to face the street. 256 triangles; built once (FLATCITY.hydKit).
+function hydrantKit(){ const pos=[], nor=[], col=[], M=new THREE.Matrix4(), C=new THREE.Color();
+  const RED=0xd42f24, DARK=0x9b2018, CHROME=0xd2d6db, NUT=0x3a3e44, PAD=0xb7b1a3;
+  const part=(geo,col_,mat)=>{ const g=geo.toNonIndexed(); g.applyMatrix4(mat); C.setHex(col_);
+    const P=g.attributes.position.array, N=g.attributes.normal.array; for(let i=0;i<P.length;i++){ pos.push(P[i]); nor.push(N[i]); }
+    for(let i=0;i<P.length/3;i++) col.push(C.r,C.g,C.b); g.dispose(); geo.dispose(); };
+  const up=(r0,r1,y0,y1,seg,c,open)=>part(new THREE.CylinderGeometry(r0,r1,y1-y0,seg,1,!!open),c,M.makeTranslation(0,(y0+y1)/2,0));
+  const side=(r,len,x,y,z,ax,seg,c,open)=>{ const R=new THREE.Matrix4(); if(ax==='x') R.makeRotationZ(Math.PI/2); else R.makeRotationX(Math.PI/2);
+    part(new THREE.CylinderGeometry(r,r,len,seg,1,!!open),c,new THREE.Matrix4().makeTranslation(x,y,z).multiply(R)); };
+  up(0.30,0.30,-0.47,0.00,8,PAD,true);                         // footing, 0.61 m down once scaled: as far as hydrantPose ever lifts one onto a slab (0.6), so none floats
+  up(0.29,0.29,0.00,0.09,8,DARK);                              // base flange
+  up(0.20,0.22,0.09,0.80,8,RED,true);                          // barrel
+  up(0.27,0.27,0.80,0.89,8,DARK);                              // collar
+  up(0.11,0.24,0.89,1.10,8,RED);                               // bonnet
+  up(0.05,0.07,1.10,1.19,5,NUT);                               // operating nut
+  for(const sx of [-1,1]){ side(0.075,0.20,sx*0.28,0.56,0,'x',6,RED,true); side(0.095,0.06,sx*0.41,0.56,0,'x',6,CHROME); }   // hose nozzles + caps
+  side(0.11,0.18,0,0.44,0.29,'z',6,RED,true); side(0.135,0.07,0,0.44,0.415,'z',6,CHROME);                                   // pumper nozzle + cap
+  const geo=new THREE.BufferGeometry(); for(let i=0;i<pos.length;i++) pos[i]*=1.3;   // the 1.3 scale about the base (y = 0 stays the surface)
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  geo.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3)); geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  return {geo,mat:new THREE.MeshLambertMaterial({vertexColors:true,flatShading:true})}; }
+// Where a hydrant stands: on the SIDEWALK SLAB's top when it is on one — the slab is navRoadY(street)+0.22, and the
+// hydrant used to start at bare ground with its bottom 0.22 m inside the slab (23,619 of 26,167 citywide). A street more
+// than 0.6 m above the ground there is a deck overhead, not this sidewalk, so the hydrant stays on the ground. The pumper
+// nozzle faces the nearest street.
+function hydrantPose(h){ const x=h[0], z=h[1], gy=navGroundY(x,z); let best=null, be=1e9, bc=null;
+  for(const s of segNear(x,z)){ if(s.hw) continue; const c=closestSeg(x,z,s), e=c.d-segHalf(s); if(e<be){ be=e; best=s; bc=c; } }
+  let y=gy, rot=hash2(x,z)*6.28;
+  if(best){ if(Math.hypot(bc.cx-x,bc.cz-z)>0.01) rot=Math.atan2(bc.cx-x,bc.cz-z);
+    if(be>=0&&be<=(best.cls<=1?4.2:3.2)){ const top=navRoadY(x,z,best.name)+0.22; if(top-gy>-0.05&&top-gy<0.6) y=top; } }
+  return {y,rot}; }
 
 /* ---- Settings menu + sourced first-due progress map ---- */
 const BOUNDARY_UI={engine:'e35'};
@@ -2572,11 +2621,19 @@ const LBL={ pool:[], cache:new Map(), keep:8, blank:null, last:null, cap:16, sho
 // the NEXT junction's card only appeared once you had passed this one.)
 function roundRect(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
 // Map-style abbreviation for the 3D callouts only (display text; the sprite still stores the full name for logic)
-const LBL_ABBR=[[/\bStreet\b/g,'St'],[/\bAvenue\b/g,'Ave'],[/\bLane\b/g,'Ln'],[/\bDrive\b/g,'Dr'],[/\bRoad\b/g,'Rd'],[/\bBoulevard\b/g,'Blvd'],[/\bPlace\b/g,'Pl'],[/\bCourt\b/g,'Ct'],[/\bTerrace\b/g,'Ter'],[/\bParkway\b/g,'Pkwy'],[/\bHighway\b/g,'Hwy'],[/\bCircle\b/g,'Cir'],[/\bSquare\b/g,'Sq'],[/\bExtension\b/g,'Ext'],[/\bMemorial\b/g,'Mem']];
+// Only the street TYPE is shortened — the last word, or the last one before a trailing North/South/East/West/Approach/
+// Ramp/Extension — and never the first word, which is always the street's own name (owner's phone, October 13, 2026:
+// "Terrace St is Ter St"; the old rule shortened the word anywhere, so 'Memorial Avenue' read 'Mem Ave' and 'Oak Lane Avenue'
+// 'Oak Ln Ave'). A two-name way ('Oregon Avenue/Vare Avenue', '...;...') is shortened part by part. 10 of 3,872 names read
+// differently, every one a correction (census in notes/ride-fixes-oct13.md).
+const LBL_SUFFIX=new Map([['Street','St'],['Avenue','Ave'],['Lane','Ln'],['Drive','Dr'],['Road','Rd'],['Boulevard','Blvd'],['Place','Pl'],['Court','Ct'],['Terrace','Ter'],['Parkway','Pkwy'],['Highway','Hwy'],['Circle','Cir'],['Square','Sq'],['Extension','Ext']]);
+const LBL_TAIL=new Set(['North','South','East','West','Approach','Ramp','Extension']);
 const LBL_DIR=[[/^West\b/,'W'],[/^East\b/,'E'],[/^North\b/,'N'],[/^South\b/,'S']];
 function abbrevStreet(n){ let s=String(n||'');
   if(s.split(' ').length>=3) for(const [re,to] of LBL_DIR) s=s.replace(re,to);   // 'South Broad Street'→'S Broad St', but SOUTH STREET keeps its name ('S St' was nonsense)
-  for(const [re,to] of LBL_ABBR) s=s.replace(re,to); return s; }
+  return s.split(/([\/;])/).map(part=>{ const w=part.split(' '); let i=w.length-1;
+    while(i>0&&LBL_TAIL.has(w[i])){ if(LBL_SUFFIX.has(w[i])) w[i]=LBL_SUFFIX.get(w[i]); i--; }
+    if(i>0&&LBL_SUFFIX.has(w[i])) w[i]=LBL_SUFFIX.get(w[i]); return w.join(' '); }).join(''); }
 function labelTex(name,block,wrong){ const bl=blockLine(block), key=name+'|'+bl+(wrong?'|W':''); const hit=LBL.cache.get(key); if(hit){ LBL.cache.delete(key); LBL.cache.set(key,hit); return hit; }   // a wrong-way sign stays RED but keeps its hundred block like every other sign (owner: the red alone says it)
   name=abbrevStreet(name);                                                         // shorten long names so the pill stays small (W School House Ln)
   const S=2,pad=9*S,ptr=5*S,fs=15*S,bfs=8.5*S,r=8*S;                               // two-line sign: hundred block above the street name (compact)
@@ -4012,7 +4069,7 @@ function updateHUD(dt){
     rc.style.display = state.running&&away?'block':'none'; rc.classList.toggle('off',!(state.running&&away)); }   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
   if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; }
-  rdCollapse(dt); freeLiveBtn(); ctlArmed(); }
+  rdCollapse(dt); freeLiveBtn(); ctlArmed(); hydUpdate(); }
 // On-screen dispatch marker: projects the target to the screen, sticks to the edge with an arrow when off-screen, always shows distance.
 const _wpV=new THREE.Vector3(), _wpF=new THREE.Vector3();
 const elWp=document.getElementById('wp'), elWpPin=elWp.querySelector('.pin'), elWpArr=elWp.querySelector('.arr'), elWpDist=elWp.querySelector('.dist');
@@ -6423,9 +6480,16 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
               rCutWall.push({x:wx,y:y+h/2,z:wz,w:0.42,h,l:pll,ang,pitch:0});}
           }
           if(rw.el==='c'&&Math.hypot(px-J.cx,pz-J.cz)<LOCAL.R*PARKS.mastR){ const k=Math.floor((segAlong+o)/PARKS.mastGap);   // ⚡ catenary (v19j): a mast every mastGap m on the electrified ways, alternating sides, a cantilever arm over the track and a wire between masts; within mastR·R only
-            if(rw._mk!==k){ rw._mk=k; const side=(k%2)?1:-1, top=y+(rw.bridge?0.12:0.45), mx=px-uz*2.9*side, mz=pz+ux*2.9*side;
-              mastPost.push({x:mx,y:top+3.4,z:mz,w:0.22,h:6.8,l:0.22,ang,pitch:0}); mastArm.push({x:px-uz*1.45*side,y:top+5.9,z:pz+ux*1.45*side,w:0.14,h:0.14,l:3.1,ang:ang+Math.PI/2,pitch:0});
-              if(rw._ml){ const l=rw._ml, dx=px-l.x, dz=pz-l.z, d=Math.hypot(dx,dz); if(d>8&&d<90) wire.push({x:(px+l.x)/2,y:(top+l.y)/2+5.4,z:(pz+l.z)/2,w:0.06,h:0.06,l:d,ang:Math.atan2(dx,dz),pitch:-Math.atan2(top-l.y,d)}); }
+            // 🚫 never over a street (owner's phone, October 13, 2026: "a pole in the middle of the street" — West School House Lane
+            // under the Norristown line at Ridge Ave). On a bridge the mast stood 2.9 m out, past the 2.6 m half-deck, so it hung
+            // in the air beside the span and from the TILT camera stood in the road below: 407 of 764 bridge masts citywide were
+            // over a street, and 18 ground masts stood on one at a level crossing. Now a bridge mast stands ON its deck (2.35 m,
+            // the parapet line), and a mast whose spot — or the track beside it — is over a roadway waits for the next piece clear
+            // of it (k is only spent when a mast is placed), as real catenary spans the road; the wire reaches across to it.
+            const side=(k%2)?1:-1, off=rw.bridge?2.35:2.9, mx=px-uz*off*side, mz=pz+ux*off*side;
+            if(rw._mk!==k&&!onAsphalt(mx,mz)&&!onAsphalt(px,pz)){ rw._mk=k; const top=y+(rw.bridge?0.12:0.45);
+              mastPost.push({x:mx,y:top+3.4,z:mz,w:0.22,h:6.8,l:0.22,ang,pitch:0}); mastArm.push({x:px-uz*off/2*side,y:top+5.9,z:pz+ux*off/2*side,w:0.14,h:0.14,l:off+0.2,ang:ang+Math.PI/2,pitch:0});
+              if(rw._ml){ const l=rw._ml, dx=px-l.x, dz=pz-l.z, d=Math.hypot(dx,dz); if(d>8&&d<PARKS.mastGap*2.4) wire.push({x:(px+l.x)/2,y:(top+l.y)/2+5.4,z:(pz+l.z)/2,w:0.06,h:0.06,l:d,ang:Math.atan2(dx,dz),pitch:-Math.atan2(top-l.y,d)}); }
               rw._ml={x:px,y:top,z:pz}; } }
           for(const side of [-1,1])railBars.push({x:px-uz*0.72*side,y:y+(rw.bridge?0.12:0.45),z:pz+ux*0.72*side,w:0.16,h:0.16,l:pll,ang,pitch});}}}
     // 🗜 v20u: every bridge / rail / catenary box is ONE instanced mesh with a colour per instance, where it was one mesh per
@@ -6583,18 +6647,13 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   // The three geometries and materials are made ONCE (HYD_KIT) and marked userData.keep so the parts disposal skips them:
   // disposing the last material on a shader frees the program, and with hydrants now at every spot that recompile cost
   // every rebuild's commit frame ~10-15ms on the perf gate. Only each mesh's instance buffer is per-commit.
+  // October 13, 2026: one merged model in ONE instanced mesh (hydrantKit — it was three meshes, so 2 fewer draw calls),
+  // standing on the sidewalk slab and facing the street (hydrantPose).
   { const HY=hydrantsNear(J.cx,J.cz,520);
-    if(HY.length){ const HH=1.5, K=FLATCITY.hydKit||(FLATCITY.hydKit={
-        body:[new THREE.CylinderGeometry(0.26,0.30,HH*0.62,7),new THREE.MeshLambertMaterial({color:0xd8382a,flatShading:true})],
-        bonnet:[new THREE.ConeGeometry(0.34,HH*0.3,7),new THREE.MeshLambertMaterial({color:0xc22e22,flatShading:true})],
-        outlet:[new THREE.CylinderGeometry(0.15,0.15,0.8,6),new THREE.MeshLambertMaterial({color:0xe4503c,flatShading:true})] });
-      const body=new THREE.InstancedMesh(K.body[0],K.body[1],HY.length), bonnet=new THREE.InstancedMesh(K.bonnet[0],K.bonnet[1],HY.length), outlet=new THREE.InstancedMesh(K.outlet[0],K.outlet[1],HY.length);
-      for(const m of [body,bonnet,outlet]) m.userData.keep=true;
-      HY.forEach((h,i)=>{ const rot=hash2(h[0],h[1])*6.28;
-        dummy.position.set(h[0],navGroundY(h[0],h[1])+HH*0.31,h[1]); dummy.rotation.set(0,rot,0); dummy.scale.set(1,1,1); dummy.updateMatrix(); body.setMatrixAt(i,dummy.matrix);
-        dummy.position.set(h[0],navGroundY(h[0],h[1])+HH*0.74,h[1]); dummy.updateMatrix(); bonnet.setMatrixAt(i,dummy.matrix);
-        dummy.position.set(h[0],navGroundY(h[0],h[1])+HH*0.42,h[1]); dummy.rotation.set(Math.PI/2,0,rot); dummy.updateMatrix(); outlet.setMatrixAt(i,dummy.matrix); });   // side outlet across the body
-      for(const m of [body,bonnet,outlet]){ m.instanceMatrix.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); } } }
+    if(HY.length){ const K=FLATCITY.hydKit||(FLATCITY.hydKit=hydrantKit()), m=new THREE.InstancedMesh(K.geo,K.mat,HY.length);
+      m.userData.keep=true; m.name='hydrants';
+      HY.forEach((h,i)=>{ const p=hydrantPose(h); dummy.position.set(h[0],p.y,h[1]); dummy.rotation.set(0,p.rot,0); dummy.scale.set(1,1,1); dummy.updateMatrix(); m.setMatrixAt(i,dummy.matrix); });
+      m.instanceMatrix.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); } }
   if(T.length&&B.length){ const bg=new Map(), BC=16, bk=(x,z)=>((x/BC)|0)+':'+((z/BC)|0);   // 🌲❌ trees vs buildings: the 11m dedupe grid lets a tree land against/inside a building face — cull any tree overlapping a footprint (+2m)
     for(const b of B){ const k=bk(b.x,b.z); let a=bg.get(k); if(!a){a=[];bg.set(k,a);} a.push(b); }
     for(let i=T.length-1;i>=0;i--){ const t2=T[i], gx=(t2.x/BC)|0, gz=(t2.z/BC)|0; let hit=false;
@@ -8671,6 +8730,10 @@ function updateMiniMap(dt){ const el=MINIMAP.el||(MINIMAP.el=document.getElement
   x.setTransform(1,0,0,1,0,0);
   if(state.target){ const px=a*state.target.x+cc*state.target.z+e, pz=b*state.target.x+d*state.target.z+f, dx=px-c, dz=pz-c, dl=Math.hypot(dx,dz), lim=rad-9*dpr;
     const k=dl>lim?lim/dl:1; x.fillStyle='#e0322b'; x.strokeStyle='#fff'; x.lineWidth=1.5*dpr; x.beginPath(); x.arc(c+dx*k,c+dz*k,4.2*dpr,0,6.2832); x.fill(); x.stroke(); }
+  if(HYDVIEW.on&&HYDVIEW.h){ const hx=HYDVIEW.h[0], hz=HYDVIEW.h[1], px=a*hx+cc*hz+e, pz=b*hx+d*hz+f, dx=px-c, dz=pz-c, dl=Math.hypot(dx,dz), lim=rad-9*dpr, k=dl>lim?lim/dl:1;   // 🧯 the marked hydrant: a blue pin
+    x.fillStyle='#2f7bff'; x.strokeStyle='#fff'; x.lineWidth=1.5*dpr; x.beginPath(); x.arc(c+dx*k,c+dz*k,5*dpr,0,6.2832); x.fill(); x.stroke();
+    x.fillStyle='#fff'; x.font='900 '+Math.round(7*dpr)+'px -apple-system,Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('H',c+dx*k,c+dz*k+0.4*dpr); MINIMAP.hydPin=[c+dx*k,c+dz*k]; }
+  else MINIMAP.hydPin=null;
   x.restore();
   // rim + compass letters
   x.lineWidth=5*dpr; x.strokeStyle='#7d7d7d'; x.beginPath(); x.arc(c,c,rad-1*dpr,0,6.2832); x.stroke();
@@ -8702,6 +8765,32 @@ function rdCollapse(dt){ const el=document.getElementById('radio'); if(!el) retu
   if(!RADIO.open||radioShown.length<radioQueue.length) return;                        // still typing: let it finish
   RADIO.t+=dt; if(RADIO.t>=RADIO.hold) rdSet(false); }
 function radio(m){ radioQueue=m; radioShown=''; radioT=0; rdSet(true); }
+/* 🧯 NEAREST HYDRANT (owner's phone, October 13, 2026: "add a new button at the top or a better place on the run card to show
+   the closest fire hydrant to that address location"). While a box is live the dispatch card carries a HYDRANT button. A tap
+   marks the hydrant nearest the ADDRESS — a blue beacon over it in the street view and a blue pin on the minimap (blue: the
+   road reflector that marks a hydrant), and a line saying how far it is and on which block. Tap again to clear; it clears
+   itself when the box ends. HYDRANTS are the PFD box-book hydrants plus OSM's; "nearest" is straight-line from the address
+   point, within 400 m. */
+const HYDVIEW={on:false,target:null,h:null,obj:null};
+function hydNearestTo(x,z){ let best=null,bd=1e18; for(const h of hydrantsNear(x,z,400)){ const d=Math.hypot(h[0]-x,h[1]-z); if(d<bd){ bd=d; best=h; } } return best?{h:best,d:bd}:null; }
+function hydClear(){ HYDVIEW.on=false; HYDVIEW.h=null; HYDVIEW.target=null;
+  if(HYDVIEW.obj){ scene.remove(HYDVIEW.obj); HYDVIEW.obj.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); HYDVIEW.obj=null; }
+  const ln=document.getElementById('hydLine'); ln.hidden=true; ln.textContent=''; document.getElementById('btnNearHyd').classList.remove('on'); }
+function hydShow(){ const t=state.target; if(!t) return; const ax=t.bx!=null?t.bx:t.x, az=t.bz!=null?t.bz:t.z, n=hydNearestTo(ax,az), ln=document.getElementById('hydLine');
+  HYDVIEW.on=true; HYDVIEW.target=t; document.getElementById('btnNearHyd').classList.add('on'); ln.hidden=false;
+  if(!n){ ln.textContent='🧯 No hydrant in the map data within 1,300 ft of the address'; return; }
+  const hx=n.h[0], hz=n.h[1], p=hydrantPose(n.h); HYDVIEW.h=n.h;
+  let st=null,sd=1e9; for(const s of segNear(hx,hz)){ if(s.hw||!s.name) continue; const c=closestSeg(hx,hz,s); if(c.d<sd){ sd=c.d; st=s; } }   // the street it stands on
+  const ft=Math.max(10,Math.round(n.d*3.2808/10)*10), blk=st?hundredBlock(hx,hz,st.name):0;
+  ln.textContent='🧯 NEAREST HYDRANT · '+ft.toLocaleString('en-US')+' ft from the address'+(st?' · '+(blk?blk+' block ':'')+abbrevStreet(st.name):'');
+  const g=new THREE.Group(), mat=()=>new THREE.MeshBasicMaterial({color:0x2f7bff,transparent:true,opacity:0.55,depthWrite:false,side:THREE.DoubleSide});
+  const col=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,22,12,1,true),mat()); col.position.y=1.6+11; g.add(col);   // a column over the hydrant, seen over the roofs
+  const ring=new THREE.Mesh(new THREE.RingGeometry(1.3,1.9,28),mat()); ring.rotation.x=-Math.PI/2; ring.position.y=0.06; g.add(ring);   // and a ring round its foot
+  g.position.set(hx,p.y,hz); g.name='hydrant-beacon'; scene.add(g); HYDVIEW.obj=g; }
+document.getElementById('btnNearHyd').addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation(); if(HYDVIEW.on) hydClear(); else hydShow(); });
+function hydUpdate(){ const b=document.getElementById('btnNearHyd'), live=!!(state.running&&state.target&&!state.over);
+  if(b.hidden===live) b.hidden=!live;
+  if(HYDVIEW.on&&(!live||state.target!==HYDVIEW.target)) hydClear(); }
 function popup(txt,cls){ const p=document.getElementById('popup'); p.textContent=txt; p.className='hud '+(cls||''); void p.offsetWidth; p.classList.add('pop'); }
 const ADDRESS_INCIDENTS=['Dwelling fire','Kitchen fire','Smoke in a dwelling','Electrical fire','Shed fire','Alarm sounding','Gas leak outside','Trash fire'];
 let lastAddress='', addressCursor=(Math.random()*ADDR.a.length)|0;
