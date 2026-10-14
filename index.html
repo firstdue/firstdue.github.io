@@ -58,8 +58,8 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     text-shadow:0 0 10px rgba(255,140,40,.8), 0 2px 3px #000; opacity:.55; }
   #combo.hot { opacity:1; animation:cpulse .5s ease infinite; }
   @keyframes cpulse { 50%{ transform:scale(1.1) rotate(-2deg); } }
-  /* 🧭 THE TOP BAR (v19z). One dark bar carries SAVES, BEST, the due-status pill with the BUILD tag,
-     SETTINGS, ACCOUNT and the DISPATCH pill. It is GLOBAL: both control schemes, Career and free drive
+  /* 🧭 THE TOP BAR (v19z). One dark bar carries the due-status pill with the BUILD tag, the BOX, GET A CALL on a patrol and
+     SETTINGS (v21j: SAVES, BEST and ACCOUNT moved into Settings; the DISPATCH pill became the line under the bar). It is GLOBAL: both control schemes, Career and free drive
      alike, because nothing here is scoped to body.ctl. Everything that used to stack under the old
      top-left SAVES block now anchors to --barBot, which is the ONE place the bar's height is stated. */
   /* --safeTop: where the game's top HUD starts. The phone's safe-area line, PLUS up to 12 px of air when there is one (owner,
@@ -73,14 +73,13 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     background:rgba(18,26,40,.93); border:1.5px solid rgba(255,255,255,.15); border-radius:16px;
     box-shadow:0 6px 20px rgba(0,0,0,.45); pointer-events:none; overflow:hidden;
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
-  /* the three that moved IN stop positioning themselves */
-  #topBar #saves, #topBar #dueChip, #topBar #cornerBtns { position:static; top:auto; left:auto; right:auto; max-width:none; }
-  #topBar #saves { display:flex; align-items:center; flex:0 0 auto; color:#e9eef7; text-shadow:none; letter-spacing:0; }
-  #topBar #saves .stat { display:grid; grid-template-columns:auto auto; align-items:center; column-gap:3px; padding:1px 3px; }
-  #topBar #saves .stat + .stat { border-left:1px solid rgba(255,255,255,.14); }
-  #topBar #saves .stat i { grid-row:1/3; font-style:normal; font-size:13px; line-height:1; }
-  #topBar #saves .stat b { font-size:7px; font-weight:900; letter-spacing:.02em; color:#aab7c9; line-height:1.2; }
-  #topBar #saves .stat u { text-decoration:none; font-size:13px; font-weight:900; color:#fff; line-height:1.1; }
+  /* the two that moved IN stop positioning themselves */
+  #topBar #dueChip, #topBar #cornerBtns { position:static; top:auto; left:auto; right:auto; max-width:none; }
+  /* 🔔 THE MIDDLE OF THE BAR (v21j, the owner's pick of the "Focused driving" layout: "● 1ST IN | BOX 3519 | ⚙").
+     BOX 3519 in gold while a box is live; the company (ENGINE 35) quietly the rest of the time. */
+  #boxTag { flex:1 1 auto; min-width:0; display:flex; align-items:center; justify-content:center; overflow:hidden; white-space:nowrap;
+    color:#7f8ea5; font-weight:900; font-size:12px; letter-spacing:.08em; }
+  #boxTag.live { color:#ffd23b; font-size:17px; letter-spacing:.04em; }
   /* 🚨 DUE-ORDER CHIP — how due YOUR engine is at the spot you're standing on right now */
   #dueChip { position:absolute; z-index:15; top:calc(var(--safeTop) + 32px); left:max(10px,env(safe-area-inset-left));   /* clears the 2-line SAVES/BEST + version block (v16m stacked the version onto its own line) */
     display:none; align-items:center; gap:6px; padding:4px 10px 4px 7px; border-radius:999px;
@@ -95,7 +94,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   /* Inside the bar the pill is ALWAYS rendered, even before a due rank is known, because the BUILD tag
      rides in it and that tag is the owner's cache check — it may not come and go. The rank still shows
      only when it is known: the dot keeps its rank colour, which is what OUT OF AREA / 2ND IN read from. */
-  #topBar #dueChip { display:flex; flex:1 1 auto; min-width:72px; flex-direction:column; align-items:center;
+  #topBar #dueChip { display:flex; flex:0 1 auto; min-width:72px; flex-direction:column; align-items:center;
     justify-content:center; gap:0; padding:3px 7px; background:rgba(9,14,24,.92);
     border:1.5px solid rgba(255,255,255,.14); box-shadow:0 2px 8px rgba(0,0,0,.4); transform:none !important; }
   #topBar #dueChip .dueRow { display:flex; align-items:center; gap:5px; max-width:100%; }
@@ -110,7 +109,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #topBar #dueChip .dueVer { color:#8fa2ba; font-weight:800; font-size:7px; letter-spacing:0; white-space:nowrap;
     max-width:100%; overflow:hidden; text-overflow:ellipsis; }
   #topBar #dueChip:not(.on) .dueRow { display:none; }
-  #areaChip { position:absolute; z-index:15; top:calc(var(--barBot) + 2px); left:max(8px,env(safe-area-inset-left));
+  #areaChip { position:relative; z-index:15;
     display:none; align-items:center; gap:6px; padding:4px 11px 4px 9px; border-radius:999px; max-width:calc(100vw - 20px);
     background:rgba(9,14,24,.94); border:1.5px solid currentColor; box-shadow:0 3px 12px rgba(0,0,0,.55);
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-weight:900; font-size:12px;
@@ -119,23 +118,25 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #areaChip .dueDot { width:8px; height:8px; border-radius:50%; background:currentColor; box-shadow:0 0 8px currentColor; flex:0 0 auto; }
   #areaChip .dueTxt { color:#fff; }
   #areaChip .dueWho { color:#9fb4cc; font-weight:800; font-size:.86em; letter-spacing:.6px; }
-  /* The chip takes the first row under the bar and everything in that column steps down behind it.
-     It is FIRST in the DOM for exactly this reason: one set of sibling rules, no state to track. The
-     alternative — stepping the chip down past whatever happens to be showing — needs a rule per
-     combination, and the one that was missed put it straight on top of the dispatch banner. */
-  #areaChip.on ~ #rivals, #areaChip.on ~ #drillHUD, #areaChip.on ~ #boxdHUD { top:calc(var(--barBot) + 31px); }
-  body.touch #areaChip.on ~ #radio { top:calc(var(--barBot) + 71px); }
-  #areaChip.on ~ #qualChip { top:calc(var(--barBot) + 53px); }
+  /* 📐 EVERYTHING UNDER THE BAR IS ONE FLOW (v21j). It was a stack of absolutely placed pieces, each at a fixed offset
+     that kept room for the piece above it, so a piece that was NOT showing still left its hole — the owner's v21i
+     screenshot ("This has a gap"): free drive with a call, a strip of empty road between the bar and the dispatch, the
+     room kept for the rival strip a patrol never has. Now they flow and wrap: whatever shows stacks up under the bar,
+     whatever does not takes no room (display:none takes no gap either). The dispatch line, then the chips (UNITS, the
+     area, the qualification) side by side, then the unit details and the drill banners. */
+  #hudCol { position:absolute; z-index:14; top:var(--barBot); left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right));
+    display:flex; flex-wrap:wrap; align-items:center; align-content:flex-start; gap:6px; pointer-events:none; }
+  #hudCol > #radio, #hudCol > #rivals, #hudCol > #drillHUD, #hudCol > #boxdHUD { flex:1 1 100%; min-width:0; max-width:100%; box-sizing:border-box; }   /* min-width:0, or a one-line dispatch is as wide as its whole text */
   /* 🎓 drill banner — sits under the top button row, in place of the dispatch banner */
-  #drillHUD { position:absolute; z-index:15; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right));
-    top:var(--barBot); display:none; flex-wrap:wrap; align-items:center; gap:7px;
+  #drillHUD { position:relative; z-index:15;
+    display:none; flex-wrap:wrap; align-items:center; gap:7px;
     background:rgba(16,32,24,.94); border:1.5px solid #3ddc84; border-radius:13px; padding:7px 11px;
     box-shadow:0 3px 13px rgba(0,0,0,.5); pointer-events:none;
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
   #drillHUD.show { display:flex; }
   /* 🎓 D2 Box Recall HUD + report */
-  #boxdHUD { position:absolute; z-index:16; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right));
-    top:var(--barBot); display:none; flex-wrap:wrap; align-items:center; gap:7px;
+  #boxdHUD { position:relative; z-index:16;
+    display:none; flex-wrap:wrap; align-items:center; gap:7px;
     background:rgba(13,22,38,.95); border:1.5px solid #f4b950; border-radius:13px; padding:7px 11px;
     box-shadow:0 3px 13px rgba(0,0,0,.5); font-family:"Barlow Condensed","Arial Narrow",sans-serif; }
   #boxdHUD.show { display:flex; }
@@ -177,10 +178,9 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   /* ⚡ NO SIREN IN THE BAR. authUpdateUI() puts .abtn.on on ACCOUNT while you are signed in, and that
      class carries `animation:sirGlow` — the old corner-button alert pulse. In the bar the button has no
      body for a halo to sit on, so it read as a bare blue light flashing twice a second on the phone.
-     Signed-in is a state, not an alarm: it says so with a quiet green dot instead. */
+     Signed-in is a state, not an alarm: it says so with a quiet green dot instead. (v21j: ACCOUNT is in Settings now, with
+     the same green dot — #settingsPanel #btnAccount.on — and this rule stays for anything that takes .on in the bar.) */
   #topBar .abtn.on { animation:none; box-shadow:none; background:none; border:0; }
-  #topBar #btnAccount.on::after { content:""; position:absolute; top:5px; right:4px; width:6px; height:6px;
-    border-radius:50%; background:#3ddc84; box-shadow:0 0 5px rgba(61,220,132,.9); }
   #topBar .abtn { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
     min-height:44px; padding:2px 4px; background:none; border:0; border-radius:11px; box-shadow:none;
     color:#e9eef7; text-shadow:none; line-height:1; pointer-events:auto; }
@@ -192,37 +192,24 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     display:flex; align-items:center; justify-content:center; }
   #topBar .abtn i svg { width:19px; height:19px; display:block; }
   #topBar #btnSettings i { color:#e9eef7; }
-  #topBar #btnAccount i { color:#7fb3ff; }
   #topBar #btnCallIcon i { color:#f4b950; }
   #topBar .abtn b { font-size:7px; font-weight:900; letter-spacing:0; color:#c3cede; }
   #topBar .abtn:active { background:rgba(255,255,255,.1); }
-  /* 📻 The DISPATCH pill is the banner's handle. Lit while the banner is open (Career and a live box
-     are ALWAYS open — v19t's rule), outlined while it is folded away on a patrol. A tap only ever OPENS. */
-  #topBar #dispatchPill { flex:0 0 auto; flex-direction:row; gap:3px; min-height:44px; padding:5px 5px; border-radius:999px;
-    background:rgba(11,17,14,.92); border:1.5px solid #2c4c37; }
-  #topBar #dispatchPill i { width:17px; height:17px; color:#7e9a88; }
-  #topBar #dispatchPill i svg { width:17px; height:17px; }
-  #topBar #dispatchPill b { color:#7e9a88; font-size:7px; letter-spacing:0; }
-  #topBar #dispatchPill.open { background:rgba(9,22,13,.92); border-color:#3ddc84; box-shadow:0 0 12px rgba(61,220,132,.4); }
-  #topBar #dispatchPill.open i { color:#8ff0b4; }
-  #topBar #dispatchPill.open b { color:#eafff0; }
-  /* AT PHONE WIDTH THE FIVE CELLS DO NOT ALL FIT WITH WORDS. 359px of bar, minus padding and gaps, is
+  /* (v21j: the bar is three cells now — rank, BOX, GET A CALL + SETTINGS — and only the SETTINGS word still folds below 420px.)
+     AT PHONE WIDTH THE FIVE CELLS DID NOT ALL FIT WITH WORDS. 359px of bar, minus padding and gaps, is
      340 for SAVES + BEST + the status pill + two buttons + the DISPATCH pill, and with every label
      spelled out they need ~400. Something has to give, and it is the SETTINGS / ACCOUNT words: the
      gear and the person are the icons the mockup itself draws, both keep their title and aria-label,
      and both keep a 44px target. The BUILD tag, the rank and the DISPATCH pill's word all stay —
      those are the things the bar exists to say. Above 420px every label is back, as drawn. */
   @media (max-width:420px) {
-    #topBar #saves .stat b { display:none; }                                    /* 🔥 12 and 🏆 15 read on their own */
-    #topBar #saves .stat { column-gap:2px; padding:1px 3px; }
-    #topBar #saves .stat u { font-size:14px; }
-    #topBar #btnSettings b, #topBar #btnAccount b { display:none; }
+    #topBar #btnSettings b { display:none; }                                    /* v21j: SAVES, BEST and ACCOUNT are in Settings now */
     #topBar .abtn i svg { width:21px; height:21px; }
     #topBar #cornerBtns .abtn { min-width:44px; padding:2px 0; }                /* the words go, the 44px target does not */
   }
   #settingsShade { position:absolute; inset:0; z-index:45; display:none; background:rgba(0,0,0,.12); pointer-events:auto; }
   #settingsShade.show { display:block; }
-  #settingsPanel { position:absolute; top:var(--barBot); right:max(8px,env(safe-area-inset-right)); z-index:46;
+  #settingsPanel { position:absolute; top:var(--barBot); right:max(8px,env(safe-area-inset-right)); z-index:46; max-height:calc(100vh - var(--barBot) - 42px); max-height:calc(100dvh - var(--barBot) - 42px); overflow-y:auto;
     display:none; width:min(330px,calc(100vw - 16px)); padding:14px; background:rgba(24,29,38,.97); border:1px solid rgba(255,255,255,.28);
     border-radius:16px; box-shadow:0 12px 34px rgba(0,0,0,.46); color:#fff; pointer-events:auto; }
   #settingsPanel.show { display:block; }
@@ -231,6 +218,20 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   .settingsGrid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
   #settingsPanel .abtn { width:100%; min-height:46px; background:#343c49; border:1px solid #697483; color:#fff; text-shadow:none; }
   #settingsPanel .abtn.on { background:#174f9f; border-color:#71a8ff; box-shadow:none; animation:none; }
+  /* 🔥 SAVES, 🏆 BEST and 👤 ACCOUNT sit at the top of Settings since v21j (owner: "Into Settings"), so the bar can be
+     the mockup's three cells. Signed in is a STATE, not a toggle: a green dot, never the blue "on" or a pulse. */
+  #setTop { display:flex; align-items:stretch; gap:9px; margin-bottom:9px; }
+  #saves { display:flex; flex:1 1 auto; align-items:center; justify-content:space-around; gap:6px; padding:5px 8px; border-radius:10px;
+    background:#1d2430; border:1px solid #4a5464; color:#e9eef7; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
+  #saves .stat { display:grid; grid-template-columns:auto auto; align-items:center; column-gap:5px; }
+  #saves .stat i { grid-row:1/3; font-style:normal; font-size:17px; line-height:1; }
+  #saves .stat b { font-size:9px; font-weight:900; letter-spacing:.06em; color:#aab7c9; line-height:1.2; }
+  #saves .stat u { text-decoration:none; font-size:16px; font-weight:900; color:#fff; line-height:1.1; }
+  #setTop #btnAccount { flex:0 0 auto; width:auto; padding:6px 12px; }
+  #setTop #btnAccount .acIco { width:17px; height:17px; vertical-align:-4px; color:#7fb3ff; }   /* the bar's own person glyph: the 👤 emoji is a dark purple blot on this panel */
+  #settingsPanel #btnAccount.on { background:#343c49; border-color:#3ddc84; }
+  #settingsPanel #btnAccount.on::after { content:""; display:inline-block; width:7px; height:7px; margin-left:6px; vertical-align:middle;
+    border-radius:50%; background:#3ddc84; box-shadow:0 0 5px rgba(61,220,132,.9); }
   #settingsPanel #btnRerun   { grid-column:1/-1; background:#1f5d84; border-color:#5aa9d6; }   /* redo THIS box from quarters */
   #settingsPanel #btnRestart { grid-column:1/-1; background:#8d2c30; border-color:#d46b6f; }   /* back to the firehouse picker */
   #boundaryOverlay { position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center; padding:var(--safeTop) 8px max(8px,env(safe-area-inset-bottom));
@@ -304,10 +305,10 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   .parkStreetChoice:active { transform:translate(-50%,-50%) scale(.96); }
   /* turn banner (top) */
   /* 🚑 rival engines panel — the 4 engines responding to the current fire */
-  #rivals { position:absolute; z-index:14; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); top:var(--barBot); bottom:auto;
+  #rivals { position:relative; z-index:14;
     display:none; flex-direction:row; flex-wrap:nowrap; align-items:center; justify-content:center; gap:7px;
     background:rgba(15,19,27,.93); border:1px solid rgba(255,255,255,.14); border-radius:13px; padding:5px 9px; box-shadow:0 3px 13px rgba(0,0,0,.5); pointer-events:none; overflow:hidden; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
-  #rivals.show { display:flex; }
+  #rivals.show.open { display:flex; }                                  /* v21j: the details open from N UNITS */
   #rivals .rvBox { font-size:10px; font-weight:900; letter-spacing:.5px; color:#ffd23b; white-space:nowrap; flex:0 0 auto; margin-right:1px; }
   #rivals .rv { display:flex; align-items:center; gap:4px; font-size:12.5px; font-weight:700; color:#eef1f5; flex:0 0 auto; padding:3px 8px 3px 3px; border-radius:999px;
     background:linear-gradient(90deg, rgba(245,146,11,.5) 0 var(--p,0%), rgba(255,255,255,.07) var(--p,0%) 100%); transition:background .18s linear, box-shadow .18s linear; }
@@ -321,6 +322,24 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #rivals .rv.lead { box-shadow:0 0 0 1.5px rgba(255,255,255,.9); }
   #rivals .rv .rvst { min-width:24px; text-align:left; }
   #rivals .rv.you .rvst { color:#fff; font-weight:800; }
+  /* 🚒 N UNITS (v21j): the race at a glance — one dot per company on the box, filled by how far it has come (red = you,
+     a gold ring = 1st due, grey = on scene). A tap opens the strip above with every company and its percent; a tap closes it.
+     The button is a 44 px target; the pill drawn inside it is 30. */
+  #unitsChip { display:none; position:relative; min-height:44px; padding:0; margin:0; background:none; border:0; cursor:pointer; pointer-events:auto;
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; -webkit-tap-highlight-color:transparent; }
+  #unitsChip.on { display:flex; align-items:center; }
+  #unitsChip .ucIn { display:flex; align-items:center; gap:6px; height:30px; padding:0 9px 0 11px; border-radius:999px; box-sizing:border-box;
+    background:rgba(15,19,27,.93); border:1px solid rgba(255,255,255,.2); box-shadow:0 3px 12px rgba(0,0,0,.5); color:#eef1f5; }
+  #unitsChip .ucN { font-size:13px; font-weight:900; color:#fff; }
+  #unitsChip .ucL { font-size:10.5px; font-weight:900; letter-spacing:.08em; color:#c3cede; }
+  #unitsChip .ucDots { display:flex; gap:4px; }
+  #unitsChip .ucDots i { width:11px; height:11px; border-radius:50%; box-sizing:border-box; border:1.5px solid var(--c);
+    background:conic-gradient(var(--c) var(--p,0%), rgba(255,255,255,.12) 0); --c:#f5920b; }
+  #unitsChip .ucDots i.you { --c:#ff4a3d; }
+  #unitsChip .ucDots i.fd { box-shadow:0 0 0 1.5px #ffd23b; }
+  #unitsChip .ucDots i.done { --c:#8b93a1; }
+  #unitsChip .ucChev { font-size:15px; font-weight:900; color:#9fb0c6; line-height:1; transition:transform .15s; }
+  #unitsChip[aria-expanded="true"] .ucChev { transform:rotate(90deg); }
   /* sits in the gap between the top button row and the dispatch banner — never overlaps either */
   #turnBanner { position:absolute; top:calc(var(--safeTop) + 156px); left:50%; transform:translateX(-50%); z-index:13; display:none; align-items:center; gap:7px;
     max-width:calc(100vw - 24px); background:#2b6df6; color:#fff; padding:6px 14px 6px 11px; border-radius:13px; box-shadow:0 2px 9px rgba(0,0,0,.3); white-space:nowrap; }
@@ -344,7 +363,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   /* 🧭 MINIMAP (v20m): a round, heading-up map under the bar - up is always the way the camera looks - with N/E/S/W
      riding the rim so a driver who is turned around can see which way is north. Seated by JS below whatever
      banner currently reaches into the top-right corner, so it never covers the rivals strip or the dispatch. */
-  #miniMap { position:absolute; right:max(8px,env(safe-area-inset-right)); top:calc(var(--barBot) + 48px); width:108px; height:108px;
+  #miniMap { position:absolute; right:max(8px,env(safe-area-inset-right)); top:var(--barBot); width:108px; height:108px;
     z-index:13; display:none; pointer-events:none; border-radius:50%; box-shadow:0 3px 12px rgba(0,0,0,.45); }
   #miniMap.on { display:block; }
   #miniMap canvas { width:100%; height:100%; display:block; border-radius:50%; }
@@ -549,7 +568,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #qcStart { display:block; width:100%; border:none; border-radius:10px; padding:12px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:15px; background:linear-gradient(180deg,#f4b950,#c98d2a); color:#241a05; cursor:pointer; pointer-events:auto; }
   #qcStart:disabled { opacity:.6; }
   #qcCancel { display:block; width:100%; margin-top:8px; border:none; border-radius:10px; padding:11px; font-weight:900; background:#343c49; color:#fff; cursor:pointer; pointer-events:auto; }
-  #qualChip { position:absolute; z-index:15; top:calc(var(--barBot) + 22px); left:max(10px,env(safe-area-inset-left)); display:none; pointer-events:none;
+  #qualChip { position:relative; z-index:15; display:none; pointer-events:none;
     background:rgba(12,17,26,.94); border:1.5px solid #f4b950; border-radius:10px; padding:5px 10px; box-shadow:0 3px 12px rgba(0,0,0,.5);
     font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; letter-spacing:.08em; font-size:12px; color:#ffd27a; }
   #qualChip b { color:#e9eef7; font-weight:800; }
@@ -632,20 +651,26 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #speed { top:clamp(46px,11vw,80px); right:max(12px, env(safe-area-inset-right)); text-align:right; }
   #speed .num { font-size:clamp(22px,5vw,34px); font-weight:900; color:#fff; line-height:1; font-family:"Arial Black",sans-serif; text-shadow:0 0 10px rgba(255,255,255,.4), 0 3px 5px rgba(0,0,0,.7); }
   #speed .cap { font-size:clamp(8px,1.6vw,11px); font-weight:800; letter-spacing:3px; color:#bbb; }
-  #radio { bottom:max(8px, env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); width:min(92vw,520px);
-    background:rgba(2,12,4,.85); border:2px solid #1f8f3a; border-radius:10px; padding:7px 11px; font-family:"Courier New",monospace;
-    font-size:clamp(10px,2.4vw,13px); line-height:1.4; color:#5dff7d; text-shadow:0 0 6px rgba(60,255,100,.5); min-height:44px;
-    box-shadow:0 0 18px rgba(20,160,60,.25), inset 0 0 30px rgba(0,60,10,.35); }
-  #radio .tag { color:#aaffc0; font-weight:700; } #radio .cur { animation:blink .8s steps(1) infinite; }
+  /* 📻 THE DISPATCH LINE (v21j, the owner's pick of the "Focused driving" layout). One line under the bar: the radio, the
+     call ("Dwelling fire · 161 Kalos Street"), and › — a tap opens the whole message (the cross streets, a narrow-street
+     note), a tap closes it. A NEW message always arrives OPEN and types out in full; RADIO.hold seconds after it has
+     finished it settles to one line (.full comes off). On a patrol with no box it folds further, to the radio alone
+     (.mini) — v19t's fold, and still never in Career or on a live box (rdCollapse). The old banner sat at a fixed
+     offset that kept room for the rival strip; this one is the first thing in #hudCol, so nothing holds a hole for it. */
+  #radio { position:relative; z-index:16; display:flex; align-items:flex-start; gap:7px; min-height:40px; padding:9px 10px 8px;
+    background:rgba(9,22,13,.94); border:1.5px solid #2f9a55; border-radius:13px; box-shadow:0 3px 13px rgba(0,0,0,.5);
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; font-size:13.5px; font-weight:700; line-height:1.35; color:#eafff0;
+    pointer-events:auto; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  #radio .tag { flex:0 0 auto; width:19px; height:19px; color:#8ff0b4; }
+  #radio .tag svg { width:19px; height:19px; display:block; }
+  #radioTxt { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #radio .cur { display:none; }
+  #radio .chev { flex:0 0 auto; font-size:17px; font-weight:900; line-height:1; color:#8ff0b4; transition:transform .15s; }
+  #radio.full #radioTxt { white-space:normal; overflow-wrap:anywhere; }
+  #radio.full .chev { transform:rotate(90deg); }
+  #hudCol > #radio.mini { flex:0 0 auto; width:44px; height:44px; min-height:0; padding:0; align-items:center; justify-content:center; border-radius:50%; }
+  #radio.mini #radioTxt, #radio.mini .chev { display:none; }
   @keyframes blink { 50% { opacity:0; } }
-  body.touch #radio { bottom:auto; top:calc(var(--barBot) + 40px); }   /* below the bar and the responding strip */
-  /* 📻 COLLAPSED RADIO. On a patrol the banner has nothing urgent to say and it sits over the road for
-     the whole shift. After a few seconds it folds into a pill under the corner buttons; a tap opens it
-     again. A LIVE BOX NEVER COLLAPSES — rdCollapse() refuses while state.target is set. */
-  /* v19z: the folded banner is now represented by the DISPATCH pill in the top bar, so folding hides the
-     banner outright rather than leaving a second pill floating under the corner buttons. The .mini class
-     is still the state flag, and #radio still answers a click, so nothing that drove v19t changed. */
-  #radio.mini { display:none; }
   #popup { top:24%; left:50%; transform:translateX(-50%); font-size:clamp(24px,6vw,42px); font-weight:900; white-space:nowrap;
     color:#ffe14d; font-family:"Arial Black",sans-serif; letter-spacing:2px; opacity:0; z-index:15; text-shadow:0 0 16px rgba(255,160,0,.9), 0 4px 0 #7a3a00, 0 7px 10px rgba(0,0,0,.7); }
   #popup.pop { animation:popIn 1.4s ease forwards; }
@@ -865,16 +890,13 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <div id="cash" class="hud"><span class="sub">CASH</span>$0</div>
 <div id="combo" class="hud">🔥 x1.0</div>
 <div id="topBar">
-  <div id="saves" class="hud"><span class="stat"><i>🔥</i><b>SAVES</b><u id="savesN">0</u></span><span class="stat"><i>🏆</i><b>BEST</b><u id="bestN">0</u></span></div>
   <div id="dueChip"><span class="dueRow"><span class="dueDot"></span><span class="dueTxt">1ST IN</span></span><b class="dueVer" id="verTag"></b></div>
+  <div id="boxTag"></div>
   <div id="cornerBtns">
     <button class="abtn" id="btnCallIcon" style="display:none" title="Get a call" aria-label="Get a call"><i><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.6" y="5.2" width="18.8" height="13.6" rx="2.6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="5.6" y="8.2" width="8.6" height="4.6" rx="1" fill="currentColor"/><circle cx="17.6" cy="15" r="1.4" fill="currentColor"/><circle cx="13.2" cy="15" r="1.4" fill="currentColor"/></svg></i></button>
     <button class="abtn" id="btnSettings"><i><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8zm0 2a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z"/><path fill="currentColor" d="M10.3 2h3.4l.4 2.3q.9.3 1.7.8l2.1-1 1.7 2.9-1.8 1.5q.1.5.1 1t-.1 1l1.8 1.5-1.7 2.9-2.1-1q-.8.5-1.7.8l-.4 2.3h-3.4l-.4-2.3q-.9-.3-1.7-.8l-2.1 1-1.7-2.9 1.8-1.5q-.1-.5-.1-1t.1-1L4.4 7l1.7-2.9 2.1 1q.8-.5 1.7-.8z"/></svg></i><b>SETTINGS</b></button>
-    <button class="abtn" id="btnAccount"><i><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 12.2a4.6 4.6 0 1 0 0-9.2 4.6 4.6 0 0 0 0 9.2z"/><path fill="currentColor" d="M12 13.8c-4.3 0-7.8 2.3-7.8 5.1V21h15.6v-2.1c0-2.8-3.5-5.1-7.8-5.1z"/></svg></i><b>ACCOUNT</b></button>
   </div>
-  <button class="abtn open" id="dispatchPill" title="Dispatch radio" aria-label="Dispatch radio"><i><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.4" y="8.2" width="19.2" height="11.4" rx="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="13.9" r="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="5.4" y="11.4" width="6" height="2" rx="1" fill="currentColor"/><rect x="5.4" y="15.2" width="6" height="2" rx="1" fill="currentColor"/><path d="M7 8 17 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></i><b>DISPATCH</b></button>
 </div>
-<div id="qualChip">🎖 CHIEF QUAL · <b id="qualChipTxt"></b></div>
 <div id="qualCard" aria-hidden="true">
   <div class="cc">
     <div class="qcHaz"></div>
@@ -885,9 +907,15 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <button id="qcCancel">CANCEL</button>
   </div>
 </div>
-<div id="areaChip"><span class="dueDot"></span><span class="dueTxt"></span><span class="dueWho"></span></div>
-<div id="rivals"></div>
-<div id="drillHUD"></div>
+<div id="hudCol">
+  <div id="radio" role="button" aria-label="Dispatch radio: tap to read it all"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.4" y="8.2" width="19.2" height="11.4" rx="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="13.9" r="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="5.4" y="11.4" width="6" height="2" rx="1" fill="currentColor"/><rect x="5.4" y="15.2" width="6" height="2" rx="1" fill="currentColor"/><path d="M7 8 17 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span id="radioTxt"></span><span class="cur">▊</span><span class="chev">›</span></div>
+  <button id="unitsChip" type="button" aria-expanded="false" aria-controls="rivals"><span class="ucIn"><b class="ucN">0</b><span class="ucL">UNITS</span><span class="ucDots"></span><span class="ucChev">›</span></span></button>
+  <div id="areaChip"><span class="dueDot"></span><span class="dueTxt"></span><span class="dueWho"></span></div>
+  <div id="qualChip">🎖 CHIEF QUAL · <b id="qualChipTxt"></b></div>
+  <div id="rivals"></div>
+  <div id="drillHUD"></div>
+  <div id="boxdHUD"></div>
+</div>
 <style>
   #duePanel { position:absolute; inset:0; z-index:70; display:none; background:#09111f; color:#e9eef7; pointer-events:auto; overflow:auto; padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left)); box-sizing:border-box; }
   #duePanel.show { display:block; }
@@ -914,7 +942,6 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #duePanel .ddRow { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid #26364f; font-size:14px; }
 </style>
 <div id="duePanel" role="dialog" aria-modal="true" aria-label="Train my local" aria-hidden="true"></div>
-<div id="boxdHUD"></div>
 <div id="boxdRep" aria-hidden="true">
   <div class="cc">
     <div class="bdHaz"></div>
@@ -928,6 +955,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <div id="settingsShade"></div>
 <div id="settingsPanel" aria-hidden="true">
   <div class="toolTitle"><span>⚙ SETTINGS</span><button class="toolClose" id="btnSettingsClose" aria-label="Close settings">×</button></div>
+  <div id="setTop"><div id="saves"><span class="stat"><i>🔥</i><b>SAVES</b><u id="savesN">0</u></span><span class="stat"><i>🏆</i><b>BEST</b><u id="bestN">0</u></span></div><button class="abtn" id="btnAccount"><svg class="acIco" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 12.2a4.6 4.6 0 1 0 0-9.2 4.6 4.6 0 0 0 0 9.2z"/><path fill="currentColor" d="M12 13.8c-4.3 0-7.8 2.3-7.8 5.1V21h15.6v-2.1c0-2.8-3.5-5.1-7.8-5.1z"/></svg> ACCOUNT</button></div>
   <div class="settingsGrid">
   <button class="abtn" id="btnBoundaryMap">🗺️ RUN MAP</button>
   <button class="abtn" id="btnNight">🌙 NIGHT</button>
@@ -1060,7 +1088,6 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <div id="speed" class="hud"><div class="num">0</div><div class="cap">MPH</div></div>
 <div id="popup" class="hud"></div>
 <div id="douse" class="hud"><div class="t">💦 EXTINGUISHING…</div><div class="bar"><div class="fill" id="douseFill"></div></div></div>
-<div id="radio" class="hud"><span class="tag">📻 DISPATCH » </span><span id="radioTxt"></span><span class="cur">▊</span></div>
 <div id="touchUI">
   <div id="steer"><span class="lab">STEER</span><span class="arr l">◄</span><span class="arr r">►</span><div id="steerKnob"></div></div>
   <div class="tbtn" id="bGas">GAS</div><div class="tbtn" id="bBrake">BRAKE</div><div class="tbtn" id="bDrift">DRIFT</div><div class="tbtn" id="bJump">JUMP</div>
@@ -1192,7 +1219,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21i";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21j";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4167,7 +4194,7 @@ function rerunCurrentBox(){
 }
 document.getElementById('btnRerun').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); rerunCurrentBox(); });
 document.getElementById('btnDiff').addEventListener('click',e=>{ e.preventDefault(); setDifficulty(DIFF.level+1); });
-document.getElementById('btnAccount').addEventListener('click',e=>{ e.preventDefault(); openAuthCard(); });
+document.getElementById('btnAccount').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openAuthCard(); });   // v21j: it lives in Settings now
 document.getElementById('authCareer').addEventListener('click',e=>{ e.preventDefault(); const a=document.getElementById('authCard'); a.classList.remove('show'); a.setAttribute('aria-hidden','true'); openProfileCard(); });
 document.getElementById('btnDrill').addEventListener('click',e=>{ e.preventDefault(); closeSettings();
   if(DRILL.on) stopDrill(); else startDrill();
@@ -4184,7 +4211,8 @@ function updateHUD(dt){
   elSavesN.textContent=state.saves; elBestN.textContent=best.saves;
   elVerTag.textContent=BUILD+(FPSM.avg?(' · '+(FPSM.avg|0)+' FPS'):'');   // v## · FPS — the BUILD tag is the owner's cache check and LEADS, so if this line ever has to truncate it loses a frame rate, never the tag
   elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
-  { const tag=document.querySelector('#radio .tag'); if(tag) tag.textContent = '📻 DISPATCH » '; }   // boundary/training mode is not a live call
+  { const bt=document.getElementById('boxTag'); if(bt){ const live=!!(state.target&&state.target.box);   // 🔔 v21j: the middle of the bar — BOX 3519 on a run, the company otherwise
+      const t=live?('BOX '+state.target.box):(DRIVE.stationId?('ENGINE '+engNum(DRIVE.stationId)):''); if(bt.textContent!==t) bt.textContent=t; bt.classList.toggle('live',live); } }
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
   { const sa=document.getElementById('satAttr'); if(sa){ const show=state.running;   // v20u: shown for the whole shift (the OpenStreetMap road and land data is on screen all the time; the CARTO credit stays by the owner's word), no longer only after a tile has loaded
@@ -6954,6 +6982,11 @@ function renderDrillHUD(){
     '<span class="dTag">FOUND '+DRILL.done+'</span>';
 }
 const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, playerDue:0 };
+const UNITS={ open:false };                                                                    // 🚒 v21j: the unit details under N UNITS, open or shut (remembered on this phone)
+try{ UNITS.open=localStorage.getItem('pfd_units')==='open'; }catch(e){}
+function unitsSet(open){ UNITS.open=!!open; try{ localStorage.setItem('pfd_units',UNITS.open?'open':'shut'); }catch(e){}
+  const c=document.getElementById('unitsChip'), r=document.getElementById('rivals');
+  if(c) c.setAttribute('aria-expanded',UNITS.open?'true':'false'); if(r) r.classList.toggle('open',UNITS.open); }
 /* 🚑 The ONLY writer of RIVALS.on. The flag and the button's lit state are one fact, so they move
    together — three call sites outside the toggle change it (rerun, missed due, shift start) and any
    one of them left to write the flag alone desyncs the button: it then reads the opposite of the
@@ -7010,9 +7043,10 @@ document.getElementById('btnCall').addEventListener('click',e=>{ e.preventDefaul
   if(state.target){ popup('📟 YOU ARE ALREADY ON A RUN','red'); return; }
   try{ closeSettings(); }catch(err){}                                                                     // it lives in Settings now: get out of the way so the box can be read
   newDispatch(); });
-document.getElementById('radio').addEventListener('click',e=>{ if(RADIO.open) return;                     // only the collapsed pill is a target
-  e.preventDefault(); rdSet(true); });
-document.getElementById('dispatchPill').addEventListener('click',e=>{ e.preventDefault(); if(!RADIO.open) rdSet(true); });   // a tap only ever OPENS — folding stays automatic and stays refused in Career and on a live box (v19t)
+document.getElementById('radio').addEventListener('click',e=>{ e.preventDefault();                       // v21j: the folded radio opens it; the open line shows it all, or back to one line
+  if(!RADIO.open){ rdSet(true,true); return; }                                                             // (it folds again on its own — v19t)
+  const f=!RADIO.full; rdSet(true,f); RADIO.pin=f; });                                                      // opened by a tap: it stays open until tapped again or the next message
+document.getElementById('unitsChip').addEventListener('click',e=>{ e.preventDefault(); unitsSet(!UNITS.open); });
 freeSet(false);
 /* 🎯 DIFFICULTY — how fast the other companies run. The player's own truck does 15 u/s by default and can be
    pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
@@ -8685,9 +8719,10 @@ function missedDue(){ if(state.over||FREE.on) return;                           
 function onPlayerArrive(){ if(!RIVALS.on||RIVALS.playerPlaced||!RIVALS.responders.length) return; RIVALS.playerPlaced=true;
   const place=RIVALS.order.length+1; RIVALS.playerPlace=place;                                        // rivals already on scene + you
   if(place===1) popup('🥇 FIRST IN!','green'); else popup(ordinal(place)+' DUE · Engine '+engNum(RIVALS.order[0])+' beat you','red'); }
-function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) return;
+function renderRivalHUD(){ const el=document.getElementById('rivals'), uc=document.getElementById('unitsChip'); if(!el) return;
   const show=RIVALS.on && state.target && RIVALS.responders.length;
-  el.classList.toggle('show',!!show); if(!show){ el.innerHTML=''; return; }
+  el.classList.toggle('show',!!show); el.classList.toggle('open',UNITS.open); if(uc) uc.classList.toggle('on',!!show);   // v21j: N UNITS shows the race; its tap opens this strip
+  if(!show){ el.innerHTML=''; return; }
   const F=RIVALS.fire;                                                                            // % of the way to the fire (straight-line) — same measure for you + rivals, a fair race gauge
   const pct=(x,z,d0)=> (F&&d0)?Math.max(0,Math.min(99,Math.round((1-Math.hypot(x-F.x,z-F.z)/d0)*100))):0;
   const rows=RIVALS.responders.map(r=>{ let cls='rv', p=0, arrived=false; if(r.firstDue) cls+=' fd';   // gather each responder's live progress so we can fill the chip + flag the leader
@@ -8697,10 +8732,16 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'); if(!el) r
     if(arrived&&!r.isPlayer) cls+=' done';
     return {num:r.num, cls, p, arrived, stat: arrived?'✓':(p+'%')}; });
   let lead=-1, leadP=-1; rows.forEach((row,i)=>{ if(!row.arrived && row.p>leadP){ leadP=row.p; lead=i; } });   // leader = closest of those still en route
-  let h = (state.target&&state.target.box) ? ('<span class="rvBox">BOX '+state.target.box+'</span>') : '';   // horizontal strip: box + a chip per responding engine (red = you, gold ring = 1st due, fill = % to the fire)
+  let h='';   // horizontal strip: a chip per responding engine (red = you, gold ring = 1st due, fill = % to the fire); the box number is in the bar since v21j
   rows.forEach((row,i)=>{ const cls=row.cls+(i===lead?' lead':'');
     h+='<div class="'+cls+'" style="--p:'+row.p+'%"><span class="badge">'+row.num+'</span><span class="rvst">'+row.stat+'</span></div>'; });
-  el.innerHTML=h; }
+  el.innerHTML=h;
+  if(uc){ const n=uc.querySelector('.ucN'), dots=uc.querySelector('.ucDots');                    // 🚒 N UNITS: one dot per company, filled to its percent. Updated IN PLACE —
+    if(n.textContent!==String(rows.length)) n.textContent=rows.length;                             // never rebuilt — so a finger on the button never loses its target mid-tap
+    while(dots.children.length<rows.length) dots.appendChild(document.createElement('i'));
+    while(dots.children.length>rows.length) dots.lastChild.remove();
+    rows.forEach((row,i)=>{ const d=dots.children[i], c=row.cls.replace(/^rv ?/,''), p=row.p+'%';
+      if(d.className!==c) d.className=c; if(d.style.getPropertyValue('--p')!==p) d.style.setProperty('--p',p); }); } }
 /* SENIOR MAN — post-run coaching (MULTIPLAYER-PLAN.md §9; single-player, no accounts/network).
    Breadcrumb of the actual drive vs the graph-optimal route, reviewed after every FIRE OUT.
    ⚠️ The coach only states MEASURED facts (lengths, wrong-way time, stopped time, due place). Never
@@ -9187,6 +9228,22 @@ function coachDone(keep){ coachHide(); if(!state.running) return;
 document.getElementById('btnCoachNext').addEventListener('click',()=>coachDone(false));
 document.getElementById('btnCoachKeep').addEventListener('click',()=>coachDone(true));
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDrill,updateBoxDrill,updateCoach];             // road-follow + arrive-to-douse + rival engines
+/* 📐 SEATING UNDER THE BAR (v21j). The minimap takes the top-right corner below anything under the bar that reaches into it
+   (the dispatch line, an open unit strip, a drill banner) and rides up beside things that do not (N UNITS, the area
+   chip). The full-width warnings (turn banner, WRONG WAY, NARROW STREET) go below ALL of it — the #hudCol flow AND the
+   minimap — whether or not the minimap is on; WRONG WAY was never seated before and sat on the map. */
+function hudSeat(mm,show){ const tb=document.getElementById('turnBanner'), ww=document.getElementById('wrongWay'), ns=document.getElementById('narrowSt');
+  let floor=0; const col=document.getElementById('hudCol'); if(col){ const r=col.getBoundingClientRect(); if(r.height>1) floor=r.bottom+6; }
+  if(show){ mm.style.top=''; const er=mm.getBoundingClientRect(); let top=null;
+    for(const id of ['radio','unitsChip','areaChip','qualChip','rivals','drillHUD','boxdHUD']){ const o=document.getElementById(id); if(!o) continue;
+      const cs=getComputedStyle(o); if(cs.display==='none'||cs.visibility==='hidden') continue; const r=o.getBoundingClientRect();
+      if(r.width<2||r.height<2||r.top>innerHeight*0.45||r.right<er.left-4) continue; top=Math.max(top||0,r.bottom+6); }
+    if(top&&top>er.top) mm.style.top=top+'px';
+    floor=Math.max(floor,mm.getBoundingClientRect().bottom+6); }
+  let low=floor;
+  for(const c of [tb,ww]){ if(!c) continue; c.style.top=''; const r=c.getBoundingClientRect(); if(r.height<2) continue;
+    if(r.top<floor) c.style.top=floor+'px'; low=Math.max(low,c.getBoundingClientRect().bottom+6); }
+  if(ns){ ns.style.top=''; const r=ns.getBoundingClientRect(); if(r.height>2&&r.top<low) ns.style.top=low+'px'; } }
 /* 🧭 MINIMAP (v20m, owner: "when I drove in an area I didn't know I got turned around a lot"). Drawn from the SAME data the
    game drives on - RB road segments (segGrid), LANDCOVER parks (landGrid), RB.wa water, and the buildings of the last
    FLATCITY commit - plus the route to the call (blue) and the call (red). Heading-up: screen-up is the direction the
@@ -9197,19 +9254,9 @@ try{ if(localStorage.getItem('pfd_minimap')==='off') MINIMAP.on=false; }catch(e)
 function mmToggleBtn(){ const b=document.getElementById('btnMiniMap'); if(b){ b.classList.toggle('on',MINIMAP.on); b.textContent='🗺 MINIMAP: '+(MINIMAP.on?'ON':'OFF'); } }
 function updateMiniMap(dt){ const el=MINIMAP.el||(MINIMAP.el=document.getElementById('miniMap')); if(!el) return;
   const show=MINIMAP.on&&state.running&&!homeEl.classList.contains('show');
-  el.classList.toggle('on',show); const tb=document.getElementById('turnBanner');
-  const ns=document.getElementById('narrowSt');
-  if(!show){ if(tb) tb.style.top=''; if(ns) ns.style.top=''; return; }
+  el.classList.toggle('on',show);
   MINIMAP.t-=dt; if(MINIMAP.t>0) return; MINIMAP.t=0.12;
-  // seat: below anything visible that reaches into the top-right corner
-  el.style.top=''; const er=el.getBoundingClientRect(); let top=null;
-  for(const id of ['rivals','radio','drillHUD','boxdHUD','qualChip','areaChip']){ const o=document.getElementById(id); if(!o) continue;
-    const cs=getComputedStyle(o); if(cs.display==='none'||cs.visibility==='hidden') continue; const r=o.getBoundingClientRect();
-    if(r.width<2||r.height<2||r.top>innerHeight*0.45||r.right<er.left-4) continue; top=Math.max(top||0,r.bottom+6); }
-  if(top&&top>er.top) el.style.top=top+'px';
-  if(tb){ tb.style.top=''; const tr=tb.getBoundingClientRect(), mb=el.getBoundingClientRect().bottom+6; if(tr.top<mb) tb.style.top=mb+'px'; }   // the turn banner spans the width: seat it below the map
-  if(ns){ ns.style.top=''; if(ns.style.display==='block'){ let nt=el.getBoundingClientRect().bottom+6; const tr=tb&&tb.getBoundingClientRect();   // 🚧 the narrow-street chip spans the width too: below the map, and below the turn banner when both show
-    if(tr&&tr.height>2&&tr.bottom+6>nt) nt=tr.bottom+6; if(ns.getBoundingClientRect().top<nt) ns.style.top=nt+'px'; } }
+  hudSeat(el,show); if(!show) return;
   const cv=MINIMAP.cv||(MINIMAP.cv=el.querySelector('canvas')); const dpr=Math.min(2,devicePixelRatio||1), W=Math.round(108*dpr);
   if(cv.width!==W){ cv.width=cv.height=W; }
   const x=cv.getContext('2d'), c=W/2, rad=c-3*dpr, s=(rad-9*dpr)/MINIMAP.R, tx=truck.x, tz=truck.z;
@@ -9264,18 +9311,20 @@ const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip,updat
 state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
 let radioQueue='', radioShown='', radioT=0, lastIdx=-1;
-/* 📻 The dispatch banner folds itself away on a patrol. RADIO.t counts up once the line has finished
-   typing; at RADIO.hold it collapses. Any new message opens it again (and restarts the count), and a
-   tap toggles it by hand. A live box holds it open — that is the one thing this must never hide. */
-const RADIO={ t:0, hold:5, open:true };
-function rdSet(open){ RADIO.open=!!open; RADIO.t=0;
-  const el=document.getElementById('radio'); if(el) el.classList.toggle('mini',!RADIO.open);
-  const pill=document.getElementById('dispatchPill'); if(pill) pill.classList.toggle('open',RADIO.open); }   // the bar's pill is the banner's handle: lit when the banner is open, outlined when it is folded away
+/* 📻 The dispatch line (v21j). A new message arrives OPEN (.full) and types out; RADIO.t counts up once it has finished,
+   and at RADIO.hold it settles to one line — or, on a patrol with no box, folds to the radio alone (.mini, v19t). A tap
+   opens it again. Career and a live box are never folded to the radio: the call is always on screen. The " | " between
+   the parts of a dispatch reads " · ". */
+const RADIO={ t:0, hold:5, open:true, full:true, pin:false };
+function rdSet(open,full){ RADIO.open=!!open; RADIO.full=!!(open&&full); RADIO.t=0; RADIO.pin=false;
+  const el=document.getElementById('radio'); if(el){ el.classList.toggle('mini',!RADIO.open); el.classList.toggle('full',RADIO.full); } }
 function rdCollapse(dt){ const el=document.getElementById('radio'); if(!el) return;
-  if(!FREE.on||state.target){ if(!RADIO.open) rdSet(true); return; }                  // Career, or a live box: always the full banner
-  if(!RADIO.open||radioShown.length<radioQueue.length) return;                        // still typing: let it finish
-  RADIO.t+=dt; if(RADIO.t>=RADIO.hold) rdSet(false); }
-function radio(m){ radioQueue=m; radioShown=''; radioT=0; rdSet(true); }
+  const patrol=FREE.on&&!state.target;
+  if(!patrol&&!RADIO.open){ rdSet(true,false); return; }                                // Career, or a live box: never folded away
+  if(!RADIO.open||RADIO.pin||radioShown.length<radioQueue.length) return;               // still typing, or opened by a tap: leave it
+  RADIO.t+=dt; if(RADIO.t<RADIO.hold) return;
+  if(patrol) rdSet(false,false); else if(RADIO.full) rdSet(true,false); }
+function radio(m){ radioQueue=String(m).replace(/\s*\|\s*/g,' · '); radioShown=''; radioT=0; rdSet(true,true); }
 /* 🧯 THE HYDRANTS NEAREST AN ADDRESS — for the senior man's card (coachHydRender). v20y also put a HYDRANT button on the
    dispatch card (October 13, 2026); the owner took it off a day later ("Don't want too much on the screen"), with its beacon and
    minimap pin — the review after the run is where hydrants are shown now. Box-book + OSM hydrants, straight line, within 400 m. */
