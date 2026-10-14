@@ -741,6 +741,27 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     padding:13px 15px 15px; box-shadow:0 0 34px rgba(255,200,0,.28), 0 18px 44px rgba(0,0,0,.65); z-index:4;
     transition:transform .26s cubic-bezier(.2,.9,.3,1); }
   #houseCard.up { transform:translate(-50%,0); }
+  /* 🧯 hydrants near the player's REAL location: a compact two-line button in the EMPTY TOP-LEFT of the home map (owner, October 14,
+     2026: "move the hydrant button to the top in the empty spot") — under the title, left of the Northeast's arm, where no firehouse
+     stands. In a browser that still shows the yellow INSTALL APP button it drops below that button instead of covering it. */
+  #btnHydNearMe { position:absolute; left:12px; top:calc(max(10px,env(safe-area-inset-top)) + 58px); z-index:3; min-height:44px; min-width:44px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+    background:rgba(9,14,26,.9); color:#9cc4ff; border:1px solid rgba(79,141,255,.6); border-radius:11px;
+    padding:7px 11px; font-size:11px; letter-spacing:.8px; cursor:pointer; }
+  #btnHydNearMe b { font-weight:900; } #btnHydNearMe span { font-weight:800; font-size:9.5px; letter-spacing:1.2px; color:#7fa9e6; }
+  #homeHud:has(#btnInstall:not([hidden])) ~ #btnHydNearMe { top:calc(max(10px,env(safe-area-inset-top)) + 112px); }
+  #hydSheet { position:absolute; inset:0; z-index:9; display:none; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.55); }
+  #hydSheet.show { display:flex; }
+  #hydSheet .card { width:min(480px,96vw); max-height:92vh; overflow:auto; text-align:left; background:#141a24; border:1px solid #2a3444; border-radius:16px 16px 0 0;
+    padding:14px 14px calc(14px + env(safe-area-inset-bottom)); color:#e9eef7; }
+  #hydSheet h2 { margin:0 0 4px; font-size:16px; font-weight:900; color:#9cc4ff; letter-spacing:.5px; }
+  #hydSheetStatus { font-size:12px; font-weight:700; color:#9fb3c8; min-height:16px; }
+  #hydSheetMap { width:100%; height:300px; border-radius:10px; background:#eceae4; margin-top:8px; display:block; }
+  #hydSheetList { margin-top:8px; font-size:13px; font-weight:700; line-height:1.7; color:#dbe8ff; }
+  #hydSheetList .n { display:inline-block; width:20px; height:20px; border-radius:10px; background:#2f7bff; color:#fff; text-align:center; font-size:11px; line-height:20px; margin-right:8px; }
+  #hydSheet .fine { margin-top:8px; font-size:10.5px; color:#8a97a8; }
+  #hydSheet .row { display:flex; gap:8px; margin-top:10px; }
+  #hydSheet .row button { flex:1; min-height:44px; border:none; border-radius:10px; font-weight:900; font-size:13px; background:#2b3d5c; color:#fff; }
   #homeLegend, #btnListView, #btnFirstDueHome { transition:opacity .2s, transform .2s; }
   #homeMapWrap.picking #homeLegend, #homeMapWrap.picking #btnListView, #homeMapWrap.picking #btnFirstDueHome {
     opacity:0; transform:translateY(14px); pointer-events:none; }   /* the card owns the bottom edge while a house is selected */
@@ -989,6 +1010,15 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     </div></div>
     <button id="btnFirstDueHome">🏆 LEADERBOARD</button>
     <button id="btnListView">☰ LIST VIEW</button>
+    <button id="btnHydNearMe" type="button" aria-label="Hydrants near me"><b>🧯 HYDRANTS</b><span>NEAR ME</span></button>
+    <div id="hydSheet" role="dialog" aria-modal="true" aria-labelledby="hydSheetTitle"><div class="card">
+      <h2 id="hydSheetTitle">🧯 HYDRANTS NEAR YOU</h2>
+      <div id="hydSheetStatus"></div>
+      <canvas id="hydSheetMap"></canvas>
+      <div id="hydSheetList"></div>
+      <div class="fine">From the PFD box books and OpenStreetMap — check a hydrant before you rely on it. Your location stays on your phone.</div>
+      <div class="row"><button id="hydSheetClose" type="button">CLOSE</button></div>
+    </div></div>
     <div id="houseCard">
       <span class="hcX" id="hcClose">×</span>
       <div class="hcName" id="hcName"></div>
@@ -1067,7 +1097,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v20z";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21a";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -8654,13 +8684,17 @@ function showCoach(r){ const el=document.getElementById('coachCard');
    each one's distance in feet and its block and street. Tap again for the route. Same hydrants and the same straight-line
    rule as the dispatch card's button (box-book + OSM hydrants within 400 m of the address point). */
 const COACHHYD={on:false,r:null,showOpt:false};
-function renderCoachHydrants(r){ const cv=document.getElementById('coachCanvas'); if(!cv) return []; const c=cv.getContext('2d');
-  const W=Math.max(280,Math.round(cv.clientWidth||320)),H=260,dpr=Math.min(2,devicePixelRatio||1); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
-  const ax=r.hx!=null?r.hx:r.fx, az=r.hz!=null?r.hz:r.fz, list=hydNearest(ax,az,3);
+function renderCoachHydrants(r){ const cv=document.getElementById('coachCanvas'); if(!cv) return [];
+  const ax=r.hx!=null?r.hx:r.fx, az=r.hz!=null?r.hz:r.fz, list=hydNearest(ax,az,3); drawHydrantMap(cv,260,ax,az,list,{mark:'fire'}); return list; }
+// A close NORTH-UP map round (ax,az) with the hydrants in `list` numbered: streets at their own width and named, the buildings of the
+// last local-city commit where they reach, water, a dashed line out to each hydrant, a north arrow and a 100 ft scale. The centre
+// is the address (opt.mark 'fire') or the player's own position ('you', orange, with opt.acc metres of accuracy drawn round it).
+function drawHydrantMap(cv,H,ax,az,list,opt){ const c=cv.getContext('2d');
+  const W=Math.max(280,Math.round(cv.clientWidth||320)),dpr=Math.min(2,devicePixelRatio||1); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
   let minX=ax-80,maxX=ax+80,minZ=az-80,maxZ=az+80;                                   // at least 160 m across, and every listed hydrant in it
   for(const q of list){ minX=Math.min(minX,q.h[0]-30); maxX=Math.max(maxX,q.h[0]+30); minZ=Math.min(minZ,q.h[1]-30); maxZ=Math.max(maxZ,q.h[1]+30); }
   const scale=Math.min((W-20)/(maxX-minX),(H-20)/(maxZ-minZ)), ox=(W-(maxX-minX)*scale)/2, oy=(H-(maxZ-minZ)*scale)/2, T=(x,z)=>[ox+(x-minX)*scale,oy+(z-minZ)*scale];
-  cv._map={minX,minZ,scale,ox,oy,view:'hydrants',hyd:list.map(q=>[q.h[0],q.h[1]])};
+  cv._map={minX,minZ,scale,ox,oy,view:opt.mark==='you'?'nearme':'hydrants',hyd:list.map(q=>[q.h[0],q.h[1]]),centre:[ax,az]};
   c.setTransform(dpr,0,0,dpr,0,0); c.fillStyle=MAP_LAND; c.fillRect(0,0,W,H);
   c.setTransform(dpr*scale,0,0,dpr*scale,dpr*(ox-minX*scale),dpr*(oy-minZ*scale));    // draw in metres: x east -> right, z south -> down (north up)
   c.fillStyle=MAP_WATER; for(const poly of RB.wa){ if(poly.length<3) continue; let a=1e9,b=-1e9,d=1e9,e=-1e9; for(const q of poly){a=Math.min(a,q[0]);b=Math.max(b,q[0]);d=Math.min(d,q[1]);e=Math.max(e,q[1]);}
@@ -8677,13 +8711,16 @@ function renderCoachHydrants(r){ const cv=document.getElementById('coachCanvas')
   c.textAlign='center'; c.textBaseline='middle'; c.font='700 10px -apple-system,"Helvetica Neue",Arial,sans-serif';
   for(const {s,mx,mz} of [...names.values()].sort((p,q)=>p.d-q.d).slice(0,6)){ const [px,py]=T(mx,mz); let ang=Math.atan2(s.bz-s.az,s.bx-s.ax); if(ang>Math.PI/2) ang-=Math.PI; if(ang<-Math.PI/2) ang+=Math.PI;
     c.save(); c.translate(px,py); c.rotate(ang); const t=abbrevStreet(s.name); c.lineWidth=3; c.strokeStyle='rgba(255,255,255,.95)'; c.strokeText(t,0,0); c.fillStyle='#4a4f57'; c.fillText(t,0,0); c.restore(); }
-  const [fx,fy]=T(ax,az); c.font='18px sans-serif'; c.fillText('🔥',fx,fy);
+  const [fx,fy]=T(ax,az);
+  if(opt.mark==='you'){ c.fillStyle='rgba(245,166,35,.18)'; c.beginPath(); c.arc(fx,fy,Math.max(10,(opt.acc||0)*scale),0,6.2832); c.fill();   // how sure the phone is
+    c.fillStyle='#fff'; c.beginPath(); c.arc(fx,fy,8,0,6.2832); c.fill(); c.fillStyle='#f5a623'; c.beginPath(); c.arc(fx,fy,5.5,0,6.2832); c.fill();
+    c.fillStyle='#4a4f57'; c.font='900 10px -apple-system,Arial,sans-serif'; c.lineWidth=3; c.strokeStyle='rgba(255,255,255,.95)'; c.strokeText('YOU',fx,fy-16); c.fillText('YOU',fx,fy-16); }
+  else { c.font='18px sans-serif'; c.fillText('🔥',fx,fy); }
   list.forEach((q,i)=>{ const [px,py]=T(q.h[0],q.h[1]); c.fillStyle='#2f7bff'; c.strokeStyle='#fff'; c.lineWidth=2; c.beginPath(); c.arc(px,py,8.5,0,6.2832); c.fill(); c.stroke();
     c.fillStyle='#fff'; c.font='900 10px -apple-system,Arial,sans-serif'; c.fillText(String(i+1),px,py+0.5); });
   c.fillStyle='#4a4f57'; c.font='900 11px -apple-system,Arial,sans-serif'; c.fillText('N ↑',W-20,14);
   const L=30.48*scale; c.strokeStyle='#4a4f57'; c.lineWidth=2; c.beginPath(); c.moveTo(12,H-12); c.lineTo(12+L,H-12); c.moveTo(12,H-17); c.lineTo(12,H-7); c.moveTo(12+L,H-17); c.lineTo(12+L,H-7); c.stroke();
-  c.textAlign='left'; c.font='700 10px -apple-system,Arial,sans-serif'; c.fillText('100 ft',17+L,H-12);
-  return list; }
+  c.textAlign='left'; c.font='700 10px -apple-system,Arial,sans-serif'; c.fillText('100 ft',17+L,H-12); }
 function coachHydUI(){ const b=document.getElementById('btnCoachHyd'), L=document.getElementById('coachHydList'), lg=document.getElementById('coachLegend'), r=COACHHYD.r; if(!r) return;
   b.classList.toggle('on',COACHHYD.on); b.textContent=COACHHYD.on?'🗺 BACK TO THE ROUTE':'🧯 HYDRANTS NEAR THE ADDRESS'; L.textContent='';
   if(!COACHHYD.on){ L.hidden=true; lg.style.display=COACHHYD.showOpt?'flex':'none'; renderCoachCanvas(r,COACHHYD.showOpt); return; }
@@ -8692,6 +8729,37 @@ function coachHydUI(){ const b=document.getElementById('btnCoachHyd'), L=documen
   list.forEach((q,i)=>{ const d=document.createElement('div'), n=document.createElement('span'); n.className='n'; n.textContent=String(i+1); d.appendChild(n);
     const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(Math.max(10,Math.round(q.d*3.2808/10)*10).toLocaleString('en-US')+' ft'+(where?' · '+where:''))); L.appendChild(d); }); }
 document.getElementById('btnCoachHyd').addEventListener('click',e=>{ e.preventDefault(); COACHHYD.on=!COACHHYD.on; coachHydUI(); });
+/* 🧯 HYDRANTS NEAR ME (owner, October 14, 2026: "add a hydrant button to the main page, and it will show the closest hydrants to
+   your location where you're at in the real world"; then "move the hydrant button to the top in the empty spot" — it sits in the
+   empty top-left of the home map). The home map's button opens a sheet that asks the phone where it is
+   (navigator.geolocation — the browser asks permission the first time) and shows the FIVE hydrants nearest that spot: the shared
+   north-up map (you in orange with the fix's accuracy round you, the hydrants numbered in blue) and a list — feet, compass
+   direction from you, block and street. It follows you while it is open (watchPosition) and stops when it closes. The position is
+   used on this sheet and nowhere else — it never leaves the phone. Same hydrants as the game: PFD box books + OSM, within 400 m. */
+const NEARME={watch:null,last:null};
+function nearMeCompass(dx,dz){ const b=(Math.atan2(dx,-dz)*180/Math.PI+360)%360; return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8]; }   // world +z is south
+function nearMeShow(pos){ const st=document.getElementById('hydSheetStatus'), L=document.getElementById('hydSheetList'), cv=document.getElementById('hydSheetMap');
+  const w=ll2world(pos.coords.latitude,pos.coords.longitude), acc=pos.coords.accuracy||0, list=hydNearest(w.x,w.z,5); NEARME.last={x:w.x,z:w.z,acc,list};
+  L.textContent='';
+  if(!list.length){ st.textContent='No hydrant in the map data within 1,300 ft of you — this works inside Philadelphia.'; cv.style.display='none'; return; }
+  st.textContent='Your position'+(acc>0?', within ±'+Math.round(acc*3.2808).toLocaleString('en-US')+' ft':'')+(acc>100?' — a rough fix; it sharpens outdoors':'')+' · follows you while this is open';
+  cv.style.display='block'; drawHydrantMap(cv,300,w.x,w.z,list,{mark:'you',acc});
+  list.forEach((q,i)=>{ const d=document.createElement('div'), n=document.createElement('span'); n.className='n'; n.textContent=String(i+1); d.appendChild(n);
+    const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(Math.max(10,Math.round(q.d*3.2808/10)*10).toLocaleString('en-US')+' ft '+nearMeCompass(q.h[0]-w.x,q.h[1]-w.z)+(where?' · '+where:''))); L.appendChild(d); }); }
+function nearMeError(err){ const st=document.getElementById('hydSheetStatus');
+  if(NEARME.last&&err&&err.code!==1){ st.textContent='Showing your last known position — the phone lost its location fix.'; return; }   // keep what we had
+  document.getElementById('hydSheetMap').style.display='none'; document.getElementById('hydSheetList').textContent='';
+  st.textContent=err&&err.code===1?'Location is off for this site — allow it in your browser settings to see the hydrants near you.':
+    'Could not find where you are'+(err&&err.code===3?' in time':'')+' — try again with location on, ideally outdoors.'; }
+function nearMeOpen(){ document.getElementById('hydSheet').classList.add('show'); NEARME.last=null;
+  document.getElementById('hydSheetStatus').textContent='Finding where you are…'; document.getElementById('hydSheetList').textContent=''; document.getElementById('hydSheetMap').style.display='none';
+  if(!navigator.geolocation){ nearMeError({code:2}); return; }
+  if(NEARME.watch!==null) navigator.geolocation.clearWatch(NEARME.watch);
+  NEARME.watch=navigator.geolocation.watchPosition(nearMeShow,nearMeError,{enableHighAccuracy:true,maximumAge:5000,timeout:20000}); }
+function nearMeClose(){ document.getElementById('hydSheet').classList.remove('show'); if(NEARME.watch!==null&&navigator.geolocation) navigator.geolocation.clearWatch(NEARME.watch); NEARME.watch=null; }
+document.getElementById('btnHydNearMe').addEventListener('click',e=>{ e.preventDefault(); nearMeOpen(); });
+document.getElementById('hydSheetClose').addEventListener('click',e=>{ e.preventDefault(); nearMeClose(); });
+document.getElementById('hydSheet').addEventListener('click',e=>{ if(e.target.id==='hydSheet') nearMeClose(); });   // a tap outside the card closes it
 function coachHide(){ const el=document.getElementById('coachCard'); if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); } }
 function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCanvas'); if(!cv) return; const c=cv.getContext('2d');
   const W=Math.max(280,Math.round(cv.clientWidth||320)),H=260,dpr=Math.min(2,devicePixelRatio||1); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); c.setTransform(dpr,0,0,dpr,0,0);
