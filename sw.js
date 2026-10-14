@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v66';  // v21c: the Senior Man card's hydrant view is interactive like the near-me map — pinch, drag, tap a hydrant.
+const CACHE = 'local-shell-v67';  // v21d: 2nd/3rd/4th due from the PFD running order for every box (data/pfdrun.js).
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

@@ -1075,6 +1075,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/btype.js"></script>
 <script src="data/rref.js"></script>
 <script src="data/pfdbox.js"></script>
+<script src="data/pfdrun.js"></script>
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/inst.js"></script>
@@ -1108,7 +1109,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21c";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21d";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1654,7 +1655,7 @@ function addressInDue(x,z){ if(!MAP.dueLevel) return true; const set=dueEngineSe
    widening — if a position has no calls, the dispatcher says so rather than handing over the wrong due. */
 function addressAtDue(x,z,level){ if(!level) return true;                    // 0 = ALL CALLS
   const resp=computeResponders(x,z); const s=resp[level-1];
-  return !!(s&&s.id===DRIVE.stationId); }
+  return !!(s&&s.id===DRIVE.stationId&&!resp.held); }                       // a HELD 4th seat is not 4th due (you are 5th or further on the list)
 function dueActive(){ return MAP.dueLevel>0 && dueEngineSet(DRIVE.stationId, MAP.dueLevel).size>0; }
 function saveBoundsSnapshot(){ DUE.polyCache.clear(); DUE.adj=null; try{ localStorage.setItem('pfd_bounds_snap', JSON.stringify({v:BOUNDS_VERSION, build:BUILD, list:RUN_BOUNDARIES})); }catch(e){} }
 (function loadBounds(){ try{ const raw=localStorage.getItem('pfd_bounds_snap'); if(!raw) return; const snap=JSON.parse(raw);
@@ -2086,6 +2087,16 @@ const PFD_BOXES=(function(){ if(typeof PFDBOX==='undefined') return [];
 // inside its surround's ring. pfdBoxAt and realBoxFor take the first box that contains the point — sorted, that is the island.
 const inBoxBB=(b,x,z)=>x>=b.bb[0]&&x<=b.bb[2]&&z>=b.bb[1]&&z<=b.bb[3];
 function pfdBoxAt(x,z){ for(const b of PFD_BOXES) if(inBoxBB(b,x,z)&&ptInRing(x,z,b.poly)) return b; return null; }
+/* 🚒 RUNNING ORDER BY BOX (data/pfdrun.js — the PFD response-zone list exported 08/07/25, baked by bake_pfdrun.py; owner,
+   October 14, 2026: "more accurate numbers of who's first in, second in, third and fourth in"). Every box's engines in the
+   order the Fire Department sends them. 2nd/3rd/4th due used to be the nearest firehouses as the crow flies: measured against
+   this list at a point inside each of the 2,061 boxes, that was right for the 2nd due 78% of the time, the 3rd 56%, the 4th
+   45% (1st due already came from the box, 100%). Units the game has no house for (the airport's Engine 78, unit 96) are
+   skipped. Built once per box on first use; ground outside every box keeps the old way (computeResponders, dueRankAt). */
+function runOrderAt(x,z){ const b=pfdBoxAt(x,z); if(!b) return null;
+  if(b.run===undefined){ b.run=null; const L=typeof PFDRUN!=='undefined'&&PFDRUN.z&&PFDRUN.z[b.box];
+    if(L){ const out=[]; for(const n of L){ const s=stations.find(q=>q.num===n); if(s&&out.indexOf(s)<0) out.push(s); } if(out.length>=4) b.run=out; } }
+  return b.run; }
 (function mergePfdHydrants(){ if(typeof PFDBOX==='undefined') return;
   const P=PFDBOX.hyd.map(h=>{ const w=ll2world(h[0],h[1]); return [Math.round(w.x),Math.round(w.z),3]; });
   const C=16, g=new Map(); for(const p of P){ const k=Math.floor(p[0]/C)+':'+Math.floor(p[1]/C); let a=g.get(k); if(!a){a=[];g.set(k,a);} a.push(p); }
@@ -7253,7 +7264,7 @@ function qualPool(companyId,due,cap,rnd){                                      /
   for(let i=0;i<ADDR.a.length;i++){ const a=ADDR.a[i]; if(!a) continue;
     const dd=Math.hypot(a[2]-st.x,a[3]-st.z); if(dd<300||dd>3000) continue; stats.dist++;                // the normal dispatch band, measured from QUARTERS
     const resp=computeResponders(a[2],a[3]); stats.resp++;                                               // REAL responder order proves the due — MAP.dueLevel is never consulted
-    if(!resp[due-1]||resp[due-1].id!==companyId) continue; stats.dueHits++;
+    if(!resp[due-1]||resp[due-1].id!==companyId||resp.held) continue; stats.dueHits++;          // a held seat is not that due
     const box=computeBox(resp[0],a[2],a[3]);                                                             // same derivation assignBox uses
     if(!(box in known)) continue; stats.knownHits++;
     const v=addressDispatchable(a); if(!v) continue; stats.valid++;                                      // same validity source as normal dispatch
@@ -7398,7 +7409,7 @@ function boxUniverse(companyId,scope){                                         /
   for(const a of ADDR.a){ if(!a) continue;
     const d=Math.hypot(a[2]-st.x,a[3]-st.z); if(d<300||d>3000) continue;
     const r=computeResponders(a[2],a[3],companyId); const s=r[due-1];
-    if(!s||s.id!==companyId) continue;
+    if(!s||s.id!==companyId||r.held) continue;                               // a held seat is not that due
     const box=computeBox(r[0],a[2],a[3]);
     /* ⚠️ computeBox derives numbers from DISTANCE RINGS (except engines with a PFD box map), so ~10% of boxes are angularly ambiguous —
        e35 box 3540 covers two real places 1871m apart. Every address that computes to the box is a
@@ -7463,7 +7474,7 @@ function reconcileDrillBoxes(companyId,scope,universe){
   for(const k of stale){ const it=map[k]; let target=null;
     if(it&&Number.isFinite(it.x)&&Number.isFinite(it.z)){
       const r=computeResponders(it.x,it.z,companyId); const who=r[due-1];
-      if(who&&who.id===companyId){ const nb=computeBox(r[0],it.x,it.z); if(live.has(nb)) target=nb; } }
+      if(who&&who.id===companyId&&!r.held){ const nb=computeBox(r[0],it.x,it.z); if(live.has(nb)) target=nb; } }
     if(target){ (groups[target]=groups[target]||[]).push({k,it}); } else orphans.push({k,it}); }
   let moved=0, merged=0;
   for(const t in groups){ const srcs=groups[t].map(g=>g.it);
@@ -7513,7 +7524,7 @@ function reconcileDrillDue(companyId,scope,universe){
   for(const k of stale){ const it=map[k]; let target=null;
     if(it&&Number.isFinite(it.x)&&Number.isFinite(it.z)){
       const r=computeResponders(it.x,it.z,companyId); const who=r[due-1];
-      if(who&&who.id===companyId){ const nb=computeBox(r[0],it.x,it.z); if(byKey[nb]) target=nb; } }
+      if(who&&who.id===companyId&&!r.held){ const nb=computeBox(r[0],it.x,it.z); if(byKey[nb]) target=nb; } }
     if(target){ (groups[target]=groups[target]||[]).push({k,it}); } else orphans.push({k,it}); }
   let moved=0, merged=0;
   for(const t in groups){ const srcs=groups[t].map(g=>g.it);
@@ -8407,13 +8418,16 @@ function stDist(st,x,z){ return Math.hypot(st.x-x,st.z-z); }
 /* 🚨 DUE ORDER AT THE TRUCK'S CURRENT SPOT ------------------------------------------------
    Real fireground idea: you're 1st in inside your own first-due, and as you drive out of it you become
    2nd/3rd/4th in on someone else's turf. Ranking mirrors computeResponders so the chip agrees with the
-   RESPONDING board: the zone owner is 1st, everyone else falls in by distance from their own house.   */
+   RESPONDING board: the zone owner is 1st, then the box's PFD running order (runOrderAt); outside every box, everyone else
+   falls in by distance from their own house.   */
 const DUECHIP={ t:0, rank:0, owner:null, pend:0, pendN:0, flash:0 };
 function dueRankAt(x,z){
   const pid=DRIVE.stationId; if(!pid||typeof PFD_ZONES==='undefined') return null;
   const pn=+String(pid).replace(/\D/g,''); if(!pn) return null;
   const owner=pfdZoneAt(x,z);
   if(owner===pn) return {rank:1, owner:pn};                                  // standing in your own first-due
+  const run=runOrderAt(x,z);                                                 // in a box: where the PFD's running order puts you
+  if(run){ const i=run.findIndex(q=>q.num===pn); return { rank:i<0?99:i+1, owner:owner }; }
   const order=[];
   if(owner!=null){ const o=stations.find(q=>q.num===owner); if(o) order.push(o); }
   const byDist=stations.slice().sort((a,b)=>stDist(a,x,z)-stDist(b,x,z));
@@ -8456,15 +8470,22 @@ function updateDueChip(dt){
 }
 // Explicit company context lets training inspect another house without changing the player's selection.
 function computeResponders(x,z,companyId=DRIVE.stationId){                                                                     // REAL first-due (PFD zone containment) + real neighboring firehouses (all 63 houses)
-  const roster=stations; const byDist=roster.slice().sort((a,b)=>stDist(a,x,z)-stDist(b,x,z));
+  const roster=stations, playerH=roster.find(s=>s.id===companyId);                             // your selected house — always shown on the board
+  const run=runOrderAt(x,z);                                                                         // in a PFD box: the Fire Department's own running order
+  if(run){ const out=[];
+    for(const s of run){ const cap=(playerH&&out.indexOf(playerH)<0)?3:4; if(out.length>=cap) break; out.push(s); }   // the first four, holding a slot for you
+    if(playerH&&out.indexOf(playerH)<0) out.push(playerH);
+    out.held=!!playerH&&!(run.indexOf(playerH)>=0&&run.indexOf(playerH)<4);   // your seat is HELD: the board shows you 4th, the list has you further down
+    return out; }
+  const byDist=roster.slice().sort((a,b)=>stDist(a,x,z)-stDist(b,x,z));                             // outside every box: nearest houses, as before
   let fdE=pfdZoneAt(x,z);                                                                             // whose real first-due zone holds the fire
-  const playerH=roster.find(s=>s.id===companyId);                                               // your selected house — always shown on the board
   if(playerH&&!pfdBoxAt(x,z)){ const pn=+engNum(playerH.id); const pz=PFD_ZONE_BY_E.get(pn); if(pz&&ptInRing(x,z,pz)) fdE=pn; }   // outside every box only: a fire in YOUR own first-due zone makes you first-due (resolves border overlaps from the simplified polygons)
   let firstDue=fdE!=null?roster.find(s=>s.num===fdE):null;
   if(!firstDue) firstDue=byDist[0];                                                                   // outside every known zone → nearest house is first-due
   const out=[firstDue];
   for(const s of byDist){ const cap=(playerH&&out.indexOf(playerH)<0)?3:4; if(out.length>=cap) break; if(out.indexOf(s)<0) out.push(s); }   // fill with nearest neighbors, holding a slot for you
   if(playerH&&out.indexOf(playerH)<0) out.push(playerH);
+  out.held=!!playerH&&playerH!==firstDue&&byDist.filter(s=>s!==firstDue).indexOf(playerH)>=3;   // HELD: shown 4th, really further down
   return out;
 }
 // 🔔 BOX NUMBER: an engine with a PFD box map (PFD_BOXES) gets the REAL box — the polygon holding the point, or the nearest of
