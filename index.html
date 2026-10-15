@@ -1561,7 +1561,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21r";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21s";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2543,7 +2543,7 @@ function pfdBoxAt(x,z){ for(const b of PFD_BOXES) if(inBoxBB(b,x,z)&&ptInRing(x,
    October 14, 2026: "more accurate numbers of who's first in, second in, third and fourth in"). Every box's engines in the
    order the Fire Department sends them. 2nd/3rd/4th due used to be the nearest firehouses as the crow flies: measured against
    this list at a point inside each of the 2,061 boxes, that was right for the 2nd due 78% of the time, the 3rd 56%, the 4th
-   45% (1st due already came from the box, 100%). Units the game has no house for (the airport's Engine 78, unit 96) are
+   45% (1st due already came from the box, 100%). Units the game has no house for (the airport's Engine 78) are
    skipped. Built once per box on first use; ground outside every box keeps the old way (computeResponders, dueRankAt). */
 function runOrderAt(x,z){ const b=pfdBoxAt(x,z); if(!b) return null;
   if(b.run===undefined){ b.run=null; const L=typeof PFDRUN!=='undefined'&&PFDRUN.z&&PFDRUN.z[b.box];
@@ -9425,7 +9425,8 @@ addEventListener('resize',()=>{ if(document.getElementById('hydSheet').classList
    LADDER / MEDIC / CHIEF and type your number: your place on this box ("6TH ENGINE IN"), remembered, and your company is
    highlighted wherever it shows; and EVERYONE ELSE, IN ORDER — the rest of every list, folded. The whole order is
    data/pfdlook.js (PFDLOOK, the response-zone list of 08/07/25), loaded the first time the lookup opens, never at start-up.
-   Unlike the game's own due order (runOrderAt) this shows units the game has no house for (Engine 78, unit 96): it is the list. */
+   Unlike the game's own due order (runOrderAt) this shows units the game has no house for (Engine 78): it is the list.
+   Unit 96 was taken out of the list itself (bake_pfdrun.py DROP; owner, October 15, 2026: "We can do away with engine 96"). */
 const BOXLOOK={box:null,ring:null,bb:null,ax:0,az:0,nHyd:0,houses:[],full:null,pin:null,mode:'box',addrLoading:false,addrWait:[],addrIx:null,view:null,follow:true,sel:null,ptr:new Map(),pinch:null,raf:0,lastTap:0,H:300,MIN:0.15,MAX:12,
   show:{E:4,L:2,B:1,M:1,S:1},mine:{k:'E',n:''},loading:false,wait:[],tab:'a',cat:'E',scroll:{},dest:null,undo:null,editing:false};
 const BOX_DUE_C=['#3ddc84','#ffd23b','#ff9f2e','#ff6b4a','#c9a3ff','#8a94a6'];   // 1st..4th as the due chip, then on
