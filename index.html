@@ -1561,7 +1561,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21s";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21t";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9437,10 +9437,15 @@ function boxHouse(kind,n){ const h=kind==='E'?PFD_STATIONS.find(q=>q.n===n):kind
   return { n:h.n, x:w.x, z:w.z, addr:cur?cur.address:boxTitle(h.loc) }; }
 function boxUnitName(kind,v){ if(kind==='S'){ const m=String(v).match(/^(SQ|R)(\d+)$/); return m?(m[1]==='R'?'RESCUE ':'SQUAD ')+m[2]:String(v); } return BOX_KIND[kind]+' '+v; }
 function boxUnitShort(kind,v){ return kind==='S'?String(v):BOX_SHORT[kind]+v; }
+/* The lookup's two data files load under the BUILD (owner, October 15, 2026: "fix the one-launch delay so lookup data changes show
+   on the first launch after an update"). sw.js serves data/ stale-while-revalidate, so a changed file used to show its OLD copy for
+   one launch (v21s: Engine 96 stayed until the app was reopened). A new BUILD is a new address the phone has never saved, so the
+   first launch of a release fetches it; the cost is one re-download of each file (~1 MB together) per release, on first use. */
+const LAZY_Q='?v='+encodeURIComponent(BUILD);
 function boxData(cb){ if(typeof PFDLOOK!=='undefined') return cb(true);                           // the whole order loads on first use
   BOXLOOK.wait.push(cb); if(BOXLOOK.loading) return; BOXLOOK.loading=true;
   const s=document.createElement('script'), done=ok=>{ BOXLOOK.loading=false; const w=BOXLOOK.wait; BOXLOOK.wait=[]; for(const f of w) f(ok&&typeof PFDLOOK!=='undefined'); };
-  s.src='data/pfdlook.js'; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
+  s.src='data/pfdlook.js'+LAZY_Q; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
 function boxFull(key){ const s=typeof PFDLOOK!=='undefined'&&PFDLOOK.f[key]; if(!s) return null; const parts=s.split('.'), out={};
   ['E','L','B','M','S'].forEach((t,i)=>{ out[t]=Array.from(parts[i]||'',ch=>PFDLOOK.lg[t][PFDLOOK.a.indexOf(ch)]); }); return out; }
 /* THE REDESIGN (owner, October 15, 2026, with three mock-ups: "Redesign the existing Box & Address Lookup to match the attached
@@ -9659,7 +9664,7 @@ hydMapGestures(BOXLOOK);
 function addrData(cb){ const S=BOXLOOK; if(typeof PFDADDR!=='undefined') return cb(true);
   S.addrWait.push(cb); if(S.addrLoading) return; S.addrLoading=true;
   const s=document.createElement('script'), done=ok=>{ S.addrLoading=false; const w=S.addrWait; S.addrWait=[]; for(const f of w) f(ok&&typeof PFDADDR!=='undefined'); };
-  s.src='data/pfdaddr.js'; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
+  s.src='data/pfdaddr.js'+LAZY_Q; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
 // The City's own form: a direction only FIRST, a street type only LAST — canonStreet shortens every TERRACE / COURT / PLACE
 // wherever it stands, and "Terrace Street" (the street NAMED Terrace) is TERRACE ST to the City, not TER ST.
 const ADDR_DES=/ (ST|AVE|RD|LN|DR|PL|BLVD|SQ|TER|WAY|CT|CIR|PIKE|WALK|PKWY|PLZ|MEWS|ALY|MALL|HTS|PATH|ROW)$/;
