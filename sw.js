@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v78';  // v21o: the Career Path card, shorter - companies and sections fold, a close that never scrolls away.
+const CACHE = 'local-shell-v79';  // v21p: calls truly at random - a shuffle bag deals every eligible address before any repeats.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
