@@ -209,31 +209,87 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   }
   #settingsShade { position:absolute; inset:0; z-index:45; display:none; background:rgba(0,0,0,.12); pointer-events:auto; }
   #settingsShade.show { display:block; }
-  #settingsPanel { position:absolute; top:var(--barBot); right:max(8px,env(safe-area-inset-right)); z-index:46; max-height:calc(100vh - var(--barBot) - 42px); max-height:calc(100dvh - var(--barBot) - 42px); overflow-y:auto;
-    display:none; width:min(330px,calc(100vw - 16px)); padding:14px; background:rgba(24,29,38,.97); border:1px solid rgba(255,255,255,.28);
-    border-radius:16px; box-shadow:0 12px 34px rgba(0,0,0,.46); color:#fff; pointer-events:auto; }
-  #settingsPanel.show { display:block; }
+  /* ⚙ SETTINGS (v21m, the owner's pick of the navy-and-blue "B · TABBED" mockup, October 14, 2026): three tabs — GAME (the run:
+     due, difficulty, rivals, guide; explore: run map, free drive, get a call, know your local), CONTROLS & DISPLAY (Tap /
+     Controller, minimap — the two were combined, owner: "if there aren't enough options to justify separate tabs") and ACCOUNT
+     (saves/best, account, career & badges, leaderboard). The footer is always there: Back to game, Retry this run (same
+     station, same call — rerunCurrentBox) and Change firehouse (back to the engine map). EVERY control is the button it always
+     was — same id, same handler, same rules (GUIDE still hides at Pro/Expert, FREE DRIVE still locks on a live box) — only
+     restyled as a row; DUE, DIFFICULTY and CONTROLS became segmented choices that call the same setters. Nothing in the
+     mockup that the game does not have (HUD customizing, audio, graphics, text size) was added. */
+  #settingsPanel { position:absolute; z-index:46; top:var(--barBot); bottom:max(8px,env(safe-area-inset-bottom));
+    left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); max-width:440px; margin:0 auto;
+    display:none; flex-direction:column; overflow:hidden; color:#e9eef7; pointer-events:auto;
+    background:linear-gradient(180deg,#131c2e,#0e1626); border:1px solid rgba(120,150,210,.24); border-radius:22px;
+    box-shadow:0 18px 44px rgba(0,0,0,.55); font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
+  #settingsPanel.show { display:flex; }
   .toolTitle { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; font-size:15px; font-weight:900; letter-spacing:1px; }
   .toolClose { width:34px; height:34px; border:0; border-radius:50%; background:#414a58; color:#fff; font-size:20px; font-weight:900; cursor:pointer; }
-  .settingsGrid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
-  #settingsPanel .abtn { width:100%; min-height:46px; background:#343c49; border:1px solid #697483; color:#fff; text-shadow:none; }
-  #settingsPanel .abtn.on { background:#174f9f; border-color:#71a8ff; box-shadow:none; animation:none; }
-  /* 🔥 SAVES, 🏆 BEST and 👤 ACCOUNT sit at the top of Settings since v21j (owner: "Into Settings"), so the bar can be
-     the mockup's three cells. Signed in is a STATE, not a toggle: a green dot, never the blue "on" or a pulse. */
-  #setTop { display:flex; align-items:stretch; gap:9px; margin-bottom:9px; }
-  #saves { display:flex; flex:1 1 auto; align-items:center; justify-content:space-around; gap:6px; padding:5px 8px; border-radius:10px;
-    background:#1d2430; border:1px solid #4a5464; color:#e9eef7; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
-  #saves .stat { display:grid; grid-template-columns:auto auto; align-items:center; column-gap:5px; }
-  #saves .stat i { grid-row:1/3; font-style:normal; font-size:17px; line-height:1; }
-  #saves .stat b { font-size:9px; font-weight:900; letter-spacing:.06em; color:#aab7c9; line-height:1.2; }
-  #saves .stat u { text-decoration:none; font-size:16px; font-weight:900; color:#fff; line-height:1.1; }
-  #setTop #btnAccount { flex:0 0 auto; width:auto; padding:6px 12px; }
-  #setTop #btnAccount .acIco { width:17px; height:17px; vertical-align:-4px; color:#7fb3ff; }   /* the bar's own person glyph: the 👤 emoji is a dark purple blot on this panel */
-  #settingsPanel #btnAccount.on { background:#343c49; border-color:#3ddc84; }
-  #settingsPanel #btnAccount.on::after { content:""; display:inline-block; width:7px; height:7px; margin-left:6px; vertical-align:middle;
-    border-radius:50%; background:#3ddc84; box-shadow:0 0 5px rgba(61,220,132,.9); }
-  #settingsPanel #btnRerun   { grid-column:1/-1; background:#1f5d84; border-color:#5aa9d6; }   /* redo THIS box from quarters */
-  #settingsPanel #btnRestart { grid-column:1/-1; background:#8d2c30; border-color:#d46b6f; }   /* back to the firehouse picker */
+  .sxHead { flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:8px 10px 2px 18px; }
+  .sxTitle { display:flex; align-items:center; gap:10px; font-size:21px; font-weight:800; }
+  .sxTitle svg { width:24px; height:24px; color:#cfe0ff; }
+  #settingsPanel .toolClose { width:44px; height:44px; background:#1d2a42; border:1px solid rgba(255,255,255,.12); font-size:22px; }
+  .sxTabs { flex:0 0 auto; display:flex; padding:0 8px; border-bottom:1px solid rgba(255,255,255,.08); }
+  .sxTabs button { flex:1 1 auto; display:flex; align-items:center; justify-content:center; gap:6px; min-height:46px; padding:0 4px;
+    background:none; border:0; border-bottom:3px solid transparent; color:#93a3bd; font:600 13.5px -apple-system,"Helvetica Neue",Arial,sans-serif;
+    cursor:pointer; white-space:nowrap; }
+  .sxTabs button svg { width:19px; height:19px; flex:0 0 auto; }
+  .sxTabs button.on { color:#fff; border-bottom-color:#2f7cf6; }
+  .sxTabs button.on svg { color:#4d93ff; }
+  .sxBody { flex:1 1 auto; min-height:0; overflow-y:auto; padding:10px 12px 12px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+  .sxPane { display:none; }
+  .sxPane.on { display:block; }
+  .sxSec { margin:16px 6px 7px; font-size:11.5px; font-weight:800; letter-spacing:.16em; color:#8d9cb5; }
+  .sxCard, .sxRun, .sxStats { background:#172236; border:1px solid rgba(255,255,255,.08); border-radius:16px; }
+  .sxCard { overflow:hidden; }
+  .sxRow { display:flex; align-items:center; gap:12px; width:100%; min-height:58px; padding:9px 14px; box-sizing:border-box; margin:0;
+    background:none; border:0; border-top:1px solid rgba(255,255,255,.07); border-radius:0; color:#e9eef7; text-align:left; text-shadow:none;
+    font:inherit; cursor:pointer; pointer-events:auto; -webkit-tap-highlight-color:transparent; }
+  .sxCard > .sxRow:first-child { border-top:0; }
+  .sxRow:active { background:rgba(255,255,255,.05); }
+  .sxRow[disabled] { opacity:.45; cursor:default; }
+  .sxI { width:24px; height:24px; flex:0 0 auto; color:#b9c8e2; }
+  .sxL { flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .sxL b { font-size:15.5px; font-weight:700; color:#fff; }
+  .sxL small { font-size:12.5px; font-weight:500; color:#93a3bd; line-height:1.3; }
+  .sxCh { width:18px; height:18px; flex:0 0 auto; color:#7d8ba3; order:5; }
+  .sxSw { position:relative; flex:0 0 auto; width:48px; height:28px; border-radius:14px; background:#38445a; transition:background .15s; }
+  .sxSw::after { content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:#fff;
+    box-shadow:0 1px 3px rgba(0,0,0,.4); transition:transform .15s; }
+  .sxTog.on .sxSw { background:#2fbf5f; }
+  .sxTog.on .sxSw::after { transform:translateX(20px); }
+  .sxStack { flex-wrap:wrap; cursor:default; row-gap:9px; }
+  .sxStack .sxSeg { flex:1 1 100%; margin-left:36px; }
+  .sxSeg { display:flex; border:1px solid #33425e; border-radius:12px; overflow:hidden; }
+  .sxSeg button { flex:1 1 0; min-width:0; min-height:44px; padding:0 3px; background:#111a2b; border:0; border-left:1px solid #33425e; color:#c8d3e6;
+    font:600 13.5px -apple-system,"Helvetica Neue",Arial,sans-serif; cursor:pointer; white-space:nowrap; }
+  .sxSeg button:first-child { border-left:0; }
+  .sxSeg button.on { background:#2f7cf6; color:#fff; }
+  .sxRun { display:flex; align-items:center; gap:12px; padding:13px 14px; }
+  .sxRun .sxL small { font-size:12px; }
+  .sxRun .sxL b { font-size:17px; }
+  .sxMode { flex:0 0 auto; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:800; color:#9cc4ff; background:rgba(47,124,246,.16); border:1px solid rgba(77,147,255,.4); }
+  .sxMode.free { color:#8ff0b4; background:rgba(61,220,132,.12); border-color:rgba(61,220,132,.4); }
+  #saves { display:flex; align-items:center; justify-content:space-around; gap:6px; padding:12px 8px; color:#e9eef7; }
+  #saves .stat { display:grid; grid-template-columns:auto auto; align-items:center; column-gap:6px; }
+  #saves .stat i { grid-row:1/3; font-style:normal; font-size:19px; line-height:1; }
+  #saves .stat b { font-size:10px; font-weight:900; letter-spacing:.08em; color:#aab7c9; line-height:1.2; }
+  #saves .stat u { text-decoration:none; font-size:19px; font-weight:900; color:#fff; line-height:1.1; }
+  /* signed in is a STATE, not a toggle: a quiet green dot before the chevron, never a pulse (v20a) */
+  #settingsPanel #btnAccount.on::after { content:""; order:4; flex:0 0 auto; width:8px; height:8px; border-radius:50%; background:#3ddc84; box-shadow:0 0 5px rgba(61,220,132,.9); }
+  .sxFoot { flex:0 0 auto; display:flex; flex-direction:column; gap:7px; padding:9px 10px 10px; border-top:1px solid rgba(255,255,255,.08); background:rgba(10,16,28,.55); }
+  .sxBack { display:flex; align-items:center; justify-content:center; gap:10px; min-height:46px; border:0; border-radius:14px;
+    background:linear-gradient(180deg,#3b86ff,#2563e0); color:#fff; font:800 17px -apple-system,"Helvetica Neue",Arial,sans-serif; cursor:pointer;
+    box-shadow:0 6px 18px rgba(47,124,246,.35); }
+  .sxBack svg { width:18px; height:18px; }
+  .sxPair { display:flex; gap:8px; }
+  .sxAlt { flex:1 1 0; min-width:0; display:flex; align-items:center; gap:7px; min-height:48px; padding:5px 8px; border-radius:14px; border:1px solid #2e4366;
+    background:#121c2f; color:#e9eef7; text-align:left; font:inherit; cursor:pointer; }
+  .sxAlt svg { width:20px; height:20px; flex:0 0 auto; color:#6fa6ff; }
+  .sxAlt span { min-width:0; }
+  .sxAlt b, .sxAlt small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sxAlt b { font-size:13px; font-weight:700; }
+  .sxAlt small { font-size:10.5px; color:#93a3bd; margin-top:1px; line-height:1.25; }
   #boundaryOverlay { position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center; padding:var(--safeTop) 8px max(8px,env(safe-area-inset-bottom));
     background:rgba(8,12,18,.82); pointer-events:auto; }
   #boundaryOverlay.show { display:flex; }
@@ -449,7 +505,6 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #coachHydList .n { display:inline-block; width:20px; height:20px; border-radius:10px; background:#2f7bff; color:#fff; text-align:center; font-size:11px; line-height:20px; margin-right:8px; }        /* stay out on the road — the alternative to going back to quarters, offered every run */
   /* 🧑‍🚒 career layer */
   .ccBadge { color:#ffd27a; font-weight:900; }
-  #houseCard .hcCareer { color:#7fe0a0; font-size:11px; font-weight:900; letter-spacing:.5px; margin-top:4px; }
   .stCareer { display:block; color:#7fe0a0; font-size:10px; font-weight:900; margin-top:1px; }
   #profileCard { position:absolute; inset:0; z-index:63; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
   #profileCard.show { display:flex; }
@@ -469,7 +524,9 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #authMsg { margin-top:10px; font-size:12px; font-weight:700; color:#8fa2bd; line-height:1.4; }
   #authName { width:100%; margin-top:10px; padding:12px; border-radius:8px; border:1px solid #2a3444; background:#0d121b; color:#e8edf5; font-size:15px; display:none; }
   #authNameSave { background:#2b6df6; color:#fff; display:none; }
-  #houseCard .hcLb { display:block; width:100%; margin-top:8px; background:#1a2230; color:#ffd27a; border:1px solid #33405a; border-radius:10px; padding:10px; font-weight:900; font-size:13px; cursor:pointer; pointer-events:auto; }
+  #houseCard .hcLb { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:7px; min-height:46px; margin:0; padding:6px 8px;
+    background:#121c2f; color:#e9eef7; border:1px solid #2e4366; border-radius:12px; font-weight:800; font-size:12.5px; letter-spacing:.6px; cursor:pointer; pointer-events:auto; white-space:nowrap; }
+  #houseCard .hcLb svg { width:18px; height:18px; flex:0 0 auto; color:#9fc0ff; }
   #lbCard { position:absolute; inset:0; z-index:65; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.8); pointer-events:auto; }
   #lbCard.show { display:flex; }
   #lbCard .cc { width:min(560px,94vw); max-height:92vh; overflow:auto; overscroll-behavior:contain; background:linear-gradient(180deg,#131f31,#0f1a2b); border:1px solid #26364f; border-radius:20px; padding:14px 14px 12px; color:#e9eef7; }
@@ -787,9 +844,12 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #btnFirstDueHome { position:absolute; right:12px; bottom:calc(60px + env(safe-area-inset-bottom)); z-index:3;
     background:rgba(9,14,26,.9); color:#8fd0ff; border:1px solid rgba(143,208,255,.4); border-radius:11px;
     padding:9px 13px; font-weight:900; font-size:11px; letter-spacing:.8px; cursor:pointer; }
-  #houseCard { position:absolute; left:50%; transform:translate(-50%,140%); bottom:calc(12px + env(safe-area-inset-bottom));
-    width:min(430px,92vw); background:linear-gradient(180deg,#161b31,#0d1122); border:2px solid #ffe14d; border-radius:16px;
-    padding:13px 15px 15px; box-shadow:0 0 34px rgba(255,200,0,.28), 0 18px 44px rgba(0,0,0,.65); z-index:4;
+  /* 🏠 THE FIREHOUSE CARD (v21m, the owner's mockup: "Yes, and add the ☆ star"): the house, your progress (local knowledge and your
+     rank at the due you ride), MODE — Dispatch | Free Drive, chosen BEFORE riding out and above RIDE OUT — then Leaderboard and
+     First-due zone side by side. The ☆ keeps a favorite on THIS phone (pfd_favs) and marks it on the map and in the list. */
+  #houseCard { position:absolute; left:50%; transform:translate(-50%,140%); bottom:calc(10px + env(safe-area-inset-bottom));
+    width:min(430px,94vw); box-sizing:border-box; background:linear-gradient(180deg,#121a2e,#0c1222); border:1px solid rgba(110,150,220,.38); border-radius:22px;
+    padding:12px 14px 14px 16px; box-shadow:0 -4px 30px rgba(0,0,0,.45), 0 18px 44px rgba(0,0,0,.65); z-index:4; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
     transition:transform .26s cubic-bezier(.2,.9,.3,1); }
   #houseCard.up { transform:translate(-50%,0); }
   /* 🧯 hydrants near the player's REAL location: a compact two-line button in the EMPTY TOP-LEFT of the home map (owner, October 14,
@@ -877,13 +937,39 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #homeLegend, #btnListView, #btnFirstDueHome { transition:opacity .2s, transform .2s; }
   #homeMapWrap.picking #homeLegend, #homeMapWrap.picking #btnListView, #homeMapWrap.picking #btnFirstDueHome {
     opacity:0; transform:translateY(14px); pointer-events:none; }   /* the card owns the bottom edge while a house is selected */
-  #houseCard .hcName { font-weight:900; font-size:clamp(15px,4vw,19px); color:#fff; }
-  #houseCard .hcAddr { color:#9fc6e8; font-size:clamp(11px,2.8vw,13px); font-weight:700; margin-top:3px; }
-  #houseCard .hcBn { color:#ffb648; font-size:11px; font-weight:900; letter-spacing:1px; margin-top:5px; }
-  #houseCard .hcGo { display:block; width:100%; margin-top:11px; background:linear-gradient(180deg,#e63946,#a4232e); color:#fff;
-    border:none; border-radius:11px; padding:13px; font-weight:900; font-size:14px; letter-spacing:1.4px; cursor:pointer;
-    box-shadow:0 6px 18px rgba(230,57,70,.4); }
-  #houseCard .hcX { position:absolute; top:8px; right:11px; color:#8195b5; font-size:19px; font-weight:900; cursor:pointer; line-height:1; }
+  #houseCard .hcTop { display:flex; align-items:flex-start; gap:2px; }
+  #houseCard .hcHd { flex:1 1 auto; min-width:0; padding-top:4px; }
+  #houseCard .hcName { font-weight:800; font-size:clamp(17px,4.8vw,22px); color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #houseCard .hcAddr { color:#a9c4ea; font-size:clamp(13px,3.6vw,15px); font-weight:600; margin-top:2px; }
+  #houseCard .hcBn { color:#ffc24a; font-size:clamp(12.5px,3.5vw,14.5px); font-weight:700; margin-top:2px; }
+  #houseCard .hcStar, #houseCard .hcX { flex:0 0 auto; width:44px; height:44px; padding:0; border:0; background:none; color:#9fb2d4; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+  #houseCard .hcStar svg { width:27px; height:27px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linejoin:round; }
+  #houseCard .hcStar.on { color:#ffd23b; }
+  #houseCard .hcStar.on svg { fill:#ffd23b; }
+  #houseCard .hcX { font-size:30px; font-weight:300; line-height:1; }
+  #houseCard .hcProg { display:flex; align-items:center; gap:10px; margin-top:9px; padding-top:9px; border-top:1px solid rgba(255,255,255,.09); }
+  #houseCard .hcPL { flex:1 1 auto; min-width:0; }
+  #houseCard .hcPL small, #houseCard .hcMode small { display:block; font-size:11px; font-weight:800; letter-spacing:.14em; color:#8d9cb5; }
+  #houseCard .hcPL b { display:block; margin-top:2px; font-size:14.5px; font-weight:700; color:#fff; white-space:nowrap; }
+  #houseCard .hcPL em { font-style:normal; color:#4fb3ff; }
+  #houseCard .hcBar { margin-top:6px; height:8px; border-radius:4px; background:#26324a; overflow:hidden; }
+  #houseCard .hcBar i { display:block; height:100%; width:0; border-radius:4px; background:linear-gradient(90deg,#2f7cf6,#4fb3ff); }
+  #houseCard .hcRank { flex:0 0 auto; display:flex; align-items:center; gap:5px; padding:6px 9px; border-radius:12px; font-size:12.5px; font-weight:700;
+    color:var(--rc,#4d9fff); background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.16); white-space:nowrap; }
+  #houseCard .hcRank svg { width:17px; height:17px; }
+  #houseCard .hcMode { margin-top:9px; padding-top:9px; border-top:1px solid rgba(255,255,255,.09); }
+  #houseCard .hcSeg { display:flex; margin-top:6px; border:1px solid #33425e; border-radius:14px; overflow:hidden; background:#111a2b; }
+  #houseCard .hcSeg button { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:8px; min-height:46px; border:0; background:none;
+    color:#c8d3e6; font:700 15px -apple-system,"Helvetica Neue",Arial,sans-serif; cursor:pointer; }
+  #houseCard .hcSeg button svg { width:22px; height:22px; flex:0 0 auto; }
+  #houseCard .hcSeg button.on { background:linear-gradient(180deg,#3b86ff,#2563e0); color:#fff; }
+  #houseCard .hcModeSub { margin-top:5px; font-size:12.5px; color:#93a3bd; }
+  #houseCard .hcGo { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; margin-top:9px; min-height:52px; border:0; border-radius:14px;
+    background:linear-gradient(180deg,#3b86ff,#2563e0); color:#fff; font-weight:900; font-size:18px; letter-spacing:1.6px; cursor:pointer; box-shadow:0 6px 18px rgba(47,124,246,.4); }
+  #houseCard .hcGo svg { width:26px; height:26px; }
+  #houseCard .hcPair { display:flex; gap:8px; margin-top:8px; }
+  .stbtn.fav .stName::after { content:" ★"; color:#ffd23b; }
   #homeListPane { position:absolute; inset:0; z-index:6; display:none; align-items:center; justify-content:center;
     background:rgba(5,8,16,.93); padding:10px; }
   #homeListPane.show { display:flex; }
@@ -971,27 +1057,48 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 </div>
 <div id="satAttr">© OpenStreetMap contributors © CARTO</div>
 <div id="settingsShade"></div>
-<div id="settingsPanel" aria-hidden="true">
-  <div class="toolTitle"><span>⚙ SETTINGS</span><button class="toolClose" id="btnSettingsClose" aria-label="Close settings">×</button></div>
-  <div id="setTop"><div id="saves"><span class="stat"><i>🔥</i><b>SAVES</b><u id="savesN">0</u></span><span class="stat"><i>🏆</i><b>BEST</b><u id="bestN">0</u></span></div><button class="abtn" id="btnAccount"><svg class="acIco" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 12.2a4.6 4.6 0 1 0 0-9.2 4.6 4.6 0 0 0 0 9.2z"/><path fill="currentColor" d="M12 13.8c-4.3 0-7.8 2.3-7.8 5.1V21h15.6v-2.1c0-2.8-3.5-5.1-7.8-5.1z"/></svg> ACCOUNT</button></div>
-  <div class="settingsGrid">
-  <button class="abtn" id="btnBoundaryMap">🗺️ RUN MAP</button>
-  <button class="abtn" id="btnNight">🌙 NIGHT</button>
-  <button class="abtn on" id="btnRoute">🧭 ROUTE</button>
-  <button class="abtn on" id="btnMiniMap">🗺 MINIMAP: ON</button>
-  <button class="abtn" id="btnSiren">🚨 SIREN</button>
-  <button class="abtn on" id="btnGuide">🔵 GUIDE</button>
-  <button class="abtn on" id="btnDue">🚒 DUE: 1ST</button>
-  <button class="abtn" id="btnControls">👆 CONTROLS: TAP</button>
-  <button class="abtn" id="btnFreeLive">🧭 FREE DRIVE</button>
-  <button class="abtn" id="btnCall" style="display:none">📟 GET A CALL</button>
-  <button class="abtn" id="btnRivals">🚑 RIVALS</button>
-  <button class="abtn" id="btnDrill">🎓 KNOW YOUR LOCAL</button>
-  <button class="abtn" id="btnDiff">🎯 FIREFIGHTER</button>
-  <button class="abtn" id="btnRerun">🔁 RESTART RUN</button>
-  <button class="abtn" id="btnRestart">↺ RESTART</button>
-  <button class="abtn" id="btnMute">🔊 SOUND</button>
+<div id="settingsPanel" aria-hidden="true" role="dialog" aria-label="Settings">
+  <div class="sxHead"><span class="sxTitle"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/><circle cx="12" cy="12" r="6.6"/></svg>Settings</span><button class="toolClose" id="btnSettingsClose" type="button" aria-label="Close settings">×</button></div>
+  <div class="sxTabs" id="sxTabs" role="tablist"><button type="button" role="tab" data-tab="game" class="on" aria-selected="true"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".8" fill="currentColor"/><circle cx="17.7" cy="13.6" r=".8" fill="currentColor"/></svg>Game</button><button type="button" role="tab" data-tab="ctl" aria-selected="false"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20h6M12 16.5V20"/></svg>Controls &amp; Display</button><button type="button" role="tab" data-tab="acct" aria-selected="false"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="3.7"/><path d="M4.5 20.2c.8-3.9 3.9-5.7 7.5-5.7s6.7 1.8 7.5 5.7"/></svg>Account</button></div>
+  <div class="sxBody">
+  <section class="sxPane on" data-pane="game">
+    <div class="sxRun"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V8l8-3.5L20 8v12.5"/><path d="M9.5 20.5v-4.5h5v4.5M8 10.5h2M14 10.5h2M8 13.5h2M14 13.5h2"/></svg><span class="sxL"><small>Current run</small><b id="sxRunTxt">—</b></span><span class="sxMode" id="sxRunMode">Dispatch</span></div>
+    <div class="sxSec">RUN SETTINGS</div>
+    <div class="sxCard">
+      <div class="sxRow sxStack"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V8l8-3.5L20 8v12.5"/><path d="M9.5 20.5v-4.5h5v4.5M8 10.5h2M14 10.5h2M8 13.5h2M14 13.5h2"/></svg><span class="sxL"><b>Due assignment</b><small id="sxDueSub">Calls that put you this due</small></span><div class="sxSeg" id="segDue" role="group" aria-label="Due assignment"><button type="button" data-v="0">All</button><button type="button" data-v="1">1st</button><button type="button" data-v="2">2nd</button><button type="button" data-v="3">3rd</button><button type="button" data-v="4">4th</button></div></div>
+      <div class="sxRow sxStack"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/></svg><span class="sxL"><b>Difficulty</b><small id="sxDiffSub"></small></span><div class="sxSeg" id="segDiff" role="group" aria-label="Difficulty"><button type="button" data-v="0">Training</button><button type="button" data-v="1">Standard</button><button type="button" data-v="2">Pro</button><button type="button" data-v="3">Expert</button></div></div>
+      <button class="sxRow sxTog" id="btnRivals" type="button" role="switch" aria-checked="false"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5.5H5a3 3 0 0 0 3.2 4.3M16 5.5h3a3 3 0 0 1-3.2 4.3M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/></svg><span class="sxL"><b>Rivals</b><small>Race the other companies on the box</small></span><span class="sxSw" aria-hidden="true"></span></button>
+      <button class="sxRow sxTog on" id="btnGuide" type="button" role="switch" aria-checked="true"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="18" r="2"/><circle cx="17.5" cy="6" r="2"/><path d="M8.5 18h6a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7h6"/></svg><span class="sxL"><b>Guide</b><small>The blue route line. Leaderboard runs need it off</small></span><span class="sxSw" aria-hidden="true"></span></button>
+    </div>
+    <div class="sxSec">EXPLORE</div>
+    <div class="sxCard">
+      <button class="sxRow sxNav" id="btnBoundaryMap" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5 9 4l6 2.5L20.5 4v13.5L15 20l-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span class="sxL"><b>Run map</b><small>First-due zones across the city</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
+      <button class="sxRow sxTog" id="btnFreeLive" type="button" role="switch" aria-checked="false"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m15.6 8.4-2.2 5-5 2.2 2.2-5z"/></svg><span class="sxL"><b>Free drive</b><small>No rivals, no box until you ask</small></span><span class="sxSw" aria-hidden="true"></span></button>
+      <button class="sxRow sxNav" id="btnCall" type="button" style="display:none"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="5.5" width="18.4" height="13" rx="2.6"/><rect x="5.8" y="8.4" width="8.4" height="4.4" rx="1"/><circle cx="17.4" cy="15" r="1.2" fill="currentColor"/></svg><span class="sxL"><b>Get a call</b><small>A box near you, right now</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
+      <button class="sxRow sxNav" id="btnDrill" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5zM12 6.5v13"/></svg><span class="sxL"><b>Know your local</b><small>Find the landmarks in your first-due</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
+    </div>
+  </section>
+  <section class="sxPane" data-pane="ctl">
+    <div class="sxSec">CONTROLS</div>
+    <div class="sxCard"><div class="sxRow sxStack"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.3" r=".8" fill="currentColor"/><circle cx="17.7" cy="13.6" r=".8" fill="currentColor"/></svg><span class="sxL"><b>Controls</b><small id="sxCtlSub">How you drive the engine</small></span><div class="sxSeg" id="segCtl" role="group" aria-label="Controls"><button type="button" data-v="tap">Tap</button><button type="button" data-v="controller">Controller</button></div></div></div>
+    <div class="sxSec">DISPLAY</div>
+    <div class="sxCard"><button class="sxRow sxTog on" id="btnMiniMap" type="button" role="switch" aria-checked="true"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 6.3 2.6 7.2h-5.2z" fill="currentColor"/></svg><span class="sxL"><b>Minimap</b><small>The round map, top right</small></span><span class="sxSw" aria-hidden="true"></span></button></div>
+  </section>
+  <section class="sxPane" data-pane="acct">
+    <div class="sxStats"><div id="saves"><span class="stat"><i>🔥</i><b>SAVES</b><u id="savesN">0</u></span><span class="stat"><i>🏆</i><b>BEST</b><u id="bestN">0</u></span></div></div>
+    <div class="sxSec">YOU</div>
+    <div class="sxCard">
+      <button class="sxRow sxNav" id="btnAccount" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="3.7"/><path d="M4.5 20.2c.8-3.9 3.9-5.7 7.5-5.7s6.7 1.8 7.5 5.7"/></svg><span class="sxL"><b>Account</b><small>Sign in to sync your careers</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
+      <button class="sxRow sxNav" id="btnCareerSx" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M9.2 13.4 7.6 21l4.4-2.4 4.4 2.4-1.6-7.6"/></svg><span class="sxL"><b>Career &amp; badges</b><small>Your ranks, by firehouse and due</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
+      <button class="sxRow sxNav" id="btnLbSx" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5.5H5a3 3 0 0 0 3.2 4.3M16 5.5h3a3 3 0 0 1-3.2 4.3M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/></svg><span class="sxL"><b>Leaderboard</b><small>Runs with the guide off and your due held</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
+    </div>
+  </section>
   </div>
+  <div class="sxFoot">
+    <button class="sxBack" id="btnBackGame" type="button"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none"/></svg>Back to game</button>
+    <div class="sxPair"><button class="sxAlt" id="btnRerun" type="button"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/></svg><span><b>Retry this run</b><small>Same station, same call</small></span></button><button class="sxAlt" id="btnRestart" type="button"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg><span><b>Change firehouse</b><small>Back to the engine map</small></span></button></div>
+  </div>
+  <div hidden><button class="abtn" id="btnNight">🌙 NIGHT</button><button class="abtn on" id="btnRoute">🧭 ROUTE</button><button class="abtn" id="btnSiren">🚨 SIREN</button><button class="abtn" id="btnMute">🔊 SOUND</button></div>
 </div>
 <div id="boundaryOverlay" aria-hidden="true">
   <div class="boundaryCard">
@@ -1159,15 +1266,12 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
       <div class="row"><button id="boxSheetClose" type="button">CLOSE</button></div>
     </div></div>
     <div id="houseCard">
-      <span class="hcX" id="hcClose">×</span>
-      <div class="hcName" id="hcName"></div>
-      <div class="hcAddr" id="hcAddr"></div>
-      <div class="hcBn" id="hcBn"></div>
-      <div class="hcCareer" id="hcCareer"></div>
-      <button class="hcGo" id="hcGo">🚒 RIDE OUT</button>
-      <button class="hcLb" id="hcLb">🏁 LEADERBOARD</button>
-      <button class="hcLb" id="hcZone">🗺️ FIRST-DUE ZONE</button>
-      <button class="hcLb" id="hcFree">🧭 FREE DRIVE: OFF</button>
+      <div class="hcTop"><div class="hcHd"><div class="hcName" id="hcName"></div><div class="hcAddr" id="hcAddr"></div><div class="hcBn" id="hcBn"></div></div>
+        <button class="hcStar" id="hcStar" type="button" aria-pressed="false" aria-label="Favorite this firehouse"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z"/></svg></button><button class="hcX" id="hcClose" type="button" aria-label="Close">×</button></div>
+      <div class="hcProg"><div class="hcPL"><small>YOUR PROGRESS</small><b>Local knowledge <em id="hcPct">0%</em></b><div class="hcBar"><i id="hcBarFill"></i></div></div><div class="hcRank" id="hcRank"></div></div>
+      <div class="hcMode"><small>MODE</small><div class="hcSeg" id="hcModeSeg" role="group" aria-label="Mode"><button type="button" data-m="0" class="on" aria-pressed="true"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 16.5V9.5a1 1 0 0 1 1-1h10v8"/><path d="M13.5 10.5h3.6l3.4 3.4v2.6h-2"/><path d="M4 6.5h8"/><circle cx="7" cy="17" r="1.9"/><circle cx="16.6" cy="17" r="1.9"/><path d="M9 17h5.6"/></svg>Dispatch</button><button type="button" data-m="1" aria-pressed="false"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m15.6 8.4-2.2 5-5 2.2 2.2-5z"/></svg>Free Drive</button></div><div class="hcModeSub" id="hcModeSub">Respond to a dispatched location.</div></div>
+      <button class="hcGo" id="hcGo" type="button"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 16.5V9.5a1 1 0 0 1 1-1h10v8"/><path d="M13.5 10.5h3.6l3.4 3.4v2.6h-2"/><path d="M4 6.5h8"/><circle cx="7" cy="17" r="1.9"/><circle cx="16.6" cy="17" r="1.9"/><path d="M9 17h5.6"/></svg>RIDE OUT</button>
+      <div class="hcPair"><button class="hcLb" id="hcLb" type="button"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5.5H5a3 3 0 0 0 3.2 4.3M16 5.5h3a3 3 0 0 1-3.2 4.3M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/></svg>LEADERBOARD</button><button class="hcLb" id="hcZone" type="button"><svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5 9 4l6 2.5L20.5 4v13.5L15 20l-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>FIRST-DUE ZONE</button></div>
     </div>
     <div id="homeListPane">
       <button id="btnBackToMap">◀ BACK TO MAP</button>
@@ -1237,7 +1341,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21l";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21m";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2307,7 +2411,8 @@ const BOUNDARY_UI={engine:'e35'};
 const settingsPanel=document.getElementById('settingsPanel'), settingsShade=document.getElementById('settingsShade'), boundaryOverlay=document.getElementById('boundaryOverlay');
 const boundaryCanvas=document.getElementById('boundaryCanvas'), boundaryEngine=document.getElementById('boundaryEngine'), boundaryStats=document.getElementById('boundaryStats');
 function closeSettings(){ settingsPanel.classList.remove('show'); settingsShade.classList.remove('show'); settingsPanel.setAttribute('aria-hidden','true'); }
-function toggleSettings(){ const show=!settingsPanel.classList.contains('show'); settingsPanel.classList.toggle('show',show); settingsShade.classList.toggle('show',show); settingsPanel.setAttribute('aria-hidden',show?'false':'true'); }
+function toggleSettings(){ const show=!settingsPanel.classList.contains('show'); if(show){ sxTab('game'); sxSync(); }   // ⚙ v21m: it opens on GAME, painted from the game's state
+  settingsPanel.classList.toggle('show',show); settingsShade.classList.toggle('show',show); settingsPanel.setAttribute('aria-hidden',show?'false':'true'); }
 function boundaryEngineName(id){ const st=(typeof stations!=='undefined'&&stations.find(s=>s.id===id))||STATIONS_RAW.find(s=>s.id===id); return st?st.name:('Engine '+id.slice(1)+' (boundary only)'); }
 function boundaryPieces(id){ return RUN_BOUNDARIES.filter(q=>q.engines.includes(id)); }
 function boundaryOpenEnds(pieces){ const points=new Map();
@@ -3878,8 +3983,8 @@ function ctlApply(){ document.body.classList.toggle('ctl',CTL.mode==='controller
 function ctlSet(m){ CTL.mode=(m==='controller')?'controller':'tap';
   try{ localStorage.setItem('pfd_controls',CTL.mode); }catch(e){}
   ctlApply(); popup(CTL.mode==='controller'?'🎮 CONTROLLER CONTROLS':'👆 TAP CONTROLS'); }
-document.getElementById('btnControls').addEventListener('click',e=>{ e.preventDefault();
-  ctlSet(CTL.mode==='controller'?'tap':'controller'); });
+document.getElementById('segCtl').addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; e.preventDefault();   // ⚙ v21m: Tap | Controller
+  if(b.dataset.v!==CTL.mode) ctlSet(b.dataset.v); sxSync(); });
 /* ▲ = what tapping the truck does: take the straight branch at a junction, otherwise roll again. It
    never STOPS the truck — a d-pad up that toggled would be a trap at a junction — and it CANCELS an
    armed turn, which is the only way to change your mind without turning. */
@@ -4119,7 +4224,7 @@ const elTimer=document.getElementById('timer'), elTimerN=elTimer.querySelector('
 const elStreetText=elStreet.querySelector('.street'),elStreetBlock=elStreet.querySelector('.block');
 document.getElementById('btnUturn').addEventListener('click',e=>{ e.preventDefault(); uTurn(); });
 document.getElementById('btnRecenter').addEventListener('click',e=>{ e.preventDefault(); recenterCamera(); });
-document.getElementById('btnGuide').addEventListener('click',e=>{ e.preventDefault(); MAP.guide=!MAP.guide; e.currentTarget.classList.toggle('on',MAP.guide);
+document.getElementById('btnGuide').addEventListener('click',e=>{ e.preventDefault(); MAP.guide=!MAP.guide; e.currentTarget.classList.toggle('on',MAP.guide); e.currentTarget.setAttribute('aria-checked',MAP.guide?'true':'false');
   try{ localStorage.setItem('pfd_guide', MAP.guide?'1':'0'); }catch(err){}                // remember the NAVIGATION ROUTE choice across sessions (routing itself always keeps running)
   routeMesh.visible = MAP.guide && state.route && !!routePts && routePts.length>1;
   routeMeshFlat.visible = routeEdgeFlat.visible = MAP.guide && state.cam===3 && state.route && !!routePts && routePts.length>1;
@@ -4192,7 +4297,8 @@ function setDueLevel(n,quiet){ n=((n|0)%5+5)%5;
       radio('📻 Only taking calls that put you '+nm+' due.'); } }
   if(state.running&&!QUAL.active){ state.target=null; state.onScene=false; newDispatch(); }   // re-pick a call that fits (never while the exam owns the dispatch)
   return n; }
-document.getElementById('btnDue').addEventListener('click',e=>{ e.preventDefault(); setDueLevel(MAP.dueLevel+1); });
+document.getElementById('segDue').addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; e.preventDefault();   // ⚙ v21m: ALL · 1st-4th, the same setter
+  if((+b.dataset.v)!==MAP.dueLevel) setDueLevel(+b.dataset.v); sxSync(); });
 document.getElementById('btnRestart').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); state.running=false; DRIVE.going=false; DRIVE.parked=false; goHome(); });
 /* 🔁 RESTART RUN — redo the CURRENT box from quarters. Keeps the same fire, the same house and your saves;
    just puts the truck back on the curb and restarts everyone's race. Distinct from ↺ RESTART, which drops
@@ -4211,7 +4317,25 @@ function rerunCurrentBox(){
   else newDispatch();
 }
 document.getElementById('btnRerun').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); rerunCurrentBox(); });
-document.getElementById('btnDiff').addEventListener('click',e=>{ e.preventDefault(); setDifficulty(DIFF.level+1); });
+document.getElementById('segDiff').addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(!b) return; e.preventDefault();   // ⚙ v21m: the four levels, the same setter
+  if((+b.dataset.v)!==DIFF.level) setDifficulty(+b.dataset.v); sxSync(); });
+/* ⚙ THE TABBED SETTINGS (v21m). sxSync paints the panel FROM the game's own state each time it opens and after each choice; the
+   toggles keep their classic .on class (their handlers set it) and gain aria-checked here. It always opens on GAME. */
+function sxTab(t){ document.querySelectorAll('#sxTabs [data-tab]').forEach(b=>{ const on=b.dataset.tab===t; b.classList.toggle('on',on); b.setAttribute('aria-selected',on?'true':'false'); });
+  document.querySelectorAll('#settingsPanel .sxPane').forEach(p=>p.classList.toggle('on',p.dataset.pane===t)); }
+function sxSync(){ const $=id=>document.getElementById(id), due=MAP.dueLevel|0, tc=w=>w.charAt(0)+w.slice(1).toLowerCase();
+  const rt=$('sxRunTxt'); if(rt) rt.textContent=(DRIVE.stationId?'Engine '+engNum(DRIVE.stationId)+' · ':'')+['All calls','1st due','2nd due','3rd due','4th due'][due]+' · '+tc(DIFF.names[DIFF.level]);
+  const rm=$('sxRunMode'); if(rm){ rm.textContent=FREE.on?'Free drive':'Dispatch'; rm.classList.toggle('free',FREE.on); }
+  for(const [id,v] of [['segDue',due],['segDiff',DIFF.level],['segCtl',CTL.mode]]){ const g=$(id); if(g) for(const b of g.children){ const on=b.dataset.v===String(v); b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false'); } }
+  const ds=$('sxDiffSub'), bl=DIFF.blurb[DIFF.level]; if(ds) ds.textContent=bl.charAt(0).toUpperCase()+bl.slice(1);
+  freeLiveBtn();
+  for(const id of ['btnRivals','btnGuide','btnMiniMap','btnFreeLive']){ const b=$(id); if(b) b.setAttribute('aria-checked',b.classList.contains('on')?'true':'false'); }
+  const dr=$('btnDrill'), dq=dr&&dr.querySelector('small'); if(dq) dq.textContent=DRILL.on?'Running: tap to stop':'Find the landmarks in your first-due';
+  const ac=$('btnAccount'), aq=ac&&ac.querySelector('small'); if(aq) aq.textContent=AUTH.user?('Signed in'+(AUTH.user.email?' as '+AUTH.user.email:'')):'Sign in to sync your careers'; }
+document.getElementById('sxTabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if(!b) return; e.preventDefault(); sxTab(b.dataset.tab); });
+document.getElementById('btnBackGame').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); });
+document.getElementById('btnCareerSx').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openProfileCard(); });
+document.getElementById('btnLbSx').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openCityLeaderboard(); });
 document.getElementById('btnAccount').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openAuthCard(); });   // v21j: it lives in Settings now
 document.getElementById('authCareer').addEventListener('click',e=>{ e.preventDefault(); const a=document.getElementById('authCard'); a.classList.remove('show'); a.setAttribute('aria-hidden','true'); openProfileCard(); });
 document.getElementById('btnDrill').addEventListener('click',e=>{ e.preventDefault(); closeSettings();
@@ -7009,7 +7133,7 @@ function unitsSet(open){ UNITS.open=!!open; try{ localStorage.setItem('pfd_units
    together — three call sites outside the toggle change it (rerun, missed due, shift start) and any
    one of them left to write the flag alone desyncs the button: it then reads the opposite of the
    truth and the next tap does the opposite of what it says. */
-function setRivals(on){ RIVALS.on=!!on; const b=document.getElementById('btnRivals'); if(b) b.classList.toggle('on',RIVALS.on); return RIVALS.on; }
+function setRivals(on){ RIVALS.on=!!on; const b=document.getElementById('btnRivals'); if(b){ b.classList.toggle('on',RIVALS.on); b.setAttribute('aria-checked',RIVALS.on?'true':'false'); } return RIVALS.on; }
 /* 🧭 FREE DRIVE / PATROL — a shift with no rival companies, no BEATEN IN and no automatic box:
    you ride out of a real house and pull a call when you want one. It is kept out of Career exactly the
    way the training modes are — profileRun() returns before it writes anything — so no run, badge, rank,
@@ -7020,8 +7144,18 @@ function setRivals(on){ RIVALS.on=!!on; const b=document.getElementById('btnRiva
 const FREE={ arm:false, on:false };
 function freeSet(on){ FREE.arm=!!on;
   const txt='🧭 FREE DRIVE: '+(FREE.arm?'ON':'OFF');
-  for(const id of ['btnFreeMode','hcFree']){ const b=document.getElementById(id); if(b){ b.textContent=txt; b.style.background=FREE.arm?'#1d6b4a':''; } }
+  for(const id of ['btnFreeMode']){ const b=document.getElementById(id); if(b){ b.textContent=txt; b.style.background=FREE.arm?'#1d6b4a':''; } }
+  { const g=document.getElementById('hcModeSeg'); if(g) for(const b of g.children){ const on=(b.dataset.m==='1')===FREE.arm; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false'); }   // 🏠 v21m: the card's MODE switch
+    const q=document.getElementById('hcModeSub'); if(q) q.textContent=FREE.arm?'No rivals or box until you ask. Career untouched.':'Respond to a dispatched location.'; }
   return FREE.arm; }
+/* ☆ FAVORITE FIREHOUSES (v21m, owner: "Yes, and add the ☆ star"): kept on THIS phone only (pfd_favs), marked on the home map
+   and in the list. Account syncing could come later (owner). */
+const FAVS=new Set(); try{ const a=JSON.parse(localStorage.getItem('pfd_favs')||'[]'); if(Array.isArray(a)) for(const id of a) FAVS.add(String(id)); }catch(e){}
+function favToggle(id){ if(FAVS.has(id)) FAVS.delete(id); else FAVS.add(id);
+  try{ localStorage.setItem('pfd_favs',JSON.stringify([...FAVS])); }catch(e){}
+  hcStarSync(); try{ refreshStationList(); }catch(e){} return FAVS.has(id); }
+function hcStarSync(){ const b=document.getElementById('hcStar'); if(!b||!hcStation) return; const on=FAVS.has(hcStation.id);
+  b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false'); b.setAttribute('aria-label',on?'Remove this firehouse from favorites':'Favorite this firehouse'); }
 /* 📟 Two doors to the same action, both free-drive only: the icon beside SETTINGS is the one tap a
    patrol actually uses, and the labelled button inside Settings is where it is discoverable and what
    the radio line points at. The icon forwards its click, so there is still ONE handler. */
@@ -7038,8 +7172,9 @@ function freeCallBtn(){ for(const id of ['btnCall','btnCallIcon']){ const b=docu
 function freeLiveLocked(){ return !state.running||!!state.target||state.over; }
 function freeLiveBtn(){ const b=document.getElementById('btnFreeLive'); if(!b) return;
   const lock=freeLiveLocked();
-  b.disabled=lock; b.classList.toggle('on',FREE.on);
-  b.textContent=FREE.on?'🧭 FREE DRIVE: ON':'🧭 FREE DRIVE';
+  b.disabled=lock; b.classList.toggle('on',FREE.on); const ac=FREE.on?'true':'false'; if(b.getAttribute('aria-checked')!==ac) b.setAttribute('aria-checked',ac);
+  { const q=b.querySelector('small'), t=lock?(state.running?'Finish the box you are on first':'Ride out first'):(FREE.on?'On: no rivals, nothing counts':'No rivals, no box until you ask');   // v21m: the row's own line says why
+    if(q&&q.textContent!==t) q.textContent=t; }   // (this runs every frame from updateHUD: write only a change)
   b.title=lock?'Finish the box you are on first':(FREE.on?'Go back on the career board':'Ride without rivals'); }
 function freeLive(on){
   if(freeLiveLocked()){ popup('🧭 FINISH THIS BOX FIRST','red'); return false; }
@@ -7055,7 +7190,7 @@ function freeLive(on){
 document.getElementById('btnFreeLive').addEventListener('click',e=>{ e.preventDefault(); freeLive(!FREE.on); });
 document.getElementById('btnCallIcon').addEventListener('click',e=>{ e.preventDefault(); document.getElementById('btnCall').click(); });
 document.getElementById('btnFreeMode').addEventListener('click',e=>{ e.preventDefault(); freeSet(!FREE.arm); });
-document.getElementById('hcFree').addEventListener('click',e=>{ e.preventDefault(); freeSet(!FREE.arm); });
+document.getElementById('hcModeSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-m]'); if(!b) return; e.preventDefault(); freeSet(b.dataset.m==='1'); });   // 🏠 Dispatch | Free Drive, before riding out
 document.getElementById('btnCall').addEventListener('click',e=>{ e.preventDefault();                      // 📟 dispatch on demand — the only way a box arrives in free drive
   if(!FREE.on||!state.running) return;
   if(state.target){ popup('📟 YOU ARE ALREADY ON A RUN','red'); return; }
@@ -7081,7 +7216,8 @@ function applyDifficultyGates(){
   const gb=document.getElementById('btnGuide');
   if(gb){ gb.style.display=gOK?'':'none'; if(!gOK){ MAP.guide=false; gb.classList.remove('on'); }
     else { try{ MAP.guide=localStorage.getItem('pfd_guide')!=='0'; }catch(e){ MAP.guide=true; }
-      gb.classList.toggle('on',MAP.guide); } }
+      gb.classList.toggle('on',MAP.guide); }
+    gb.setAttribute('aria-checked',MAP.guide?'true':'false'); }
   const ub=document.getElementById('btnUturn'); if(ub) ub.style.display=uOK?'':'none';
   if(typeof routeMeshFlat!=='undefined'&&routeMeshFlat) routeMeshFlat.visible=routeMeshFlat.visible&&MAP.guide;
   if(typeof routeEdgeFlat!=='undefined'&&routeEdgeFlat) routeEdgeFlat.visible=routeEdgeFlat.visible&&MAP.guide;
@@ -9274,7 +9410,7 @@ function hudSeat(mm,show){ const tb=document.getElementById('turnBanner'), ww=do
    truck's own heading. N (red), E, S, W ride the rim. Redrawn at ~8 Hz, and only while a shift is running. */
 const MINIMAP={on:true, t:0, R:230, cv:null, el:null, wa:null};
 try{ if(localStorage.getItem('pfd_minimap')==='off') MINIMAP.on=false; }catch(e){}
-function mmToggleBtn(){ const b=document.getElementById('btnMiniMap'); if(b){ b.classList.toggle('on',MINIMAP.on); b.textContent='🗺 MINIMAP: '+(MINIMAP.on?'ON':'OFF'); } }
+function mmToggleBtn(){ const b=document.getElementById('btnMiniMap'); if(b){ b.classList.toggle('on',MINIMAP.on); b.setAttribute('aria-checked',MINIMAP.on?'true':'false'); } }   // v21m: a switch row — never overwrite its label
 function updateMiniMap(dt){ const el=MINIMAP.el||(MINIMAP.el=document.getElementById('miniMap')); if(!el) return;
   const show=MINIMAP.on&&state.running&&!homeEl.classList.contains('show');
   el.classList.toggle('on',show);
@@ -9763,7 +9899,7 @@ const homeEl=document.getElementById('home');
     }
   }
 })();
-function refreshStationList(){ document.querySelectorAll('#stationList .stbtn[data-station]').forEach(b=>{   // repaint careers on the battalion list — 1→4 position letters, colored by rank
+function refreshStationList(){ document.querySelectorAll('#stationList .stbtn[data-station]').forEach(b=>{ b.classList.toggle('fav',FAVS.has(b.dataset.station));   // ☆ v21m   // repaint careers on the battalion list — 1→4 position letters, colored by rank
   const e=PROFILE.engines[b.dataset.station], el=b.querySelector('.stCareer'); if(!el) return;
   if(!(e&&e.runs>0)){ el.textContent=''; return; }
   el.innerHTML=POSITIONS.map((k,i)=>{ const t=e.pos&&e.pos[k];
@@ -9875,6 +10011,11 @@ function drawHomeMap(now){
     c.shadowColor=col; c.shadowBlur=on?16:8; c.fillStyle=col;
     c.beginPath(); c.arc(0,0,r,0,6.283); c.fill(); c.shadowBlur=0;
     c.strokeStyle='rgba(255,255,255,.85)'; c.lineWidth=on?1.8:1; c.stroke();
+    if(FAVS.has(d.st.id)){ HOMEMAP.favDrawn=(HOMEMAP.favDrawn||0)+1;                 // ☆ a favorite wears a gold ring and a gold star (pfd_favs, this phone)
+      c.strokeStyle='#ffd23b'; c.lineWidth=1.6; c.beginPath(); c.arc(0,0,r+2.3,0,6.283); c.stroke();
+      const sr=r*1.35, sx=(r+3)*0.8, sy=-(r+3)*0.8; c.beginPath();
+      for(let j=0;j<10;j++){ const a=-Math.PI/2+j*Math.PI/5, rr=(j%2?0.45:1)*sr; c.lineTo(sx+Math.cos(a)*rr,sy+Math.sin(a)*rr); }
+      c.closePath(); c.fillStyle='#ffd23b'; c.fill(); c.strokeStyle='#4a3500'; c.lineWidth=0.7; c.stroke(); }
     { const pe=PROFILE.engines[d.st.id]; if(pe&&pe.runs>0){                                            // 🧑‍🚒 career pips: due 1→4 left-to-right, colored by that position's rank; faint = not started
         c.strokeStyle='rgba(0,0,0,.35)'; c.lineWidth=.6;
         for(let i=0;i<POSITIONS.length;i++){ const t=pe.pos&&pe.pos[POSITIONS[i]];
@@ -9915,11 +10056,14 @@ let hcStation=null;
 function showHouseCard(st){ hcStation=st;
   document.getElementById('hcName').textContent=st.name;
   document.getElementById('hcAddr').textContent=st.address;
-  document.getElementById('hcBn').textContent=ordinalBn(st.bn)+' BATTALION · DIVISION '+st.div;
-  { const e=PROFILE.engines[st.id], el=document.getElementById('hcCareer');   // read-only — browsing a house must not create its career record
-    if(el){ if(!e||!e.runs){ el.textContent='NEW CAREER · starts at ROOKIE'; }
-      else { const parts=POSITIONS.map((k,i)=>(i+1)+['ST','ND','RD','TH'][i]+' '+((e.pos&&e.pos[k])?RANKS_SHORT[e.pos[k].rank|0]:'—'));
-        el.textContent='LOCAL '+companyMasteryOf(e)+'% · '+parts.join(' · '); } } }
+  document.getElementById('hcBn').textContent=ordinalBn(st.bn)+' Battalion · Division '+st.div;
+  { const e=PROFILE.engines[st.id], has=!!(e&&e.runs);                        // read-only — browsing a house must not create its career record
+    const pct=has?Math.max(0,Math.min(100,companyMasteryOf(e)|0)):0, di=Math.max(0,(MAP.dueLevel|0)-1), t=has&&e.pos?e.pos[POSITIONS[di]]:null, r=t?(t.rank|0):0;
+    document.getElementById('hcPct').textContent=pct+'%'; document.getElementById('hcBarFill').style.width=pct+'%';
+    const rk=document.getElementById('hcRank'), nm=RANKS[r].charAt(0)+RANKS[r].slice(1).toLowerCase();   // the rank at the due you ride (ALL CALLS reads 1st)
+    rk.innerHTML='<svg class="" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 19 6v5.6c0 4.2-2.9 7.5-7 9.2-4.1-1.7-7-5-7-9.2V6z"/><path d="m8.6 11.8 2.3 2.3 4.6-4.6"/></svg><span></span>'; rk.querySelector('span').textContent=has?(['1st','2nd','3rd','4th'][di]+' due · '+nm):'New career · Rookie';
+    rk.style.setProperty('--rc',RANK_C[r]); }
+  hcStarSync();
   document.getElementById('houseCard').classList.add('up');
   document.getElementById('homeMapWrap').classList.add('picking');
 }
@@ -9947,6 +10091,7 @@ function closeHomeMap(){ if(HOMEMAP.raf){ cancelAnimationFrame(HOMEMAP.raf); HOM
   cv.addEventListener('pointerup',e=>{ if(!moved) homeMapTap(e.clientX,e.clientY); });
   document.getElementById('hcGo').addEventListener('click',()=>{ if(HOMEMAP.sel) flyToStation(HOMEMAP.sel); });
   document.getElementById('hcClose').addEventListener('click',()=>{ HOMEMAP.sel=null; hideHouseCard(); });
+  document.getElementById('hcStar').addEventListener('click',e=>{ e.preventDefault(); if(hcStation) favToggle(hcStation.id); });   // ☆ this phone's favorites
   document.getElementById('btnListView').addEventListener('click',()=>document.getElementById('homeListPane').classList.add('show'));
   const closeList=()=>document.getElementById('homeListPane').classList.remove('show');
   document.getElementById('btnCloseList').addEventListener('click',closeList);
