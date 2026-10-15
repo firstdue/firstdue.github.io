@@ -509,7 +509,43 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   .stCareer { display:block; color:#7fe0a0; font-size:10px; font-weight:900; margin-top:1px; }
   #profileCard { position:absolute; inset:0; z-index:63; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
   #profileCard.show { display:flex; }
-  #profileCard .cc { width:min(560px,94vw); max-height:88vh; overflow:auto; background:#141a24; border:1px solid #2a3444; border-radius:14px; padding:14px; }
+  #profileCard .cc { width:min(560px,94vw); max-height:88vh; overflow:auto; background:#141a24; border:1px solid #2a3444; border-radius:14px; padding:14px; overscroll-behavior:contain; }
+  /* 🧑‍🚒 CAREER PATH, SHORTER (v21o, owner: "have to scroll all the way down and it's alot to closed it out. Should have it collapse
+     and expand each engine ... And a way to quickly get back without having to go to the bottom of the page"). A × that never
+     scrolls away (a zero-height sticky holder, so it costs no room), ↑ TOP once you are down the page, each company folded to
+     one line of its four dues (the one you ride open), and the rank ladder and the badges as folds. */
+  /* the bar costs no room (its height is given back by the negative margin): at the top it is only the ×, over the hero's empty
+     corner; once the hero has scrolled away it turns into a slim title bar and the card slides UNDER it, never past the × */
+  .cpStick { position:sticky; top:0; z-index:6; height:52px; margin:0 -14px -52px; padding:0 14px; box-sizing:border-box;
+    display:flex; align-items:center; justify-content:space-between; pointer-events:none; transition:background .15s, box-shadow .15s; }
+  .cpStickT { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:20px; letter-spacing:.06em; text-transform:uppercase;
+    color:#fff; opacity:0; transition:opacity .15s; }
+  #cpScroll.stuck .cpStick { background:rgba(20,26,36,.97); box-shadow:0 1px 0 #2a3444, 0 8px 18px rgba(0,0,0,.35); }
+  #cpScroll.stuck .cpStickT { opacity:1; }
+  .cpX { flex:0 0 auto; width:44px; height:44px; margin-right:-4px; border-radius:50%; border:1px solid rgba(255,255,255,.18);
+    background:rgba(26,36,56,.96); color:#fff; font-size:24px; line-height:1; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); pointer-events:auto; }
+  .cpStickB { position:sticky; bottom:0; height:0; z-index:6; }
+  .cpTop { position:absolute; right:-2px; bottom:8px; min-height:44px; padding:0 14px; border-radius:22px; border:1px solid rgba(244,185,80,.55);
+    background:rgba(26,36,56,.96); color:#ffd27a; font:800 13px "Barlow Condensed","Arial Narrow",sans-serif; letter-spacing:.12em; cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.5); opacity:0; transform:translateY(8px); transition:opacity .15s, transform .15s; pointer-events:none; }
+  #cpScroll.down .cpTop { opacity:1; transform:none; pointer-events:auto; }
+  .cpFold > summary { cursor:pointer; list-style:none; min-height:44px; margin-top:6px; margin-bottom:4px; -webkit-tap-highlight-color:transparent; }
+  .cpFold > summary::-webkit-details-marker { display:none; }
+  .cpFold > summary::after { order:1; }
+  .cpChev { order:2; font-size:20px; line-height:1; color:#f4b950; transition:transform .15s; }
+  .cpFold[open] > summary .cpChev { transform:rotate(90deg); }
+  .pdEng .pdHead { cursor:pointer; min-height:40px; align-items:center; margin:-4px 0 0; -webkit-tap-highlight-color:transparent; }
+  .pdEng.open .pdHead { margin-bottom:6px; }
+  .pdHead .pdHR { display:flex; align-items:center; gap:8px; }
+  .pdChev { font-size:18px; line-height:1; color:#8fa2ba; transition:transform .15s; }
+  .pdEng.open .pdChev { transform:rotate(90deg); }
+  .pdEng .pdBody { display:none; }
+  .pdEng.open .pdBody { display:block; }
+  .pdSum { display:flex; flex-wrap:wrap; gap:3px 12px; margin:1px 0 3px; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700;
+    letter-spacing:.06em; font-size:13px; color:#6f809b; }
+  .pdSum b { font-weight:800; }
+  .pdSum .q { color:#f4b950; }
+  .pdEng.open .pdSum { display:none; }
   #pcBody { margin-top:8px; font-size:13px; color:#e8edf5; }
   .pcRow { padding:7px 8px; border-radius:8px; margin:4px 0; background:#1a2230; }
   .pcRow.cur { outline:1px solid #ffd27a; }
@@ -1134,12 +1170,13 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   </div>
 </div>
 <div id="profileCard" aria-hidden="true">
-  <div class="cc">
+  <div class="cc" id="cpScroll">
+    <div class="cpStick"><span class="cpStickT" aria-hidden="true">Career Path</span><button class="cpX" id="btnProfileX" type="button" aria-label="Close Career Path">×</button></div>
     <div class="cpHero"><div class="cpEmblem"><svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="cpBrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe3ab"/><stop offset=".55" stop-color="#f4b950"/><stop offset="1" stop-color="#bd7d1e"/></linearGradient></defs><g fill="url(#cpBrass)" stroke="#7d5314" stroke-width="1.4" stroke-linejoin="round"><path d="M50 50 L34 6 L50 21 L66 6 Z"/><path d="M50 50 L34 94 L50 79 L66 94 Z"/><path d="M50 50 L6 34 L21 50 L6 66 Z"/><path d="M50 50 L94 34 L79 50 L94 66 Z"/></g><circle cx="50" cy="50" r="8.5" fill="#0e1929" stroke="url(#cpBrass)" stroke-width="2.6"/></svg></div>
       <div><div class="cpTitle">Career Path</div><div class="cpTag">Your journey · your legacy</div></div></div>
     <div class="cpSec">Your progress <span class="tag">This device</span></div>
     <div id="pcBody"></div>
-    <div class="cpSec">Rank Ladder <span class="tag">Per engine</span></div>
+    <details class="cpFold" id="cpFoldRanks"><summary class="cpSec">Rank Ladder <span class="tag">Per engine</span><span class="cpChev" aria-hidden="true">›</span></summary>
     <div class="cpNote">Every firehouse is its own career — and <b>each due position</b> (1st, 2nd, 3rd, 4th) is its own track. Master your 1st due, expand into your 2nd, learn your 3rd and 4th. Difficulty (TRAINING → EXPERT) is your own choice in Settings — it never changes your rank, and your rank never locks it.</div>
 
     <div class="cpStep" style="--seg:#4d9fff"><div class="cpMark"><div class="cpDot start"></div></div>
@@ -1152,11 +1189,12 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
       <div class="cpRank" style="--c:#f2913a"><div class="cpRh"><h3>Veteran</h3><span class="cpRig">🚑</span></div><div class="cpU">Prove it at <b>real pace</b>.</div><ul class="cpPerks"><li><span class="pi">🛡️</span>10 more held</li><li><span class="pi">📦</span>7 unique boxes</li><li><span class="pi">✨</span>3 clean runs</li><li><span class="pi">⚡</span>3 on STANDARD+</li></ul></div></div>
 
     <div class="cpStep"><div class="cpMark"><div class="cpDot lock">🔒</div></div>
-      <div class="cpRank" style="--c:#e5484d"><div class="cpRh"><h3>Chief</h3><span class="cpRig">🚙</span></div><div class="cpU">The local is <b>yours</b>.</div><ul class="cpPerks"><li><span class="pi">🛡️</span>15 more held</li><li><span class="pi">📦</span>12 unique boxes</li><li><span class="pi">✨</span>5 clean</li><li><span class="pi">🔥</span>5 on PRO+</li><li><span class="pi">🧭</span>5 no-guide</li><li><span class="pi">🎖</span>Qualification (coming)</li></ul></div></div>
+      <div class="cpRank" style="--c:#e5484d"><div class="cpRh"><h3>Chief</h3><span class="cpRig">🚙</span></div><div class="cpU">The local is <b>yours</b>.</div><ul class="cpPerks"><li><span class="pi">🛡️</span>15 more held</li><li><span class="pi">📦</span>12 unique boxes</li><li><span class="pi">✨</span>5 clean</li><li><span class="pi">🔥</span>5 on PRO+</li><li><span class="pi">🧭</span>5 no-guide</li><li><span class="pi">🎖</span>Chief qualification</li></ul></div></div>
 
     <div class="cpNote">By <b>Chief</b> the knowledge is real — dozens of boxes held clean, at pace, with no route line. Rank is earned per due position and never expires; difficulty stays your own choice, run to run.</div>
+    </details>
 
-    <div class="cpSec">Badges <span class="tag">Per firehouse</span></div>
+    <details class="cpFold" id="cpFoldBadges"><summary class="cpSec">Badges <span class="tag">Per firehouse · citywide</span><span class="cpChev" aria-hidden="true">›</span></summary>
     <div class="cpBadgeRow"><div class="cpMedal" style="--m:#f4b950">⭐</div><div><h4>First In</h4><p>Take a box first-in when you're 1st due.</p></div></div>
     <div class="cpBadgeRow"><div class="cpMedal" style="--m:#8fb4ff">📖</div><div><h4>Textbook</h4><p>A run the senior man has zero complaints about.</p></div></div>
     <div class="cpBadgeRow"><div class="cpMedal" style="--m:#37c274">🛡️</div><div><h4>Due Diligence</h4><p>Hold your due 5 runs in a row.</p></div></div>
@@ -1168,12 +1206,13 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <div class="cpBadgeRow"><div class="cpMedal" style="--m:#4d9fff">🌐</div><div><h4>Well Traveled</h4><p>Run 5 different firehouses.</p></div></div>
     <div class="cpBadgeRow"><div class="cpMedal" style="--m:#f4b950">💯</div><div><h4>Century Club</h4><p>100 total saves.</p></div></div>
     <div class="cpBadgeRow"><div class="cpMedal" style="--m:#c69bf0">🎓</div><div><h4>Know Your Local</h4><p>Find 10 landmarks in one drill.</p></div></div>
-    <div class="cpBadgeRow"><div class="cpMedal" style="--m:#e5484d"><svg class="hydIco" aria-hidden="true"><use href="#hydIcoSym"/></svg></div><div><h4>Hydrant Scout</h4><p>Mark 5 hydrants.</p></div></div>
+    </details>
 
     <div class="cpFoot"><h4><span aria-hidden="true">🏆</span> Leaderboard rule</h4>
       <div class="cpRule"><div class="li"><span class="chk">✓</span>Guide off</div><div class="li"><span class="chk">✓</span>Held due</div></div>
       <p class="cpFine">Only runs that meet both post to the board — every ranked time is earned on the harder tracks. Your rank + badges sync to your account across devices.</p></div>
     <button id="btnProfileClose">CLOSE</button>
+    <div class="cpStickB"><button class="cpTop" id="btnProfileTop" type="button" aria-label="Back to the top">↑ TOP</button></div>
   </div>
 </div>
 <div id="coachCard" aria-hidden="true">
@@ -1342,7 +1381,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21n";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21o";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -8584,6 +8623,7 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
      player is on, record or not; an absent record renders as a FRESH company. Only a completed response
      (profileRun → careerTrack → profEng) starts a career. */
   const cur=DRIVE.stationId||PROFILE.lastPlayed||null, rows=[];
+  if(cur&&!CPOPEN.seen.has(cur)){ CPOPEN.seen.add(cur); CPOPEN.add(cur); }                 // the company you ride opens itself, once a session; after that your folds stand
   const posRow=(t,i,engId)=>{ const info=careerPosInfo(t||null), col=t?RANK_C[t.rank|0]:'#3a4a63';   // NOT STARTED ≠ ROOKIE: an absent track renders muted, no earned progress pretended
     const ready=!!info.qualReady, att=(t&&t.qual&&t.qual.attempts)|0;
     const sub= info.mastered?('MASTERED'+(info.qualPassed?' · QUALIFICATION PASSED':''))
@@ -8606,8 +8646,12 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
     '</div>'; };
   const fmt=(id,e)=>{ const fresh=!e||!e.pos||!Object.keys(e.pos).length;      // absent record === fresh company (never fabricated)
     const bd=((e&&e.badges)||[]).map(b=>BADGE_NAMES[b]||b).join(', ');
-    let h='<div class="pdEng'+(id===cur?' cur':'')+'"><div class="pdHead"><b>Engine '+engNum(id)+'</b>'+
-      (fresh?'<span class="pdMy">NEW LOCAL</span>':'<span class="pdMy">COMPANY MASTERY '+companyMasteryOf(e)+'%</span>')+'</div>';
+    const open=CPOPEN.has(id);                                                  // 🧑‍🚒 v21o: folded to one line unless opened (the one you ride opens itself)
+    const sum=POSITIONS.map((k,i)=>{ const t=e&&e.pos&&e.pos[k], q=t&&careerPosInfo(t).qualReady;
+      return '<span>'+POS_LABELS[i].replace(' DUE','')+' <b style="color:'+(t?RANK_C[t.rank|0]:'#4a5a75')+'">'+(t?RANKS[t.rank|0]:'—')+'</b>'+(q?' <b class="q">· QUAL READY</b>':'')+'</span>'; }).join('');
+    let h='<div class="pdEng'+(id===cur?' cur':'')+(open?' open':'')+'" data-eng="'+id+'"><div class="pdHead" role="button" aria-expanded="'+(open?'true':'false')+'"><b>Engine '+engNum(id)+'</b>'+
+      '<span class="pdHR">'+(fresh?'<span class="pdMy">NEW LOCAL</span>':'<span class="pdMy">COMPANY MASTERY '+companyMasteryOf(e)+'%</span>')+'<span class="pdChev" aria-hidden="true">›</span></span></div>'+
+      '<div class="pdSum">'+sum+'</div><div class="pdBody">';
     if(fresh&&id===cur){                                                        // 🚪 the two doors — neither behind the other
       h+='<div class="pdFresh">Your career here hasn\'t started yet.</div>'+
         '<div class="pdDoor"><b>CAREER · NOT STARTED</b><span>Ride your first box to begin your career.</span>'+
@@ -8617,7 +8661,7 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
             '<span>'+(lk.assessed&&bx?(knowledgeProofText(lk)+' — training never starts Career progress.'):'Practice first-due intersections without starting Career progress.')+'</span>'; })()+
         '<button class="pdTrain" data-teng="'+id+'">🎓 TRAIN MY LOCAL</button></div>'+
         POSITIONS.slice(1).map((k,i)=>posRow(null,i+1,id)).join('')+
-      '</div>';
+      '</div></div>';
       return h; }
     { const lk=localKnowledge(id,KNOW_DEF_SCOPE), bx=lk.dims.find(d=>d.key==='intersections');   // demonstrated-from-memory knowledge — always states what it counts, never a grade
       h+= lk.assessed
@@ -8628,17 +8672,19 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
       const rec=careerRecommendOf(e);
       if(rec) h+='<div class="pdNext">🎯 NEXT TRAINING — '+rec.label+(rec.text?' · '+rec.text:'')+
         (rec.qual?'':'<button class="pdRideOut" data-reng="'+id+'" data-rdue="'+rec.due+'">RIDE OUT</button>')+'</div>'; }
-    h+='<div class="pdStats">'+((e&&e.saves)|0)+' saves · '+((e&&e.runs)|0)+' runs · tap a due row for its full requirements'+(bd?'<div class="pcBadges">🎖 '+bd+'</div>':'')+'</div></div>';
+    h+='<div class="pdStats">'+((e&&e.saves)|0)+' saves · '+((e&&e.runs)|0)+' runs · tap a due row for its full requirements'+(bd?'<div class="pcBadges">🎖 '+bd+'</div>':'')+'</div></div></div>';
     return h; };
   if(cur) rows.push(fmt(cur,PROFILE.engines[cur]||null));                       // may be null — fresh company
   for(const id of Object.keys(PROFILE.engines)){ const en=PROFILE.engines[id];   // defensive: a blank/absent entry is simply a company with nothing to show
     if(id!==cur&&en&&en.runs>0) rows.push(fmt(id,en)); }
   if(!rows.length) rows.push('<div class="pcRow">No runs yet — ride out and hold your due slot. Every firehouse tracks a separate career for 1st, 2nd, 3rd and 4th due.</div>');
-  const cb=PROFILE.city.badges.map(b=>BADGE_NAMES[b]||b).join(', ');
+  const cb=PROFILE.city.badges.filter(b=>b!=='scout').map(b=>BADGE_NAMES[b]||b).join(', ');   // v21o: HYDRANT SCOUT retired (owner) — marking is scouts-only and the badge was out of reach
   if(cb) rows.push('<div class="pcRow"><b>CITYWIDE</b><div class="pcBadges">🎖 '+cb+'</div></div>');
   document.getElementById('pcBody').innerHTML=rows.join('');
-  /* (v16l removed the hydrant export UI — pins auto-upload to Supabase; the HYDRANT SCOUT badge shows the progress) */
-  el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
+  /* (v16l removed the hydrant export UI — pins auto-upload to Supabase. v21o retired the HYDRANT SCOUT badge, owner's call.) */
+  el.classList.add('show'); el.setAttribute('aria-hidden','false');
+  const sc=document.getElementById('cpScroll'); if(sc){ sc.scrollTop=0; sc.classList.remove('down','stuck'); } }
+const CPOPEN=new Set(); CPOPEN.seen=new Set();                                             // which companies are open on the Career card (this session)
 document.getElementById('pcBody').addEventListener('click',e=>{
   const qb=e.target.closest('.pdQualStart');
   if(qb){ e.stopPropagation(); qualUiOpen(qb.dataset.qeng,+qb.dataset.qdue); return; }
@@ -8646,7 +8692,14 @@ document.getElementById('pcBody').addEventListener('click',e=>{
   if(rb){ e.stopPropagation(); trainingRideOut(rb.dataset.reng,+rb.dataset.rdue); return; }
   const tb=e.target.closest('.pdTrain');
   if(tb){ e.stopPropagation(); trainMyLocal(tb.dataset.teng); return; }
+  const hd=e.target.closest('.pdHead');                                                     // 🧑‍🚒 v21o: a company's name folds it open or shut
+  if(hd){ const en=hd.closest('.pdEng'), id=en&&en.dataset.eng; if(!en) return; const o=!en.classList.contains('open');
+    en.classList.toggle('open',o); hd.setAttribute('aria-expanded',o?'true':'false'); if(o) CPOPEN.add(id); else CPOPEN.delete(id); return; }
   const g=e.target.closest('.pdPos'); if(g) g.classList.toggle('open'); });
+document.getElementById('btnProfileX').addEventListener('click',e=>{ e.preventDefault(); document.getElementById('btnProfileClose').click(); });   // the × that never scrolls away
+document.getElementById('btnProfileTop').addEventListener('click',e=>{ e.preventDefault(); const sc=document.getElementById('cpScroll'); sc.scrollTo({top:0,behavior:'smooth'}); });
+document.getElementById('cpScroll').addEventListener('scroll',e=>{ const sc=e.currentTarget, d=sc.scrollTop>420, k=sc.scrollTop>90;   // stuck: the hero is gone, the bar shows; down: ↑ TOP
+  if(sc.classList.contains('down')!==d) sc.classList.toggle('down',d); if(sc.classList.contains('stuck')!==k) sc.classList.toggle('stuck',k); },{passive:true});
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
@@ -8680,7 +8733,7 @@ function playerAddHydrant(){ if(!state.running||DRIVE.going) return;
   PROFILE.hyd.push({ lat:+ll.lat.toFixed(6), lon:+ll.lon.toFixed(6), x:hx, z:hz, src:2, ts:Date.now(), build:BUILD });
   PROFILE.city.hydCount=PROFILE.hyd.length;
   { const kn=profKnow(DRIVE.stationId); if(kn) kn.hydrants=(kn.hydrants|0)+1; }                          // 📖 knowledge: hydrant scouted while riding THIS company
-  if(PROFILE.hyd.length>=5&&!PROFILE.city.badges.includes('scout')){ PROFILE.city.badges.push('scout'); popup('🎖 HYDRANT SCOUT','green'); }
+  // (v21o: the HYDRANT SCOUT badge is retired — owner's call; a scout's pins still count in their local knowledge above)
   saveProfile();
   if(AUTH.user){ try{ sbFetch('/rest/v1/hydrant_submission',{ method:'POST', headers:{ 'Prefer':'return=minimal' },   // 🧯 auto-upload to the dev's Supabase — no copy/paste needed
     body:JSON.stringify([{ profile_id:AUTH.user.id, lat:+ll.lat.toFixed(6), lon:+ll.lon.toFixed(6), world_x:hx, world_z:hz, game_build:BUILD }]) }); }catch(e){} }
