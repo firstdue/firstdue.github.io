@@ -678,6 +678,14 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #radio .cur { display:none; }
   #radio .chev { flex:0 0 auto; font-size:17px; font-weight:900; line-height:1; color:#8ff0b4; transition:transform .15s; }
   #radio.full #radioTxt { white-space:normal; overflow-wrap:anywhere; }
+  /* THE ADDRESS IS THE LINE; THE CROSS STREETS DROP DOWN (owner, October 14, 2026, choosing between pictures: "Without, after a
+     tap: the cross streets drop down on their own line under a thin divider. Tap again to put them away"). A dispatch's own
+     parts ("Kitchen fire | 161 Kalos Street | Between ...") split there: the first two are the line (.rh), everything after
+     (the cross streets, a narrow-street note) is .dd, shown only while the line is open. A new call arrives open, so they
+     are read once, then fold away with the rest after RADIO.hold. */
+  #radioTxt .dd { display:none; }
+  #radio.full #radioTxt .dd:not(:empty) { display:block; margin-top:4px; padding-top:4px; border-top:1px solid rgba(143,240,180,.28);
+    font-size:12.5px; font-weight:600; color:#bfe9cf; }
   #radio.full .chev { transform:rotate(90deg); }
   #hudCol > #radio.mini { flex:0 0 auto; width:44px; height:44px; min-height:0; padding:0; align-items:center; justify-content:center; border-radius:50%; }
   #radio.mini #radioTxt, #radio.mini .chev { display:none; }
@@ -919,7 +927,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   </div>
 </div>
 <div id="hudCol">
-  <div id="radio" role="button" aria-label="Dispatch radio: tap to read it all"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.4" y="8.2" width="19.2" height="11.4" rx="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="13.9" r="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="5.4" y="11.4" width="6" height="2" rx="1" fill="currentColor"/><rect x="5.4" y="15.2" width="6" height="2" rx="1" fill="currentColor"/><path d="M7 8 17 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span id="radioTxt"></span><span class="cur">▊</span><span class="chev">›</span></div>
+  <div id="radio" role="button" aria-label="Dispatch radio: tap to read it all"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.4" y="8.2" width="19.2" height="11.4" rx="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="13.9" r="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="5.4" y="11.4" width="6" height="2" rx="1" fill="currentColor"/><rect x="5.4" y="15.2" width="6" height="2" rx="1" fill="currentColor"/><path d="M7 8 17 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span id="radioTxt"><span class="rh"></span><span class="dd"></span></span><span class="cur">▊</span><span class="chev">›</span></div>
   <div id="unitsRow"><button id="unitsChip" type="button" aria-expanded="false" aria-controls="rivals"><span class="ucIn"><b class="ucN">0</b><span class="ucL">UNITS</span><span class="ucDots"></span><span class="ucChev">›</span></span></button><div id="rivals" role="button" aria-label="Unit details: tap to fold back to the units chip"><div class="rvList"></div><span class="rvFold" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></div>
   <div id="areaChip"><span class="dueDot"></span><span class="dueTxt"></span><span class="dueWho"></span></div>
   <div id="qualChip">🎖 CHIEF QUAL · <b id="qualChipTxt"></b></div>
@@ -1229,7 +1237,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21k";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21l";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4245,7 +4253,7 @@ function updateHUD(dt){
   { const rc=document.getElementById('btnRecenter'), away=Math.abs(CAMLOOK.yaw)>0.03||Math.abs(CAMLOOK.pitch)>0.03;   // v20k: only once the view has been dragged (owner)
     rc.style.display = state.running&&away?'block':'none'; rc.classList.toggle('off',!(state.running&&away)); }   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
-  if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } elRadio.textContent=radioShown; }
+  if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } rdText(radioShown); }
   rdCollapse(dt); freeLiveBtn(); ctlArmed(); }
 // On-screen dispatch marker: projects the target to the screen, sticks to the edge with an arrow when off-screen, always shows distance.
 const _wpV=new THREE.Vector3(), _wpF=new THREE.Vector3();
@@ -9328,8 +9336,8 @@ state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (
 let radioQueue='', radioShown='', radioT=0, lastIdx=-1;
 /* 📻 The dispatch line (v21j). A new message arrives OPEN (.full) and types out; RADIO.t counts up once it has finished,
    and at RADIO.hold it settles to one line — or, on a patrol with no box, folds to the radio alone (.mini, v19t). A tap
-   opens it again. Career and a live box are never folded to the radio: the call is always on screen. The " | " between
-   the parts of a dispatch reads " · ". */
+   opens it again. Career and a live box are never folded to the radio: the call is always on screen. A dispatch's first
+   two parts are the line ("kind · address"); the rest (cross streets, a narrow-street note) drops down while it is open. */
 const RADIO={ t:0, hold:5, open:true, full:true, pin:false };
 function rdSet(open,full){ RADIO.open=!!open; RADIO.full=!!(open&&full); RADIO.t=0; RADIO.pin=false;
   const el=document.getElementById('radio'); if(el){ el.classList.toggle('mini',!RADIO.open); el.classList.toggle('full',RADIO.full); } }
@@ -9339,7 +9347,16 @@ function rdCollapse(dt){ const el=document.getElementById('radio'); if(!el) retu
   if(!RADIO.open||RADIO.pin||radioShown.length<radioQueue.length) return;               // still typing, or opened by a tap: leave it
   RADIO.t+=dt; if(RADIO.t<RADIO.hold) return;
   if(patrol) rdSet(false,false); else if(RADIO.full) rdSet(true,false); }
-function radio(m){ radioQueue=String(m).replace(/\s*\|\s*/g,' · '); radioShown=''; radioT=0; rdSet(true,true); }
+function radio(m){ const p=String(m).split(/\s*\|\s*/);                                // a dispatch: "kind | address | Between ..."
+  radioQueue=p.length>2?(p[0]+' · '+p[1]+'\n'+p.slice(2).join(' · ')):p.join(' · ');     // the line, then (after \n) what drops down under it
+  radioShown=''; radioT=0; rdSet(true,true); rdFit(p.length>2?(p[0]+' · '+p[1]):''); }
+function rdFit(head){ const h=elRadio.querySelector('.rh'); h.style.fontSize=''; if(!head) return;   // the ADDRESS must never be cut off: a long one shrinks the line to fit, never below 11 px
+  const W=elRadio.clientWidth-2; if(W<=0) return;                                        // (3.5% of calls: 'Smoke in a dwelling' + a long street, up to 365 px in a 298 px line)
+  const cs=getComputedStyle(h), c=rdFit.c||(rdFit.c=document.createElement('canvas').getContext('2d'));
+  c.font=cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily; const w=c.measureText(head).width, f=parseFloat(cs.fontSize);
+  if(w>W) h.style.fontSize=Math.max(11,f*W/w).toFixed(2)+'px'; }
+function rdText(t){ const i=t.indexOf('\n'), h=elRadio.querySelector('.rh'), d=elRadio.querySelector('.dd');   // the two spans are kept, only their text changes
+  const a=i<0?t:t.slice(0,i), b=i<0?'':t.slice(i+1); if(h.textContent!==a) h.textContent=a; if(d.textContent!==b) d.textContent=b; }
 /* 🧯 THE HYDRANTS NEAREST AN ADDRESS — for the senior man's card (coachHydRender). v20y also put a HYDRANT button on the
    dispatch card (October 13, 2026); the owner took it off a day later ("Don't want too much on the screen"), with its beacon and
    minimap pin — the review after the run is where hydrants are shown now. Box-book + OSM hydrants, straight line, within 400 m. */
