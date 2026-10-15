@@ -502,6 +502,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #btnCoachHyd { width:100%; margin-top:8px; min-height:44px; border:2px solid #4f8dff; border-radius:10px; padding:10px; font-size:13px; font-weight:900; background:#0d2f6b; color:#dbe8ff; pointer-events:auto; }
   #btnCoachHyd.on { background:#2f7bff; color:#fff; border-color:#cfe0ff; }
   #coachHydList { margin-top:8px; font-size:13px; font-weight:700; color:#dbe8ff; line-height:1.7; }
+  #coachHydList .byStreet, #hydSheetList .byStreet { margin-top:4px; font-size:11.5px; font-weight:600; line-height:1.4; color:#93a3bd; }   /* v21n: what the feet mean */
   #coachHydList .n { display:inline-block; width:20px; height:20px; border-radius:10px; background:#2f7bff; color:#fff; text-align:center; font-size:11px; line-height:20px; margin-right:8px; }        /* stay out on the road — the alternative to going back to quarters, offered every run */
   /* 🧑‍🚒 career layer */
   .ccBadge { color:#ffd27a; font-weight:900; }
@@ -1341,7 +1342,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21m";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21n";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9005,11 +9006,12 @@ function showCoach(r){ const el=document.getElementById('coachCard');
 // frame is drawn; ◎ goes back to the address. The ROUTE view stays a still picture — the card scrolls over it as before.
 const COACHHYD={on:false,r:null,showOpt:false,list:[],ax:0,az:0,view:null,follow:true,sel:null,ptr:new Map(),pinch:null,raf:0,lastTap:0,H:260,MIN:0.15,MAX:12};
 function coachHydRender(){ const S=COACHHYD; if(!S.on||!S.view) return;
-  drawHydrantMap(S.cv,S.H,S.ax,S.az,S.list,{mark:'fire',view:S.view,all:true,sel:S.sel});
+  const SR=S.sel?hydStreetTo(S.list.F,S.sel):null;
+  drawHydrantMap(S.cv,S.H,S.ax,S.az,S.list,{mark:'fire',view:S.view,all:true,sel:S.sel,selPath:SR&&SR.path});
   const M=S.cv._map, n=M.hyd.filter(h=>h[0]>=M.minX&&h[0]<=M.maxX&&h[1]>=M.minZ&&h[1]<=M.maxZ).length+M.all.length, sl=document.getElementById('coachHydSel');
   document.getElementById('coachRecenter').classList.toggle('off',!S.follow);
-  if(S.sel){ const h=S.sel, d=Math.hypot(h[0]-S.ax,h[1]-S.az), where=hydStreetLabel(h);
-    sl.textContent='Tapped hydrant: '+Math.max(10,Math.round(d*3.2808/10)*10).toLocaleString('en-US')+' ft '+nearMeCompass(h[0]-S.ax,h[1]-S.az)+' of the address'+(where?' · '+where:''); }
+  if(S.sel){ const h=S.sel, where=hydStreetLabel(h), q={dl:Math.hypot(h[0]-S.ax,h[1]-S.az),d:SR?SR.d:0,straight:!SR};
+    sl.textContent='Tapped hydrant: '+hydFt(q)+(SR?' by street':'')+', '+nearMeCompass(h[0]-S.ax,h[1]-S.az)+' of the address'+(where?' · '+where:''); }
   else sl.textContent=n+' hydrant'+(n===1?'':'s')+' in view · pinch to zoom, drag to move, tap one for its distance'; }
 // A close NORTH-UP map round (ax,az) with the hydrants in `list` numbered: streets at their own width and named, the buildings of the
 // last local-city commit where they reach, water, a dashed line out to each hydrant, a north arrow and a 100 ft scale. The centre
@@ -9037,8 +9039,9 @@ function drawHydrantMap(cv,H,ax,az,list,opt){ const c=cv.getContext('2d');
   for(const pass of [0,1]) for(const s of segs){ c.strokeStyle=pass?'#ffffff':'#b9b5ab'; c.lineWidth=Math.max(segHalf(s)*2,2/scale)+(pass?0:2.4/scale); c.beginPath(); c.moveTo(s.ax,s.az); c.lineTo(s.bx,s.bz); c.stroke(); }   // each street at its own width
   if(opt.ring){ c.strokeStyle='rgba(214,40,57,.95)'; c.lineWidth=2.6/scale; c.lineJoin='round'; ring(opt.ring); c.stroke(); }   // ...and its edge over them
   c.setLineDash([4/scale,3/scale]); c.strokeStyle='rgba(47,123,255,.85)'; c.lineWidth=1.8/scale;
-  for(const q of list){ c.beginPath(); c.moveTo(ax,az); c.lineTo(q.h[0],q.h[1]); c.stroke(); }
-  if(opt.sel){ c.strokeStyle='rgba(230,150,0,.95)'; c.lineWidth=2.4/scale; c.beginPath(); c.moveTo(ax,az); c.lineTo(opt.sel[0],opt.sel[1]); c.stroke(); }
+  const walk=(p,x,z)=>{ c.beginPath(); if(p&&p.length>1){ c.moveTo(p[0][0],p[0][1]); for(let i=1;i<p.length;i++) c.lineTo(p[i][0],p[i][1]); } else { c.moveTo(ax,az); c.lineTo(x,z); } c.stroke(); };   // along the streets when there is a path (v21n)
+  for(const q of list) walk(q.path,q.h[0],q.h[1]);
+  if(opt.sel){ c.strokeStyle='rgba(230,150,0,.95)'; c.lineWidth=2.4/scale; walk(opt.selPath,opt.sel[0],opt.sel[1]); }
   c.setLineDash([]);
   c.setTransform(dpr,0,0,dpr,0,0);                                                    // back to pixels for the words and the markers
   // names: the streets nearest the middle of the frame; zoomed out, only the big ones
@@ -9077,7 +9080,8 @@ function coachHydUI(){ const b=document.getElementById('btnCoachHyd'), L=documen
   document.getElementById('coachMapBtns').hidden=false; S.view=hydMapFit(S,S.ax,S.az,list); S.follow=true; S.sel=null; S.cv.classList.add('live'); document.getElementById('coachHydSel').hidden=false; coachHydRender();   // buttons first: the fit keeps the numbered hydrants clear of them
   if(!list.length){ const d=document.createElement('div'); d.textContent='No hydrant in the map data within 1,300 ft of the address.'; L.appendChild(d); return; }
   list.forEach((q,i)=>{ const d=document.createElement('div'), n=document.createElement('span'); n.className='n'; n.textContent=String(i+1); d.appendChild(n);
-    const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(Math.max(10,Math.round(q.d*3.2808/10)*10).toLocaleString('en-US')+' ft'+(where?' · '+where:''))); L.appendChild(d); }); }
+    const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(hydFt(q)+(where?' · '+where:''))); L.appendChild(d); });
+  { const f=document.createElement('div'); f.className='byStreet'; f.textContent='Feet along the streets from the address, the way you would lay hose.'; L.appendChild(f); } }
 document.getElementById('btnCoachHyd').addEventListener('click',e=>{ e.preventDefault(); COACHHYD.on=!COACHHYD.on; coachHydUI(); });
 COACHHYD.cv=document.getElementById('coachCanvas'); COACHHYD.render=()=>coachHydRender(); COACHHYD.active=()=>COACHHYD.on&&!!COACHHYD.view; COACHHYD.home=()=>[COACHHYD.ax,COACHHYD.az];
 document.getElementById('coachZoomIn').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(COACHHYD,1.6); });
@@ -9099,13 +9103,15 @@ const NEARME={watch:null,last:null,view:null,follow:true,sel:null,ptr:new Map(),
 function nearMeCompass(dx,dz){ const b=(Math.atan2(dx,-dz)*180/Math.PI+360)%360; return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8]; }   // world +z is south
 function nearMeSize(){ const r=document.getElementById('hydSheetMap').parentElement.getBoundingClientRect(), h=Math.round(r.height); if(h>80) NEARME.H=h; }   // the map's box, whatever the screen
 function nearMeRender(pass){ const L=NEARME.last, cv=document.getElementById('hydSheetMap'); if(!L||!L.list.length||!NEARME.view) return; nearMeSize();
-  drawHydrantMap(cv,NEARME.H,L.x,L.z,L.list,{mark:'you',acc:L.acc,view:NEARME.view,all:true,sel:NEARME.sel});
+  const SR=NEARME.sel?hydStreetTo(L.F,NEARME.sel):null;                              // the tapped one, by street too
+  drawHydrantMap(cv,NEARME.H,L.x,L.z,L.list,{mark:'you',acc:L.acc,view:NEARME.view,all:true,sel:NEARME.sel,selPath:SR&&SR.path});
   const M=cv._map, n=M.hyd.filter(h=>h[0]>=M.minX&&h[0]<=M.maxX&&h[1]>=M.minZ&&h[1]<=M.maxZ).length+M.all.length;
   document.getElementById('hydSheetStatus').textContent='Your position'+(L.acc>0?', within ±'+Math.round(L.acc*3.2808).toLocaleString('en-US')+' ft':'')+(L.acc>100?' — a rough fix; it sharpens outdoors':'')+
     ' · '+n+' hydrant'+(n===1?'':'s')+' in view · pinch to zoom, drag to move';
   document.getElementById('hydRecenter').classList.toggle('off',!NEARME.follow);
   const sl=document.getElementById('hydSel');
-  if(NEARME.sel){ const h=NEARME.sel, d=Math.hypot(h[0]-L.x,h[1]-L.z), where=hydStreetLabel(h); sl.textContent='Tapped hydrant: '+Math.max(10,Math.round(d*3.2808/10)*10).toLocaleString('en-US')+' ft '+nearMeCompass(h[0]-L.x,h[1]-L.z)+' of you'+(where?' · '+where:''); }
+  if(NEARME.sel){ const h=NEARME.sel, where=hydStreetLabel(h), q={dl:Math.hypot(h[0]-L.x,h[1]-L.z),d:SR?SR.d:0,straight:!SR};
+    sl.textContent='Tapped hydrant: '+hydFt(q)+(SR?' by street':'')+', '+nearMeCompass(h[0]-L.x,h[1]-L.z)+' of you'+(where?' · '+where:''); }
   else sl.textContent='';
   if(!pass){ const h0=NEARME.H; nearMeSize(); if(NEARME.H!==h0) nearMeRender(1); } }   // a longer or shorter status moved the map's box: draw at the size it now is
 /* 🧭 THE HYDRANT MAPS' HANDS — one set for the near-me sheet AND the senior man's card (owner, October 14, 2026: "can we do the
@@ -9137,12 +9143,13 @@ function hydMapGestures(S){ const cv=S.cv, P=S.ptr;                             
   cv.addEventListener('pointerup',end); cv.addEventListener('pointercancel',end);
   cv.addEventListener('wheel',e=>{ if(!S.active()) return; e.preventDefault(); const [x,y]=at(e); hydMapZoom(S,e.deltaY<0?1.25:0.8,x,y); },{passive:false}); }
 function nearMeShow(pos){ const st=document.getElementById('hydSheetStatus'), L=document.getElementById('hydSheetList'), cv=document.getElementById('hydSheetMap');
-  const w=ll2world(pos.coords.latitude,pos.coords.longitude), acc=pos.coords.accuracy||0, list=hydNearest(w.x,w.z,5); NEARME.last={x:w.x,z:w.z,acc,list};
+  const w=ll2world(pos.coords.latitude,pos.coords.longitude), acc=pos.coords.accuracy||0, list=hydNearest(w.x,w.z,5); NEARME.last={x:w.x,z:w.z,acc,list,F:list.F};
   L.textContent='';
   if(!list.length){ st.textContent='No hydrant in the map data within 1,300 ft of you — this works inside Philadelphia.'; cv.style.display='none'; document.querySelector('#hydSheet .mapBtns').style.display='none'; return; }
   cv.style.display='block'; document.querySelector('#hydSheet .mapBtns').style.display='';
   list.forEach((q,i)=>{ const d=document.createElement('div'), n=document.createElement('span'); n.className='n'; n.textContent=String(i+1); d.appendChild(n);   // the rows FIRST: they set how tall the map can be
-    const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(Math.max(10,Math.round(q.d*3.2808/10)*10).toLocaleString('en-US')+' ft '+nearMeCompass(q.h[0]-w.x,q.h[1]-w.z)+(where?' · '+where:''))); L.appendChild(d); });
+    const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(hydFt(q)+' '+nearMeCompass(q.h[0]-w.x,q.h[1]-w.z)+(where?' · '+where:''))); L.appendChild(d); });
+  { const f=document.createElement('div'); f.className='byStreet'; f.textContent='Feet along the streets, the way you would walk it or lay hose. The direction is where to look.'; L.appendChild(f); }
   if(!NEARME.view){ nearMeSize(); NEARME.view=hydMapFit(NEARME,w.x,w.z,list); }       // the first fix: centred on you, the nearest five in the frame
   else if(NEARME.follow){ NEARME.view.cx=w.x; NEARME.view.cz=w.z; }
   nearMeRender(); }
@@ -9496,7 +9503,38 @@ function rdText(t){ const i=t.indexOf('\n'), h=elRadio.querySelector('.rh'), d=e
 /* 🧯 THE HYDRANTS NEAREST AN ADDRESS — for the senior man's card (coachHydRender). v20y also put a HYDRANT button on the
    dispatch card (October 13, 2026); the owner took it off a day later ("Don't want too much on the screen"), with its beacon and
    minimap pin — the review after the run is where hydrants are shown now. Box-book + OSM hydrants, straight line, within 400 m. */
-function hydNearest(x,z,n){ return hydrantsNear(x,z,400).map(h=>({h,d:Math.hypot(h[0]-x,h[1]-z)})).sort((p,q)=>p.d-q.d).slice(0,n); }
+/* 🚒 HYDRANTS BY STREET (owner, October 14, 2026, on the near-me map: the "closer" hydrants were ones "I would have between houses
+   and or peoples yard"). The list ranked them AS THE CROW FLIES, so a hydrant behind the houses looked close. The positions are
+   right — the box-book hydrants are the Water Department's own, within 0.5 m of the PWD survey (median of 337 matched) — so
+   now every distance is measured ALONG THE STREETS, the way you walk it or lay hose: one-way streets either way, freeways and
+   ramps never. At Lawnton St x Pedley Rd the Henry Avenue hydrant the old list put 3rd at 228 ft is 1,363 ft by street.
+   hydEdgeSnap: the nearest street edge to a point (and where on it); hydStreetFrom: a Dijkstra out to maxD from YOUR street
+   point; hydStreetTo: one hydrant's distance and the path (you → your street → … → its street → it) the map draws. */
+function hydEdgeSnap(x,z){ let best=null,bd=60*60; const gx=Math.floor(x/NCELL),gz=Math.floor(z/NCELL);
+  for(let a=gx-2;a<=gx+2;a++)for(let b=gz-2;b<=gz+2;b++){ const arr=ngrid.get(a+':'+b); if(!arr) continue;
+    for(const n of arr) for(const e of n.adj){ if(e.hw) continue; const m=e.to, dx=m.x-n.x, dz=m.z-n.z, L2=dx*dx+dz*dz||1e-6;
+      let t=((x-n.x)*dx+(z-n.z)*dz)/L2; t=t<0?0:t>1?1:t; const px=n.x+t*dx, pz=n.z+t*dz, d=(px-x)*(px-x)+(pz-z)*(pz-z);
+      if(d<bd){ bd=d; best={a:n,b:m,t,px,pz,len:Math.sqrt(L2),off:Math.sqrt(d)}; } } }
+  return best; }
+function hydStreetFrom(x,z,maxD){ const o=hydEdgeSnap(x,z); if(!o) return null;
+  const dist=new Map(), prev=new Map(), heap=new MinHeap(), done=new Set();
+  const seed=(n,d)=>{ if(!dist.has(n)||d<dist.get(n)){ dist.set(n,d); prev.set(n,null); heap.push(d,n); } };
+  seed(o.a,o.t*o.len); seed(o.b,(1-o.t)*o.len);
+  while(heap.size){ const n=heap.pop(); if(done.has(n)) continue; done.add(n); const p=dist.get(n); if(p>maxD) break;
+    for(const e of n.adj){ if(e.hw) continue; const nd=p+e.w; if(!dist.has(e.to)||nd<dist.get(e.to)){ dist.set(e.to,nd); prev.set(e.to,n); heap.push(nd,e.to); } } }
+  return {o,dist,prev,x,z,maxD}; }
+function hydStreetTo(F,h){ if(!F) return null; const s=hydEdgeSnap(h[0],h[1]); if(!s) return null; const o=F.o; let best=null;
+  if((s.a===o.a&&s.b===o.b)||(s.a===o.b&&s.b===o.a)){ const ts=s.a===o.a?s.t:1-s.t; best={d:Math.abs(ts-o.t)*o.len,via:null}; }   // the same block as you
+  for(const [n,along] of [[s.a,s.t*s.len],[s.b,(1-s.t)*s.len]]){ const g=F.dist.get(n); if(g==null||g>F.maxD) continue; const d=g+along; if(!best||d<best.d) best={d,via:n}; }
+  if(!best) return null;
+  const path=[[F.x,F.z],[o.px,o.pz]];
+  if(best.via){ const chain=[]; for(let n=best.via;n;n=F.prev.get(n)) chain.push([n.x,n.z]); chain.reverse(); for(const q of chain) path.push(q); }
+  path.push([s.px,s.pz],[h[0],h[1]]);
+  return {d:best.d+o.off+s.off,path}; }
+function hydNearest(x,z,n){ const F=hydStreetFrom(x,z,1100), cand=hydrantsNear(x,z,400).map(h=>({h,dl:Math.hypot(h[0]-x,h[1]-z)}));
+  for(const q of cand){ const r=F&&hydStreetTo(F,q.h); if(r){ q.d=r.d; q.path=r.path; } else { q.d=F?F.maxD+q.dl:q.dl; q.path=null; q.straight=true; } }   // no street reaches it: last, and said so
+  const out=cand.sort((p,q)=>p.d-q.d).slice(0,n); out.F=F; return out; }
+function hydFt(q){ const ft=Math.max(10,Math.round((q.straight?q.dl:q.d)*3.2808/10)*10).toLocaleString('en-US'); return ft+' ft'+(q.straight?' (straight line)':''); }
 function hydStreetLabel(h){ let st=null,sd=1e9; for(const s of segNear(h[0],h[1])){ if(s.hw||!s.name) continue; const c=closestSeg(h[0],h[1],s); if(c.d<sd){ sd=c.d; st=s; } }   // the street it stands on
   if(!st) return ''; const blk=hundredBlock(h[0],h[1],st.name); return (blk?blk+' block ':'')+abbrevStreet(st.name); }
 function popup(txt,cls){ const p=document.getElementById('popup'); p.textContent=txt; p.className='hud '+(cls||''); void p.offsetWidth; p.classList.add('pop'); }
