@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v73';  // v21j: the "Focused driving" top HUD: one flow under the bar, BOX in the bar, the dispatch as one line, N UNITS.
+const CACHE = 'local-shell-v74';  // v21k: 4 UNITS replaces in place - the unit strip takes the chip's row, the minimap never moves.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

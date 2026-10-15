@@ -126,7 +126,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
      area, the qualification) side by side, then the unit details and the drill banners. */
   #hudCol { position:absolute; z-index:14; top:var(--barBot); left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right));
     display:flex; flex-wrap:wrap; align-items:center; align-content:flex-start; gap:6px; pointer-events:none; }
-  #hudCol > #radio, #hudCol > #rivals, #hudCol > #drillHUD, #hudCol > #boxdHUD { flex:1 1 100%; min-width:0; max-width:100%; box-sizing:border-box; }   /* min-width:0, or a one-line dispatch is as wide as its whole text */
+  #hudCol > #radio, #hudCol > #unitsRow, #hudCol > #drillHUD, #hudCol > #boxdHUD { flex:1 1 100%; min-width:0; max-width:100%; box-sizing:border-box; }   /* min-width:0, or a one-line dispatch is as wide as its whole text */
   /* 🎓 drill banner — sits under the top button row, in place of the dispatch banner */
   #drillHUD { position:relative; z-index:15;
     display:none; flex-wrap:wrap; align-items:center; gap:7px;
@@ -304,30 +304,17 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   .parkStreetChoice.wrong.selected { outline:3px solid #ffcf66; outline-offset:2px; }
   .parkStreetChoice:active { transform:translate(-50%,-50%) scale(.96); }
   /* turn banner (top) */
-  /* 🚑 rival engines panel — the 4 engines responding to the current fire */
-  #rivals { position:relative; z-index:14;
-    display:none; flex-direction:row; flex-wrap:nowrap; align-items:center; justify-content:center; gap:7px;
-    background:rgba(15,19,27,.93); border:1px solid rgba(255,255,255,.14); border-radius:13px; padding:5px 9px; box-shadow:0 3px 13px rgba(0,0,0,.5); pointer-events:none; overflow:hidden; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
-  #rivals.show.open { display:flex; }                                  /* v21j: the details open from N UNITS */
-  #rivals .rvBox { font-size:10px; font-weight:900; letter-spacing:.5px; color:#ffd23b; white-space:nowrap; flex:0 0 auto; margin-right:1px; }
-  #rivals .rv { display:flex; align-items:center; gap:4px; font-size:12.5px; font-weight:700; color:#eef1f5; flex:0 0 auto; padding:3px 8px 3px 3px; border-radius:999px;
-    background:linear-gradient(90deg, rgba(245,146,11,.5) 0 var(--p,0%), rgba(255,255,255,.07) var(--p,0%) 100%); transition:background .18s linear, box-shadow .18s linear; }
-  #rivals .rv .badge { width:22px; height:22px; border-radius:50%; background:#f5920b; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:800; flex:0 0 auto; }
-  #rivals .rv.you .badge { background:#d8342b; box-shadow:0 0 0 2px rgba(255,255,255,.85); }
-  #rivals .rv.fd .badge { box-shadow:0 0 0 2px #ffd23b; }
-  #rivals .rv.you.fd .badge { box-shadow:0 0 0 2px #ffd23b, 0 0 0 4px rgba(255,255,255,.55); }
-  #rivals .rv.you { background:linear-gradient(90deg, rgba(216,52,43,.62) 0 var(--p,0%), rgba(255,255,255,.09) var(--p,0%) 100%); }
-  #rivals .rv.done { background:rgba(107,114,128,.55); }
-  #rivals .rv.done .badge { background:#6b7280; }
-  #rivals .rv.lead { box-shadow:0 0 0 1.5px rgba(255,255,255,.9); }
-  #rivals .rv .rvst { min-width:24px; text-align:left; }
-  #rivals .rv.you .rvst { color:#fff; font-weight:800; }
-  /* 🚒 N UNITS (v21j): the race at a glance — one dot per company on the box, filled by how far it has come (red = you,
-     a gold ring = 1st due, grey = on scene). A tap opens the strip above with every company and its percent; a tap closes it.
-     The button is a 44 px target; the pill drawn inside it is 30. */
-  #unitsChip { display:none; position:relative; min-height:44px; padding:0; margin:0; background:none; border:0; cursor:pointer; pointer-events:auto;
-    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; -webkit-tap-highlight-color:transparent; }
-  #unitsChip.on { display:flex; align-items:center; }
+  /* 🚒 THE UNITS ROW (v21j; REPLACE IN PLACE since the owner's mockup "A · REPLACE IN PLACE", October 14, 2026). One row under
+     the dispatch line, 44 px tall whichever way it shows, so the minimap below it and the road never move when it switches.
+     COMPACT: "4 UNITS" and a dot per company, filled by how far it has come (red = you, a gold ring = 1st due, grey = on
+     scene). A tap swaps it, in the same row, for EXPANDED: the strip, every company with its percent or ✓, revealed sideways
+     from the left where the chip was, with a fold tab at the right end. A tap on the strip folds it back to the chip (the
+     whole strip is the 44 px target; the tab says what a tap does). No dropdown and nothing drawn over the road. */
+  #unitsRow { display:none; position:relative; z-index:14; height:44px; align-items:center; }
+  #unitsRow.on { display:flex; }
+  #unitsChip { display:flex; align-items:center; position:relative; height:44px; padding:0; margin:0; background:none; border:0; cursor:pointer; pointer-events:auto;
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; -webkit-tap-highlight-color:transparent; transform-origin:left center; animation:ucBack .15s ease-out; }
+  #unitsRow.open #unitsChip { display:none; }
   #unitsChip .ucIn { display:flex; align-items:center; gap:6px; height:30px; padding:0 9px 0 11px; border-radius:999px; box-sizing:border-box;
     background:rgba(15,19,27,.93); border:1px solid rgba(255,255,255,.2); box-shadow:0 3px 12px rgba(0,0,0,.5); color:#eef1f5; }
   #unitsChip .ucN { font-size:13px; font-weight:900; color:#fff; }
@@ -338,8 +325,32 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #unitsChip .ucDots i.you { --c:#ff4a3d; }
   #unitsChip .ucDots i.fd { box-shadow:0 0 0 1.5px #ffd23b; }
   #unitsChip .ucDots i.done { --c:#8b93a1; }
-  #unitsChip .ucChev { font-size:15px; font-weight:900; color:#9fb0c6; line-height:1; transition:transform .15s; }
-  #unitsChip[aria-expanded="true"] .ucChev { transform:rotate(90deg); }
+  #unitsChip .ucChev { font-size:15px; font-weight:900; color:#9fb0c6; line-height:1; }
+  /* 🚑 the strip: the companies on the box (#rivals keeps .show while there is a race to show; the row's .open decides which
+     of the two you see). Each pill is filled by its percent; the leader still en route gets a white ring. */
+  #rivals { display:none; flex:1 1 auto; min-width:0; height:44px; box-sizing:border-box; align-items:center; gap:4px; padding:4px 3px 4px 5px;
+    background:rgba(15,19,27,.94); border:1px solid rgba(255,255,255,.16); border-radius:13px; box-shadow:0 3px 13px rgba(0,0,0,.5);
+    pointer-events:auto; cursor:pointer; overflow:hidden; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; -webkit-tap-highlight-color:transparent; }
+  #unitsRow.open #rivals.show { display:flex; animation:rvOpen .18s ease-out; }
+  #rivals .rvList { flex:1 1 auto; min-width:0; height:100%; display:flex; align-items:center; gap:4px; }
+  #rivals .rv { flex:1 1 0; min-width:0; height:34px; box-sizing:border-box; display:flex; align-items:center; gap:4px; padding:0 6px 0 3px; border-radius:999px;
+    font-size:13px; font-weight:800; color:#eef1f5; white-space:nowrap; overflow:hidden;
+    background:linear-gradient(90deg, rgba(245,146,11,.5) 0 var(--p,0%), rgba(255,255,255,.08) var(--p,0%) 100%); transition:background .18s linear, box-shadow .18s linear; }
+  #rivals .rv .badge { width:26px; height:26px; border-radius:50%; background:#f5920b; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:900; flex:0 0 auto; }
+  #rivals .rv.you .badge { background:#d8342b; box-shadow:0 0 0 2px rgba(255,255,255,.85); }
+  #rivals .rv.fd .badge { box-shadow:0 0 0 2px #ffd23b; }
+  #rivals .rv.you.fd .badge { box-shadow:0 0 0 2px #ffd23b, 0 0 0 4px rgba(255,255,255,.55); }
+  #rivals .rv.you { background:linear-gradient(90deg, rgba(216,52,43,.62) 0 var(--p,0%), rgba(255,255,255,.09) var(--p,0%) 100%); }
+  #rivals .rv.done { background:rgba(107,114,128,.55); }
+  #rivals .rv.done .badge { background:#6b7280; }
+  #rivals .rv.lead { box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.9); }
+  #rivals .rv .rvst { min-width:0; overflow:hidden; }
+  #rivals .rv.you .rvst { color:#fff; font-weight:900; }
+  #rivals .rvFold { flex:0 0 auto; width:30px; height:34px; display:flex; align-items:center; justify-content:center; color:#c3cede; border-left:1px solid rgba(255,255,255,.14); }
+  #rivals .rvFold svg { width:18px; height:18px; display:block; }
+  @keyframes rvOpen { from { clip-path:inset(0 100% 0 0 round 13px); opacity:.55; } to { clip-path:inset(0 0 0 0 round 13px); opacity:1; } }
+  @keyframes ucBack { from { opacity:0; transform:scaleX(.8); } to { opacity:1; transform:none; } }
+  @media (prefers-reduced-motion:reduce) { #unitsChip, #unitsRow.open #rivals.show { animation:none; } }
   /* sits in the gap between the top button row and the dispatch banner — never overlaps either */
   #turnBanner { position:absolute; top:calc(var(--safeTop) + 156px); left:50%; transform:translateX(-50%); z-index:13; display:none; align-items:center; gap:7px;
     max-width:calc(100vw - 24px); background:#2b6df6; color:#fff; padding:6px 14px 6px 11px; border-radius:13px; box-shadow:0 2px 9px rgba(0,0,0,.3); white-space:nowrap; }
@@ -909,10 +920,9 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 </div>
 <div id="hudCol">
   <div id="radio" role="button" aria-label="Dispatch radio: tap to read it all"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="2.4" y="8.2" width="19.2" height="11.4" rx="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="16.6" cy="13.9" r="2.9" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="5.4" y="11.4" width="6" height="2" rx="1" fill="currentColor"/><rect x="5.4" y="15.2" width="6" height="2" rx="1" fill="currentColor"/><path d="M7 8 17 3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span id="radioTxt"></span><span class="cur">▊</span><span class="chev">›</span></div>
-  <button id="unitsChip" type="button" aria-expanded="false" aria-controls="rivals"><span class="ucIn"><b class="ucN">0</b><span class="ucL">UNITS</span><span class="ucDots"></span><span class="ucChev">›</span></span></button>
+  <div id="unitsRow"><button id="unitsChip" type="button" aria-expanded="false" aria-controls="rivals"><span class="ucIn"><b class="ucN">0</b><span class="ucL">UNITS</span><span class="ucDots"></span><span class="ucChev">›</span></span></button><div id="rivals" role="button" aria-label="Unit details: tap to fold back to the units chip"><div class="rvList"></div><span class="rvFold" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></div></div>
   <div id="areaChip"><span class="dueDot"></span><span class="dueTxt"></span><span class="dueWho"></span></div>
   <div id="qualChip">🎖 CHIEF QUAL · <b id="qualChipTxt"></b></div>
-  <div id="rivals"></div>
   <div id="drillHUD"></div>
   <div id="boxdHUD"></div>
 </div>
@@ -1219,7 +1229,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21j";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21k";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -6985,8 +6995,8 @@ const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, pl
 const UNITS={ open:false };                                                                    // 🚒 v21j: the unit details under N UNITS, open or shut (remembered on this phone)
 try{ UNITS.open=localStorage.getItem('pfd_units')==='open'; }catch(e){}
 function unitsSet(open){ UNITS.open=!!open; try{ localStorage.setItem('pfd_units',UNITS.open?'open':'shut'); }catch(e){}
-  const c=document.getElementById('unitsChip'), r=document.getElementById('rivals');
-  if(c) c.setAttribute('aria-expanded',UNITS.open?'true':'false'); if(r) r.classList.toggle('open',UNITS.open); }
+  const c=document.getElementById('unitsChip'), w=document.getElementById('unitsRow');
+  if(c) c.setAttribute('aria-expanded',UNITS.open?'true':'false'); if(w) w.classList.toggle('open',UNITS.open); }   // the strip REPLACES the chip in its row
 /* 🚑 The ONLY writer of RIVALS.on. The flag and the button's lit state are one fact, so they move
    together — three call sites outside the toggle change it (rerun, missed due, shift start) and any
    one of them left to write the flag alone desyncs the button: it then reads the opposite of the
@@ -7047,6 +7057,7 @@ document.getElementById('radio').addEventListener('click',e=>{ e.preventDefault(
   if(!RADIO.open){ rdSet(true,true); return; }                                                             // (it folds again on its own — v19t)
   const f=!RADIO.full; rdSet(true,f); RADIO.pin=f; });                                                      // opened by a tap: it stays open until tapped again or the next message
 document.getElementById('unitsChip').addEventListener('click',e=>{ e.preventDefault(); unitsSet(!UNITS.open); });
+document.getElementById('rivals').addEventListener('click',e=>{ e.preventDefault(); unitsSet(false); });         // the strip folds back to the chip (its tab says so)
 freeSet(false);
 /* 🎯 DIFFICULTY — how fast the other companies run. The player's own truck does 15 u/s by default and can be
    pushed to 42 with ＋, so CHIEF genuinely out-runs a lazy driver while ROOKIE gives you room to learn. */
@@ -8719,10 +8730,11 @@ function missedDue(){ if(state.over||FREE.on) return;                           
 function onPlayerArrive(){ if(!RIVALS.on||RIVALS.playerPlaced||!RIVALS.responders.length) return; RIVALS.playerPlaced=true;
   const place=RIVALS.order.length+1; RIVALS.playerPlace=place;                                        // rivals already on scene + you
   if(place===1) popup('🥇 FIRST IN!','green'); else popup(ordinal(place)+' DUE · Engine '+engNum(RIVALS.order[0])+' beat you','red'); }
-function renderRivalHUD(){ const el=document.getElementById('rivals'), uc=document.getElementById('unitsChip'); if(!el) return;
+function renderRivalHUD(){ const el=document.getElementById('rivals'), uc=document.getElementById('unitsChip'), row=document.getElementById('unitsRow'); if(!el) return;
+  const list=el.querySelector('.rvList')||el;
   const show=RIVALS.on && state.target && RIVALS.responders.length;
-  el.classList.toggle('show',!!show); el.classList.toggle('open',UNITS.open); if(uc) uc.classList.toggle('on',!!show);   // v21j: N UNITS shows the race; its tap opens this strip
-  if(!show){ el.innerHTML=''; return; }
+  el.classList.toggle('show',!!show); if(row){ row.classList.toggle('on',!!show); row.classList.toggle('open',UNITS.open); }   // the units row: the chip, or the strip in its place
+  if(!show){ list.textContent=''; return; }
   const F=RIVALS.fire;                                                                            // % of the way to the fire (straight-line) — same measure for you + rivals, a fair race gauge
   const pct=(x,z,d0)=> (F&&d0)?Math.max(0,Math.min(99,Math.round((1-Math.hypot(x-F.x,z-F.z)/d0)*100))):0;
   const rows=RIVALS.responders.map(r=>{ let cls='rv', p=0, arrived=false; if(r.firstDue) cls+=' fd';   // gather each responder's live progress so we can fill the chip + flag the leader
@@ -8732,10 +8744,13 @@ function renderRivalHUD(){ const el=document.getElementById('rivals'), uc=docume
     if(arrived&&!r.isPlayer) cls+=' done';
     return {num:r.num, cls, p, arrived, stat: arrived?'✓':(p+'%')}; });
   let lead=-1, leadP=-1; rows.forEach((row,i)=>{ if(!row.arrived && row.p>leadP){ leadP=row.p; lead=i; } });   // leader = closest of those still en route
-  let h='';   // horizontal strip: a chip per responding engine (red = you, gold ring = 1st due, fill = % to the fire); the box number is in the bar since v21j
-  rows.forEach((row,i)=>{ const cls=row.cls+(i===lead?' lead':'');
-    h+='<div class="'+cls+'" style="--p:'+row.p+'%"><span class="badge">'+row.num+'</span><span class="rvst">'+row.stat+'</span></div>'; });
-  el.innerHTML=h;
+  // the strip: a pill per responding engine (red = you, gold ring = 1st due, fill = % to the fire). Updated IN PLACE, never rebuilt —
+  // the whole strip is a tap target now, and a pill rebuilt under a finger loses the tap.
+  while(list.children.length<rows.length){ const d=document.createElement('div'); d.innerHTML='<span class="badge"></span><span class="rvst"></span>'; list.appendChild(d); }
+  while(list.children.length>rows.length) list.lastChild.remove();
+  rows.forEach((row,i)=>{ const d=list.children[i], c=row.cls+(i===lead?' lead':''), p=row.p+'%', b=d.firstChild, t=d.lastChild;
+    if(d.className!==c) d.className=c; if(d.style.getPropertyValue('--p')!==p) d.style.setProperty('--p',p);
+    if(b.textContent!==String(row.num)) b.textContent=row.num; if(t.textContent!==row.stat) t.textContent=row.stat; });
   if(uc){ const n=uc.querySelector('.ucN'), dots=uc.querySelector('.ucDots');                    // 🚒 N UNITS: one dot per company, filled to its percent. Updated IN PLACE —
     if(n.textContent!==String(rows.length)) n.textContent=rows.length;                             // never rebuilt — so a finger on the button never loses its target mid-tap
     while(dots.children.length<rows.length) dots.appendChild(document.createElement('i'));
@@ -9229,13 +9244,13 @@ document.getElementById('btnCoachNext').addEventListener('click',()=>coachDone(f
 document.getElementById('btnCoachKeep').addEventListener('click',()=>coachDone(true));
 const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDrill,updateBoxDrill,updateCoach];             // road-follow + arrive-to-douse + rival engines
 /* 📐 SEATING UNDER THE BAR (v21j). The minimap takes the top-right corner below anything under the bar that reaches into it
-   (the dispatch line, an open unit strip, a drill banner) and rides up beside things that do not (N UNITS, the area
-   chip). The full-width warnings (turn banner, WRONG WAY, NARROW STREET) go below ALL of it — the #hudCol flow AND the
+   (the dispatch line, the units row — whichever way it shows — a drill banner) and rides up beside things that do not (the
+   area chip, the qualification chip). The full-width warnings (turn banner, WRONG WAY, NARROW STREET) go below ALL of it — the #hudCol flow AND the
    minimap — whether or not the minimap is on; WRONG WAY was never seated before and sat on the map. */
 function hudSeat(mm,show){ const tb=document.getElementById('turnBanner'), ww=document.getElementById('wrongWay'), ns=document.getElementById('narrowSt');
   let floor=0; const col=document.getElementById('hudCol'); if(col){ const r=col.getBoundingClientRect(); if(r.height>1) floor=r.bottom+6; }
   if(show){ mm.style.top=''; const er=mm.getBoundingClientRect(); let top=null;
-    for(const id of ['radio','unitsChip','areaChip','qualChip','rivals','drillHUD','boxdHUD']){ const o=document.getElementById(id); if(!o) continue;
+    for(const id of ['radio','unitsRow','areaChip','qualChip','drillHUD','boxdHUD']){ const o=document.getElementById(id); if(!o) continue;   // the units row is full width: the map sits below it, chip or strip, and never moves when it switches
       const cs=getComputedStyle(o); if(cs.display==='none'||cs.visibility==='hidden') continue; const r=o.getBoundingClientRect();
       if(r.width<2||r.height<2||r.top>innerHeight*0.45||r.right<er.left-4) continue; top=Math.max(top||0,r.bottom+6); }
     if(top&&top>er.top) mm.style.top=top+'px';
