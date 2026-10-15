@@ -1381,7 +1381,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21p";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21q";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9367,7 +9367,8 @@ const ADDR_DIR=/^(N|S|E|W) /;
 const addrNoDir=k=>{ const w=k.split(' '); return (w.length>2&&/^[NSEW]$/.test(w[0]))?w.slice(1).join(' '):k; };   // N 23RD ST -> 23RD ST; E ST stays (the street named E)
 const addrNoDes=k=>k.split(' ').length>1?k.replace(ADDR_DES,''):k;
 function addrIndex(){ const S=BOXLOOK; if(S.addrIx) return S.addrIx; const ix=new Map(), add=(k,v)=>{ if(!ix.has(k)) ix.set(k,[]); const l=ix.get(k); if(!l.includes(v)) l.push(v); };
-  for(const k of Object.keys(PFDADDR.s)){ const nd=addrNoDir(k); add(k,k); add(nd,k); add(addrNoDes(k),k); add(addrNoDes(nd),k); }
+  for(const k of Object.keys(PFDADDR.s)){ const nd=addrNoDir(k), c=addrCanon(k); add(k,k); add(nd,k); add(addrNoDes(k),k); add(addrNoDes(nd),k);
+    if(c!==k){ add(c,k); add(addrNoDes(c),k); } }   // what you type is shortened (WEST END DR -> W END DR); the City's name must be too, or East Falls Ln and West End Dr (2 of 3,437) are never found
   return S.addrIx=ix; }
 function addrRuns(st){ const v=PFDADDR.s[st]; if(v==null) return null; const A=PFDADDR.a, d=(s,i,w)=>{ let n=0; for(let k=0;k<w;k++) n=n*64+A.indexOf(s[i+k]); return n; };
   return v.split('|').map(side=>{ const out=[]; for(let i=0;i+20<=side.length;i+=20) out.push({a:d(side,i,3),z:d(side,i+3,3),box:PFDADDR.boxes[d(side,i+6,2)],
@@ -9627,7 +9628,7 @@ function narrowCorner(edge,street){ const L=Math.hypot(edge.b.x-edge.a.x,edge.b.
     if(out.length){ const other=out.find(e=>e.name&&canonStreet(e.name)!==cn), nm=other?other.name:null; return {node:n,d:p,at:nm}; }
     for(const e of n.adj){ if(!e.nw||e.hw) continue; const nd=p+e.w; if(nd<(dist.has(e.to)?dist.get(e.to):Infinity)){ dist.set(e.to,nd); open.push(nd,e.to); } } }
   return null; }
-const CALLBAG={key:'',bag:[],fb:null};                                     // 🎲 the shuffle bag (see below)
+const CALLBAG={key:'',bag:[],fb:null,recent:[]};                           // 🎲 the shuffle bag (see below)
 function makeAddressDispatch(){ if(!ADDR||!ADDR.a||!ADDR.a.length)return null;
   const polys=[]; for(const st of stations){ const p=duePolygon(st.id); if(p) polys.push(p); }           // union of the traced first-due areas (the mapped play area)
   const inMapped=(x,z)=>{ if(!polys.length) return true; for(const p of polys) if(ptInRing(x,z,p)) return true; return false; };
@@ -9637,20 +9638,29 @@ function makeAddressDispatch(){ if(!ADDR||!ADDR.a||!ADDR.a.length)return null;
      gap came up most. Engine 35 at 1st due from quarters has 50 eligible addresses, and over 400 calls the top 10 took 46% (20%
      is fair) — 3401 West Westmoreland Street 27 times where 8 is its share. Now every eligible address is collected once and
      dealt from a SHUFFLE BAG: all of them, in a random order, before any comes round again, never the one you just had. The
-     bag is kept while you answer from the same spot at the same due (a 150 m cell), so the scan (8-38 ms here) runs once. */
+     bag is kept while you answer from the same spot at the same due (a 150 m cell), so the scan (8-38 ms here) runs once.
+     THE BIGGER POOL (v21q, owner: "yes bigger pool"): ADDR grew from 6,500 to 24,918 addresses, and a full scan of every eligible
+     one would cost about four times as much — a hitch on a phone as the call drops. So a bag is now AT MOST 60, drawn at random
+     (the ring of addresses 300-3,000 m away is shuffled first, then checked one by one until 60 qualify), and the last 150 calls
+     are remembered (CALLBAG.recent) and skipped; when every eligible address is recent, the memory is cleared and a new round
+     starts. So a pool of up to 150 still goes round in full before anything repeats (as in v21p), and a bigger one never repeats
+     within 150 calls. The checks stop at 60, so a bag costs about what the old full scan did (6-11 ms here). */
   const key=MAP.dueLevel+':'+Math.round(truck.x/150)+':'+Math.round(truck.z/150);
-  if(CALLBAG.key!==key||!CALLBAG.bag.length){ const cand=[]; let fallback=null;
-    for(const a of ADDR.a){ if(!a) continue;
-      const d=Math.hypot(a[2]-truck.x,a[3]-truck.z); if(d<300||d>3000) continue;                                    // keep runs nearby (was up to 7500m)
-      if(!addressAtDue(a[2],a[3],MAP.dueLevel)) continue;                                                             // 🚒 must put YOU in the selected due slot — never a different one
-      const v=addressDispatchable(a); if(!v) continue;
-      const c={a,edge:v.edge,cross:v.cross};
-      if(inMapped(a[2],a[3])) cand.push(c); else if(!fallback) fallback=c; }                                         // ✅ inside a real first-due polygon → box reflects the right engine; else one spare so a run always exists
-    for(let i=cand.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0, t=cand[i]; cand[i]=cand[j]; cand[j]=t; }   // Fisher-Yates
-    if(cand.length>1&&cand[cand.length-1].a[0]===lastAddress){ const t=cand[0]; cand[0]=cand[cand.length-1]; cand[cand.length-1]=t; }   // the bag is dealt from its end: never the call you just had
+  if(CALLBAG.key!==key||!CALLBAG.bag.length){ let cand=[], fallback=null;
+    const ring=[]; for(const a of ADDR.a){ if(!a) continue; const d=Math.hypot(a[2]-truck.x,a[3]-truck.z); if(d>=300&&d<=3000) ring.push(a); }   // keep runs nearby (was up to 7500m)
+    for(let i=ring.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0, t=ring[i]; ring[i]=ring[j]; ring[j]=t; }   // Fisher-Yates: the bag is a random draw
+    let recent=new Set(CALLBAG.recent);
+    const fill=()=>{ for(const a of ring){ if(cand.length>=60) break; if(recent.has(a[0])) continue;
+        if(!addressAtDue(a[2],a[3],MAP.dueLevel)) continue;                                                           // 🚒 must put YOU in the selected due slot — never a different one
+        const v=addressDispatchable(a); if(!v) continue;
+        const c={a,edge:v.edge,cross:v.cross};
+        if(inMapped(a[2],a[3])) cand.push(c); else if(!fallback) fallback=c; } };                                   // ✅ inside a real first-due polygon → box reflects the right engine; else one spare so a run always exists
+    fill(); if(!cand.length){ CALLBAG.recent=[]; recent=new Set(); fill(); }                                         // every eligible one is recent: a new round
+    if(cand.length>1&&cand[cand.length-1].a[0]===lastAddress){ const t=cand[0]; cand[0]=cand[cand.length-1]; cand[cand.length-1]=t; }   // dealt from the end: never the call you just had
     CALLBAG.key=key; CALLBAG.bag=cand; CALLBAG.fb=fallback; }
   const pick=CALLBAG.bag.pop()||CALLBAG.fb;
-  if(!pick) return null;                                                     // caller distinguishes "no calls at this due" from a general failure via dueCallsAvailable()
+  if(!pick) return null;
+  CALLBAG.recent.push(pick.a[0]); if(CALLBAG.recent.length>150) CALLBAG.recent.splice(0,CALLBAG.recent.length-150);                                                     // caller distinguishes "no calls at this due" from a general failure via dueCallsAvailable()
   return buildAddressTarget(pick.a,pick.edge,pick.cross); }
 function dueCallsAvailable(level){ if(!level) return true;                   // is even ONE valid call available at this due right now?
   for(const a of ADDR.a){ if(!a) continue;
