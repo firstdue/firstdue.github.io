@@ -903,9 +903,9 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #btnHydNearMe, #btnBoxLookup { width:126px; padding-left:6px; padding-right:6px; }   /* one width for the pair, whatever the phone's font */
   #hydSheet, #boxSheet { position:absolute; inset:0; z-index:9; display:none; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.55); }
   #hydSheet.show, #boxSheet.show { display:flex; }
-  #hydSheet .card, #boxSheet .card { width:min(480px,96vw); max-height:92vh; overflow:auto; text-align:left; background:#141a24; border:1px solid #2a3444; border-radius:16px 16px 0 0;
+  #hydSheet .card { width:min(480px,96vw); max-height:92vh; overflow:auto; text-align:left; background:#141a24; border:1px solid #2a3444; border-radius:16px 16px 0 0;
     padding:14px 14px calc(14px + env(safe-area-inset-bottom)); color:#e9eef7; }
-  #hydSheet h2, #boxSheet h2 { margin:0 0 4px; font-size:16px; font-weight:900; color:#9cc4ff; letter-spacing:.5px; }
+  #hydSheet h2 { margin:0 0 4px; font-size:16px; font-weight:900; color:#9cc4ff; letter-spacing:.5px; }
   #hydSheetStatus { font-size:12px; font-weight:700; color:#9fb3c8; min-height:16px; }
   #hydSheetMap { position:absolute; inset:0; width:100%; height:100%; border-radius:10px; background:#eceae4; display:block; touch-action:none; }   /* the map takes the pinch and the drag */
   /* FULL SCREEN (owner, October 14, 2026: "can we make this the size of the screen to be able to show more"): the card is the
@@ -926,51 +926,178 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #hydSel { margin-top:6px; font-size:12.5px; font-weight:800; color:#ffd27a; min-height:18px; }   /* a line kept for it, so a tap does not shrink the map */
   #hydSheetList { margin-top:8px; font-size:13px; font-weight:700; line-height:1.7; color:#dbe8ff; }
   #hydSheetList .n { display:inline-block; width:20px; height:20px; border-radius:10px; background:#2f7bff; color:#fff; text-align:center; font-size:11px; line-height:20px; margin-right:8px; }
-  #hydSheet .fine, #boxSheet .fine { margin-top:8px; font-size:10.5px; color:#8a97a8; }
-  #hydSheet .row, #boxSheet .row { display:flex; gap:8px; margin-top:10px; }
-  #hydSheet .row button, #boxSheet .row button { flex:1; min-height:44px; border:none; border-radius:10px; font-weight:900; font-size:13px; background:#2b3d5c; color:#fff; }
-  #boxMode { display:flex; gap:6px; margin:6px 0 4px; }
-  #boxMode button { flex:1; min-height:40px; border-radius:9px; border:1px solid #33435c; background:#1b2536; color:#9fb3c8; font-weight:900; font-size:12px; letter-spacing:.8px; font-family:inherit; }
-  #boxMode button.on { background:#2f7bff; color:#fff; border-color:#2f7bff; }
-  #boxSug { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; } #boxSug:empty { display:none; }
-  #boxSug button { min-height:40px; border-radius:9px; border:1px solid #33435c; background:#141f30; color:#dbe8ff; font-weight:800; font-size:12.5px; padding:0 10px; font-family:inherit; }
-  #boxAddr { margin-top:6px; font-size:14px; font-weight:900; color:#fff; } #boxAddr:empty { display:none; } #boxAddr .q { display:block; font-size:11.5px; font-weight:700; color:#ffd27a; margin-top:2px; }
-  #boxForm { display:flex; gap:8px; margin:6px 0 2px; }
-  #boxInput { flex:1; min-width:0; min-height:44px; border-radius:10px; border:1px solid #3a4a63; background:#0d1320; color:#fff; font-size:18px; font-weight:900;
-    letter-spacing:3px; padding:0 12px; font-family:inherit; }
-  #boxInput::placeholder { color:#5d6f88; font-size:13px; font-weight:700; letter-spacing:.3px; }
-  #boxGo { min-height:44px; padding:0 16px; border:none; border-radius:10px; background:#f5b84b; color:#1a1206; font-weight:900; font-size:13px; letter-spacing:.5px; }
-  #boxStatus { font-size:12px; font-weight:700; color:#9fb3c8; min-height:16px; margin-top:4px; }
-  #boxHead { margin-top:2px; } #boxHead .bn, #boxHead .sub { display:block; } #boxHead .sub { margin-top:1px; }
-  #boxHead .bn { font:900 26px "Arial Black",sans-serif; color:#ffd27a; letter-spacing:1px; } #boxHead .sub { font-size:11.5px; font-weight:800; color:#9fb3c8; letter-spacing:.6px; }
-  #boxMap { width:100%; height:260px; border-radius:10px; background:#eceae4; margin-top:8px; display:block; touch-action:none; }
-  #boxSel { margin-top:6px; font-size:12.5px; font-weight:800; color:#ffd27a; }
-  #boxUnits .grp { margin-top:10px; } #boxSheet .ty { font-size:10.5px; font-weight:900; letter-spacing:1.4px; color:#8fa6c4; margin-bottom:2px; }
-  #boxUnits .u.me { background:rgba(255,210,122,.10); box-shadow:inset 3px 0 0 #ffd27a; padding-left:6px; }   /* your company, wherever it shows */
-  #boxFit { margin-top:12px; padding:10px; border:1px solid #2a3444; border-radius:12px; background:#0f1520; }
-  #boxFit .fitRow { display:flex; gap:6px; align-items:center; margin-top:4px; }
-  #boxFit .kinds { display:flex; gap:4px; flex:1; min-width:0; }
-  #boxFit .kinds button { flex:1; min-width:0; min-height:44px; border-radius:9px; border:1px solid #33435c; background:#1b2536; color:#9fb3c8;
-    font-weight:900; font-size:10.5px; letter-spacing:.2px; padding:0 2px; font-family:inherit; }
-  #boxFit .kinds button.on { background:#2f7bff; color:#fff; border-color:#2f7bff; }
-  #boxMine { width:60px; flex:none; min-height:44px; border-radius:9px; border:1px solid #3a4a63; background:#0d1320; color:#fff; font-size:18px; font-weight:900;
-    text-align:center; font-family:inherit; padding:0; }
-  #boxMine::placeholder { color:#5d6f88; font-size:13px; }
-  #boxFitOut { margin-top:8px; font-size:12.5px; font-weight:700; color:#9fb3c8; min-height:16px; }
-  #boxFitOut .pos { display:block; font:900 20px "Arial Black",sans-serif; color:#ffd27a; letter-spacing:.5px; }
-  #boxMore { margin-top:12px; border:1px solid #2a3444; border-radius:12px; background:#0f1520; }
-  #boxMore summary { min-height:44px; display:flex; align-items:center; padding:0 12px; font-size:12px; font-weight:900; letter-spacing:1px; color:#9cc4ff;
-    cursor:pointer; list-style:none; }
-  #boxMore summary::-webkit-details-marker { display:none; } #boxMore summary::after { content:'\25BE'; margin-left:auto; font-size:16px; } #boxMore[open] summary::after { content:'\25B4'; }
-  #boxMoreList { padding:0 12px 10px; } #boxMoreList .chips { display:flex; flex-wrap:wrap; gap:5px; margin:4px 0 10px; }
-  #boxMoreList .chip { font-size:11.5px; font-weight:800; color:#dbe8ff; background:#1b2536; border:1px solid #2a3444; border-radius:7px; padding:3px 6px; }
-  #boxMoreList .chip b { color:#8fa6c4; font-size:10px; margin-right:4px; }
-  #boxMoreList .chip.me { border-color:#ffd27a; color:#ffd27a; background:rgba(255,210,122,.12); }
-  #boxUnits .u { display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid #222c3b; font-size:13px; }
-  #boxUnits .due { flex:none; width:38px; text-align:center; border-radius:6px; padding:3px 0; font-size:10.5px; font-weight:900; color:#0b0f17; }
-  #boxUnits .nm { flex:none; min-width:92px; font-weight:900; color:#fff; letter-spacing:.3px; }
-  #boxUnits .fr { flex:1; min-width:0; color:#9fb3c8; font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  #boxUnits .mi { flex:none; color:#c9d6e8; font-size:12px; font-weight:800; }
+  #hydSheet .fine { margin-top:8px; font-size:10.5px; color:#8a97a8; }
+  #hydSheet .row { display:flex; gap:8px; margin-top:10px; }
+  #hydSheet .row button { flex:1; min-height:44px; border:none; border-radius:10px; font-weight:900; font-size:13px; background:#2b3d5c; color:#fff; }
+  /* 🔔 BOX & ADDRESS LOOKUP — the navy-and-blue panel (owner, October 15, 2026, with three mock-ups: "Redesign the existing Box &
+     Address Lookup to match the attached mock-ups and the navy-and-blue style of the updated Settings panel"). Nearly full screen:
+     a header that never scrolls (title, × Close) over ONE scrolling body — the search, the result, YOUR ASSIGNMENT, the tabs
+     (Assignment | Map | Full order) and About this data. Scrolled into the results the tabs stick to the top, and one compact row
+     ("Box 3515 · Change search" and your place) is laid OVER the content above them (.blMini is absolutely placed), so nothing in
+     the flow changes height as they stick. Colours, radii and type are the Settings panel's (#settingsPanel, .sxCard, .sxTabs). */
+  #boxSheet .card { position:relative; width:min(480px,100vw); height:calc(100% - max(6px,env(safe-area-inset-top))); max-height:none; padding:0; display:flex; flex-direction:column; overflow:hidden;
+    background:linear-gradient(180deg,#131c2e,#0e1626); border:1px solid rgba(120,150,210,.24); border-bottom:0; border-radius:20px 20px 0 0;
+    box-shadow:0 -10px 40px rgba(0,0,0,.5); color:#e9eef7; text-align:left; font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
+  #boxSheet .card:focus { outline:none; }
+  #boxSheet button, #boxSheet input { font-family:inherit; }
+  #boxSheet svg { flex:none; }
+  .blHead { flex:none; display:flex; align-items:center; gap:10px; padding:8px 10px 8px 16px; border-bottom:1px solid rgba(255,255,255,.08); }
+  .blHead > svg { width:26px; height:26px; color:#cfe0ff; }
+  #boxSheetTitle { flex:1 1 auto; min-width:0; margin:0; font-size:clamp(16px,5vw,20px); font-weight:700; line-height:1.15; color:#fff; letter-spacing:0; }   /* wraps to two lines on a narrow phone rather than cut */
+  #boxSheetClose { flex:none; display:flex; align-items:center; gap:6px; min-height:44px; min-width:44px; padding:0 14px 0 10px; border-radius:14px;
+    border:1px solid rgba(255,255,255,.16); background:#1d2a42; color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
+  #boxSheetClose span { font-size:26px; font-weight:300; line-height:1; margin-top:-3px; }
+  .blBody { position:relative; flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+    padding:0 12px calc(18px + env(safe-area-inset-bottom)); }   /* no top padding: a sticky child would stop that far down */
+  .blCard { background:#172236; border:1px solid rgba(255,255,255,.08); border-radius:16px; }
+  .blSearch { margin-top:12px; padding:10px; }
+  .blSeg { display:flex; border:1px solid #33425e; border-radius:12px; overflow:hidden; }
+  .blSeg button { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:0 6px; border:0;
+    border-left:1px solid #33425e; background:#111a2b; color:#c8d3e6; font-size:15px; font-weight:700; cursor:pointer; }
+  .blSeg button:first-child { border-left:0; }
+  .blSeg button svg { width:19px; height:19px; }
+  .blSeg button.on { background:#2f7cf6; color:#fff; }
+  .blLbl { display:block; margin:10px 2px 5px; font-size:11.5px; font-weight:800; letter-spacing:.14em; color:#8d9cb5; text-transform:uppercase; }
+  #boxForm { margin:0; }
+  .blInRow { display:flex; gap:8px; }
+  .blIn { position:relative; flex:1 1 auto; min-width:0; }
+  #boxInput { display:block; width:100%; box-sizing:border-box; min-height:48px; margin:0; border-radius:12px; border:1px solid #3a4a63; background:#0d1320; color:#fff;
+    font-size:21px; font-weight:800; letter-spacing:1.5px; padding:0 44px 0 14px; }
+  #boxInput.addr { font-size:17px; font-weight:600; letter-spacing:0; }
+  #boxInput:focus { outline:none; border-color:#4d93ff; box-shadow:0 0 0 3px rgba(47,124,246,.3); }
+  #boxInput::placeholder { color:#5d6f88; font-size:15px; font-weight:600; letter-spacing:0; }
+  #boxClear { position:absolute; right:2px; top:50%; transform:translateY(-50%); width:44px; height:44px; padding:0; border:0; background:none; color:#93a3bd; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; }
+  #boxClear span { display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:#3a4a63; color:#0d1320; font-size:16px; font-weight:900; line-height:1; }
+  #boxClear[hidden] { display:none; }
+  #boxGo { flex:none; display:flex; align-items:center; gap:7px; min-height:48px; padding:0 16px; border:0; border-radius:12px;
+    background:linear-gradient(180deg,#3b86ff,#2563e0); color:#fff; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px rgba(47,124,246,.3); }
+  #boxGo svg { width:20px; height:20px; }
+  #boxStatus { margin:9px 2px 0; font-size:14px; font-weight:600; line-height:1.35; color:#b9c8e2; } #boxStatus:empty { display:none; }
+  #boxStatus[data-k="err"] { color:#ffc2b8; } #boxStatus[data-k="err"]::before { content:"⚠ "; }
+  #boxStatus[data-k="load"]::before { content:""; display:inline-block; width:12px; height:12px; margin-right:8px; vertical-align:-1px; border-radius:50%;
+    border:2px solid #4d93ff; border-right-color:transparent; animation:blSpin .8s linear infinite; }
+  @keyframes blSpin { to { transform:rotate(360deg); } }
+  #boxSug { display:flex; flex-direction:column; gap:6px; margin-top:8px; } #boxSug:empty { display:none; }
+  #boxSug button { min-height:44px; border-radius:12px; border:1px solid #2e4366; background:#121c2f; color:#e9eef7; font-size:15px; font-weight:600; padding:6px 12px; text-align:left; cursor:pointer; }
+  #boxResult[hidden] { display:none; }
+  .blSum { margin-top:12px; padding:12px 16px; }
+  #boxAddr { margin-bottom:6px; font-size:15.5px; font-weight:700; color:#fff; line-height:1.3; } #boxAddr:empty { display:none; }
+  #boxAddr .q { display:block; margin-top:3px; font-size:13.5px; font-weight:600; color:#ffd27a; }
+  #boxHead .bn, #boxHead .sub { display:block; }
+  #boxHead .bn { font-size:30px; font-weight:900; color:#fff; letter-spacing:.5px; line-height:1.1; }
+  #boxHead .sub { margin-top:3px; font-size:15px; font-weight:600; color:#a9b8d0; }
+  #boxFit { margin-top:12px; padding:12px 14px; border:1.5px solid #b8902a; border-radius:16px; background:linear-gradient(180deg,rgba(255,200,60,.08),rgba(255,200,60,.03)); }
+  #boxSheet .ty { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:800; letter-spacing:.16em; color:#8d9cb5; text-transform:uppercase; }
+  #boxSheet .ty svg { width:19px; height:19px; }
+  #boxFit > .ty { color:#ffd23b; }
+  .blPick { display:flex; gap:8px; margin-top:9px; }
+  #boxMineBtn { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:9px; min-height:46px; padding:0 12px; border-radius:12px; border:1px solid #3a4a63;
+    background:#0f1626; color:#fff; font-size:17px; font-weight:700; text-align:left; cursor:pointer; }
+  #boxMineBtn svg { width:22px; height:22px; color:#b9c8e2; }
+  #boxMineName { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #boxMineBtn .car { flex:none; color:#4d93ff; font-size:13px; }
+  #boxMineChange { flex:none; min-height:46px; padding:0 16px; border-radius:12px; border:1px solid #33507e; background:#14213a; color:#8fbaff; font-size:15px; font-weight:700; cursor:pointer; }
+  #boxMineEd { margin-top:9px; } #boxMineEd[hidden] { display:none; }
+  #boxFit .kinds { display:flex; border:1px solid #33425e; border-radius:12px; overflow:hidden; }
+  #boxFit .kinds button { flex:1 1 0; min-width:0; min-height:44px; padding:0 2px; border:0; border-left:1px solid #33425e; background:#111a2b; color:#c8d3e6; font-size:14px; font-weight:700; cursor:pointer; }
+  #boxFit .kinds button:first-child { border-left:0; }
+  #boxFit .kinds button.on { background:#2f7cf6; color:#fff; }
+  .blEdRow { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .blEdRow label { flex:none; font-size:14px; font-weight:700; color:#b9c8e2; }
+  #boxMine { width:84px; flex:none; box-sizing:border-box; min-height:46px; margin:0; border-radius:12px; border:1px solid #3a4a63; background:#0d1320; color:#fff; font-size:20px; font-weight:800; text-align:center; padding:0; }
+  #boxMine:focus { outline:none; border-color:#4d93ff; box-shadow:0 0 0 3px rgba(47,124,246,.3); }
+  #boxMine::placeholder { color:#5d6f88; font-size:15px; font-weight:600; }
+  #boxMineDone { margin-left:auto; min-height:46px; padding:0 18px; border:0; border-radius:12px; background:#2f7cf6; color:#fff; font-size:15px; font-weight:800; cursor:pointer; }
+  #boxFitOut { margin-top:10px; font-size:15px; font-weight:600; color:#c8d3e6; line-height:1.35; } #boxFitOut:empty { display:none; }
+  #boxFitOut .pos { display:block; font-size:30px; font-weight:900; color:#ffd23b; line-height:1.1; }
+  #boxFitOut .why { display:block; margin-top:3px; color:#c8d3e6; }
+  #boxFitOut .warn { color:#ffd27a; }
+  #boxShowOrder { display:inline-flex; align-items:center; gap:6px; min-height:44px; margin:2px 0 -8px; padding:0; border:0; background:none; color:#5ea2ff; font-size:15.5px; font-weight:700; cursor:pointer; }
+  #boxShowOrder[hidden] { display:none; }
+  #boxStickAt { height:12px; }
+  .blStick { position:sticky; top:var(--blMiniH,0px); z-index:4; margin:0 -12px; padding:0 12px; background:#10192b; }
+  .blMini { position:absolute; left:0; right:0; bottom:100%; display:flex; align-items:center; gap:12px; padding:2px 12px; background:#10192b;
+    border-bottom:1px solid rgba(255,255,255,.06); visibility:hidden; }
+  .blStick.stuck .blMini { visibility:visible; }
+  .blStick.stuck { box-shadow:0 10px 14px -12px rgba(0,0,0,.8); }
+  .blMini button { min-height:42px; min-width:0; padding:0; border:0; background:none; color:#e9eef7; font-size:14.5px; font-weight:600; text-align:left; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #boxMiniSearch { flex:0 1 auto; } #boxMiniSearch b { font-weight:800; color:#fff; } #boxMiniSearch u { text-decoration:none; color:#5ea2ff; }
+  #boxMiniFit { flex:0 1 auto; margin-left:auto; color:#ffd23b; font-weight:700; } #boxMiniFit:empty { display:none; }
+  #boxMiniFit .sh { display:none; }
+  @media (max-width:359px) { #boxMiniFit .lg { display:none; } #boxMiniFit .sh { display:inline; } }
+  .blTabs { display:flex; border-bottom:1px solid rgba(255,255,255,.1); }
+  .blTabs button { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:6px; min-height:48px; padding:0 2px; background:none; border:0;
+    border-bottom:3px solid transparent; color:#93a3bd; font-size:15px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .blTabs button svg { width:20px; height:20px; }
+  .blTabs button.on { color:#fff; border-bottom-color:#2f7cf6; }
+  .blTabs button.on svg { color:#4d93ff; }
+  @media (max-width:359px) { .blTabs button svg { display:none; } }
+  .blPane { padding-top:12px; } .blPane[hidden] { display:none; }
+  .blNote { margin:0 4px 10px; font-size:13.5px; font-weight:500; color:#93a3bd; line-height:1.35; }
+  #boxUnits .grp { margin-bottom:12px; padding:10px 12px 4px; }
+  #boxUnits .ty { margin:2px 2px 6px; }
+  #boxUnits .u { display:flex; align-items:center; gap:12px; padding:9px 4px; border-top:1px solid rgba(255,255,255,.07); }
+  #boxUnits .ty + .u { border-top:0; }
+  #boxUnits .due { flex:none; width:52px; text-align:center; border-radius:8px; padding:5px 0; font-size:13px; font-weight:900; color:#0b0f17; letter-spacing:.3px; }
+  #boxUnits .who { flex:1 1 auto; min-width:0; }
+  #boxUnits .nm { display:block; font-size:17px; font-weight:700; color:#fff; }
+  #boxUnits .fr { display:block; margin-top:2px; font-size:13.5px; font-weight:500; color:#a9b8d0; line-height:1.3; overflow-wrap:anywhere; }
+  #boxUnits .fr:empty { display:none; }
+  #boxUnits .mi { flex:none; text-align:right; } #boxUnits .mi:empty { display:none; }
+  #boxUnits .mi b { display:block; font-size:15px; font-weight:800; color:#dbe6f7; white-space:nowrap; }
+  #boxUnits .mi small { display:block; font-size:10.5px; font-weight:600; color:#8d9cb5; white-space:nowrap; }
+  #boxSheet .me { background:rgba(255,210,60,.10); box-shadow:inset 3px 0 0 #ffd23b; border-radius:8px; }   /* your company, wherever it shows */
+  #boxSheet .you { flex:none; padding:4px 9px; border-radius:8px; background:#ffd23b; color:#1a1406; font-size:12px; font-weight:900; letter-spacing:.04em; white-space:nowrap; }
+  .blMapHd { display:flex; align-items:center; gap:10px; margin:0 2px 10px; }
+  .blMapHd > span { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:7px; font-size:16px; font-weight:700; color:#fff; }
+  .blMapHd > span svg { width:20px; height:20px; color:#4d93ff; }
+  #boxDir { flex:none; display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 14px; box-sizing:border-box; border-radius:12px; border:1.5px solid #2f7cf6;
+    color:#8fbaff; background:rgba(47,124,246,.1); font-size:15.5px; font-weight:700; text-decoration:none; cursor:pointer; }
+  #boxDir[data-off] { border-color:#33425e; color:#8d9cb5; background:none; }
+  #boxDir svg { width:17px; height:17px; }
+  #boxMapWrap { height:clamp(260px,50vh,460px); border-radius:14px; overflow:hidden; background:#1b2433; }
+  #boxMapWrap[hidden] { display:none; }
+  #boxMap { position:absolute; inset:0; width:100%; height:100%; display:block; background:#eceae4; touch-action:none; }
+  #boxNoMap { padding:14px 16px; font-size:14.5px; line-height:1.4; color:#b9c8e2; } #boxNoMap[hidden] { display:none; }
+  #boxSel { margin:8px 4px 0; font-size:14px; font-weight:600; color:#c8d3e6; line-height:1.35; } #boxSel:empty { display:none; }
+  #boxDest { display:flex; align-items:flex-start; gap:12px; margin-top:10px; padding:12px 14px; }
+  #boxDest > svg { width:28px; height:28px; color:#2f7cf6; margin-top:2px; }
+  #boxDest .dl { flex:1 1 auto; min-width:0; }
+  #boxDestKind { display:block; font-size:11.5px; font-weight:800; letter-spacing:.16em; color:#8d9cb5; text-transform:uppercase; }
+  #boxDestName { display:block; margin-top:3px; font-size:16.5px; font-weight:700; color:#fff; overflow-wrap:anywhere; }
+  #boxDestSub { display:block; margin-top:2px; font-size:13.5px; color:#a9b8d0; overflow-wrap:anywhere; } #boxDestSub:empty { display:none; }
+  #boxDestNote { display:block; margin-top:5px; font-size:12.5px; font-weight:600; color:#8d9cb5; }
+  #boxDest.none > svg { color:#5d6f88; } #boxDest.none #boxDestName { color:#c8d3e6; font-weight:600; font-size:15px; }
+  #boxDestClear { flex:none; min-height:44px; padding:0 16px; border-radius:12px; border:1px solid #33507e; background:#14213a; color:#8fbaff; font-size:15px; font-weight:700; cursor:pointer; }
+  #boxDestClear[hidden] { display:none; }
+  #boxDirMsg { margin:8px 4px 0; font-size:14.5px; font-weight:700; color:#ffd27a; } #boxDirMsg:empty { display:none; }
+  .blCats { display:flex; gap:6px; }
+  .blCats button { flex:1 1 0; min-width:0; min-height:48px; padding:2px 3px; border-radius:12px; border:1px solid #2e4366; background:#121c2f; color:#c8d3e6;
+    font-size:13.5px; font-weight:700; line-height:1.15; cursor:pointer; overflow-wrap:anywhere; }
+  .blCats button.on { background:#2f7cf6; border-color:#2f7cf6; color:#fff; }
+  .blOrd { margin-top:12px; padding:12px 12px 6px; }
+  #boxOrdHd { display:flex; align-items:flex-start; gap:10px; margin:0 2px 8px; }
+  #boxOrdHd svg { width:26px; height:26px; color:#b9c8e2; }
+  #boxOrdHd b { display:block; font-size:13px; font-weight:800; letter-spacing:.14em; color:#b9c8e2; text-transform:uppercase; }
+  #boxOrdHd small { display:block; margin-top:2px; font-size:13.5px; color:#93a3bd; }
+  #boxOrder { list-style:none; margin:0; padding:0; }
+  #boxOrder li { display:flex; align-items:center; gap:14px; min-height:44px; padding:4px 6px; border-top:1px solid rgba(255,255,255,.07); }
+  #boxOrder li:first-child { border-top:0; } #boxOrder li:focus { outline:none; }
+  #boxOrder .ord { flex:none; width:56px; text-align:center; padding:5px 0; border-radius:8px; background:#1d2a42; color:#c8d3e6; font-size:14px; font-weight:800; }
+  #boxOrder .nm { flex:1 1 auto; min-width:0; font-size:17px; font-weight:700; color:#fff; }
+  #boxOrder li.me { box-shadow:inset 0 0 0 1.5px #ffd23b; background:rgba(255,210,60,.08); }
+  #boxOrder li.me .ord { background:#ffd23b; color:#1a1406; }
+  #boxOrder li.cut { min-height:0; padding:9px 6px 6px; font-size:11.5px; font-weight:800; letter-spacing:.14em; color:#8d9cb5; text-transform:uppercase; }
+  .blSr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  #boxAbout { margin-top:14px; }
+  #boxAbout summary { display:flex; align-items:center; gap:10px; min-height:52px; padding:0 14px; font-size:15.5px; font-weight:700; color:#c8d3e6; cursor:pointer; list-style:none; }
+  #boxAbout summary::-webkit-details-marker { display:none; }
+  #boxAbout summary svg { width:22px; height:22px; color:#b9c8e2; }
+  #boxAbout summary::after { content:'\25BE'; margin-left:auto; font-size:16px; color:#93a3bd; } #boxAbout[open] summary::after { content:'\25B4'; }
+  #boxAbout .tx { padding:0 16px 14px; font-size:13.5px; line-height:1.45; color:#a9b8d0; }
+  #boxAbout .tx p { margin:0 0 8px; } #boxAbout .tx b { color:#dbe6f7; }
   #homeLegend, #btnListView, #btnFirstDueHome { transition:opacity .2s, transform .2s; }
   #homeMapWrap.picking #homeLegend, #homeMapWrap.picking #btnListView, #homeMapWrap.picking #btnFirstDueHome {
     opacity:0; transform:translateY(14px); pointer-events:none; }   /* the card owns the bottom edge while a house is selected */
@@ -1286,24 +1413,77 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
       <div class="fine">From the PFD box books and OpenStreetMap — check a hydrant before you rely on it. Your location stays on your phone.</div>
       <div class="row"><button id="hydSheetClose" type="button">CLOSE</button></div>
     </div></div>
-    <div id="boxSheet" role="dialog" aria-modal="true" aria-labelledby="boxSheetTitle"><div class="card">
-      <h2 id="boxSheetTitle">🔔 BOX LOOKUP</h2>
-      <div id="boxMode" role="group" aria-label="Look up by"><button type="button" data-m="box" class="on">BOX #</button><button type="button" data-m="addr">ADDRESS</button></div>
-      <form id="boxForm" autocomplete="off"><input id="boxInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Box number, like 3515" aria-label="Box number"><button id="boxGo" type="submit">LOOK UP</button></form>
-      <div id="boxStatus"></div>
-      <div id="boxSug"></div>
-      <div id="boxAddr"></div>
-      <div id="boxHead"></div>
-      <div class="mapWrap" id="boxMapWrap" style="display:none"><canvas id="boxMap"></canvas><div class="mapBtns"><button id="boxZoomIn" type="button" aria-label="Zoom in">＋</button><button id="boxZoomOut" type="button" aria-label="Zoom out">－</button><button id="boxRecenter" type="button" aria-label="Back to the box">◎</button></div></div>
-      <div id="boxSel"></div>
-      <div id="boxUnits"></div>
-      <div id="boxFit" hidden><div class="ty">WHERE DO I FIT?</div>
-        <div class="fitRow"><div class="kinds" role="group" aria-label="Your company"><button type="button" data-k="E" class="on">ENGINE</button><button type="button" data-k="L">LADDER</button><button type="button" data-k="M">MEDIC</button><button type="button" data-k="B">CHIEF</button></div>
-        <input id="boxMine" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="No." aria-label="Your company number" autocomplete="off"></div>
-        <div id="boxFitOut"></div></div>
-      <details id="boxMore" hidden><summary>EVERYONE ELSE, IN ORDER</summary><div id="boxMoreList"></div></details>
-      <div class="fine">Who runs the box, in the order the Fire Department sends each kind of unit — the PFD response-zone list of August 7, 2025. Box outline and hydrants from the PFD box books; miles are straight-line from quarters.</div>
-      <div class="row"><button id="boxSheetClose" type="button">CLOSE</button></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="blTruck" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17V9.5H12V17M12 11.5h4l3.5 3.2V17h-1.3M2.5 17h1.9M8.8 17h5.4"/><circle cx="6.6" cy="17.2" r="2"/><circle cx="16.3" cy="17.2" r="2"/><path d="M2.8 7.3l9-3.2M5.6 6.3v3.2M8.8 5.2v4.3"/></g></symbol>
+      <symbol id="blCube" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.8l8 4.4v9.6l-8 4.4-8-4.4V7.2z"/><path d="M4 7.2l8 4.4 8-4.4M12 11.6v9.6"/></g></symbol>
+      <symbol id="blPin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 21s-6.5-6.1-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 14.9 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g></symbol>
+      <symbol id="blSearch" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.2"/><path d="M15.2 15.2l5.3 5.3"/></g></symbol>
+      <symbol id="blUser" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="12" cy="7.8" r="4"/><path d="M4 20.5c.6-4.4 3.9-6.6 8-6.6s7.4 2.2 8 6.6z"/></g></symbol>
+      <symbol id="blList" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6.5h11.5M9 12h11.5M9 17.5h11.5"/><path d="M4.2 6.5h.01M4.2 12h.01M4.2 17.5h.01" stroke-width="2.8"/></g></symbol>
+      <symbol id="blMap" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20z"/><path d="M8.5 4v13.5M15.5 6.5V20"/></g></symbol>
+      <symbol id="blInfo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.6h.01" stroke-width="2.6"/></g></symbol>
+      <symbol id="blOut" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></g></symbol>
+      <symbol id="blLadder" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 3L6 21M18 3l-3 18M8.4 7h8.6M7.8 11h8.6M7.2 15h8.6"/></g></symbol>
+      <symbol id="blStar" viewBox="0 0 24 24"><path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+      <symbol id="blCross" viewBox="0 0 24 24"><path d="M9.5 4h5v5.5H20v5h-5.5V20h-5v-5.5H4v-5h5.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+      <symbol id="blShield" viewBox="0 0 24 24"><path d="M12 3l7.5 3v5.5c0 4.6-3.2 8-7.5 9.5-4.3-1.5-7.5-4.9-7.5-9.5V6z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    </svg>
+    <div id="boxSheet" role="dialog" aria-modal="true" aria-labelledby="boxSheetTitle"><div class="card" tabindex="-1">
+      <div class="blHead"><svg aria-hidden="true" focusable="false"><use href="#blTruck"/></svg><h2 id="boxSheetTitle">Box &amp; Address Lookup</h2>
+        <button id="boxSheetClose" type="button" aria-label="Close the lookup"><span aria-hidden="true">×</span>Close</button></div>
+      <div class="blBody" id="boxBody">
+        <section class="blCard blSearch" id="boxSearch" aria-label="Search">
+          <div id="boxMode" class="blSeg" role="group" aria-label="Look up by"><button type="button" data-m="box" class="on" aria-pressed="true"><svg aria-hidden="true" focusable="false"><use href="#blCube"/></svg>Box #</button><button type="button" data-m="addr" aria-pressed="false"><svg aria-hidden="true" focusable="false"><use href="#blPin"/></svg>Address</button></div>
+          <form id="boxForm" autocomplete="off" role="search">
+            <label for="boxInput" id="boxInputLbl" class="blLbl">Box number</label>
+            <div class="blInRow"><div class="blIn"><input id="boxInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" enterkeyhint="search" placeholder="Box number, like 3515" autocomplete="off" autocorrect="off" spellcheck="false"><button id="boxClear" type="button" aria-label="Clear the search" hidden><span aria-hidden="true">×</span></button></div>
+              <button id="boxGo" type="submit"><svg aria-hidden="true" focusable="false"><use href="#blSearch"/></svg>Search</button></div>
+          </form>
+          <div id="boxStatus" role="status" aria-live="polite"></div>
+          <div id="boxSug"></div>
+        </section>
+        <div id="boxResult" hidden>
+          <section class="blCard blSum" id="boxSum" aria-live="polite"><div id="boxAddr"></div><div id="boxHead"></div></section>
+          <section id="boxFit" aria-labelledby="boxFitTitle">
+            <div class="ty" id="boxFitTitle"><svg aria-hidden="true" focusable="false"><use href="#blUser"/></svg>Your assignment</div>
+            <div class="blPick"><button id="boxMineBtn" type="button" aria-expanded="false" aria-controls="boxMineEd"><svg aria-hidden="true" focusable="false"><use href="#blTruck"/></svg><span id="boxMineName">Pick company</span><span class="car" aria-hidden="true">▼</span></button><button id="boxMineChange" type="button" aria-expanded="false" aria-controls="boxMineEd">Change</button></div>
+            <div id="boxMineEd" hidden>
+              <div class="kinds" role="group" aria-label="Kind of company"><button type="button" data-k="E" class="on" aria-pressed="true">Engine</button><button type="button" data-k="L" aria-pressed="false">Ladder</button><button type="button" data-k="M" aria-pressed="false">Medic</button><button type="button" data-k="B" aria-pressed="false">Chief</button></div>
+              <div class="blEdRow"><label for="boxMine">Company number</label><input id="boxMine" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" enterkeyhint="done" placeholder="No." autocomplete="off"><button id="boxMineDone" type="button">Done</button></div>
+            </div>
+            <div id="boxFitOut" aria-live="polite"></div>
+            <button id="boxShowOrder" type="button" hidden>Show in full order <span aria-hidden="true">→</span></button>
+          </section>
+          <div id="boxStickAt"></div>
+          <div class="blStick" id="boxStick">
+            <div class="blMini" id="boxMini" aria-hidden="true"><button id="boxMiniSearch" type="button"><b id="boxMiniBox">Box</b> · <u>Change search</u></button><button id="boxMiniFit" type="button"></button></div>
+            <div class="blTabs" id="boxTabs" role="tablist" aria-label="Results"><button type="button" role="tab" id="boxTabA" data-tab="a" aria-controls="boxPaneA" aria-selected="true" class="on"><svg aria-hidden="true" focusable="false"><use href="#blList"/></svg>Assignment</button><button type="button" role="tab" id="boxTabM" data-tab="m" aria-controls="boxPaneM" aria-selected="false" tabindex="-1"><svg aria-hidden="true" focusable="false"><use href="#blMap"/></svg>Map</button><button type="button" role="tab" id="boxTabF" data-tab="f" aria-controls="boxPaneF" aria-selected="false" tabindex="-1"><svg aria-hidden="true" focusable="false"><use href="#blList"/></svg>Full order</button></div>
+          </div>
+          <div class="blPane" id="boxPaneA" role="tabpanel" aria-labelledby="boxTabA">
+            <div class="blNote">The initial assignment, in the order each kind of unit is sent. Miles are straight-line from each company's quarters.</div>
+            <div id="boxUnits"></div>
+          </div>
+          <div class="blPane" id="boxPaneM" role="tabpanel" aria-labelledby="boxTabM" hidden>
+            <div class="blMapHd"><span><svg aria-hidden="true" focusable="false"><use href="#blPin"/></svg>Box boundary &amp; hydrants</span><a id="boxDir" role="button" tabindex="0" target="_blank" rel="noopener" data-off>Directions <svg aria-hidden="true" focusable="false"><use href="#blOut"/></svg></a></div>
+            <div class="mapWrap" id="boxMapWrap"><canvas id="boxMap" aria-label="Map of the box, its outline and its hydrants"></canvas><div class="mapBtns"><button id="boxZoomIn" type="button" aria-label="Zoom in">＋</button><button id="boxZoomOut" type="button" aria-label="Zoom out">－</button><button id="boxRecenter" type="button" aria-label="Back to the box">◎</button></div></div>
+            <div id="boxNoMap" class="blCard" hidden></div>
+            <div id="boxSel"></div>
+            <div id="boxDest" class="blCard none"><svg aria-hidden="true" focusable="false"><use href="#blPin"/></svg><div class="dl"><span id="boxDestKind">Destination</span><span id="boxDestName"></span><span id="boxDestSub"></span><span id="boxDestNote">Directions open in your maps app.</span></div><button id="boxDestClear" type="button" hidden>Clear</button></div>
+            <div id="boxDirMsg" role="status" aria-live="polite"></div>
+          </div>
+          <div class="blPane" id="boxPaneF" role="tabpanel" aria-labelledby="boxTabF" hidden>
+            <div class="blCats" id="boxCats" role="group" aria-label="Kind of unit"><button type="button" data-c="E" class="on" aria-pressed="true">Engines</button><button type="button" data-c="L" aria-pressed="false">Ladders</button><button type="button" data-c="B" aria-pressed="false">Chiefs</button><button type="button" data-c="M" aria-pressed="false">Medics</button><button type="button" data-c="S" aria-pressed="false">Rescue / Squad</button></div>
+            <section class="blCard blOrd" aria-labelledby="boxOrdHd"><div id="boxOrdHd"></div><ol id="boxOrder"></ol></section>
+          </div>
+        </div>
+        <details id="boxAbout" class="blCard"><summary><svg aria-hidden="true" focusable="false"><use href="#blInfo"/></svg>About this data</summary><div class="tx">
+          <p><b>Running order.</b> Who runs each box, in the order the Fire Department sends each kind of unit — the PFD response-zone list of August 7, 2025. The initial assignment is the first 4 engines, 2 ladders, the battalion chief, the medic and the rescue / squad.</p>
+          <p><b>Box outline and hydrants.</b> From the PFD box books. Check a hydrant before you rely on it.</p>
+          <p><b>Addresses.</b> The City of Philadelphia's property (OPA) list, downloaded October 14, 2026. A house number the City does not list takes the nearest listed one, and says so.</p>
+          <p><b>Distances.</b> Miles are straight-line from each company's quarters to the box — not driving distance.</p>
+          <p><b>Directions.</b> They open in your maps app (Apple Maps on an iPhone or iPad, Google Maps elsewhere), which starts from wherever you are. This page never asks for your location.</p>
+        </div></details>
+      </div>
     </div></div>
     <div id="houseCard">
       <div class="hcTop"><div class="hcHd"><div class="hcName" id="hcName"></div><div class="hcAddr" id="hcAddr"></div><div class="hcBn" id="hcBn"></div></div>
@@ -1381,7 +1561,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21q";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21r";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9121,6 +9301,15 @@ function drawHydrantMap(cv,H,ax,az,list,opt){ const c=cv.getContext('2d');
   list.forEach((q,i)=>{ const [px,py]=T(q.h[0],q.h[1]); c.fillStyle='#2f7bff'; c.strokeStyle='#fff'; c.lineWidth=2; c.beginPath(); c.arc(px,py,8.5,0,6.2832); c.fill(); c.stroke();
     c.fillStyle='#fff'; c.font='900 10px -apple-system,Arial,sans-serif'; c.fillText(String(i+1),px,py+0.5); });
   if(opt.sel){ const [px,py]=T(opt.sel[0],opt.sel[1]); c.strokeStyle='#f0a000'; c.lineWidth=3; c.beginPath(); c.arc(px,py,12,0,6.2832); c.stroke(); }   // the tapped one
+  if(opt.dest){ const d=opt.dest, [px,py]=T(d.x,d.z);                               // the chosen DESTINATION (BOX LOOKUP): a gold ring, a pin for a map point, a label
+    if(d.kind==='pt'){ c.fillStyle='#f0a000'; c.strokeStyle='#fff'; c.lineWidth=2.5; c.beginPath(); c.moveTo(px,py); c.bezierCurveTo(px-9,py-12,px-9,py-24,px,py-24); c.bezierCurveTo(px+9,py-24,px+9,py-12,px,py); c.closePath(); c.stroke(); c.fill();
+      c.fillStyle='#fff'; c.beginPath(); c.arc(px,py-17,3.2,0,6.2832); c.fill(); }
+    c.strokeStyle='rgba(255,255,255,.95)'; c.lineWidth=6; c.beginPath(); c.arc(px,py,d.kind==='hyd'?14:9,0,6.2832); c.stroke();
+    c.strokeStyle='#f0a000'; c.lineWidth=3; c.beginPath(); c.arc(px,py,d.kind==='hyd'?14:9,0,6.2832); c.stroke();
+    const top=py-(d.kind==='hyd'?21:31), t='Destination'; c.font='800 11px -apple-system,Arial,sans-serif'; const w=c.measureText(t).width+14;
+    c.fillStyle='#2f7cf6'; c.beginPath(); if(c.roundRect) c.roundRect(px-w/2,top-19,w,19,6); else c.rect(px-w/2,top-19,w,19); c.fill();
+    c.beginPath(); c.moveTo(px-5,top); c.lineTo(px+5,top); c.lineTo(px,top+5); c.closePath(); c.fill();
+    c.fillStyle='#fff'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(t,px,top-9.5); }
   c.fillStyle='#4a4f57'; c.font='900 11px -apple-system,Arial,sans-serif'; c.fillText('N ↑',W-20,14);
   let ft=100; for(const f of [50,100,200,500,1000,2000,5000]) if(f*0.3048*scale<=110) ft=f;   // a scale bar of a round length that fits
   const L=ft*0.3048*scale; c.strokeStyle='#4a4f57'; c.lineWidth=2; c.beginPath(); c.moveTo(12,H-12); c.lineTo(12+L,H-12); c.moveTo(12,H-17); c.lineTo(12,H-7); c.moveTo(12+L,H-17); c.lineTo(12+L,H-7); c.stroke();
@@ -9192,7 +9381,7 @@ function hydMapGestures(S){ const cv=S.cv, P=S.ptr;                             
     else if(P.size===2&&S.pinch&&S.pinch.d>10){ const [a,b]=[...P.values()], d=Math.hypot(a.x-b.x,a.y-b.y); if(d>10) hydMapZoom(S,S.view.mpp/(S.pinch.mpp*S.pinch.d/d),(a.x+b.x)/2,(a.y+b.y)/2); } });
   const end=e=>{ const p=P.get(e.pointerId); P.delete(e.pointerId); if(P.size<2) S.pinch=null; if(!S.active()) return;
     if(p&&!p.moved&&P.size===0&&e.type==='pointerup'&&performance.now()-p.t0<400){ const now=performance.now();
-      if(now-S.lastTap<320){ S.lastTap=0; hydMapZoom(S,2,p.x,p.y); } else { S.lastTap=now; hydMapPick(S,p.x,p.y); } } };
+      if(now-S.lastTap<320){ S.lastTap=0; if(S.unpick) S.unpick(S); hydMapZoom(S,2,p.x,p.y); } else { S.lastTap=now; (S.pick||hydMapPick)(S,p.x,p.y); } } };
   cv.addEventListener('pointerup',end); cv.addEventListener('pointercancel',end);
   cv.addEventListener('wheel',e=>{ if(!S.active()) return; e.preventDefault(); const [x,y]=at(e); hydMapZoom(S,e.deltaY<0?1.25:0.8,x,y); },{passive:false}); }
 function nearMeShow(pos){ const st=document.getElementById('hydSheetStatus'), L=document.getElementById('hydSheetList'), cv=document.getElementById('hydSheetMap');
@@ -9237,8 +9426,8 @@ addEventListener('resize',()=>{ if(document.getElementById('hydSheet').classList
    highlighted wherever it shows; and EVERYONE ELSE, IN ORDER — the rest of every list, folded. The whole order is
    data/pfdlook.js (PFDLOOK, the response-zone list of 08/07/25), loaded the first time the lookup opens, never at start-up.
    Unlike the game's own due order (runOrderAt) this shows units the game has no house for (Engine 78, unit 96): it is the list. */
-const BOXLOOK={box:null,ring:null,bb:null,ax:0,az:0,nHyd:0,houses:[],full:null,pin:null,mode:'box',addrLoading:false,addrWait:[],addrIx:null,view:null,follow:true,sel:null,ptr:new Map(),pinch:null,raf:0,lastTap:0,H:260,MIN:0.15,MAX:12,
-  show:{E:4,L:2,B:1,M:1,S:1},mine:{k:'E',n:''},loading:false,wait:[]};
+const BOXLOOK={box:null,ring:null,bb:null,ax:0,az:0,nHyd:0,houses:[],full:null,pin:null,mode:'box',addrLoading:false,addrWait:[],addrIx:null,view:null,follow:true,sel:null,ptr:new Map(),pinch:null,raf:0,lastTap:0,H:300,MIN:0.15,MAX:12,
+  show:{E:4,L:2,B:1,M:1,S:1},mine:{k:'E',n:''},loading:false,wait:[],tab:'a',cat:'E',scroll:{},dest:null,undo:null,editing:false};
 const BOX_DUE_C=['#3ddc84','#ffd23b','#ff9f2e','#ff6b4a','#c9a3ff','#8a94a6'];   // 1st..4th as the due chip, then on
 const BOX_KIND={E:'ENGINE',L:'LADDER',B:'BATTALION',M:'MEDIC'}, BOX_SHORT={E:'E',L:'L',B:'B',M:'M'};
 function boxTitle(s){ return String(s||'').toLowerCase().replace(/\b[a-z]/g,m=>m.toUpperCase()); }
@@ -9253,93 +9442,211 @@ function boxData(cb){ if(typeof PFDLOOK!=='undefined') return cb(true);         
   s.src='data/pfdlook.js'; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
 function boxFull(key){ const s=typeof PFDLOOK!=='undefined'&&PFDLOOK.f[key]; if(!s) return null; const parts=s.split('.'), out={};
   ['E','L','B','M','S'].forEach((t,i)=>{ out[t]=Array.from(parts[i]||'',ch=>PFDLOOK.lg[t][PFDLOOK.a.indexOf(ch)]); }); return out; }
+/* THE REDESIGN (owner, October 15, 2026, with three mock-ups: "Redesign the existing Box & Address Lookup to match the attached
+   mock-ups and the navy-and-blue style of the updated Settings panel ... Preserve all working search behavior, response-order
+   calculations, addresses, distances, map boundaries, hydrants, and data-source information"). The box search, the running order
+   (boxFull), the quarters and miles (boxHouse), the box map (drawHydrantMap + hydMapGestures) and the address table (addr*) are
+   the same code; what changed is where things sit and what you can do with the map:
+   - a nearly full-screen panel: a header that never scrolls (title, × Close) over ONE scrolling body (overscroll contained, so
+     the home map never moves behind it);
+   - the result card (BOX 3515 · Engine 35's first-due · 8th Battalion), then YOUR ASSIGNMENT (was WHERE DO I FIT?, now above the
+     map and the lists), then three tabs: ASSIGNMENT (the first assignment, addresses wrapping under the names), MAP (the box map,
+     plus a DESTINATION — the searched address, or a hydrant or a spot you tap — and Directions ↗ into the phone's maps app) and
+     FULL ORDER (one kind of unit at a time, every company in order — it replaces EVERYONE ELSE, IN ORDER);
+   - scrolled into the results, the tabs stick to the top with ONE compact row above them ("Box 3515 · Change search" and your
+     place), drawn OVER the content, so nothing in the flow changes height as they stick (no jump, no flicker at the line).
+   Directions are EXTERNAL only — a link with the destination's coordinates and no start, so the maps app starts from wherever the
+   phone is; this page never asks for the location, and nothing in the game changes. */
+const BOX_GROUPS=[['Engines','E','blTruck'],['Ladders','L','blLadder'],['Battalion Chief','B','blStar'],['Medic','M','blCross'],['Rescue / Squad','S','blShield']];
+const BOX_ONE={E:'engine',L:'ladder',B:'battalion chief',M:'medic',S:'rescue / squad'}, BOX_IN={E:'engine',L:'ladder',B:'chief',M:'medic'};
+const blEl=id=>document.getElementById(id);
+const blIco=id=>'<svg aria-hidden="true" focusable="false"><use href="#'+id+'"/></svg>';
+function boxNice(kind,v){ return kind==='S'?boxTitle(boxUnitName(kind,v)):boxTitle(BOX_KIND[kind])+' '+v; }   // Engine 25, Battalion 10, Rescue 1, Squad 47
+function boxSay(t,k){ const st=blEl('boxStatus'); st.textContent=t||''; if(t&&k) st.dataset.k=k; else delete st.dataset.k; }   // info | load | err
+function boxClearSync(){ blEl('boxClear').hidden=!blEl('boxInput').value; }
+function boxCompanyExists(k,n){ if(typeof PFDLOOK!=='undefined'&&(PFDLOOK.lg[k]||[]).includes(n)) return true;   // on some box's list, or at least a real house
+  return k==='E'?PFD_STATIONS.some(q=>q.n===n):k==='L'?PFD_STATIONS.some(q=>q.l===n):k==='B'?PFD_STATIONS.some(q=>q.bc===n):false; }
 function boxFit(S){ const W=S.cv.clientWidth||320, H=S.H, bb=S.bb, mpp=Math.min(S.MAX,Math.max(S.MIN,(bb[2]-bb[0]+60)/W,(bb[3]-bb[1]+60)/(H-64)));
   return { cx:(bb[0]+bb[2])/2, cz:(bb[1]+bb[3])/2+22*mpp, mpp }; }   // the box a little above the middle, clear of ＋ － ◎
-function boxRender(){ const S=BOXLOOK; if(!S.view||!S.ring) return;
-  drawHydrantMap(S.cv,S.H,S.ax,S.az,[],{mark:'box',label:S.box,ring:S.ring,view:S.view,all:true,allIn:S.ring,sel:S.sel,houses:S.houses,pin:S.pin});
-  document.getElementById('boxRecenter').classList.toggle('off',!S.follow);
-  const sl=document.getElementById('boxSel');
+function boxMapSize(){ const h=Math.round(blEl('boxMapWrap').getBoundingClientRect().height); if(h>80) BOXLOOK.H=h; }   // the map's box, whatever the screen
+function boxRender(){ const S=BOXLOOK; if(!S.view||!S.ring) return; boxMapSize();
+  drawHydrantMap(S.cv,S.H,S.ax,S.az,[],{mark:'box',label:S.box,ring:S.ring,view:S.view,all:true,allIn:S.ring,sel:S.sel,houses:S.houses,pin:S.pin,dest:S.dest});
+  blEl('boxRecenter').classList.toggle('off',!S.follow);
+  const sl=blEl('boxSel');
   if(S.sel){ const where=hydStreetLabel(S.sel); sl.textContent='Tapped hydrant'+(where?': '+where:'')+' · in box '+S.box; }
-  else sl.textContent=S.nHyd+' hydrant'+(S.nHyd===1?'':'s')+' in box '+S.box+' · pinch to zoom, drag to move, tap one'; }
+  else sl.textContent=S.nHyd+' hydrant'+(S.nHyd===1?'':'s')+' in box '+S.box+' · pinch to zoom, drag to move, '+(S.dest&&S.dest.kind==='addr'?'tap a hydrant for its block':'tap a hydrant or a spot to pick a destination'); }
+function boxMapShow(){ const S=BOXLOOK, wrap=blEl('boxMapWrap'), no=blEl('boxNoMap');   // the Map tab: the map is drawn only when it can be seen
+  wrap.hidden=!S.ring; no.hidden=!!S.ring;
+  if(!S.ring){ no.textContent='The box books draw no outline for box '+S.box+', so there is no map to pick a destination from.'; return; }
+  boxMapSize(); if(!S.view){ S.view=boxFit(S); S.follow=true; } boxRender(); }
+// DIRECTIONS ↗ — the destination's own coordinates, no start: the maps app starts from wherever the phone is
+function boxDirUrl(d){ const ll=world2ll(d.x,d.z), q=ll.lat.toFixed(6)+','+ll.lon.toFixed(6), ua=navigator.userAgent||'';
+  const apple=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);   // an iPad says Macintosh
+  return apple?'https://maps.apple.com/?daddr='+q:'https://www.google.com/maps/dir/?api=1&destination='+q; }
+function boxDestUI(){ const S=BOXLOOK, d=S.dest, a=blEl('boxDir');
+  blEl('boxDest').classList.toggle('none',!d); blEl('boxDirMsg').textContent=''; blEl('boxDestClear').hidden=!d;
+  blEl('boxDestName').textContent=d?d.label:S.ring?'Tap a hydrant or a spot on the map':'Look up an address to get directions to it';
+  const what=d?(d.kind==='addr'?'Searched address':d.kind==='hyd'?'Hydrant':'Map point'):''; blEl('boxDestSub').textContent=d?what+(d.sub?' · '+d.sub:''):'';
+  if(d){ a.href=boxDirUrl(d); a.removeAttribute('data-off'); a.setAttribute('aria-label','Directions to '+what.toLowerCase()+' '+d.label+', in your maps app'); }
+  else { a.removeAttribute('href'); a.setAttribute('data-off',''); a.setAttribute('aria-label','Directions — choose an address, hydrant, or map point first'); } }
+// a tap on the box map: a hydrant (its block, as before) — and, unless the destination is the searched address, the destination:
+// that hydrant, or the spot tapped. The first tap of a double-tap zoom is put back (boxUnpick), so zooming never moves it.
+function boxPick(S,px,py){ const M=S.cv._map; if(!M) return; let best=null, bd=22;
+  for(const h of M.hyd.concat(M.all)){ const d=Math.hypot(M.ox+(h[0]-M.minX)*M.scale-px,M.oy+(h[1]-M.minZ)*M.scale-py); if(d<bd){ bd=d; best=h; } }
+  S.undo={sel:S.sel,dest:S.dest}; S.sel=best;
+  if(!(S.dest&&S.dest.kind==='addr')){
+    if(best){ const where=hydStreetLabel(best); S.dest={kind:'hyd',x:best[0],z:best[1],label:where||'Hydrant',sub:'In box '+S.box}; }
+    else { const x=M.minX+(px-M.ox)/M.scale, z=M.minZ+(py-M.oy)/M.scale, where=hydStreetLabel([x,z]), ll=world2ll(x,z);
+      S.dest={kind:'pt',x,z,label:where?'Near '+where:'Map point',sub:ll.lat.toFixed(5)+', '+ll.lon.toFixed(5)}; }
+    boxDestUI(); }
+  S.render(); }
+function boxUnpick(S){ if(!S.undo) return; S.sel=S.undo.sel; S.dest=S.undo.dest; S.undo=null; boxDestUI(); }
 function boxMineLoad(){ try{ const v=localStorage.getItem('pfd_myunit')||''; const m=v.match(/^([ELBM])(\d{1,3})$/); if(m) BOXLOOK.mine={k:m[1],n:m[2]}; }catch(e){} }
 function boxMineSave(){ try{ const m=BOXLOOK.mine; if(m.n) localStorage.setItem('pfd_myunit',m.k+m.n); else localStorage.removeItem('pfd_myunit'); }catch(e){} }
 function boxIsMine(kind,v){ const m=BOXLOOK.mine; return !!m.n&&kind===m.k&&String(v)===String(+m.n); }
-// WHERE DO I FIT? — your place on this box's list for your kind of unit, and your company highlighted wherever it shows
-function boxFitUpdate(){ const S=BOXLOOK, m=S.mine, out=document.getElementById('boxFitOut');
-  document.querySelectorAll('#boxFit .kinds button').forEach(bt=>bt.classList.toggle('on',bt.dataset.k===m.k));
-  document.querySelectorAll('#boxUnits .u, #boxMoreList .chip').forEach(el=>el.classList.toggle('me',boxIsMine(el.dataset.kind,el.dataset.unit)));
-  out.textContent=''; if(!S.full) return;
-  if(!m.n){ out.textContent='Pick your kind of company and type its number.'; return; }
-  const list=S.full[m.k]||[], i=list.indexOf(+m.n), who=BOX_KIND[m.k]+' '+(+m.n);
-  if(i<0){ out.textContent=who+' is not on box '+S.box+"'s list."; return; }
-  const pos=document.createElement('span'); pos.className='pos'; pos.textContent=ordinalBn(i+1).toUpperCase()+' '+(m.k==='B'?'CHIEF':BOX_KIND[m.k])+' IN';
-  out.appendChild(pos); out.appendChild(document.createTextNode(who+' on box '+S.box+' · '+(i<S.show[m.k]?'on the first assignment above':'after the first assignment — see everyone else below'))); }
-function boxLookup(raw,from){ const S=BOXLOOK, st=document.getElementById('boxStatus'), U=document.getElementById('boxUnits'), Hd=document.getElementById('boxHead'), wrap=document.getElementById('boxMapWrap');
-  const digits=String(raw||'').replace(/\D/g,'').slice(0,4), fit=document.getElementById('boxFit'), more=document.getElementById('boxMore'), ML=document.getElementById('boxMoreList');
-  U.textContent=''; Hd.textContent=''; ML.textContent=''; document.getElementById('boxSel').textContent=''; fit.hidden=true; more.hidden=true; more.open=false;
-  S.view=null; S.sel=null; S.ring=null; S.box=null; S.full=null; wrap.style.display='none';
-  S.pin=from&&from.pin||null; if(!from) document.getElementById('boxAddr').textContent='';   // an address search keeps its line and its pin
-  if(!digits){ st.textContent='Type a box number — four digits; the first two are the first-due engine.'; return false; }
+function boxMineEdit(open){ const S=BOXLOOK; S.editing=!!open; blEl('boxMineEd').hidden=!open;
+  for(const id of ['boxMineBtn','boxMineChange']) blEl(id).setAttribute('aria-expanded',open?'true':'false');
+  const mi=blEl('boxMine'); if(open&&mi.value!==S.mine.n) mi.value=S.mine.n; boxScrollState(); }
+// YOUR ASSIGNMENT (was WHERE DO I FIT?) — your place on this box's list for your kind of unit; your company highlighted wherever it shows
+function boxFitUpdate(){ const S=BOXLOOK, m=S.mine, out=blEl('boxFitOut'), so=blEl('boxShowOrder'), mf=blEl('boxMiniFit');
+  document.querySelectorAll('#boxFit .kinds button').forEach(bt=>{ const on=bt.dataset.k===m.k; bt.classList.toggle('on',on); bt.setAttribute('aria-pressed',on?'true':'false'); });
+  blEl('boxMineName').textContent=m.n?boxNice(m.k,+m.n):'Pick company';
+  document.querySelectorAll('#boxUnits .u').forEach(el=>{ const me=boxIsMine(el.dataset.kind,el.dataset.unit); el.classList.toggle('me',me); let y=el.querySelector('.you');
+    if(me&&!y){ y=document.createElement('span'); y.className='you'; y.textContent='You'; el.insertBefore(y,el.querySelector('.mi')); } else if(!me&&y) y.remove(); });
+  out.textContent=''; so.hidden=true; mf.textContent=''; mf.removeAttribute('aria-label');
+  if(S.full){
+    if(!m.n) out.textContent='Pick your kind of company and type its number to see where you fit on this box.';
+    else { const list=S.full[m.k]||[], i=list.indexOf(+m.n), who=boxNice(m.k,+m.n), w=document.createElement('span'), lg=document.createElement('span'), sh=document.createElement('span');
+      lg.className='lg'; lg.textContent=who; sh.className='sh'; sh.textContent=boxUnitShort(m.k,+m.n);
+      if(i<0){ w.className='warn'; w.textContent=boxCompanyExists(m.k,+m.n)?who+" is not on box "+S.box+"'s running order.":'There is no '+who+' in the PFD list — check the number.'; out.appendChild(w);
+        mf.append(lg,sh,' · not on this box'); mf.setAttribute('aria-label','Your assignment: '+w.textContent); }
+      else { const pos=document.createElement('span'), why=document.createElement('span'), t=ordinalBn(i+1)+' '+BOX_IN[m.k]+' in';
+        pos.className='pos'; pos.textContent=t; why.className='why'; why.textContent=i<S.show[m.k]?'On the initial assignment':'After the initial assignment';
+        out.append(pos,why); so.hidden=false; mf.append(lg,sh,' · '+ordinalBn(i+1)+' in'); mf.setAttribute('aria-label','Your assignment: '+who+', '+t); } } }
+  boxOrderRender(); boxScrollState(); }
+// FULL ORDER — one kind of unit at a time, every company in the order sent, the end of the initial assignment marked
+function boxOrderRender(){ const S=BOXLOOK, L=blEl('boxOrder'), hd=blEl('boxOrdHd'), k=S.cat, list=(S.full&&S.full[k])||[], m=S.mine; L.textContent=''; hd.textContent='';
+  if(!S.full) return;
+  hd.innerHTML=blIco(BOX_GROUPS.find(g=>g[1]===k)[2]); const t=document.createElement('div'), b=document.createElement('b'), sm=document.createElement('small');
+  b.textContent=BOX_ONE[k]+' response order';
+  sm.textContent=!list.length?'No '+BOX_ONE[k]+' on box '+S.box+"'s list.":m.n&&m.k===k?(list.indexOf(+m.n)>=0?'Your company is highlighted':boxNice(m.k,+m.n)+' is not on this list'):
+    'All '+list.length+' in the order they are sent'+(k!=='S'&&!m.n?' · set your company above to highlight it':'');
+  t.append(b,sm); hd.appendChild(t);
+  list.forEach((v,i)=>{ if(i===S.show[k]){ const c=document.createElement('li'); c.className='cut'; c.setAttribute('aria-hidden','true'); c.textContent='After the initial assignment'; L.appendChild(c); }
+    const li=document.createElement('li'); li.dataset.kind=k; li.dataset.unit=String(v);
+    const o=document.createElement('span'); o.className='ord'; o.textContent=ordinalBn(i+1);
+    const d=document.createElement('span'); d.className='blSr'; d.textContent=' — ';                   // read aloud as "6th — Engine 2"
+    const nm=document.createElement('span'); nm.className='nm'; nm.textContent=boxNice(k,v); li.append(o,d,nm);
+    if(boxIsMine(k,v)){ li.classList.add('me'); const y=document.createElement('span'); y.className='you'; y.textContent='Your company'; li.appendChild(y); }
+    L.appendChild(li); }); }
+function boxCat(k){ BOXLOOK.cat=k; document.querySelectorAll('#boxCats [data-c]').forEach(b=>{ const on=b.dataset.c===k; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false'); }); boxOrderRender(); }
+// the tabs stick once scrolled to: their place in the flow is the marker just above them
+function boxStickTop(){ const a=blEl('boxStickAt'); return a.offsetTop+a.offsetHeight; }
+function boxScrollState(){ const st=blEl('boxStick'), mini=blEl('boxMini'); if(blEl('boxResult').hidden){ st.classList.remove('stuck'); return; }
+  const mh=mini.offsetHeight; st.style.setProperty('--blMiniH',mh+'px');
+  const stuck=blEl('boxBody').scrollTop>=boxStickTop()-mh-1;
+  if(stuck!==st.classList.contains('stuck')){ st.classList.toggle('stuck',stuck); mini.setAttribute('aria-hidden',stuck?'false':'true'); } }
+// a tab keeps its own place: back to one you left, it is where you left it (the Full order's kind of unit too); a new result starts each at its top
+function boxTab(t,opt){ const S=BOXLOOK, body=blEl('boxBody'), fresh=opt&&opt.fresh;
+  if(!fresh&&S.tab!==t) S.scroll[S.tab]=body.scrollTop;
+  S.tab=t;
+  document.querySelectorAll('#boxTabs [data-tab]').forEach(b=>{ const on=b.dataset.tab===t; b.classList.toggle('on',on); b.setAttribute('aria-selected',on?'true':'false'); b.tabIndex=on?0:-1; });
+  for(const [k,id] of [['a','boxPaneA'],['m','boxPaneM'],['f','boxPaneF']]) blEl(id).hidden=k!==t;
+  if(t==='m') boxMapShow();
+  if(fresh) return;
+  const at=boxStickTop()-blEl('boxMini').offsetHeight, saved=S.scroll[t];
+  if(body.scrollTop>=at-1) body.scrollTop=saved!=null&&saved>=at?saved:at;   // in the results: where you left this tab, or its top under the tabs
+  boxScrollState(); }
+function boxShowInOrder(){ const S=BOXLOOK; if(!S.mine.n) return; boxCat(S.mine.k); boxTab('f');
+  const row=document.querySelector('#boxOrder li.me'), body=blEl('boxBody'); if(!row) return;
+  const mh=blEl('boxMini').offsetHeight, under=mh+blEl('boxStick').offsetHeight, at=boxStickTop()-mh,
+    y=row.getBoundingClientRect().top-body.getBoundingClientRect().top+body.scrollTop, room=body.clientHeight-under;
+  body.scrollTop=Math.max(at,y-under-Math.max(0,(room-row.offsetHeight)/2)); boxScrollState();   // your row in the middle of what the tabs leave
+  row.tabIndex=-1; try{ row.focus({preventScroll:true}); }catch(e){} }
+function boxLookup(raw,from){ const S=BOXLOOK, U=blEl('boxUnits'), Hd=blEl('boxHead'), res=blEl('boxResult');
+  const digits=String(raw||'').replace(/\D/g,'').slice(0,4);
+  U.textContent=''; Hd.textContent=''; blEl('boxSel').textContent=''; res.hidden=true;
+  S.view=null; S.sel=null; S.ring=null; S.box=null; S.full=null; S.undo=null; S.scroll={};
+  S.pin=from&&from.pin||null; S.dest=from&&from.dest||null; if(!from) blEl('boxAddr').textContent='';   // an address search keeps its line, its pin and its destination; anything else drops the old one
+  if(!digits){ boxSay(from?'':'Type a box number — four digits; the first two are the first-due engine.','info'); boxScrollState(); return false; }
   const key=digits.padStart(4,'0');
-  if(typeof PFDLOOK==='undefined'){ st.textContent='Loading the running orders…'; boxData(ok=>{ if(ok) boxLookup(key,from); else st.textContent='Could not load the running orders — check your connection and try again.'; }); return false; }
-  const full=boxFull(key); if(!full){ st.textContent='No box '+key+' in the PFD list.'; return false; }
+  if(typeof PFDLOOK==='undefined'){ boxSay('Loading the running orders…','load'); boxData(ok=>{ if(ok) boxLookup(key,from); else boxSay('Could not load the running orders — check your connection and try again.','err'); }); return false; }
+  const full=boxFull(key); if(!full){ boxSay('No box '+key+' in the PFD list.','err'); return false; }
   S.box=key; S.full=full; if(!from) try{ localStorage.setItem('pfd_boxlook',key); }catch(e){}
   const bx=PFD_BOXES.find(q=>q.box===key), n1=full.E[0];
   const bn=document.createElement('span'); bn.className='bn'; bn.textContent='BOX '+key; Hd.appendChild(bn);
-  const sub=document.createElement('span'); sub.className='sub'; sub.textContent='ENGINE '+n1+"'S FIRST-DUE AREA"+(PFD_BN[n1]?' · '+ordinalBn(PFD_BN[n1]).toUpperCase()+' BATTALION':''); Hd.appendChild(sub);
+  const sub=document.createElement('span'); sub.className='sub'; sub.textContent='Engine '+n1+"'s first-due"+(PFD_BN[n1]?' · '+ordinalBn(PFD_BN[n1])+' Battalion':''); Hd.appendChild(sub);
   if(bx){ S.ring=bx.poly; S.bb=bx.bb;
     let cx=0,cz=0; for(const p of bx.poly){ cx+=p[0]; cz+=p[1]; } cx/=bx.poly.length; cz/=bx.poly.length;   // a label point INSIDE the box, nearest its middle
     let best=null,bd=1e18; for(let i=0;i<=16;i++) for(let j=0;j<=16;j++){ const x=bx.bb[0]+(bx.bb[2]-bx.bb[0])*i/16, y=bx.bb[1]+(bx.bb[3]-bx.bb[1])*j/16;
       if(!ptInRing(x,y,bx.poly)) continue; const d=(x-cx)**2+(y-cz)**2; if(d<bd){ bd=d; best=[x,y]; } }
     [S.ax,S.az]=best||[cx,cz];
     S.nHyd=hydrantsNear((bx.bb[0]+bx.bb[2])/2,(bx.bb[1]+bx.bb[3])/2,Math.hypot(bx.bb[2]-bx.bb[0],bx.bb[3]-bx.bb[1])/2+5).filter(h=>ptInRing(h[0],h[1],bx.poly)).length;
-    st.textContent=''; }
-  else st.textContent='The box books draw no outline for box '+key+' — here is who runs it.';
+    boxSay(''); }
+  else boxSay('The box books draw no outline for box '+key+' — here is who runs it.','info');
+  // ASSIGNMENT — the first assignment (how many of each is BOXLOOK.show): quarters wrap under the name, miles straight-line from quarters
   const K=S.show, seen=new Set(); S.houses=[];
-  const groups=[['ENGINES','E'],['LADDERS','L'],['BATTALION CHIEF','B'],['MEDIC','M'],['RESCUE / SQUAD','S']];
-  for(const [title,kind] of groups){ const list=full[kind].slice(0,K[kind]); if(!list.length) continue;
-    const g=document.createElement('div'); g.className='grp'; const ty=document.createElement('div'); ty.className='ty'; ty.textContent=title; g.appendChild(ty);
+  for(const [title,kind,ico] of BOX_GROUPS){ const list=full[kind].slice(0,K[kind]); if(!list.length) continue;
+    const g=document.createElement('section'); g.className='grp blCard'; g.dataset.kind=kind;
+    const ty=document.createElement('div'); ty.className='ty'; ty.innerHTML=blIco(ico); ty.appendChild(document.createTextNode(title)); g.appendChild(ty);
     list.forEach((v,i)=>{ const row=document.createElement('div'); row.className='u'; row.dataset.kind=kind; row.dataset.unit=String(v);
       const d=document.createElement('span'); d.className='due'; d.textContent=ordinalBn(i+1).toUpperCase(); d.style.background=BOX_DUE_C[Math.min(i,BOX_DUE_C.length-1)];
-      const nm=document.createElement('span'); nm.className='nm'; nm.textContent=boxUnitName(kind,v);
+      const who=document.createElement('span'); who.className='who'; const nm=document.createElement('span'); nm.className='nm'; nm.textContent=boxNice(kind,v);
       const fr=document.createElement('span'); fr.className='fr'; const mi=document.createElement('span'); mi.className='mi'; const h=boxHouse(kind,v);
-      if(h){ if(bx) mi.textContent=(Math.hypot(h.x-S.ax,h.z-S.az)/1609.34).toFixed(1)+' mi';
-        fr.textContent=kind==='E'?h.addr:'with Engine '+h.n;
+      if(h){ if(bx){ const m=(Math.hypot(h.x-S.ax,h.z-S.az)/1609.34).toFixed(1), b=document.createElement('b'), sm=document.createElement('small');
+          b.textContent=m+' mi'; sm.textContent='straight line'; mi.append(b,sm); mi.setAttribute('aria-label',m+' miles in a straight line from quarters'); }
+        fr.textContent=kind==='E'?h.addr:'With Engine '+h.n+' · '+h.addr;
         if(kind==='E'&&!seen.has(h.n)){ seen.add(h.n); S.houses.push({x:h.x,z:h.z,t:'E'+h.n,c:BOX_DUE_C[Math.min(i,BOX_DUE_C.length-1)]}); } }
-      row.append(d,nm,fr,mi); g.appendChild(row); });
+      who.append(nm,fr); row.append(d,who,mi); g.appendChild(row); });
     U.appendChild(g); }
-  // EVERYONE ELSE, IN ORDER — the rest of every list, folded
-  for(const [title,kind] of groups){ const rest=full[kind].slice(K[kind]); if(!rest.length) continue;
-    const ty=document.createElement('div'); ty.className='ty'; ty.textContent=title+' '+ordinalBn(K[kind]+1).toUpperCase()+'–'+ordinalBn(full[kind].length).toUpperCase(); ML.appendChild(ty);
-    const ch=document.createElement('div'); ch.className='chips';
-    rest.forEach((v,i)=>{ const c=document.createElement('span'); c.className='chip'; c.dataset.kind=kind; c.dataset.unit=String(v);
-      const o=document.createElement('b'); o.textContent=String(K[kind]+i+1); c.append(o,boxUnitShort(kind,v)); ch.appendChild(c); });
-    ML.appendChild(ch); }
-  fit.hidden=false; more.hidden=!ML.childNodes.length;
-  const mi=document.getElementById('boxMine'); if(mi.value!==BOXLOOK.mine.n) mi.value=BOXLOOK.mine.n;
-  boxFitUpdate();
-  if(bx){ wrap.style.display='block'; S.view=boxFit(S); S.follow=true; boxRender(); }
+  res.hidden=false; blEl('boxMiniBox').textContent='Box '+key;
+  const mi=blEl('boxMine'); if(mi.value!==S.mine.n) mi.value=S.mine.n;
+  boxMineEdit(S.editing||!S.mine.n);
+  boxTab('a',{fresh:true}); boxCat(S.mine.n?S.mine.k:'E'); boxFitUpdate(); boxDestUI();
   return true; }
-function boxOpen(){ document.getElementById('boxSheet').classList.add('show');
+function boxOpen(){ blEl('boxSheet').classList.add('show');
   let m='box'; try{ m=localStorage.getItem('pfd_lookmode')==='addr'?'addr':'box'; }catch(e){}
-  boxSetMode(m,true); }
-function boxClose(){ document.getElementById('boxSheet').classList.remove('show'); BOXLOOK.ptr.clear(); BOXLOOK.pinch=null; }
+  boxSetMode(m,true); blEl('boxBody').scrollTop=0; boxScrollState();
+  try{ document.querySelector('#boxSheet .card').focus({preventScroll:true}); }catch(e){} }   // the focus moves into the dialog (no keyboard: it is the panel, not a field)
+function boxClose(){ blEl('boxSheet').classList.remove('show'); BOXLOOK.ptr.clear(); BOXLOOK.pinch=null; const a=document.activeElement; if(a&&blEl('boxSheet').contains(a)) try{ a.blur(); }catch(e){} }
 boxMineLoad();
-document.getElementById('btnBoxLookup').addEventListener('click',e=>{ e.preventDefault(); boxOpen(); });
-document.getElementById('boxForm').addEventListener('submit',e=>{ e.preventDefault(); const inp=document.getElementById('boxInput'); document.getElementById('boxSug').textContent='';
-  if(BOXLOOK.mode==='addr') addrLookup(inp.value); else boxLookup(inp.value); try{ inp.blur(); }catch(err){} });
-document.getElementById('boxInput').addEventListener('input',e=>{ if(BOXLOOK.mode==='addr'){ addrSuggest(e.target.value); return; }
+blEl('btnBoxLookup').addEventListener('click',e=>{ e.preventDefault(); boxOpen(); });
+blEl('boxForm').addEventListener('submit',e=>{ e.preventDefault(); const inp=blEl('boxInput'); blEl('boxSug').textContent='';
+  if(BOXLOOK.mode==='addr') addrLookup(inp.value);
+  else if(!inp.value.replace(/\D/g,'')){ boxLookup(''); boxSay('Type a box number first — four digits, like 3515.','err'); }
+  else boxLookup(inp.value);
+  try{ inp.blur(); }catch(err){} });                                                  // the keyboard goes, so the result can be seen
+blEl('boxInput').addEventListener('input',e=>{ boxClearSync(); if(BOXLOOK.mode==='addr'){ addrSuggest(e.target.value); return; }
   const v=e.target.value.replace(/\D/g,'').slice(0,4); if(v!==e.target.value) e.target.value=v; });
+blEl('boxClear').addEventListener('click',e=>{ e.preventDefault(); const inp=blEl('boxInput'); inp.value=''; boxClearSync(); blEl('boxSug').textContent=''; try{ inp.focus(); }catch(err){} });
 document.querySelectorAll('#boxMode button').forEach(bt=>bt.addEventListener('click',e=>{ e.preventDefault(); if(bt.dataset.m!==BOXLOOK.mode) boxSetMode(bt.dataset.m,false); }));
 document.querySelectorAll('#boxFit .kinds button').forEach(bt=>bt.addEventListener('click',e=>{ e.preventDefault(); BOXLOOK.mine.k=bt.dataset.k; boxMineSave(); boxFitUpdate(); }));
-document.getElementById('boxMine').addEventListener('input',e=>{ const v=e.target.value.replace(/\D/g,'').slice(0,3); if(v!==e.target.value) e.target.value=v; BOXLOOK.mine.n=v.replace(/^0+/,''); boxMineSave(); boxFitUpdate(); });
-document.getElementById('boxSheetClose').addEventListener('click',e=>{ e.preventDefault(); boxClose(); });
-document.getElementById('boxSheet').addEventListener('click',e=>{ if(e.target.id==='boxSheet') boxClose(); });   // a tap outside the card closes it
-BOXLOOK.cv=document.getElementById('boxMap'); BOXLOOK.render=()=>boxRender(); BOXLOOK.active=()=>!!BOXLOOK.view&&document.getElementById('boxSheet').classList.contains('show');
+blEl('boxMine').addEventListener('input',e=>{ const v=e.target.value.replace(/\D/g,'').slice(0,3); if(v!==e.target.value) e.target.value=v; BOXLOOK.mine.n=v.replace(/^0+/,''); boxMineSave(); boxFitUpdate(); });
+blEl('boxMine').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); boxMineEdit(false); try{ e.target.blur(); }catch(err){} } });
+for(const id of ['boxMineBtn','boxMineChange']) blEl(id).addEventListener('click',e=>{ e.preventDefault(); boxMineEdit(!BOXLOOK.editing); });
+blEl('boxMineDone').addEventListener('click',e=>{ e.preventDefault(); boxMineEdit(false); try{ blEl('boxMine').blur(); }catch(err){} });
+blEl('boxShowOrder').addEventListener('click',e=>{ e.preventDefault(); boxShowInOrder(); });
+document.querySelectorAll('#boxTabs [data-tab]').forEach(b=>b.addEventListener('click',e=>{ e.preventDefault(); if(b.dataset.tab!==BOXLOOK.tab) boxTab(b.dataset.tab); }));
+blEl('boxTabs').addEventListener('keydown',e=>{ const t=['a','m','f'], i=t.indexOf(BOXLOOK.tab); let j=-1;   // arrow keys move along the tabs
+  if(e.key==='ArrowRight') j=(i+1)%3; else if(e.key==='ArrowLeft') j=(i+2)%3; else if(e.key==='Home') j=0; else if(e.key==='End') j=2; if(j<0) return;
+  e.preventDefault(); boxTab(t[j]); document.querySelector('#boxTabs [data-tab="'+t[j]+'"]').focus(); });
+document.querySelectorAll('#boxCats [data-c]').forEach(b=>b.addEventListener('click',e=>{ e.preventDefault(); boxCat(b.dataset.c); }));
+blEl('boxMiniSearch').addEventListener('click',e=>{ e.preventDefault(); const inp=blEl('boxInput'); blEl('boxBody').scrollTop=0; boxScrollState(); try{ inp.focus(); inp.select(); }catch(err){} });
+blEl('boxMiniFit').addEventListener('click',e=>{ e.preventDefault(); blEl('boxBody').scrollTop=Math.max(0,blEl('boxFit').offsetTop-12); boxScrollState(); });
+blEl('boxBody').addEventListener('scroll',boxScrollState,{passive:true});
+blEl('boxDir').addEventListener('click',e=>{ if(!BOXLOOK.dest){ e.preventDefault(); blEl('boxDirMsg').textContent='Choose an address, hydrant, or map point.'; } });
+blEl('boxDir').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&!BOXLOOK.dest){ e.preventDefault(); blEl('boxDirMsg').textContent='Choose an address, hydrant, or map point.'; } });
+blEl('boxDestClear').addEventListener('click',e=>{ e.preventDefault(); const S=BOXLOOK; S.dest=null; S.sel=null; S.undo=null; boxDestUI(); boxRender(); });
+blEl('boxSheetClose').addEventListener('click',e=>{ e.preventDefault(); boxClose(); });
+blEl('boxSheet').addEventListener('click',e=>{ if(e.target.id==='boxSheet') boxClose(); });   // a tap outside the card closes it
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&blEl('boxSheet').classList.contains('show')){ e.preventDefault(); e.stopPropagation(); boxClose(); } });   // Escape closes it, wherever the focus is
+addEventListener('resize',()=>{ if(!blEl('boxSheet').classList.contains('show')) return; boxScrollState(); if(BOXLOOK.tab==='m'&&BOXLOOK.view) boxRender(); });   // a turned phone: the map re-measures
+BOXLOOK.cv=blEl('boxMap'); BOXLOOK.render=()=>boxRender(); BOXLOOK.active=()=>!!BOXLOOK.view&&BOXLOOK.tab==='m'&&blEl('boxSheet').classList.contains('show');
 BOXLOOK.home=()=>{ if(!BOXLOOK.bb) return null; const f=boxFit(BOXLOOK); if(BOXLOOK.view) BOXLOOK.view.mpp=f.mpp; return [f.cx,f.cz]; };   // ◎: the whole box again
-document.getElementById('boxZoomIn').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(BOXLOOK,1.6); });
-document.getElementById('boxZoomOut').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(BOXLOOK,1/1.6); });
-document.getElementById('boxRecenter').addEventListener('click',e=>{ e.preventDefault(); hydMapHome(BOXLOOK); });
+BOXLOOK.pick=boxPick; BOXLOOK.unpick=boxUnpick;
+blEl('boxZoomIn').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(BOXLOOK,1.6); });
+blEl('boxZoomOut').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(BOXLOOK,1/1.6); });
+blEl('boxRecenter').addEventListener('click',e=>{ e.preventDefault(); hydMapHome(BOXLOOK); });
 hydMapGestures(BOXLOOK);
 /* 📍 ADDRESS LOOKUP — the same sheet, switched to ADDRESS (owner, October 14, 2026: "members can look up an address, find the box
    and who's on it", then "Download it"; where it sits was left to us: "pick one you feel is best, I'll let you know if I want it
@@ -9383,39 +9690,40 @@ function addrOn(st,n){ const sides=addrRuns(st); if(!sides) return null; const m
 function addrParse(t){ const m=String(t||'').trim().match(/^(\d+)(?:\s*-\s*\d+)?[A-Za-z]?\s+(.+)$/); return m?{n:+m[1],street:m[2]}:null; }   // 4005A Main St; 4005 O St is O Street
 function addrCandidates(text){ const ix=addrIndex(), c=addrCanon(text); let l=ix.get(c)||ix.get(addrNoDes(c))||ix.get(addrNoDir(c))||ix.get(addrNoDes(addrNoDir(c)))||[]; return l.slice().sort(); }
 function addrNice(st){ return boxTitle(st).replace(/\b(\d+)(St|Nd|Rd|Th)\b/g,(m,n,s)=>n+s.toLowerCase()); }
-function addrLookup(raw){ const st=document.getElementById('boxStatus'), line=document.getElementById('boxAddr'), sug=document.getElementById('boxSug');
+function addrLookup(raw){ const line=blEl('boxAddr'), sug=blEl('boxSug');
   const text=String(raw||'').trim(); try{ if(text) localStorage.setItem('pfd_addrlook',text); }catch(e){}
   boxLookup('',{keep:true}); line.textContent=''; sug.textContent='';
-  if(!text){ st.textContent='Type an address — a house number and the street, like 4208 Ridge Ave.'; return false; }
-  if(typeof PFDADDR==='undefined'){ st.textContent='Loading the address list…'; addrData(ok=>{ if(ok) addrLookup(text); else st.textContent='Could not load the address list — check your connection and try again.'; }); return false; }
-  const q=addrParse(text); if(!q){ st.textContent='Start with the house number — like 4208 Ridge Ave.'; return false; }
+  if(!text){ boxSay('Type an address — a house number and the street, like 4208 Ridge Ave.','err'); return false; }
+  if(typeof PFDADDR==='undefined'){ boxSay('Loading the address list…','load'); addrData(ok=>{ if(ok) addrLookup(text); else boxSay('Could not load the address list — check your connection and try again.','err'); }); return false; }
+  const q=addrParse(text); if(!q){ boxSay('Start with the house number — like 4208 Ridge Ave.','err'); return false; }
   const cands=addrCandidates(q.street);
-  if(!cands.length){ st.textContent='No street called "'+q.street.trim()+'" in the City\'s property list.'; addrSuggest(text); return false; }
+  if(!cands.length){ boxSay('No street called "'+q.street.trim()+'" in the City\'s property list.','err'); addrSuggest(text); return false; }
   const hits=cands.map(c=>addrOn(c,q.n)).filter(r=>r&&!r.none);
-  if(!hits.length){ const r=addrOn(cands[0],q.n); st.textContent='No '+q.n+' '+addrNice(cands[0])+' in the City\'s property list'+(r&&r.hi?' — its numbers run '+r.lo+' to '+r.hi+'.':'.'); return false; }
-  if(hits.length>1){ st.textContent=q.n+' '+q.street.trim()+' is on more than one street — which one?';   // e.g. N and S 23rd St
+  if(!hits.length){ const r=addrOn(cands[0],q.n); boxSay('No '+q.n+' '+addrNice(cands[0])+' in the City\'s property list'+(r&&r.hi?' — its numbers run '+r.lo+' to '+r.hi+'.':'.'),'err'); return false; }
+  if(hits.length>1){ boxSay(q.n+' '+q.street.trim()+' is on more than one street — which one?','info');   // e.g. N and S 23rd St
     for(const h of hits){ const bt=document.createElement('button'); bt.type='button'; bt.textContent=q.n+' '+addrNice(h.st)+' · box '+h.box;
-      bt.addEventListener('click',e=>{ e.preventDefault(); document.getElementById('boxInput').value=q.n+' '+addrNice(h.st); addrLookup(q.n+' '+h.st); }); sug.appendChild(bt); }
+      bt.addEventListener('click',e=>{ e.preventDefault(); const inp=blEl('boxInput'); inp.value=q.n+' '+addrNice(h.st); boxClearSync(); try{ inp.blur(); }catch(err){} addrLookup(q.n+' '+h.st); }); sug.appendChild(bt); }
     return false; }
-  const h=hits[0]; boxLookup(h.box,{pin:h.pin});
-  const a=document.createElement('span'); a.textContent='📍 '+h.n+' '+addrNice(h.st)+' is in box '+h.box; line.appendChild(a);
+  const h=hits[0], label=h.n+' '+addrNice(h.st);
+  boxLookup(h.box,{pin:h.pin,dest:{kind:'addr',x:h.pin[0],z:h.pin[1],label,sub:h.exact?'In box '+h.box:'The nearest listed property, '+h.near+' '+addrNice(h.st)}});   // the address IS the destination
+  const a=document.createElement('span'); a.textContent='📍 '+label+' is in box '+h.box; line.appendChild(a);
   if(!h.exact){ const n=document.createElement('span'); n.className='q'; n.textContent='No property numbered '+h.n+' in the City\'s list — the nearest is '+h.near+', in this box.'; line.appendChild(n); }
   return h; }
-function addrSuggest(raw){ const sug=document.getElementById('boxSug'); sug.textContent=''; if(typeof PFDADDR==='undefined'){ addrData(ok=>{ if(ok&&BOXLOOK.mode==='addr') addrSuggest(document.getElementById('boxInput').value); }); return; }   // typed before the list landed: suggest once it does
+function addrSuggest(raw){ const sug=blEl('boxSug'); sug.textContent=''; if(typeof PFDADDR==='undefined'){ addrData(ok=>{ if(ok&&BOXLOOK.mode==='addr') addrSuggest(blEl('boxInput').value); }); return; }   // typed before the list landed: suggest once it does
   const m=String(raw||'').trim().match(/^(\d+)(?:\s*-\s*\d+)?[A-Za-z]?\s+(.+)$/); if(!m||!m[2].trim().length) return;
   const frag=addrCanon(m[2]).replace(/ (S|ST|STR|A|AV|AVE|R|RD)$/,s=>s), keys=Object.keys(PFDADDR.s), out=[];
   for(const k of keys){ const nd=addrNoDir(k); if(k.startsWith(frag)||nd.startsWith(frag)) out.push(k); if(out.length>40) break; }
   out.sort((p,q)=>p.length-q.length||(p<q?-1:1));
   for(const k of out.slice(0,6)){ const bt=document.createElement('button'); bt.type='button'; bt.textContent=m[1]+' '+addrNice(k);
-    bt.addEventListener('click',e=>{ e.preventDefault(); const v=m[1]+' '+addrNice(k); document.getElementById('boxInput').value=v; sug.textContent=''; addrLookup(v); }); sug.appendChild(bt); } }
-function boxSetMode(m,opening){ const S=BOXLOOK, inp=document.getElementById('boxInput'); S.mode=m; try{ localStorage.setItem('pfd_lookmode',m); }catch(e){}
-  document.querySelectorAll('#boxMode button').forEach(bt=>bt.classList.toggle('on',bt.dataset.m===m));
-  document.getElementById('boxSug').textContent=''; document.getElementById('boxAddr').textContent='';
+    bt.addEventListener('click',e=>{ e.preventDefault(); const v=m[1]+' '+addrNice(k), inp=blEl('boxInput'); inp.value=v; boxClearSync(); sug.textContent=''; try{ inp.blur(); }catch(err){} addrLookup(v); }); sug.appendChild(bt); } }
+function boxSetMode(m,opening){ const S=BOXLOOK, inp=blEl('boxInput'); S.mode=m; try{ localStorage.setItem('pfd_lookmode',m); }catch(e){}
+  document.querySelectorAll('#boxMode button').forEach(bt=>{ const on=bt.dataset.m===m; bt.classList.toggle('on',on); bt.setAttribute('aria-pressed',on?'true':'false'); });
+  blEl('boxSug').textContent=''; blEl('boxAddr').textContent=''; blEl('boxInputLbl').textContent=m==='addr'?'Address':'Box number';
   let last=''; try{ last=localStorage.getItem(m==='addr'?'pfd_addrlook':'pfd_boxlook')||''; }catch(e){}
-  if(m==='addr'){ inp.setAttribute('inputmode','text'); inp.removeAttribute('pattern'); inp.maxLength=60; inp.placeholder='Address, like 4208 Ridge Ave'; inp.style.letterSpacing='0'; inp.style.fontSize='16px';
-    inp.value=last; if(last) addrLookup(last); else { boxLookup('',{keep:true}); document.getElementById('boxStatus').textContent='Type an address — a house number and the street, like 4208 Ridge Ave.'; addrData(()=>{}); boxData(()=>{}); if(!opening) try{ inp.focus(); }catch(e){} } }
-  else { inp.setAttribute('inputmode','numeric'); inp.setAttribute('pattern','[0-9]*'); inp.maxLength=4; inp.placeholder='Box number, like 3515'; inp.style.letterSpacing=''; inp.style.fontSize='';
-    inp.value=last; if(last) boxLookup(last); else { boxLookup(''); boxData(()=>{}); if(!opening) try{ inp.focus(); }catch(e){} } } }
+  if(m==='addr'){ inp.setAttribute('inputmode','text'); inp.removeAttribute('pattern'); inp.maxLength=60; inp.placeholder='Address, like 4208 Ridge Ave'; inp.setAttribute('autocapitalize','words'); inp.classList.add('addr');   // the full keyboard
+    inp.value=last; boxClearSync(); if(last) addrLookup(last); else { boxLookup('',{keep:true}); boxSay('Type an address — a house number and the street, like 4208 Ridge Ave.','info'); addrData(()=>{}); boxData(()=>{}); if(!opening) try{ inp.focus(); }catch(e){} } }
+  else { inp.setAttribute('inputmode','numeric'); inp.setAttribute('pattern','[0-9]*'); inp.maxLength=4; inp.placeholder='Box number, like 3515'; inp.removeAttribute('autocapitalize'); inp.classList.remove('addr');   // the number pad
+    inp.value=last; boxClearSync(); if(last) boxLookup(last); else { boxLookup(''); boxData(()=>{}); if(!opening) try{ inp.focus(); }catch(e){} } } }
 function coachHide(){ const el=document.getElementById('coachCard'); if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); } }
 function renderCoachCanvas(r,showOpt){ const cv=document.getElementById('coachCanvas'); if(!cv) return; const c=cv.getContext('2d');
   const W=Math.max(280,Math.round(cv.clientWidth||320)),H=260,dpr=Math.min(2,devicePixelRatio||1); cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); c.setTransform(dpr,0,0,dpr,0,0);

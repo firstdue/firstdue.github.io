@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v80';  // v21q: the bigger call pool - 24,918 call addresses (was 6,500); data/addr.js changed.
+const CACHE = 'local-shell-v81';  // v21r: the Box & Address Lookup redesign - tabs, Your assignment on top, a destination and Directions on the box map.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
