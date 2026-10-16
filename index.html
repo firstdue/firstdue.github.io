@@ -1565,7 +1565,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21v";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21w";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9898,7 +9898,18 @@ function mapvTruckVector(x,tw,th){ x.fillStyle='#1d1f23'; for(const f of [-0.3,0
    ⚠ No closePath() here either (it is quadratic in a long path in Chrome): a ring closes with a lineTo back to its first point. */
 const FPV='20261015';                                                                     // bump with every re-bake: the tile URLs carry it
 const FP={idx:null,idxState:'idle',tiles:new Map(),busy:0,T:500,max:40,drawn:0};
+/* 🚒 THE FIREHOUSES (owner, October 16, 2026: "would like to see firehouse names on building roofs"): data/fp/firehouses.json, baked by
+   bake_footprints.js — each PFD house's building as the City names it ("Fire Engine 59/Ladder 18"; 55 houses), else the one its point
+   lies in (7; E39 shares the Ridge & Cinnaminson building the City calls "Police 5th District"). The roof is painted fire-engine red
+   and its companies are written along it, from the game's own roster: "E59 · L18". */
+const FHV='20261016';
+function fhPrep(n,o){ const st=stations.find(s=>s.num===n); if(!st||o.length<6) return null; const a=Float64Array.from(o), m=a.length/2; let cx=0,cz=0,lu=0,ux=1,uz=0; const bb=[1e9,1e9,-1e9,-1e9];
+  for(let j=0;j<m;j++){ const q=(j+1)%m, x1=a[j*2],z1=a[j*2+1],x2=a[q*2],z2=a[q*2+1], L=Math.hypot(x2-x1,z2-z1); cx+=x1; cz+=z1; if(L>lu){ lu=L; ux=(x2-x1)/L; uz=(z2-z1)/L; }
+    if(x1<bb[0]) bb[0]=x1; if(z1<bb[1]) bb[1]=z1; if(x1>bb[2]) bb[2]=x1; if(z1>bb[3]) bb[3]=z1; }
+  cx/=m; cz/=m; let lo=1e9,hi=-1e9,l2=1e9,h2=-1e9; for(let j=0;j<m;j++){ const ex=a[j*2]-cx, ez=a[j*2+1]-cz, a1=ex*ux+ez*uz, a2=-ex*uz+ez*ux; if(a1<lo) lo=a1; if(a1>hi) hi=a1; if(a2<l2) l2=a2; if(a2>h2) h2=a2; }
+  return {n,id:st.id,o:a,bb,ux,uz,len:hi-lo,wid:h2-l2,lx:cx+ux*(lo+hi)/2-uz*(l2+h2)/2,lz:cz+uz*(lo+hi)/2+ux*(l2+h2)/2,label:'E'+n+(st.ladder?' \u00b7 L'+st.ladder:'')}; }
 function fpIndex(){ if(FP.idxState!=='idle') return; FP.idxState='loading';
+  fetch('data/fp/firehouses.json?v='+FHV).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{ FP.fh=Object.entries(j.fh||{}).map(([n,f])=>fhPrep(+n,f.o)).filter(Boolean); }).catch(()=>{ FP.fh=[]; });
   fetch('data/fp/index.json?v='+FPV).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{ FP.idx=j; FP.T=j.tile||500; FP.idxState='ready'; }).catch(()=>{ FP.idxState='failed'; }); }
 function fpEnsure(cx,cz,R){ if(FP.idxState==='idle') fpIndex(); if(FP.idxState!=='ready') return;
   const T=FP.T, need=[];
@@ -9958,7 +9969,8 @@ function fpDecode(buf,k){ const d=new Uint8Array(buf); if(d.length<8||d[0]!==70|
 function fpDraw(x,cx,cz,R){ FP.drawn=0; if(FP.idxState!=='ready') return 0; const C=MAPV_C, M=MAPV, L=[], det=M.a*M.d-M.cc*M.b||1, v=[1e9,1e9,-1e9,-1e9];
   for(const [sx,sy] of [[0,0],[innerWidth,0],[0,innerHeight],[innerWidth,innerHeight]]){ const X=(M.d*(sx-M.e)-M.cc*(sy-M.f))/det, Z=(-M.b*(sx-M.e)+M.a*(sy-M.f))/det;   // the screen's corners in the world
     if(X<v[0]) v[0]=X; if(Z<v[1]) v[1]=Z; if(X>v[2]) v[2]=X; if(Z>v[3]) v[3]=Z; }
-  let tiles=0; for(const t of FP.tiles.values()){ if(t.state!=='ready'||t.bb[2]<v[0]||t.bb[0]>v[2]||t.bb[3]<v[1]||t.bb[1]>v[3]) continue; tiles++;
+  let tiles=0; FP.fhVis=[];
+  for(const t of FP.tiles.values()){ if(t.state!=='ready'||t.bb[2]<v[0]||t.bb[0]>v[2]||t.bb[3]<v[1]||t.bb[1]>v[3]) continue; tiles++;
     for(const c of t.cells) if(!(c.bb[2]<v[0]||c.bb[0]>v[2]||c.bb[3]<v[1]||c.bb[1]>v[3])) L.push(c); }
   if(!L.length) return 0; FP.cellsDrawn=L.length;
   x.fillStyle=C.shadow; for(const t of L) x.fill(t.shadow);
@@ -9969,6 +9981,9 @@ function fpDraw(x,cx,cz,R){ FP.drawn=0; if(FP.idxState!=='ready') return 0; cons
   x.lineCap='butt'; x.strokeStyle='rgba(40,40,40,.55)'; x.lineWidth=0.35; for(const t of L) x.stroke(t.ridge);
   x.fillStyle=C.hatch; for(const t of L) x.fill(t.hatch);
   x.fillStyle=C.hvac; for(const t of L) x.fill(t.hvac);
+  FP.fhVis=(FP.fh||[]).filter(f=>!(f.bb[2]<v[0]||f.bb[0]>v[2]||f.bb[3]<v[1]||f.bb[1]>v[3])&&fpCovered(f.lx,f.lz));   // 🚒 firehouses: a fire-engine red roof (their companies are written on it in the label pass)
+  if(FP.fhVis.length){ x.fillStyle='#b8322a'; x.beginPath(); for(const f of FP.fhVis){ const o=f.o; x.moveTo(o[0],o[1]); for(let j=2;j<o.length;j+=2) x.lineTo(o[j],o[j+1]); x.lineTo(o[0],o[1]); } x.fill();
+    x.strokeStyle='rgba(255,255,255,.75)'; x.lineWidth=Math.max(0.4,1.2*M.mpp); x.stroke(); }
   if(M.mpp<0.34){ x.strokeStyle=C.edge; x.lineWidth=0.3; for(const t of L) x.stroke(t.edge); }   // outlines only when pinched in past the normal zoom: they are the costliest thing to paint (South Philly rowhouses 22.9 -> 11.6 ms with them off, forced raster)
   return FP.drawn=tiles; }
 const mapvT=(px,pz)=>[MAPV.a*px+MAPV.cc*pz+MAPV.e,MAPV.b*px+MAPV.d*pz+MAPV.f];       // world -> map screen
@@ -10055,6 +10070,13 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
   // the route
   if(state.route&&MAP.guide&&routePts&&routePts.length>1){ x.strokeStyle=C.route; x.lineWidth=Math.max(3.2,9*mpp); x.lineCap='round'; x.lineJoin='round'; x.beginPath(); x.moveTo(routePts[0].x,routePts[0].z); for(let i=1;i<routePts.length;i++) x.lineTo(routePts[i].x,routePts[i].z); x.stroke(); }
   screen();
+  // 🚒 HYDRANTS (owner: "Not seeing hydrant in this new view"): the very points the 3D view and HYDRANTS NEAR ME use (HYDRANTS), a red
+  // hydrant from above — a body and its side nozzles on a white rim. Smaller zoomed out; MAPV.hyd = how many are on screen.
+  { const hs=hydrantsNear(tx,tz,R), r=Math.max(2.4,Math.min(5,1.9/mpp)), pts=[]; for(const h of hs){ const [px,py]=T(h[0],h[1]); if(px>-8&&px<W+8&&py>-8&&py<H+8) pts.push(px,py); }
+    M.hyd=pts.length/2; M.hydPts=pts.slice(0,20);
+    if(pts.length){ const shape=g=>{ for(let i=0;i<pts.length;i+=2){ const px=pts[i], py=pts[i+1]; x.moveTo(px+r+g,py); x.arc(px,py,r+g,0,6.2832); x.rect(px-r*1.75-g,py-r*0.38-g,r*3.5+2*g,r*0.76+2*g); } };
+      x.fillStyle='#fff'; x.beginPath(); shape(1.4); x.fill(); x.fillStyle='#d7261e'; x.beginPath(); shape(0); x.fill();
+      x.fillStyle='rgba(90,10,6,.75)'; x.beginPath(); for(let i=0;i<pts.length;i+=2){ x.moveTo(pts[i]+r*0.38,pts[i+1]); x.arc(pts[i],pts[i+1],r*0.38,0,6.2832); } x.fill(); } }
   // the armed turn, then street names on the asphalt (upright), then real landmark names — each label in a free spot
   const hc=document.getElementById('hudCol'), topY=Math.max(70,hc?hc.getBoundingClientRect().bottom+6:70);   // below the HUD's top column (radio, units), which would cover a label
   const taken=[], free=(cx,cy,hx,hy)=>{ if(cx-hx<4||cx+hx>W-4||cy-hy<topY) return false; for(const b of taken) if(Math.abs(cx-b[0])<hx+b[2]+4&&Math.abs(cy-b[1])<hy+b[3]+4) return false; taken.push([cx,cy,hx,hy]); return true; };   // no label on another, none cut off at the edge
@@ -10081,6 +10103,20 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
       for(const q of sp) taken.push([q[0],q[1],10,10]); taken.push([e[0],e[1],14,14]);
       M.arrow={pts:sp,tip,wrong}; } } }
   M.tagL=!!(M.arrow&&M.arrow.tip[0]>M.ax+4); taken.push([M.tagL?M.ax-52:M.ax+52,M.ay-6,28,15]);   // the E-number tag sits on the side AWAY from a turn's arrow (it hid a right turn at the truck)
+  // 🚒 the firehouses: their companies written along the red roof (owner: "would like to see firehouse names on building roofs"), before any street name
+  M.fhLab=[]; M.fhAt=[]; x.textAlign='center'; x.textBaseline='middle';
+  for(const f of (FP.drawn&&FP.fhVis)||[]){ const [cx0,cy0]=T(f.lx,f.lz); if(cx0<-80||cx0>W+80||cy0<-80||cy0>H+80) continue;
+    const [qx,qy]=T(f.lx+f.ux,f.lz+f.uz); let an=Math.atan2(qy-cy0,qx-cx0); if(an>Math.PI/2) an-=Math.PI; if(an<-Math.PI/2) an+=Math.PI;
+    x.font='900 10px -apple-system,"Helvetica Neue",Arial,sans-serif'; const w10=x.measureText(f.label).width||1, Lp=f.len/mpp, Wp=f.wid/mpp;
+    const fs=Math.max(10,Math.min(20,10*Lp*0.82/w10,Wp*0.72));
+    x.font='900 '+fs.toFixed(1)+'px -apple-system,"Helvetica Neue",Arial,sans-serif'; const tw=x.measureText(f.label).width, ac=Math.abs(Math.cos(an)), as=Math.abs(Math.sin(an)), hx=ac*tw/2+as*fs/2, hy=as*tw/2+ac*fs/2;
+    let px=cx0, py=cy0;                                                                  // along the roof to the first spot clear of the truck, its tag and the labels already placed (at quarters the truck stands at the door);
+    const cand=[0,0.28,-0.28,0.42,-0.42].map(k=>T(f.lx+f.ux*f.len*k,f.lz+f.uz*f.len*k));   // none on a small roof (Engine 12): just beside it, then a ring around it
+    { const vx=-(qy-cy0), vy=qx-cx0, vl=Math.hypot(vx,vy)||1, off=f.wid/2/mpp+hy+6; for(const sg of [1,-1]) cand.push([cx0+vx/vl*off*sg,cy0+vy/vl*off*sg]);
+      for(const r of [52,78]) for(let a=0;a<8;a++) cand.push([cx0+Math.cos(a*Math.PI/4)*r,cy0+Math.sin(a*Math.PI/4)*r]); }
+    for(const [ax2,ay2] of cand){ if(ax2-hx<4||ax2+hx>W-4||ay2-hy<topY||ay2+hy>H-140) continue; if(!taken.some(q=>Math.abs(ax2-q[0])<hx+q[2]&&Math.abs(ay2-q[1])<hy+q[3])){ px=ax2; py=ay2; break; } }
+    x.save(); x.translate(px,py); x.rotate(an); x.lineJoin='round'; x.lineWidth=3.2; x.strokeStyle='rgba(84,12,8,.9)'; x.strokeText(f.label,0,0); x.fillStyle='#fff'; x.fillText(f.label,0,0); x.restore();
+    taken.push([px,py,hx,hy]); M.fhLab.push(f.label); M.fhAt=M.fhAt||[]; M.fhAt.push([f.label,Math.round(px),Math.round(py)]); }
   // the streets you can turn onto are named first — Map view has no cards — along each, just past its junction
   const offered=new Set(); x.font='800 14px -apple-system,"Helvetica Neue",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
   if(typeof LBL!=='undefined') for(const sp of LBL.pool){ const p=sp.visible&&sp._pick; if(!p||!p.at||!sp._name) continue;
