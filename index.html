@@ -1565,7 +1565,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21u";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21v";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4583,7 +4583,7 @@ function updateHUD(dt){
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
   { const sa=document.getElementById('satAttr'); if(sa){ const show=state.running;   // v20u: shown for the whole shift (the OpenStreetMap road and land data is on screen all the time; the CARTO credit stays by the owner's word), no longer only after a tile has loaded
-      if(show) sa.textContent = '© OpenStreetMap contributors © CARTO';
+      if(show) sa.textContent = '© OpenStreetMap contributors © CARTO'+(MAPV.active&&FP.drawn?' · Buildings: City of Philadelphia':'');   // 🏠 the City's footprints, while Map view shows them
       sa.classList.toggle('show', show); } }
   if(DRIVE.pending && DRIVE.arrowT>0){ const jn=DRIVE.pending.at, nx=DRIVE.pending.next;                 // next-turn banner
     elTurn.style.display='flex'; elTurn.querySelector('.dir').textContent=DRIVE.arrow>0?'→':'←';
@@ -7288,7 +7288,7 @@ function __oldBuildFlatCity(){ genCityData(); if(!buildData.length) return;
      HAZARD       fuel · hospital                                              (what changes the job)
    The drill names one inside your own first-due and asks you to drive to it. No dispatches while drilling. */
 const LMK_CATS=["supermarket", "fuel", "school", "hospital", "worship", "park", "pharmacy", "library"];
-const LMK_ICON=['\U0001f6d2','\u26fd','\U0001f3eb','\U0001f3e5','\u26ea','\U0001f333','\U0001f48a','\U0001f4da'];
+const LMK_ICON=['\u{1f6d2}','\u26fd','\u{1f3eb}','\u{1f3e5}','\u26ea','\u{1f333}','\u{1f48a}','\u{1f4da}'];   // v21v: JS has no \U escape: '\U0001f4da' printed as the text "U0001f4da" on the FIND IT card (owner's phone)
 const LMK_LABEL=['SUPERMARKET','GAS STATION','SCHOOL','HOSPITAL','PLACE OF WORSHIP','PARK','PHARMACY','LIBRARY'];
 const DRILL={ on:false, target:null, t0:0, done:0, best:null, pool:[], streak:0, nextAt:0, ax:0, az:0 };
 function drillPool(){                                                          // landmarks inside YOUR first-due
@@ -9871,7 +9871,8 @@ const MAPV_C={ ground:'#d3d9bd', park:'#9bc977', wood:'#7cb15c', cem:'#a7cd8a', 
   hwy:'#50565e', center:'#f2c21b', zebra:'#f6f6f2', shadow:'rgba(34,38,34,.30)', edge:'rgba(55,59,65,.55)',
   flat:['#c9cdd1','#dfe1e3','#a9afb5','#80868d','#5d6268','#b8bcc1','#cfc9bf'],                      // rowhouse roofs from above: silver coat, white membrane, greys, tar, black
   shingle:[['#a3a8ae','#73787e'],['#93806f','#685749'],['#7b8086','#53575d'],['#ab9884','#7a6857'],['#866f62','#5c4a40']],   // [sunny side, shaded side]
-  membrane:'#e5e6e2', inst:'#e4dac4', hatch:'rgba(62,66,72,.7)', hvac:'#9fa5ab', tree:'#5b9b3c', treeHi:'#79bd50', treeLo:'rgba(36,84,26,.24)', route:'rgba(40,120,255,.88)' };
+  membrane:'#e5e6e2', membranes:['#e5e6e2','#d4d6d7','#c1c5c8','#aeb2b6','#959a9f'],   // big real roofs: white to weathered grey
+  inst:'#e4dac4', hatch:'rgba(62,66,72,.7)', hvac:'#9fa5ab', tree:'#5b9b3c', treeHi:'#79bd50', treeLo:'rgba(36,84,26,.24)', route:'rgba(40,120,255,.88)' };
 const mHash=n=>{ n=Math.sin(n*12.9898+78.233)*43758.5453; return n-Math.floor(n); };
 function mapvSprite(){ if(MAPV.sprState!=='idle') return; MAPV.sprState='loading'; const im=new Image();
   im.onload=()=>{ MAPV.spr=im; MAPV.sprState='ready'; }; im.onerror=()=>{ MAPV.sprState='failed'; }; im.src='assets/truck/pumper-top-v1.png'; }
@@ -9887,6 +9888,89 @@ function mapvFrame(dt){ const on=MAPV.on&&state.running&&!homeEl.classList.conta
 function mapvTruckVector(x,tw,th){ x.fillStyle='#1d1f23'; for(const f of [-0.3,0.02,0.3]){ x.fillRect(-tw*0.56,f*th-th*0.07,tw*0.14,th*0.14); x.fillRect(tw*0.42,f*th-th*0.07,tw*0.14,th*0.14); }   // until the art loads
   x.fillStyle='#c8231b'; x.fillRect(-tw/2,-th/2,tw,th); x.fillStyle='#f4f3ee'; x.fillRect(-tw*0.45,-th*0.48,tw*0.9,th*0.27); x.fillStyle='#1c2330'; x.fillRect(-tw*0.39,-th*0.47,tw*0.78,th*0.07);
   x.fillStyle='#f0c21f'; x.fillRect(-tw*0.33,-th*0.14,tw*0.66,th*0.58); x.strokeStyle='#fff'; x.lineWidth=1.5; x.strokeRect(-tw/2,-th/2,tw,th); }
+/* 🏠 REAL BUILDINGS IN MAP VIEW (owner, October 15, 2026: "Yes download it so the top down view is real"). The City's 546,050
+   building footprints (L&I LI_BUILDING_FOOTPRINTS, baked by bake_footprints.js into data/fp/<tx>_<tz>.bin, 500 m squares, plus
+   data/fp/index.json) load ONLY in Map view and only around the truck, three at a time, and the least recently used go past
+   FP.max. Each tile is decoded ONCE into Path2D shapes in world metres — shadows, roofs by colour, the two halves of a pitched
+   roof, ridges, hatches, rooftop units, outlines — so a frame only sets the map's transform and fills them. Where a tile has not
+   arrived the generated buildings stand in; where the index has no square, the City has no building there and none is drawn.
+   Roof classes come from the bake (shape + neighbours): 0 attached = flat, 1 detached or twin = pitched, 2 big = membrane, 3 tiny.
+   ⚠ No closePath() here either (it is quadratic in a long path in Chrome): a ring closes with a lineTo back to its first point. */
+const FPV='20261015';                                                                     // bump with every re-bake: the tile URLs carry it
+const FP={idx:null,idxState:'idle',tiles:new Map(),busy:0,T:500,max:40,drawn:0};
+function fpIndex(){ if(FP.idxState!=='idle') return; FP.idxState='loading';
+  fetch('data/fp/index.json?v='+FPV).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{ FP.idx=j; FP.T=j.tile||500; FP.idxState='ready'; }).catch(()=>{ FP.idxState='failed'; }); }
+function fpEnsure(cx,cz,R){ if(FP.idxState==='idle') fpIndex(); if(FP.idxState!=='ready') return;
+  const T=FP.T, need=[];
+  for(let tx=Math.floor((cx-R)/T);tx<=Math.floor((cx+R)/T);tx++) for(let tz=Math.floor((cz-R)/T);tz<=Math.floor((cz+R)/T);tz++){ const k=tx+'_'+tz; if(!FP.idx.tiles[k]) continue;
+    const t=FP.tiles.get(k); if(t){ t.used=GT; continue; } need.push([Math.hypot((tx+0.5)*T-cx,(tz+0.5)*T-cz),k]); }
+  need.sort((a,b)=>a[0]-b[0]);
+  for(const [,k] of need){ if(FP.busy>=3) break; FP.busy++; const t={state:'loading',used:GT}; FP.tiles.set(k,t);
+    fetch('data/fp/'+k+'.bin?v='+FPV).then(r=>r.ok?r.arrayBuffer():Promise.reject(r.status)).then(buf=>{ Object.assign(t,fpDecode(buf,k)); t.state='ready'; })
+      .catch(()=>{ t.state='failed'; }).finally(()=>{ FP.busy--; }); }
+  if(FP.tiles.size>FP.max){ const old=[...FP.tiles].filter(e=>e[1].state!=='loading').sort((a,b)=>a[1].used-b[1].used);
+    for(let i=0;i<old.length&&FP.tiles.size>FP.max;i++) FP.tiles.delete(old[i][0]); } }
+// real data rules here: its tile is in, or the City has no building in that square (a failed tile is not covered: the generated ones stand in)
+function fpCovered(x,z){ if(FP.idxState!=='ready') return false; const k=Math.floor(x/FP.T)+'_'+Math.floor(z/FP.T); if(!FP.idx.tiles[k]) return true; const t=FP.tiles.get(k); return !!(t&&t.state==='ready'); }
+function fpDecode(buf,k){ const d=new Uint8Array(buf); if(d.length<8||d[0]!==70||d[1]!==80||d[2]!==84||d[3]!==49) throw new Error('not a footprint tile: '+k);
+  const [tx,tz]=k.split('_').map(Number), ox=tx*FP.T*10, oz=tz*FP.T*10; let p=8;
+  const n=(d[4]|d[5]<<8|d[6]<<16)+d[7]*16777216;
+  const vu=()=>{ let v=0,m=1,b; do{ b=d[p++]; v+=(b&127)*m; m*=128; }while(b&128); return v; }, vs=()=>{ const v=vu(); return v%2?-(v+1)/2:v/2; };
+  const C=MAPV_C, P=()=>new Path2D(), t={n,cells:[],bb:[1e9,1e9,-1e9,-1e9]}, Q=FP.T/2, cellOf=new Map();   // four 250 m quarters, each its own shapes: only the ones on screen are painted
+  const cell=(x,z)=>{ const ci=Math.max(0,Math.min(1,Math.floor((x-tx*FP.T)/Q))), cj=Math.max(0,Math.min(1,Math.floor((z-tz*FP.T)/Q))), k=ci*2+cj; let c=cellOf.get(k);
+    if(!c){ c={shadow:P(),flat:C.flat.map(P),sh:C.shingle.map(()=>[P(),P()]),memb:C.membranes.map(P),tiny:P(),ridge:P(),hatch:P(),hvac:P(),edge:P(),bb:[1e9,1e9,-1e9,-1e9]}; cellOf.set(k,c); t.cells.push(c); } return c; };
+  const ring=(path,a)=>{ path.moveTo(a[0],a[1]); for(let j=2;j<a.length;j+=2) path.lineTo(a[j],a[j+1]); path.lineTo(a[0],a[1]); };
+  const inside=(a,x,z)=>{ let c=false; for(let j=0,m=a.length/2,q=m-1;j<m;q=j++){ const xi=a[j*2],zi=a[j*2+1],xj=a[q*2],zj=a[q*2+1]; if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi) c=!c; } return c; };
+  const box=(path,x,z,ux,uz,hu,hv)=>{ const vx=-uz,vz=ux; path.moveTo(x-ux*hu-vx*hv,z-uz*hu-vz*hv); path.lineTo(x+ux*hu-vx*hv,z+uz*hu-vz*hv); path.lineTo(x+ux*hu+vx*hv,z+uz*hu+vz*hv); path.lineTo(x-ux*hu+vx*hv,z-uz*hu+vz*hv); path.lineTo(x-ux*hu-vx*hv,z-uz*hu-vz*hv); };
+  const half=(a,cx,cz,nx,nz,sg)=>{ const o=[], m=a.length/2; for(let j=0;j<m;j++){ const q=(j+1)%m, x1=a[j*2],z1=a[j*2+1],x2=a[q*2],z2=a[q*2+1], d1=sg*((x1-cx)*nx+(z1-cz)*nz), d2=sg*((x2-cx)*nx+(z2-cz)*nz);
+      if(d1>=0) o.push(x1,z1); if((d1>=0)!==(d2>=0)){ const f=d1/(d1-d2); o.push(x1+(x2-x1)*f,z1+(z2-z1)*f); } } return o; };
+  const hull=pts=>{ const P2=[]; for(let j=0;j<pts.length;j+=2) P2.push([pts[j],pts[j+1]]); P2.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+    const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]), lo=[], up=[];
+    for(const q of P2){ while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0) lo.pop(); lo.push(q); }
+    for(let j=P2.length-1;j>=0;j--){ const q=P2[j]; while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0) up.pop(); up.push(q); }
+    lo.pop(); up.pop(); const h=lo.concat(up), o=[]; for(const q of h) o.push(q[0],q[1]); return o; };
+  const sunX=-0.928, sunZ=-0.371;
+  for(let i=0;i<n;i++){ const hft=d[p++], cls=d[p++], nr=vu(), rings=[];
+    for(let r=0;r<nr;r++){ const m=vu(), a=new Float64Array(m*2); let X=ox, Z=oz; for(let j=0;j<m;j++){ X+=vs(); Z+=vs(); a[j*2]=X/10; a[j*2+1]=Z/10; } rings.push(a); }
+    const o=rings[0], m=o.length/2; if(m<3) continue;
+    let cx=0,cz=0,ar=0,lu=0,ux=1,uz=0;
+    for(let j=0;j<m;j++){ const q=(j+1)%m, x1=o[j*2],z1=o[j*2+1],x2=o[q*2],z2=o[q*2+1]; cx+=x1; cz+=z1; ar+=x1*z2-x2*z1; const L=Math.hypot(x2-x1,z2-z1); if(L>lu){ lu=L; ux=(x2-x1)/L; uz=(z2-z1)/L; } }
+    cx/=m; cz/=m; ar=Math.abs(ar)/2;
+    const g=cell(cx,cz), bb=g.bb, hm0=hft?Math.min(60,hft*0.3048):6;                       // the quarter's box takes in the building AND its shadow
+    for(let j=0;j<m;j++){ const x1=o[j*2],z1=o[j*2+1]; if(x1<bb[0]) bb[0]=x1; if(z1<bb[1]) bb[1]=z1; if(x1+0.37*hm0>bb[2]) bb[2]=x1+0.37*hm0; if(z1+0.15*hm0>bb[3]) bb[3]=z1+0.15*hm0; }
+    const hm=hft?Math.min(60,hft*0.3048):6, sx=0.37*hm, sz=0.15*hm, sp=new Float64Array(m*4);   // the sun shadow: the footprint swept by the sun's offset (the scene's sun, as the generated buildings use)
+    for(let j=0;j<m;j++){ sp[j*2]=o[j*2]; sp[j*2+1]=o[j*2+1]; sp[m*2+j*2]=o[j*2]+sx; sp[m*2+j*2+1]=o[j*2+1]+sz; }
+    ring(g.shadow,hull(sp));
+    const hsh=((Math.round(o[0]*10)*73856093)^(Math.round(o[1]*10)*19349663))>>>0;
+    if(cls===1){                                                                          // pitched: split along the longest side, the half facing the sun lit
+      const pi=hsh%C.shingle.length, nx=-uz, nz=ux, lit=(nx*sunX+nz*sunZ)>0, A=half(o,cx,cz,nx,nz,1), Bh=half(o,cx,cz,nx,nz,-1);
+      if(A.length>=6) ring(g.sh[pi][lit?0:1],A); if(Bh.length>=6) ring(g.sh[pi][lit?1:0],Bh);
+      let lo=1e9,hi=-1e9; for(let j=0;j<m;j++){ const pr=(o[j*2]-cx)*ux+(o[j*2+1]-cz)*uz; if(pr<lo) lo=pr; if(pr>hi) hi=pr; }
+      if(hi-lo>2){ g.ridge.moveTo(cx+ux*(lo+0.5),cz+uz*(lo+0.5)); g.ridge.lineTo(cx+ux*(hi-0.5),cz+uz*(hi-0.5)); } }
+    else if(cls===2){ const mb=g.memb[(hsh>>>3)%C.membranes.length]; for(const a of rings) ring(mb,a);                                  // big: a light membrane and its rooftop units
+      let lo=1e9,hi=-1e9; for(let j=0;j<m;j++){ const pr=(o[j*2]-cx)*ux+(o[j*2+1]-cz)*uz; if(pr<lo) lo=pr; if(pr>hi) hi=pr; }
+      for(const f of [0,0.3,-0.3]){ const hx=cx+ux*(hi-lo)*f, hz=cz+uz*(hi-lo)*f; if(inside(o,hx,hz)) box(g.hvac,hx,hz,ux,uz,1.1,0.8); } }
+    else if(cls===3) ring(g.tiny,o);
+    else { for(const a of rings) ring(g.flat[hsh%C.flat.length],a); if(ar>40&&inside(o,cx,cz)) box(g.hatch,cx,cz,ux,uz,0.45,0.45); }   // attached: a flat roof, its hatch
+    for(const a of rings) ring(g.edge,a); }
+  for(const c of t.cells){ const b=c.bb; if(b[0]<t.bb[0]) t.bb[0]=b[0]; if(b[1]<t.bb[1]) t.bb[1]=b[1]; if(b[2]>t.bb[2]) t.bb[2]=b[2]; if(b[3]>t.bb[3]) t.bb[3]=b[3]; }
+  return t; }
+function fpDraw(x,cx,cz,R){ FP.drawn=0; if(FP.idxState!=='ready') return 0; const C=MAPV_C, M=MAPV, L=[], det=M.a*M.d-M.cc*M.b||1, v=[1e9,1e9,-1e9,-1e9];
+  for(const [sx,sy] of [[0,0],[innerWidth,0],[0,innerHeight],[innerWidth,innerHeight]]){ const X=(M.d*(sx-M.e)-M.cc*(sy-M.f))/det, Z=(-M.b*(sx-M.e)+M.a*(sy-M.f))/det;   // the screen's corners in the world
+    if(X<v[0]) v[0]=X; if(Z<v[1]) v[1]=Z; if(X>v[2]) v[2]=X; if(Z>v[3]) v[3]=Z; }
+  let tiles=0; for(const t of FP.tiles.values()){ if(t.state!=='ready'||t.bb[2]<v[0]||t.bb[0]>v[2]||t.bb[3]<v[1]||t.bb[1]>v[3]) continue; tiles++;
+    for(const c of t.cells) if(!(c.bb[2]<v[0]||c.bb[0]>v[2]||c.bb[3]<v[1]||c.bb[1]>v[3])) L.push(c); }
+  if(!L.length) return 0; FP.cellsDrawn=L.length;
+  x.fillStyle=C.shadow; for(const t of L) x.fill(t.shadow);
+  C.flat.forEach((col,i)=>{ x.fillStyle=col; for(const t of L) x.fill(t.flat[i]); });
+  C.shingle.forEach((pal,i)=>{ for(const s of [0,1]){ x.fillStyle=pal[s]; for(const t of L) x.fill(t.sh[i][s]); } });
+  C.membranes.forEach((col,i)=>{ x.fillStyle=col; for(const t of L) x.fill(t.memb[i]); });
+  x.fillStyle=C.flat[3]; for(const t of L) x.fill(t.tiny);
+  x.lineCap='butt'; x.strokeStyle='rgba(40,40,40,.55)'; x.lineWidth=0.35; for(const t of L) x.stroke(t.ridge);
+  x.fillStyle=C.hatch; for(const t of L) x.fill(t.hatch);
+  x.fillStyle=C.hvac; for(const t of L) x.fill(t.hvac);
+  if(M.mpp<0.34){ x.strokeStyle=C.edge; x.lineWidth=0.3; for(const t of L) x.stroke(t.edge); }   // outlines only when pinched in past the normal zoom: they are the costliest thing to paint (South Philly rowhouses 22.9 -> 11.6 ms with them off, forced raster)
+  return FP.drawn=tiles; }
 const mapvT=(px,pz)=>[MAPV.a*px+MAPV.cc*pz+MAPV.e,MAPV.b*px+MAPV.d*pz+MAPV.f];       // world -> map screen
 function mapvBranchPts(at,next,len){ const pts=[[at.x,at.z]]; let a=at,b=next,acc=0,g=0;   // a branch street from its junction, along the street, about len m
   while(b&&g++<24){ pts.push([b.x,b.z]); acc+=Math.hypot(b.x-a.x,b.z-a.z); if(acc>=len) break; const nx=keepStreet(a,b); a=b; b=nx; } return pts; }
@@ -9928,14 +10012,23 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
       for(let t=-q.hw+0.5;t<=q.hw-0.5;t+=1.15){ const cx0=E.x+ux*dist+px*t, cz0=E.z+uz*dist+pz*t;
         x.moveTo(cx0-ux*1.3-px*0.28,cz0-uz*1.3-pz*0.28); x.lineTo(cx0+ux*1.3-px*0.28,cz0+uz*1.3-pz*0.28); x.lineTo(cx0+ux*1.3+px*0.28,cz0+uz*1.3+pz*0.28); x.lineTo(cx0-ux*1.3+px*0.28,cz0-uz*1.3+pz*0.28); } } }
   x.fill();
-  // buildings, as a satellite sees them: a sun shadow by height, then the roof
-  const vis=[]; for(const q of FLATCITY.mmB||[]) if(q&&Math.abs(q.x-tx)<R&&Math.abs(q.z-tz)<R) vis.push(q);
+  // the tree canopies of the local city — first, so a real building drawn over one hides it
+  const trees=[]; for(const p of FLATCITY.parts){ if(!p.isInstancedMesh||!(p.userData&&p.userData.shadeCast==='tree')) continue; const m=p.instanceMatrix.array;
+    for(let i=0;i<p.count;i++){ const o=i*16, X=m[o+12], Z=m[o+14]; if(Math.abs(X-tx)>R||Math.abs(Z-tz)>R) continue; trees.push([X,Z,Math.max(2.6,Math.min(6.5,Math.hypot(m[o],m[o+1],m[o+2])*1.6))]); } }
+  if(trees.length){ x.fillStyle=C.shadow; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X+2.2+r,Z+0.9); x.arc(X+2.2,Z+0.9,r,0,6.2832); } x.fill();
+    x.fillStyle=C.tree; x.beginPath(); for(const [X,Z,r] of trees) for(const [ox,oz,k] of [[-0.35,0.2,0.72],[0.38,0.22,0.68],[0,-0.32,0.7],[0,0,0.8]]){ x.moveTo(X+ox*r+k*r,Z+oz*r); x.arc(X+ox*r,Z+oz*r,k*r,0,6.2832); } x.fill();
+    x.fillStyle=C.treeHi; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X-0.3*r+0.42*r,Z-0.32*r); x.arc(X-0.3*r,Z-0.32*r,0.42*r,0,6.2832); } x.fill();
+    x.fillStyle=C.treeLo; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X+0.3*r+0.45*r,Z+0.35*r); x.arc(X+0.3*r,Z+0.35*r,0.45*r,0,6.2832); } x.fill(); }
+  // buildings, as a satellite sees them: a sun shadow by height, then the roof. The City's real footprints where their tile is in (fpDraw,
+  // below); the generated buildings only where it is not
+  fpEnsure(tx,tz,R*1.15);
+  const vis=[]; for(const q of FLATCITY.mmB||[]) if(q&&Math.abs(q.x-tx)<R&&Math.abs(q.z-tz)<R&&!fpCovered(q.x,q.z)) vis.push(q); M.gen=vis.length;
   const quad=(q,ca,sa,x0,x1,z0,z1,ox,oz)=>{ const X=(lx,lz)=>q.x+lx*ca+lz*sa+ox, Z=(lx,lz)=>q.z-lx*sa+lz*ca+oz;
     x.moveTo(X(x0,z0),Z(x0,z0)); x.lineTo(X(x1,z0),Z(x1,z0)); x.lineTo(X(x1,z1),Z(x1,z1)); x.lineTo(X(x0,z1),Z(x0,z1)); x.lineTo(X(x0,z0),Z(x0,z0)); };   // closed by a line back, not closePath (the edges are stroked)
   const SX=0.37, SZ=0.15, sunX=-0.928, sunZ=-0.371;                                   // the scene's sun (-300,270,-120): shadows fall east-south-east, ~0.4 of the height
   x.fillStyle=C.shadow; x.beginPath();
   for(const q of vis){ const a=q.ang||0, ca=Math.cos(a), sa=Math.sin(a), h=Math.min(40,q.h||7); for(const k of [0.34,0.67,1]) quad(q,ca,sa,-q.w/2,q.w/2,-q.d/2,q.d/2,SX*h*k,SZ*h*k); }
-  for(const ei of FLATCITY.mmInst||[]){ if(ei.bb[2]<tx-R||ei.bb[0]>tx+R||ei.bb[3]<tz-R||ei.bb[1]>tz+R) continue; const p=ei.p; x.moveTo(p[0]+3,p[1]+1.2); for(let i=2;i<p.length;i+=2) x.lineTo(p[i]+3,p[i+1]+1.2); }
+  for(const ei of FLATCITY.mmInst||[]){ if(ei.bb[2]<tx-R||ei.bb[0]>tx+R||ei.bb[3]<tz-R||ei.bb[1]>tz+R||fpCovered((ei.bb[0]+ei.bb[2])/2,(ei.bb[1]+ei.bb[3])/2)) continue; const p=ei.p; x.moveTo(p[0]+3,p[1]+1.2); for(let i=2;i<p.length;i+=2) x.lineTo(p[i]+3,p[i+1]+1.2); }
   x.fill();
   const bucket=new Map(), put=(col,args)=>{ let l=bucket.get(col); if(!l){ l=[]; bucket.set(col,l); } l.push(args); }, ridges=[], dividers=[], hatches=[], hvacs=[];
   for(const q of vis){ const a=q.ang||0, ca=Math.cos(a), sa=Math.sin(a), n=Math.max(1,q.units|0), k=q.kind||'', w2=q.w/2, d2=q.d/2;
@@ -9957,14 +10050,8 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
   x.fillStyle=C.hatch; x.beginPath(); for(const [q,ca,sa,lx,lz] of hatches) quad(q,ca,sa,lx-0.45,lx+0.45,lz-0.45,lz+0.45,0,0); x.fill();
   x.fillStyle=C.hvac; x.beginPath(); for(const [q,ca,sa,lx,lz] of hvacs) quad(q,ca,sa,lx-1,lx+1,lz-0.8,lz+0.8,0,0); x.fill();
   x.strokeStyle=C.edge; x.lineWidth=0.3; x.beginPath(); for(const q of vis){ const a=q.ang||0; quad(q,Math.cos(a),Math.sin(a),-q.w/2,q.w/2,-q.d/2,q.d/2,0,0); } x.stroke();
-  x.fillStyle=C.inst; x.beginPath(); for(const ei of FLATCITY.mmInst||[]){ if(ei.bb[2]<tx-R||ei.bb[0]>tx+R||ei.bb[3]<tz-R||ei.bb[1]>tz+R) continue; const p=ei.p; x.moveTo(p[0],p[1]); for(let i=2;i<p.length;i+=2) x.lineTo(p[i],p[i+1]); x.lineTo(p[0],p[1]); } x.fill(); x.stroke();
-  // the real tree canopies of the local city
-  const trees=[]; for(const p of FLATCITY.parts){ if(!p.isInstancedMesh||!(p.userData&&p.userData.shadeCast==='tree')) continue; const m=p.instanceMatrix.array;
-    for(let i=0;i<p.count;i++){ const o=i*16, X=m[o+12], Z=m[o+14]; if(Math.abs(X-tx)>R||Math.abs(Z-tz)>R) continue; trees.push([X,Z,Math.max(2.6,Math.min(6.5,Math.hypot(m[o],m[o+1],m[o+2])*1.6))]); } }
-  if(trees.length){ x.fillStyle=C.shadow; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X+2.2+r,Z+0.9); x.arc(X+2.2,Z+0.9,r,0,6.2832); } x.fill();
-    x.fillStyle=C.tree; x.beginPath(); for(const [X,Z,r] of trees) for(const [ox,oz,k] of [[-0.35,0.2,0.72],[0.38,0.22,0.68],[0,-0.32,0.7],[0,0,0.8]]){ x.moveTo(X+ox*r+k*r,Z+oz*r); x.arc(X+ox*r,Z+oz*r,k*r,0,6.2832); } x.fill();
-    x.fillStyle=C.treeHi; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X-0.3*r+0.42*r,Z-0.32*r); x.arc(X-0.3*r,Z-0.32*r,0.42*r,0,6.2832); } x.fill();
-    x.fillStyle=C.treeLo; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X+0.3*r+0.45*r,Z+0.35*r); x.arc(X+0.3*r,Z+0.35*r,0.45*r,0,6.2832); } x.fill(); }
+  x.fillStyle=C.inst; x.beginPath(); for(const ei of FLATCITY.mmInst||[]){ if(ei.bb[2]<tx-R||ei.bb[0]>tx+R||ei.bb[3]<tz-R||ei.bb[1]>tz+R||fpCovered((ei.bb[0]+ei.bb[2])/2,(ei.bb[1]+ei.bb[3])/2)) continue; const p=ei.p; x.moveTo(p[0],p[1]); for(let i=2;i<p.length;i+=2) x.lineTo(p[i],p[i+1]); x.lineTo(p[0],p[1]); } x.fill(); x.stroke();
+  fpDraw(x,tx,tz,R);                                                                       // 🏠 the City's real buildings
   // the route
   if(state.route&&MAP.guide&&routePts&&routePts.length>1){ x.strokeStyle=C.route; x.lineWidth=Math.max(3.2,9*mpp); x.lineCap='round'; x.lineJoin='round'; x.beginPath(); x.moveTo(routePts[0].x,routePts[0].z); for(let i=1;i<routePts.length;i++) x.lineTo(routePts[i].x,routePts[i].z); x.stroke(); }
   screen();

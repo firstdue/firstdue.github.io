@@ -8,3 +8,5 @@ assets/highway/*.glb binary -diff
 assets/truck/*.glb binary -diff
 tools/*.blend binary -diff
 assets/highway/GLTFLoader.147.js -diff linguist-vendored
+data/fp/*.bin binary
+data/fp/index.json -diff linguist-generated
