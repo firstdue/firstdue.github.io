@@ -1565,7 +1565,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21w";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21x";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9902,7 +9902,7 @@ const FP={idx:null,idxState:'idle',tiles:new Map(),busy:0,T:500,max:40,drawn:0};
    bake_footprints.js — each PFD house's building as the City names it ("Fire Engine 59/Ladder 18"; 55 houses), else the one its point
    lies in (7; E39 shares the Ridge & Cinnaminson building the City calls "Police 5th District"). The roof is painted fire-engine red
    and its companies are written along it, from the game's own roster: "E59 · L18". */
-const FHV='20261016';
+const FHV='20261016b';   // bump with every change to firehouses.json (b: Engine 39's building cut from the 5th Police District's)
 function fhPrep(n,o){ const st=stations.find(s=>s.num===n); if(!st||o.length<6) return null; const a=Float64Array.from(o), m=a.length/2; let cx=0,cz=0,lu=0,ux=1,uz=0; const bb=[1e9,1e9,-1e9,-1e9];
   for(let j=0;j<m;j++){ const q=(j+1)%m, x1=a[j*2],z1=a[j*2+1],x2=a[q*2],z2=a[q*2+1], L=Math.hypot(x2-x1,z2-z1); cx+=x1; cz+=z1; if(L>lu){ lu=L; ux=(x2-x1)/L; uz=(z2-z1)/L; }
     if(x1<bb[0]) bb[0]=x1; if(z1<bb[1]) bb[1]=z1; if(x1>bb[2]) bb[2]=x1; if(z1>bb[3]) bb[3]=z1; }
