@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v88';  // v21y: the Real buildings (test) switch for the 3D view (off by default); firehouse roof labels stay on the roof.
+const CACHE = 'local-shell-v89';  // v21z: each firehouse its own look (Engine 35 / Ladder 25 first), every firehouse near the truck drawn, and the ladder truck in the bay.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
