@@ -1566,7 +1566,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21z";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22a";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -10520,7 +10520,7 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
     x.rotate(Math.atan2(ny,nx)+Math.PI/2); x.fillStyle='#d32f2f'; x.beginPath(); x.moveTo(0,-11); x.lineTo(5,2); x.lineTo(-5,2); x.closePath(); x.fill(); x.fillStyle='#555'; x.beginPath(); x.moveTo(0,11); x.lineTo(5,2); x.lineTo(-5,2); x.closePath(); x.fill(); x.restore(); }
   const ms=performance.now()-t0; M.ms=M.ms?M.ms*0.9+ms*0.1:ms; }
 mmToggleBtn();
-const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip,updateMiniMap];                 // frame() renders the Tilt view
+const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip,updateMiniMap,updateFireBays];                 // frame() renders the Tilt view
 
 state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
@@ -10833,15 +10833,15 @@ function createEngine2Ladder3Station(st){                                   // t
 function createDefaultStation(st){                                          // every other house, sized to its companies
   return buildFirehouse(st, Object.assign({}, STATION_CFG, { bays: st.ladder?3:2 }));
 }
-const STATION_TEMPLATES={ e2:createEngine2Ladder3Station, e35:createE35Station };   // add more real houses here (each its own look)
+const STATION_TEMPLATES={ e2:createEngine2Ladder3Station, e35:createE35Station, e66:createE66Station };   // add more real houses here (each its own look)
 
 /* 🏚️ A FIREHOUSE IS A FEW DRAW CALLS (owner, October 16, 2026: "Can we make each firehouse its own look"). Every box of a model goes
    into ONE vertex-coloured mesh (FHK.lam, shared), its lights into one unlit mesh (FHK.glow), its lettering onto a plane — so a model
    at every firehouse near the truck costs ~3 draw calls where the old one (60 meshes) could only ever be built for the house you ride.
    ⚠ The two materials are SHARED: dispose a model's geometry and its textures (fhDispose), never FHK.lam / FHK.glow. */
 const FHK={lam:null,glow:null};
-function fhKit(){ const L=[], G=[], planes=[], m4=new THREE.Matrix4(), qt=new THREE.Quaternion(), eu=new THREE.Euler(), col=new THREE.Color(), one=new THREE.Vector3(1,1,1), pos=new THREE.Vector3();
-  const put=(arr,geo,c,x,y,z,rx,ry,rz)=>{ eu.set(rx||0,ry||0,rz||0); qt.setFromEuler(eu); m4.compose(pos.set(x,y,z),qt,one);
+function fhKit(){ const L=[], G=[], planes=[], DR=[], m4=new THREE.Matrix4(), qt=new THREE.Quaternion(), eu=new THREE.Euler(), col=new THREE.Color(), one=new THREE.Vector3(1,1,1), pos=new THREE.Vector3();
+  let M=null; const put=(arr,geo,c,x,y,z,rx,ry,rz)=>{ eu.set(rx||0,ry||0,rz||0); qt.setFromEuler(eu); m4.compose(pos.set(x,y,z),qt,one);
     const g=geo.index?geo.toNonIndexed():geo; if(g!==geo) geo.dispose(); g.applyMatrix4(m4); col.set(c);
     const n=g.attributes.position.count, ca=new Float32Array(n*3); for(let i=0;i<n;i++){ ca[i*3]=col.r; ca[i*3+1]=col.g; ca[i*3+2]=col.b; }
     g.setAttribute('color',new THREE.BufferAttribute(ca,3)); arr.push(g); };
@@ -10853,12 +10853,27 @@ function fhKit(){ const L=[], G=[], planes=[], m4=new THREE.Matrix4(), qt=new TH
     glowBox:(w,h,d,c,x,y,z)=>put(G,new THREE.BoxGeometry(w,h,d),c,x,y,z),
     glowCyl:(rt,rb,h,sg,c,x,y,z)=>put(G,new THREE.CylinderGeometry(rt,rb,h,sg),c,x,y,z),
     plane:(w,h,tex,x,y,z,transparent)=>planes.push({w,h,tex,x,y,z,transparent}),
-    finish:U=>{ const g=new THREE.Group();
+    doorBox:(w,h,d,c,x,y,z)=>put(DR,new THREE.BoxGeometry(w,h,d),c,x,y,z),        // the bay door: its own mesh, hidden while the door is up
+    mark:()=>{ M={l:L.length,g:G.length,p:planes.length}; },                        // everything after this is the house's own engine (fhRig)
+    finish:U=>{ const g=new THREE.Group(), rig=M?{mode:'home',planes:[]}:null, cnt=(arr,k)=>{ let n=0; for(let i=0;i<k;i++) n+=arr[i].attributes.position.count; return n; };
       if(!FHK.lam){ FHK.lam=new THREE.MeshLambertMaterial({vertexColors:true}); FHK.glow=new THREE.MeshBasicMaterial({vertexColors:true}); }
-      if(L.length) g.add(new THREE.Mesh(merge(L),FHK.lam)); if(G.length) g.add(new THREE.Mesh(merge(G),FHK.glow));
-      for(const p of planes){ const m=new THREE.Mesh(new THREE.PlaneGeometry(p.w,p.h),new THREE.MeshBasicMaterial({map:p.tex,transparent:!!p.transparent})); m.position.set(p.x,p.y,p.z); g.add(m); }
-      g.userData=Object.assign({fhKit:true},U||{}); return g; } }; }
+      if(L.length){ const l0=M?cnt(L,M.l):0, me=new THREE.Mesh(merge(L),FHK.lam); g.add(me); if(rig){ rig.lam=me; rig.l0=l0; rig.l1=me.geometry.attributes.position.count; } }
+      if(G.length){ const g0=M?cnt(G,M.g):0, me=new THREE.Mesh(merge(G),FHK.glow); g.add(me); if(rig){ rig.glow=me; rig.g0=g0; rig.g1=me.geometry.attributes.position.count; } }
+      planes.forEach((p,i)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(p.w,p.h),new THREE.MeshBasicMaterial({map:p.tex,transparent:!!p.transparent})); m.position.set(p.x,p.y,p.z); g.add(m); if(rig&&i>=M.p) rig.planes.push(m); });
+      if(DR.length){ const me=new THREE.Mesh(merge(DR),FHK.lam); me.visible=false; g.add(me); if(rig) rig.door=me; }
+      g.userData=Object.assign({fhKit:true},U||{}); if(rig) g.userData.rig=rig; return g; } }; }
 function fhDispose(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); const m=o.material; if(m&&m!==FHK.lam&&m!==FHK.glow){ if(m.map&&!(m.map.userData&&m.map.userData.fhShared)) m.map.dispose(); m.dispose(); } }); }
+/* 🚒 IN QUARTERS OR OUT ON THE BOX (owner, October 16). A house's own engine stands in its bay — 'home' — unless it is out on YOUR box
+   (a rival dispatched from that house, RIVALS.list). Then its bay is empty, and its door is shut — 'out' — only if nothing else of the
+   house is still in: a LADDER still in quarters keeps the doors up and the engine's side simply empty — 'open' (owner: "the engine is
+   out but not the ladder so both doors open but in the engine side would be empty and not closed"). On a free run there are no rivals,
+   so every house you pass has its doors up and its engine in. Ladders (and the ambulance) always stay in: only engines are dispatched
+   for now — when ladders go on the box, a house with both out shuts. The house you ride is 'open': its engine is you. */
+function fhRig(g,mode){ const r=g&&g.userData&&g.userData.rig; if(!r||r.mode===mode) return; r.mode=mode; const home=mode==='home';
+  if(r.lam) r.lam.geometry.setDrawRange(0,home?r.l1:r.l0); if(r.glow) r.glow.geometry.setDrawRange(0,home?r.g1:r.g0);
+  for(const m of r.planes) m.visible=home; if(r.door) r.door.visible=mode==='out'; }
+function updateFireBays(){ if(typeof FH3D==='undefined'||!FH3D.list.length) return; const out=(state.target&&RIVALS.list.length)?RIVALS.list:null;
+  for(const q of FH3D.list) fhRig(q.g,!(out&&out.some(r=>r.id===q.id))?'home':q.ladder?'open':'out'); }   // a ladder still in keeps the doors up
 function fhCanvas(w,h,draw){ const cv=document.createElement('canvas'); cv.width=w; cv.height=h; draw(cv.getContext('2d'),w,h); const t=new THREE.CanvasTexture(cv); t.anisotropy=4; return t; }
 
 function buildFirehouse(st,C){
@@ -10894,7 +10909,7 @@ function buildFirehouse(st,C){
     K.plane(W*0.9,W*0.9*170/1200,tex,0,C.bayH+(H-C.bayH)*0.52,fz+0.05,true); }
   /* ---- apparatus. RIGHT bay is left EMPTY: the player's controllable Engine parks there. ---- */
   for(let i2=0;i2<bays;i2++){ const kind=i2===bays-1?'engine':(i2===0?'amb':'ladder'), x=bayX(i2), vz=fz-C.recess+2.6;
-    if(kind==='engine') continue;                                           // ← the player's truck IS this rig
+    if(kind==='engine') continue;                                           // ← the house's own engine goes in last (fhEngine, after K.mark) — riding this house, the player's truck IS this rig
     if(kind==='amb'){ box(3.2,2.0,6.6,0xc0392f,x,1.0,vz); box(3.2,1.9,5.0,0xf4f4f0,x,2.9,vz-0.6); box(3.0,1.5,1.8,0xf4f4f0,x,2.6,vz+3.1); box(3.24,0.4,6.62,0xf4f4f0,x,2.0,vz); }
     else fhLadder(K,x,fz-0.5,st.ladder); }
   for(let i2=0;i2<bays;i2++) K.glowBox(2.6,0.12,0.5,0xfff2c4,bayX(i2),C.bayH-0.5,fz-C.recess+1.6);   // ceiling light strips inside each bay
@@ -10910,6 +10925,7 @@ function buildFirehouse(st,C){
     fhFlag(K,wx+C.wing/2+1.4,wD/2-1); }
   /* ---- broad concrete apron: every bay connects to the roadway, no grass in between ---- */
   { const apD=C.setback+6.5; box(W+C.wing*0.8,0.04,apD,0xd9d6cc,C.wing*0.3,0.1,fz+apD/2); }
+  { const ex=bayX(bays-1); K.mark(); fhEngine(K,ex,fz-0.6,st.num); fhDoor(K,ex,C.bayW,C.bayH,fz-0.9); }   // 🚒 the house's own engine in the right bay (fhRig)
   return K.finish({C,W,D,H,engBayX:((bays-1)*C.bayPitch)/2,halfW:W/2+(C.wing||0),xMin:-W/2,xMax:W/2+(C.wing>0?C.wing+1.6:0),setback:C.setback,spawnIn:C.spawnIn,yawFix:C.yawFix||0});
 }
 /* 🚒 THE LADDER TRUCK IN ITS BAY (owner, October 16: "Can the ladder truck in the bay door look better") — a rear-mount aerial facing out
@@ -10955,6 +10971,35 @@ function fhLadder(K,x,zf,num){ const box=K.box, red=0xc8231b, redDk=0x9e1a14, wh
   for(let z=lz0+0.5;z<lz1-1.0;z+=0.72) box(0.78,0.04,0.04,0xdfe3e8,x,3.7,z);
   box(1.4,0.26,0.24,0x2a2a2a,x,3.36,zf-1.05);                                // the ladder rest over the cab
   box(2.5,1.9,0.06,0x8f1812,x,1.72,zr+0.03); }                               // the back (in the dark of the bay)
+/* 🚒 THE HOUSE'S OWN ENGINE IN ITS BAY — a pumper facing out, front at zf: red body with compartment doors and a white stripe, the
+   pump panel behind the cab, the hose bed under its yellow cover, the red-and-white cab with its windshield, side windows, mirrors and
+   the lit "ENGINE n" sign, light bar, chrome grille with the gold number plate, bumper, lights, four wheels. Real size (the player's
+   truck is drawn larger, for the street). Added after K.mark(), so fhRig can take it away while it is out. */
+function fhEngine(K,x,zf,num){ const box=K.box, red=0xc8231b, redDk=0x9e1a14, white=0xf2f2ee, chrome=0xcfd4d9, glass=0x1f2b35, rub=0x1a1a1a;
+  const L=9.2, zr=zf-L, zc=(zf+zr)/2, cabL=3.0, zcab=zf-cabL/2, bodyL=L-cabL, zb=zr+bodyL/2;
+  box(2.2,0.32,L-0.3,0x1c1c1e,x,0.62,zc);                                    // frame
+  for(const az of [zf-1.4,zr+1.9]) for(const sg of [-1,1]){ K.cyl(0.52,0.52,0.38,14,rub,x+sg*1.06,0.52,az,0,0,Math.PI/2); K.cyl(0.26,0.26,0.4,10,0xb9bec4,x+sg*1.07,0.52,az,0,0,Math.PI/2); }   // four wheels and their hubs
+  box(2.5,2.0,bodyL,red,x,1.75,zb); box(2.53,0.13,bodyL,white,x,1.45,zb);    // the body and its white stripe
+  for(const sg of [-1,1]) for(let i=1;i<4;i++) box(0.02,1.65,0.05,redDk,x+sg*1.265,1.85,zr+i*(bodyL-1.3)/4);   // compartment doors
+  for(const sg of [-1,1]){ box(0.04,1.5,1.1,chrome,x+sg*1.27,1.8,zf-cabL-0.65); box(0.03,0.2,bodyL-0.4,chrome,x+sg*1.27,0.86,zb); }   // the pump panel, a running board
+  box(2.3,0.5,bodyL-0.6,0xe2b52e,x,3.0,zb-0.1);                              // the hose bed under its yellow cover
+  box(2.5,1.55,cabL,red,x,1.33,zcab); box(2.5,1.55,0.03,0xf0503f,x,1.33,zf+0.005);   // the cab: red below (its nose a lighter red, as the ladder's),
+  box(2.5,1.22,cabL-0.15,white,x,2.71,zcab-0.07); box(2.5,0.12,cabL,white,x,2.12,zcab);   // white above, the belt line
+  box(2.18,0.86,0.06,glass,x,2.74,zf-0.17); box(0.06,0.86,0.06,0x2b2b2b,x,2.74,zf-0.14);   // windshield and its centre post
+  for(const sg of [-1,1]){ box(0.06,0.72,1.5,glass,x+sg*1.26,2.74,zcab+0.25); box(0.06,0.62,0.9,glass,x+sg*1.26,1.62,zcab+0.45);
+    box(0.1,0.5,0.25,0x222222,x+sg*1.42,2.55,zf-0.45); box(0.06,0.06,0.3,chrome,x+sg*1.32,2.85,zf-0.45); }   // side windows, door glass, mirrors
+  K.plane(1.55,0.3,fhSign('ENGINE '+num),x,3.17,zf-0.13);                    // the lit unit sign over the windshield
+  box(2.0,0.2,0.4,0xd8d8d8,x,3.42,zf-0.55);
+  for(const [ox,c] of [[-0.72,0xff2a1a],[-0.24,0xffffff],[0.24,0xffffff],[0.72,0xff2a1a]]) K.glowBox(0.42,0.17,0.42,c,x+ox,3.43,zf-0.55);   // light bar
+  box(1.5,0.82,0.06,chrome,x,1.12,zf+0.01); for(let i=0;i<4;i++) box(1.36,0.05,0.07,0x6a6f75,x,0.82+i*0.18,zf+0.02);   // grille
+  box(0.5,0.28,0.05,0xd4b04a,x,1.22,zf+0.05);                                // its gold number plate
+  box(2.62,0.32,0.5,0xd5dade,x,0.6,zf+0.2);                                  // bumper
+  for(const sg of [-1,1]){ K.glowBox(0.32,0.24,0.06,0xfff3c8,x+sg*0.88,1.16,zf+0.03);
+    K.glowBox(0.2,0.2,0.06,0xff3b2a,x+sg*1.07,1.78,zf+0.03); K.glowBox(0.14,0.14,0.06,0xffb300,x+sg*1.07,1.45,zf+0.03); }   // head, warning and turn lights
+  box(2.5,1.9,0.06,0x8f1812,x,1.75,zr+0.03); }                               // the back (in the dark of the bay)
+function fhDoor(K,x,w,h,z){ const c=0xb3302a, dk=0x8a221d, gl=0x2d3a44;           // a sectional bay door, shut: red panels and a row of windows
+  K.doorBox(w,h,0.12,c,x,h/2,z); for(let i=1;i<5;i++) K.doorBox(w,0.05,0.04,dk,x,i*h/5,z+0.07);
+  const n=Math.max(2,Math.floor(w/1.15)); for(let i=0;i<n;i++) K.doorBox(Math.min(0.8,w/n-0.3),h/5*0.55,0.04,gl,x-w/2+(i+0.5)*w/n,h*0.7,z+0.07); }
 function fhFlag(K,x,z){ K.cyl(0.09,0.13,12,7,0xd3d8de,x,6,z); K.box(2.6,1.5,0.09,0xb22a35,x+1.35,10.9,z); K.box(1.05,0.75,0.11,0x27356e,x+0.58,11.28,z); }
 
 /* 🚒 ENGINE 35 / LADDER 25 — 4208 Ridge Ave, East Falls, from the owner's Street View pictures (April 2025): a one-storey bay block whose
@@ -11004,13 +11049,64 @@ function createE35Station(st){
   box(1.1,wH+0.3,1.1,stone[1],wx+wW/2-0.55,(wH+0.3)/2,wf-0.55);              // a fieldstone corner at the wing's far end
   box(9,0.03,7.5,0x6e9a4b,wx+wW/2+4.4,0.04,wf+1.6);                          // the lawn and the flag
   fhFlag(K,wx+wW/2+3.0,wf+2.6);
+  K.mark(); fhEngine(K,3.0,fz-0.9,35); fhDoor(K,(opW/2-0.28)/2,opW/2-0.28,opH,fz-0.55);   // 🚒 Engine 35 on the right, or that half's door shut (fhRig)
   return K.finish({W,D,H,engBayX:3.0,halfW:W/2+wW+1,xMin:-W/2,xMax:W/2+wW+5,setback:6.5,spawnIn:5.0,yawFix:0}); }
+
+/* 🚒 ENGINE 66 — 7727 Ridge Ave, Andorra, from the owner's Street View pictures (April 2025): a one-storey buff-brick house, its City
+   outline 19.2 m along Ridge by 22.6 m deep. The higher bay block on the left has ONE wide opening with a red steel frame, under a
+   long white canopy lettered "ENGINE NO. 66" in red that runs on over the entry (a grey door and a band of grey windows); a red bench
+   by the pier; a bare flagpole at the left corner; the lower wing on the right with its one window and a chimney; the concrete apron
+   and its yellow line, the lawn and a young tree. Inside the bay, turnout lockers on the left; Engine 66 parks in the right of it.
+   Local x is the outline's own frame (a - 9.6, right as seen from the street); the canopy's front is the outline's street edge. */
+function createE66Station(st){
+  const K=fhKit(), box=K.box, W=19.2, D=22.6, fz=D/2, wz=fz-1.2, zb=-fz+0.1, H=5.4, H2=4.6;
+  const E=(x1,x2,y1,y2,z1,z2,c)=>box(x2-x1,y2-y1,z2-z1,c,(x1+x2)/2,(y1+y2)/2,(z1+z2)/2);     // a box by its extents
+  const buff=0xe2bd82, buffDk=0xc29c66, cope=0xcac6bc, roof=0x6c6964, red=0xc8262a, oL=-6.9, oR=0.2, oH=3.6, R=8.0, eng=-1.6;   // buff a shade light: the front can face away from the sun
+  E(-9.1,-7.2,0,H,wz-12.3,wz,buff);                                          // the bay block: its left strip (the outline's short back-left corner),
+  E(-7.2,oL,0,H,wz-R,wz,buff); E(-7.2,2.0,0,H,zb,wz-R,buff);                 // the left jamb and everything behind the bay,
+  E(oL,oR,oH,H,wz-R,wz,buff); E(oR,2.0,0,H,wz-R,wz,buff);                    // the header over the opening, the pier and wall on its right
+  E(2.0,5.4,0,H2,zb,wz-0.3,buff); E(5.4,9.6,0,H2,zb,wz,buff);                // the lower part: the entry (set back under the canopy) and the wing
+  E(-9.0,-7.3,H,H+0.04,wz-12.2,wz-0.1,roof); E(-7.3,1.9,H,H+0.04,zb+0.1,wz-0.1,roof); E(2.1,9.5,H2,H2+0.04,zb+0.1,wz-0.4,roof);   // flat roofs
+  E(-9.2,2.05,H,H+0.22,wz-0.3,wz+0.08,cope); E(-9.2,-8.95,H,H+0.22,wz-12.3,wz,cope); E(1.85,2.05,H,H+0.22,zb,wz,cope);   // concrete coping
+  E(2.0,9.7,H2,H2+0.18,wz-0.6,wz+0.06,cope); E(9.45,9.7,H2,H2+0.18,zb,wz,cope);
+  for(const y of [1.2,2.4]) for(const [a,b2] of [[-9.1,-7.0],[0.3,2.0],[5.4,9.6]]) E(a,b2,y,y+0.03,wz,wz+0.01,buffDk);   // a few mortar courses so it reads as brick
+  for(const y of [4.2,4.8]) E(-9.1,2.0,y,y+0.03,wz,wz+0.01,buffDk);
+  E(4.9,5.6,H2,H2+1.3,wz-5.0,wz-4.3,buffDk);                                 // the chimney
+  /* ---- the bay: dark inside, its lockers, the red frame ---- */
+  E(oL,oR,0,oH,wz-R,wz-R+0.12,0x16120e); E(oL,oR,0,0.08,wz-R,wz,0x2e2a25); E(oL,oR,oH-0.08,oH,wz-R,wz-0.3,0x1e1a16);
+  E(oL,oL+0.08,0,oH,wz-R,wz-0.35,0x221d18); E(oR-0.08,oR,0,oH,wz-R,wz-0.35,0x221d18);
+  for(let i=0;i<4;i++){ const z=wz-2.4-i*1.05; E(oL+0.1,oL+0.66,0.2,2.25,z-0.47,z+0.47,0x34322f); E(oL+0.62,oL+0.72,0.85,1.95,z-0.33,z+0.33,i%2?0xc9a43a:0x8d7a3e); }   // turnout lockers
+  K.glowBox(4.6,0.1,0.4,0xfff2c4,(oL+oR)/2,oH-0.16,wz-3.6);                  // the bay's ceiling light
+  E(oL-0.12,oL+0.12,0,oH,wz-0.25,wz+0.06,red); E(oR-0.12,oR+0.12,0,oH,wz-0.25,wz+0.06,red); E(oL-0.12,oR+0.12,oH-0.22,oH,wz-0.25,wz+0.06,red);
+  /* ---- the canopy and its lettering ---- */
+  E(-7.8,5.4,oH,oH+0.62,wz,fz,0xe4e3de); E(-7.85,5.45,oH+0.6,oH+0.68,wz,fz+0.03,0xbdbdb8); E(2.0,5.4,oH+0.3,oH+0.62,wz-0.3,wz,0xe4e3de);
+  for(const x of [2.6,4.6]) K.glowCyl(0.15,0.15,0.06,8,0xfff1c8,x,oH-0.03,fz-0.6);   // its downlights over the entry
+  { const tex=fhCanvas(1024,80,(c,w,h)=>{ c.fillStyle='#e4e3de'; c.fillRect(0,0,w,h);   // "ENGINE NO. 66" in red on the canopy — an OPAQUE picture (no see-through pixels for iPhone's canvas noise)
+      c.fillStyle='#c8262a'; c.textAlign='center'; c.textBaseline='middle'; c.font='900 72px "Arial Black",Arial,sans-serif';
+      for(const [t,x] of [['ENGINE',0.27],['NO. 66',0.66]]){ c.save(); c.translate(w*x,h*0.55); c.scale(0.78,1); c.fillText(t,0,0); c.restore(); } });   // condensed, as painted
+    K.plane(oR-oL,0.54,tex,(oL+oR)/2,oH+0.31,fz+0.012); }
+  /* ---- the entry, the wing, the little things ---- */
+  E(2.1,3.0,0,2.25,wz-0.3,wz-0.24,0x8c9195); E(2.25,2.85,1.25,2.05,wz-0.3,wz-0.22,0x5d6a72);   // the grey door and its window,
+  E(2.3,2.55,1.4,1.75,wz-0.3,wz-0.21,0xf2f2ee); E(2.6,2.8,1.5,1.8,wz-0.3,wz-0.21,0xf2f2ee);      // notices taped to it
+  E(3.05,5.3,0.85,3.35,wz-0.3,wz-0.23,0x8f9498); E(3.15,5.2,0.95,3.25,wz-0.3,wz-0.21,0x9aa3a7);  // the band of grey windows
+  for(const y of [1.55,2.25,2.9]) E(3.15,5.2,y,y+0.05,wz-0.3,wz-0.2,0x7d8286); E(3.55,3.62,0.95,3.25,wz-0.3,wz-0.2,0x7d8286);
+  E(4.4,5.0,0.95,1.35,wz-0.3,wz+0.1,0xe9e9e6);                               // the air conditioner
+  E(1.0,1.55,2.15,2.6,wz,wz+0.04,0x6c7074); E(0.95,1.3,1.35,1.75,wz,wz+0.04,0xf3f3f3); E(0.97,1.28,1.6,1.72,wz,wz+0.05,0x2f5aa8);   // the plaque and a sign
+  E(-8.45,-8.15,1.45,1.8,wz,wz+0.12,red);                                    // the alarm box on the left pier
+  E(0.4,2.0,0.42,0.5,wz+0.25,wz+0.7,red); E(0.4,2.0,0.55,0.95,wz+0.2,wz+0.26,red); for(const x of [0.5,1.8]) E(x,x+0.1,0,0.42,wz+0.3,wz+0.65,0x7a1a17);   // the red bench
+  E(6.6,8.4,1.25,2.95,wz,wz+0.06,0x8a8f93); E(6.72,8.28,1.37,2.83,wz,wz+0.08,0x6f7b82); E(7.47,7.53,1.37,2.83,wz,wz+0.09,0x8a8f93); E(6.5,8.5,1.12,1.25,wz,wz+0.14,0xcfcac0);   // the wing's window
+  K.cyl(0.07,0.1,9.6,7,0xd3d8de,-9.0,4.8,fz+0.9); K.cyl(0.14,0.14,0.2,7,0xd8c27a,-9.0,9.7,fz+0.9);   // the bare flagpole
+  E(-9.6,2.9,0.03,0.07,wz,fz+6.6,0xcfcbc1); E(eng-0.06,eng+0.06,0.07,0.085,wz+0.2,fz+6.4,0xe2b53a);   // the concrete apron and its yellow line
+  E(2.9,9.8,0.03,0.065,wz-0.3,fz+6.6,0x6e9a4b);                              // the lawn and its young tree
+  K.cyl(0.06,0.08,2.2,6,0x6b5a45,7.6,1.1,wz+1.6); K.cyl(0.55,0.75,1.5,7,0x5f8f3e,7.6,2.7,wz+1.6);
+  K.mark(); fhEngine(K,eng,wz-0.5,66); fhDoor(K,(oL+oR)/2,oR-oL,oH,wz-0.15);   // 🚒 Engine 66 in the right of the bay, or the door shut (fhRig)
+  return K.finish({W,D,H,engBayX:eng,halfW:15,xMin:-W/2,xMax:W/2,setback:9.0,spawnIn:5.0,yawFix:0}); }
 
 function buildStationHouse(st){
   if(STHOUSE.group){ FLATCITY.group.remove(STHOUSE.group); fhDispose(STHOUSE.group); STHOUSE.group=null; }
   if(!st||!DRIVE.stPerp) return;
   const tpl=STATION_TEMPLATES[st.id]||createDefaultStation;
-  const g=tpl(st); if(!g) return;
+  const g=tpl(st); if(!g) return; fhRig(g,'open');                          // its engine is the player: the bay stands empty, the door up
   const U=g.userData, n=DRIVE.stPerp, yaw=Math.atan2(-n.x,-n.z)+(U.yawFix||0);
   const lxx=Math.cos(yaw), lxz=-Math.sin(yaw);                              // world direction of local +X
   const dist=U.setback+U.D/2;                                               // kerb → building centre (stOff is the kerb’s own offset from the centreline — adding it here double-counted and pushed the house 7m too far back)
@@ -11047,7 +11143,7 @@ function fh3dSync(cx,cz){ if(FH3D.state==='idle') fh3dLoad(); const keep=new Set
     if(!g) continue; const U=g.userData, xc=(U.xMin+U.xMax)/2, along=(a0+a1)/2-xc, deep=d0+U.D/2;   // the front on the outline's street edge, centred along it
     const px=fx+nx*deep+lx*along, pz=fz+nz*deep+lz*along;
     g.position.set(px,(typeof NAVGEO!=='undefined'&&NAVGEO.active)?navGroundY(px,pz):groundHeight(px,pz),pz); g.rotation.y=yaw;
-    FLATCITY.group.add(g); FH3D.list.push({id:st.id,g,x:px,z:pz,halfW:U.halfW}); }
+    FLATCITY.group.add(g); FH3D.list.push({id:st.id,g,x:px,z:pz,halfW:U.halfW,ladder:!!st.ladder}); }
   for(let i=FH3D.list.length-1;i>=0;i--){ const q=FH3D.list[i]; if(keep.has(q.id)) continue; FLATCITY.group.remove(q.g); fhDispose(q.g); FH3D.list.splice(i,1); } }
 fh3dLoad();
 
