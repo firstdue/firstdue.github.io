@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v83';  // v21t: lookup data loads under the BUILD (no one-launch delay); box 1776 + 4936 fixed - data/pfdbox.js, data/pfdaddr.js changed.
+const CACHE = 'local-shell-v84';  // v21u: Map view (a top-down map, Settings switch, touch the street to turn; assets/truck/pumper-top-v1.png), the controller is the default, wrong-way driving flows like legal.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
