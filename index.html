@@ -1566,7 +1566,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22a";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22b";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -10251,7 +10251,7 @@ const FP={idx:null,idxState:'idle',tiles:new Map(),busy:0,T:500,max:40,drawn:0};
    bake_footprints.js — each PFD house's building as the City names it ("Fire Engine 59/Ladder 18"; 55 houses), else the one its point
    lies in (7; E39 shares the Ridge & Cinnaminson building the City calls "Police 5th District"). The roof is painted fire-engine red
    and its companies are written along it, from the game's own roster: "E59 · L18". */
-const FHV='20261016b';   // bump with every change to firehouses.json (b: Engine 39's building cut from the 5th Police District's)
+const FHV='20261016c';   // bump with every change to firehouses.json (b: Engine 39's building cut from the 5th Police District's; c: Engine 59's from the police station's half)
 function fhPrep(n,o){ const st=stations.find(s=>s.num===n); if(!st||o.length<6) return null; const a=Float64Array.from(o), m=a.length/2; let cx=0,cz=0,lu=0,ux=1,uz=0; const bb=[1e9,1e9,-1e9,-1e9];
   for(let j=0;j<m;j++){ const q=(j+1)%m, x1=a[j*2],z1=a[j*2+1],x2=a[q*2],z2=a[q*2+1], L=Math.hypot(x2-x1,z2-z1); cx+=x1; cz+=z1; if(L>lu){ lu=L; ux=(x2-x1)/L; uz=(z2-z1)/L; }
     if(x1<bb[0]) bb[0]=x1; if(z1<bb[1]) bb[1]=z1; if(x1>bb[2]) bb[2]=x1; if(z1>bb[3]) bb[3]=z1; }
@@ -10833,14 +10833,14 @@ function createEngine2Ladder3Station(st){                                   // t
 function createDefaultStation(st){                                          // every other house, sized to its companies
   return buildFirehouse(st, Object.assign({}, STATION_CFG, { bays: st.ladder?3:2 }));
 }
-const STATION_TEMPLATES={ e2:createEngine2Ladder3Station, e35:createE35Station, e66:createE66Station };   // add more real houses here (each its own look)
+const STATION_TEMPLATES={ e2:createEngine2Ladder3Station, e12:createE12Station, e35:createE35Station, e59:createE59Station, e66:createE66Station };   // add more real houses here (each its own look)
 
 /* 🏚️ A FIREHOUSE IS A FEW DRAW CALLS (owner, October 16, 2026: "Can we make each firehouse its own look"). Every box of a model goes
    into ONE vertex-coloured mesh (FHK.lam, shared), its lights into one unlit mesh (FHK.glow), its lettering onto a plane — so a model
    at every firehouse near the truck costs ~3 draw calls where the old one (60 meshes) could only ever be built for the house you ride.
    ⚠ The two materials are SHARED: dispose a model's geometry and its textures (fhDispose), never FHK.lam / FHK.glow. */
-const FHK={lam:null,glow:null};
-function fhKit(){ const L=[], G=[], planes=[], DR=[], m4=new THREE.Matrix4(), qt=new THREE.Quaternion(), eu=new THREE.Euler(), col=new THREE.Color(), one=new THREE.Vector3(1,1,1), pos=new THREE.Vector3();
+const FHK={lam:null,glow:null,flag:null};
+function fhKit(){ const L=[], G=[], planes=[], DR=[], FL=[], OB=[], m4=new THREE.Matrix4(), qt=new THREE.Quaternion(), eu=new THREE.Euler(), col=new THREE.Color(), one=new THREE.Vector3(1,1,1), pos=new THREE.Vector3();
   let M=null; const put=(arr,geo,c,x,y,z,rx,ry,rz)=>{ eu.set(rx||0,ry||0,rz||0); qt.setFromEuler(eu); m4.compose(pos.set(x,y,z),qt,one);
     const g=geo.index?geo.toNonIndexed():geo; if(g!==geo) geo.dispose(); g.applyMatrix4(m4); col.set(c);
     const n=g.attributes.position.count, ca=new Float32Array(n*3); for(let i=0;i<n;i++){ ca[i*3]=col.r; ca[i*3+1]=col.g; ca[i*3+2]=col.b; }
@@ -10855,14 +10855,17 @@ function fhKit(){ const L=[], G=[], planes=[], DR=[], m4=new THREE.Matrix4(), qt
     plane:(w,h,tex,x,y,z,transparent)=>planes.push({w,h,tex,x,y,z,transparent}),
     doorBox:(w,h,d,c,x,y,z)=>put(DR,new THREE.BoxGeometry(w,h,d),c,x,y,z),        // the bay door: its own mesh, hidden while the door is up
     mark:()=>{ M={l:L.length,g:G.length,p:planes.length}; },                        // everything after this is the house's own engine (fhRig)
+    flag:o=>FL.push(o),                                                              // fhFlagAt notes each flag it draws (userData.flags)
+    obj:o=>OB.push(o),                                                               // a ready-made mesh (the flag's cloth), added as it is
     finish:U=>{ const g=new THREE.Group(), rig=M?{mode:'home',planes:[]}:null, cnt=(arr,k)=>{ let n=0; for(let i=0;i<k;i++) n+=arr[i].attributes.position.count; return n; };
       if(!FHK.lam){ FHK.lam=new THREE.MeshLambertMaterial({vertexColors:true}); FHK.glow=new THREE.MeshBasicMaterial({vertexColors:true}); }
       if(L.length){ const l0=M?cnt(L,M.l):0, me=new THREE.Mesh(merge(L),FHK.lam); g.add(me); if(rig){ rig.lam=me; rig.l0=l0; rig.l1=me.geometry.attributes.position.count; } }
       if(G.length){ const g0=M?cnt(G,M.g):0, me=new THREE.Mesh(merge(G),FHK.glow); g.add(me); if(rig){ rig.glow=me; rig.g0=g0; rig.g1=me.geometry.attributes.position.count; } }
       planes.forEach((p,i)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(p.w,p.h),new THREE.MeshBasicMaterial({map:p.tex,transparent:!!p.transparent})); m.position.set(p.x,p.y,p.z); g.add(m); if(rig&&i>=M.p) rig.planes.push(m); });
       if(DR.length){ const me=new THREE.Mesh(merge(DR),FHK.lam); me.visible=false; g.add(me); if(rig) rig.door=me; }
-      g.userData=Object.assign({fhKit:true},U||{}); if(rig) g.userData.rig=rig; return g; } }; }
-function fhDispose(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); const m=o.material; if(m&&m!==FHK.lam&&m!==FHK.glow){ if(m.map&&!(m.map.userData&&m.map.userData.fhShared)) m.map.dispose(); m.dispose(); } }); }
+      for(const o of OB) g.add(o);
+      g.userData=Object.assign({fhKit:true},U||{}); if(rig) g.userData.rig=rig; g.userData.flags=FL; return g; } }; }
+function fhDispose(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); const m=o.material; if(m&&m!==FHK.lam&&m!==FHK.glow&&m!==FHK.flag){ if(m.map&&!(m.map.userData&&m.map.userData.fhShared)) m.map.dispose(); m.dispose(); } }); }
 /* 🚒 IN QUARTERS OR OUT ON THE BOX (owner, October 16). A house's own engine stands in its bay — 'home' — unless it is out on YOUR box
    (a rival dispatched from that house, RIVALS.list). Then its bay is empty, and its door is shut — 'out' — only if nothing else of the
    house is still in: a LADDER still in quarters keeps the doors up and the engine's side simply empty — 'open' (owner: "the engine is
@@ -10923,6 +10926,7 @@ function buildFirehouse(st,C){
     box(1.7,3.3,0.28,0x4a3527,wx+3.0,1.65,wD/2+0.1); box(0.9,1.1,0.12,0xc8a24a,wx-4.2,wH*0.66,wD/2+0.12);
     box(2.4,0.45,0.9,0xb8503f,wx+0.4,0.6,wD/2+1.9); box(2.4,0.7,0.16,0xa5432f,wx+0.4,1.05,wD/2+2.28);
     fhFlag(K,wx+C.wing/2+1.4,wD/2-1); }
+  else fhFlag(K,-W/2-0.8,fz+2.6);                                               // no wing: the pole by the bay block's front corner, clear of the canopy
   /* ---- broad concrete apron: every bay connects to the roadway, no grass in between ---- */
   { const apD=C.setback+6.5; box(W+C.wing*0.8,0.04,apD,0xd9d6cc,C.wing*0.3,0.1,fz+apD/2); }
   { const ex=bayX(bays-1); K.mark(); fhEngine(K,ex,fz-0.6,st.num); fhDoor(K,ex,C.bayW,C.bayH,fz-0.9); }   // 🚒 the house's own engine in the right bay (fhRig)
@@ -11000,7 +11004,37 @@ function fhEngine(K,x,zf,num){ const box=K.box, red=0xc8231b, redDk=0x9e1a14, wh
 function fhDoor(K,x,w,h,z){ const c=0xb3302a, dk=0x8a221d, gl=0x2d3a44;           // a sectional bay door, shut: red panels and a row of windows
   K.doorBox(w,h,0.12,c,x,h/2,z); for(let i=1;i<5;i++) K.doorBox(w,0.05,0.04,dk,x,i*h/5,z+0.07);
   const n=Math.max(2,Math.floor(w/1.15)); for(let i=0;i<n;i++) K.doorBox(Math.min(0.8,w/n-0.3),h/5*0.55,0.04,gl,x-w/2+(i+0.5)*w/n,h*0.7,z+0.07); }
-function fhFlag(K,x,z){ K.cyl(0.09,0.13,12,7,0xd3d8de,x,6,z); K.box(2.6,1.5,0.09,0xb22a35,x+1.35,10.9,z); K.box(1.05,0.75,0.11,0x27356e,x+0.58,11.28,z); }
+/* 🇺🇸 THE FLAG, ALL THE WAY UP (owner, October 16: "Make sure the flag in the flag pole is all the way up. Non should be half staffed and
+   all should have one on their pole if not in the picture include one"). A pole from y0, h tall, its gold finial, and the flag at the
+   TOP — its upper edge 0.15 m under the finial — flying along +x (dir -1: along -x), s its scale (1 = 2.6 x 1.5 m): red with white
+   stripes and the blue canton by the pole. Every house model draws one; the kit notes it (userData.flags) and the suite checks it. */
+function fhFlagTex(){ let t=FH_SIGN.get('#flag'); if(t) return t;           // the stars and stripes: one OPAQUE picture (no see-through pixels for iPhone's canvas noise), shared
+  t=fhCanvas(190,100,(c,w,h)=>{ for(let i=0;i<13;i++){ c.fillStyle=i%2?'#f4f4f2':'#b8202e'; c.fillRect(0,Math.floor(i*h/13),w,Math.ceil(h/13)+1); }
+    const cw=Math.round(w*0.4), ch=Math.round(h*7/13); c.fillStyle='#253a73'; c.fillRect(0,0,cw,ch); c.fillStyle='#f4f4f2';
+    for(let r=0;r<9;r++) for(let k=0;k<(r%2?5:6);k++){ c.beginPath(); c.arc(cw*(k*2+(r%2?2:1))/12,ch*(r+1)/10,1.6,0,6.2832); c.fill(); } });
+  t.userData.fhShared=true; FH_SIGN.set('#flag',t); return t; }
+/* 🇺🇸 THE FLAG, ALL THE WAY UP AND FLYING CLEAN (owner, October 16: "Make sure the flag in the flag pole is all the way up. Non should be
+   half staffed and all should have one on their pole if not in the picture include one"; then "One not wrapped around the pole"). The
+   flag is CLOTH: the stars and stripes on a plane, its hoist edge along the pole at the TOP (0.15 m under the finial), the fly out flat,
+   rippled gently from the hoist — never twisted, never round the pole. hoist = the pole's direction (up the hoist), fly = the way it
+   flies; both sides drawn (the back mirrored, as a real flag). One shared picture and material: fhDispose keeps both. */
+function fhFlagCloth(K,ox,oy,oz,hx,hy,hz,fx,fy,fz,fw,fh){ const geo=new THREE.PlaneGeometry(fw,fh,10,1); geo.translate(fw/2,fh/2,0);
+  const p=geo.attributes.position; for(let i=0;i<p.count;i++){ const u=p.getX(i)/fw; p.setZ(i,0.06*fh*Math.sin(u*6.6)*u); }   // a gentle ripple, none at the hoist
+  const nx=fy*hz-fz*hy, ny=fz*hx-fx*hz, nz=fx*hy-fy*hx;                      // the cloth's normal
+  geo.applyMatrix4(new THREE.Matrix4().set(fx,hx,nx,ox, fy,hy,ny,oy, fz,hz,nz,oz, 0,0,0,1));
+  if(!FHK.flag) FHK.flag=new THREE.MeshBasicMaterial({map:fhFlagTex(),side:THREE.DoubleSide,color:0xe2e2e2});
+  K.obj(new THREE.Mesh(geo,FHK.flag)); }
+function fhFlagAt(K,x,y0,z,h,dir,s){ dir=dir||1; s=s||1; const top=y0+h, fw=2.5*s, fh=1.32*s;   // a pole from y0, h tall, the flag at its top, flying along +x (dir -1: along -x)
+  K.cyl(0.07+0.02*s,0.1+0.03*s,h,7,0xd3d8de,x,y0+h/2,z); K.cyl(0.13*s+0.03,0.13*s+0.03,0.2,7,0xd8c27a,x,top+0.1,z);
+  fhFlagCloth(K,x+dir*0.06,top-0.15-fh,z,0,1,0,dir,0,0,fw,fh);
+  K.flag({x,z,pole:top,flagTop:top-0.15}); }
+function fhFlag(K,x,z){ fhFlagAt(K,x,0,z,12,1,1); }                              // the standard pole, 12 m on the ground
+function fhFlagOut(K,x,y,z,len,s,side){ s=s||1; side=side||0; const fw=1.75*s, fh=0.95*s, t1=len-0.1, t0=t1-fh;   // a short pole out from the wall, leaning up (and to one side: side -1 left, 1 right); the flag's hoist along its END
+  const u=new THREE.Vector3(side*0.6,0.7,side?0.4:0.7).normalize(), d=new THREE.Vector3(0,-1,0).addScaledVector(u,u.y).normalize();   // the pole; the fly hangs square to it, down and out
+  const e=new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),u));
+  K.cyl(0.05,0.06,len,7,0xd3d8de,x+u.x*len/2,y+u.y*len/2,z+u.z*len/2,e.x,e.y,e.z); K.cyl(0.09,0.09,0.14,7,0xd8c27a,x+u.x*(len+0.08),y+u.y*(len+0.08),z+u.z*(len+0.08),e.x,e.y,e.z);   // the pole, its finial
+  fhFlagCloth(K,x+u.x*t0+d.x*0.04,y+u.y*t0+d.y*0.04,z+u.z*t0+d.z*0.04,u.x,u.y,u.z,d.x,d.y,d.z,fw,fh);   // flat, never round the pole: facing the street when the pole leans sideways
+  K.flag({x,z,pole:y+u.y*len,flagTop:y+u.y*t1}); }
 
 /* 🚒 ENGINE 35 / LADDER 25 — 4208 Ridge Ave, East Falls, from the owner's Street View pictures (April 2025): a one-storey bay block whose
    street face is polished red-brown granite with ONE wide apparatus opening, "ENGINE 35 / Ladder 25" lettered on the granite above it,
@@ -11055,7 +11089,7 @@ function createE35Station(st){
 /* 🚒 ENGINE 66 — 7727 Ridge Ave, Andorra, from the owner's Street View pictures (April 2025): a one-storey buff-brick house, its City
    outline 19.2 m along Ridge by 22.6 m deep. The higher bay block on the left has ONE wide opening with a red steel frame, under a
    long white canopy lettered "ENGINE NO. 66" in red that runs on over the entry (a grey door and a band of grey windows); a red bench
-   by the pier; a bare flagpole at the left corner; the lower wing on the right with its one window and a chimney; the concrete apron
+   by the pier; the flagpole at the left corner (bare in the picture: it flies the flag, owner); the lower wing on the right with its one window and a chimney; the concrete apron
    and its yellow line, the lawn and a young tree. Inside the bay, turnout lockers on the left; Engine 66 parks in the right of it.
    Local x is the outline's own frame (a - 9.6, right as seen from the street); the canopy's front is the outline's street edge. */
 function createE66Station(st){
@@ -11095,12 +11129,170 @@ function createE66Station(st){
   E(-8.45,-8.15,1.45,1.8,wz,wz+0.12,red);                                    // the alarm box on the left pier
   E(0.4,2.0,0.42,0.5,wz+0.25,wz+0.7,red); E(0.4,2.0,0.55,0.95,wz+0.2,wz+0.26,red); for(const x of [0.5,1.8]) E(x,x+0.1,0,0.42,wz+0.3,wz+0.65,0x7a1a17);   // the red bench
   E(6.6,8.4,1.25,2.95,wz,wz+0.06,0x8a8f93); E(6.72,8.28,1.37,2.83,wz,wz+0.08,0x6f7b82); E(7.47,7.53,1.37,2.83,wz,wz+0.09,0x8a8f93); E(6.5,8.5,1.12,1.25,wz,wz+0.14,0xcfcac0);   // the wing's window
-  K.cyl(0.07,0.1,9.6,7,0xd3d8de,-9.0,4.8,fz+0.9); K.cyl(0.14,0.14,0.2,7,0xd8c27a,-9.0,9.7,fz+0.9);   // the bare flagpole
+  fhFlagAt(K,-9.0,0,fz+0.9,9.6,1,0.85);                                       // the flagpole at the left corner (bare in the picture) — the flag at the top
   E(-9.6,2.9,0.03,0.07,wz,fz+6.6,0xcfcbc1); E(eng-0.06,eng+0.06,0.07,0.085,wz+0.2,fz+6.4,0xe2b53a);   // the concrete apron and its yellow line
   E(2.9,9.8,0.03,0.065,wz-0.3,fz+6.6,0x6e9a4b);                              // the lawn and its young tree
   K.cyl(0.06,0.08,2.2,6,0x6b5a45,7.6,1.1,wz+1.6); K.cyl(0.55,0.75,1.5,7,0x5f8f3e,7.6,2.7,wz+1.6);
   K.mark(); fhEngine(K,eng,wz-0.5,66); fhDoor(K,(oL+oR)/2,oR-oL,oH,wz-0.15);   // 🚒 Engine 66 in the right of the bay, or the door shut (fhRig)
   return K.finish({W,D,H,engBayX:eng,halfW:15,xMin:-W/2,xMax:W/2,setback:9.0,spawnIn:5.0,yawFix:0}); }
+
+/* 🚒 ENGINE 59 / LADDER 18 — 2201 W Hunting Park Ave, Nicetown, from the owner's Street View pictures (November 2018, May 2025): a
+   three-storey buff-brick house, its City outline 39.2 m along Hunting Park by 16.7 m deep at the front (lower wings behind). The
+   ground floor is an arcade of round arches: Ladder 18's arch on the left under its LADDER 18 sign, the pier with the big red Maltese
+   cross and the red niche with its statue below, Engine 59's arch under its ENGINE 59 sign (the owner's close-up, November 2018 — and
+   the flag on its short pole out from the wall above the LADDER 18 sign), the red arched doors with a row of small windows, then the carved stone doorway with its red door (the shield and figures in the tympanum, a white
+   firefighter statue by it), the open arch of the ALLEY in the middle — the carved cartouche above it marks the centre of the front.
+   The right half is the POLICE STATION (owner: "the other half of the building is as police station there is a alleyway after the
+   red door between the two the alleyway leads to the parking lot in the back for both"): one building, so the model draws it all,
+   mirrored — a glass doorway, two arches with plain steel doors — but firehouses.json holds only the firehouse's half (the bake cuts
+   the City's one outline at the alley), so Map view's red roof is the firehouse alone and the model is centred on that half.
+   A stone string course; eleven windows on the second floor; on the third, eleven taller windows between PAIRED stone columns; the
+   frieze and a deep dentilled cornice. The apron and the bays' yellow lines. Local x = the outline's own frame (a - 20.3). */
+function fhArchDoor(fn,xc,r,hs,z,c,win){ const k=v=>Math.round(v*0.72), dk=(k(c>>16&255)<<16)|(k(c>>8&255)<<8)|k(c&255), N=8, dy=r/N;           // an arched bay door, shut, its round top in slices (panel lines a shade darker)
+  fn(2*r,hs,0.1,c,xc,hs/2,z); for(let i=0;i<N;i++){ const ym=hs+(i+0.5)*dy, w=Math.sqrt(Math.max(0,r*r-(ym-hs)*(ym-hs))); fn(2*w,dy+0.01,0.1,c,xc,ym,z); }
+  for(const y of [hs*0.34,hs*0.67,hs]) fn(2*r-0.1,0.05,0.04,dk,xc,y,z+0.06);
+  if(win) for(const y of win) for(let i=-1;i<=1;i++) fn(r*0.42,0.3,0.04,0x2d3a44,xc+i*r*0.6,y,z+0.07); }   // rows of small windows (Engine 12's)
+function createE59Station(st){
+  const K=fhKit(), box=K.box, W=39.2, D=49, fz=D/2, wf=fz, fd=16.7, zb=fz-fd, Hg=5.4, Hb=14.6, wt=0.6, R=6.0, X0=-W/2, X1=W/2;
+  const E=(x1,x2,y1,y2,z1,z2,c)=>box(x2-x1,y2-y1,z2-z1,c,(x1+x2)/2,(y1+y2)/2,(z1+z2)/2);     // a box by its extents
+  const buff=0xdcac66, buffDk=0xb08754, ringC=0xa0783f, stone=0xe8dfc8, stoneDk=0xc6bea9, red=0xc0302a, dark=0x17120e, roof=0x6c6964;   // a shade light: the front can face away from the sun
+  /* ---- the ground floor: an arcade. [centre, inner half-width, springing height, kind] ---- */
+  const OP=[[-15.125,1.575,2.45,'lad'],[-9.125,1.575,2.45,'eng'],[-3.6,1.5,3.4,'door'],[0,1.25,3.2,'pass'],[3.6,1.5,3.4,'glass'],[9.125,1.575,2.45,'shut'],[15.125,1.575,2.45,'shut']];
+  E(X0,X1,Hg,Hb,zb,wf,buff); E(X0,X1,0,Hg,zb,wf-wt-R,buff);                // the upper floors, and the ground floor behind the bays
+  let gx=X0; for(const [xc,r] of OP){ E(gx,xc-r,0,Hg,wf-wt-R,wf,buff); E(gx,xc-r,0,0.55,wf,wf+0.06,stoneDk); gx=xc+r; }   // the piers between the arches, their stone base
+  E(gx,X1,0,Hg,wf-wt-R,wf,buff); E(gx,X1,0,0.55,wf,wf+0.06,stoneDk);
+  for(const [xc,r,hs,kind] of OP){ const N=8, dy=r/N, stoneArch=kind==='door'||kind==='pass'||kind==='glass', rt=stoneArch?0.45:0.32, rc=stoneArch?stone:ringC;
+    for(let i=0;i<N;i++){ const y0=hs+i*dy, ym=y0+dy/2, w=Math.sqrt(Math.max(0,r*r-(ym-hs)*(ym-hs))); E(xc-r,xc-w,y0,y0+dy,wf-wt,wf,buff); E(xc+w,xc+r,y0,y0+dy,wf-wt,wf,buff); }   // the wall round the arch's head
+    E(xc-r,xc+r,hs+r,Hg,wf-wt,wf,buff);
+    const n=9, rr=r+rt/2; for(let k=0;k<n;k++){ const th=Math.PI*(k+0.5)/n; box(Math.PI*rr/n+0.03,rt,0.12,rc,xc+rr*Math.cos(th),hs+rr*Math.sin(th),wf+0.05,0,0,th-Math.PI/2); }   // its ring
+    E(xc-r-rt,xc-r,0,hs,wf,wf+0.1,rc); E(xc+r,xc+r+rt,0,hs,wf,wf+0.1,rc);  // and jambs
+    if(stoneArch) E(xc-0.26,xc+0.26,hs+r-0.05,hs+r+rt+0.2,wf,wf+0.18,stone);   // a keystone
+    if(kind==='lad'||kind==='eng'||kind==='pass'){                           // an open bay: dark inside
+      E(xc-r,xc+r,0,Hg,wf-wt-R,wf-wt-R+0.12,dark); E(xc-r,xc+r,0,0.08,wf-wt-R,wf-wt,0x2e2a25); E(xc-r,xc+r,Hg-0.08,Hg,wf-wt-R,wf-wt,0x1e1a16);
+      E(xc-r,xc-r+0.08,0,Hg,wf-wt-R,wf-wt,0x221d18); E(xc+r-0.08,xc+r,0,Hg,wf-wt-R,wf-wt,0x221d18); K.glowBox(1.6,0.1,0.4,0xfff2c4,xc,Hg-0.2,wf-wt-2.5); }
+    else if(kind==='shut'){ E(xc-r,xc+r,0,Hg,wf-wt-R,wf-wt,buff); fhArchDoor(box,xc,r,hs,wf-0.3,0x5b6168); }   // the police half's arches: plain steel doors, down
+    else { E(xc-r,xc+r,0,hs+r,wf-wt-R,wf-0.15,stone);                        // a doorway: stone filling the arch, the door in it, the tympanum
+      E(xc-1.15,xc-0.8,0,2.95,wf-0.15,wf+0.05,stone); E(xc+0.8,xc+1.15,0,2.95,wf-0.15,wf+0.05,stone); E(xc-1.2,xc+1.2,2.6,2.95,wf-0.15,wf+0.08,stoneDk);
+      if(kind==='door'){ E(xc-0.8,xc+0.8,0,2.6,wf-0.15,wf-0.1,red); E(xc-0.55,xc-0.42,0.9,2.3,wf-0.15,wf-0.08,0x2b3238); E(xc+0.28,xc+0.52,1.45,1.69,wf-0.15,wf-0.07,0xd4b04a);   // the red door
+        E(xc-0.32,xc+0.32,3.25,4.2,wf-0.15,wf+0.02,stoneDk); for(const sg of [-1,1]) E(xc+sg*0.5-0.2,xc+sg*0.5+0.2,3.05,3.85,wf-0.15,wf,stoneDk);   // the carved shield and its figures
+        K.cyl(0.3,0.3,0.5,8,stone,xc+1.95,0.25,wf+0.4); K.cyl(0.17,0.22,0.95,8,0xeceae3,xc+1.95,0.98,wf+0.4); K.cyl(0.12,0.12,0.24,8,0xeceae3,xc+1.95,1.57,wf+0.4); }   // the white firefighter by it
+      else { E(xc-0.9,xc+0.9,0,2.6,wf-0.15,wf-0.1,0x3d4a55); E(xc-0.03,xc+0.03,0,2.6,wf-0.15,wf-0.08,0x9aa1ab); E(xc-1.1,xc+1.1,3.0,3.45,wf-0.15,wf-0.1,0x3d4a55); } } }
+  /* ---- the company signs, the big Maltese cross, the statue niche ---- */
+  for(const [x,t] of [[-15.125,'LADDER 18'],[-9.125,'ENGINE 59']]){ E(x-1.12,x+1.12,4.52,5.12,wf,wf+0.05,0xd8cfb4);   // a cream stone panel over each company's arch
+    const tex=fhCanvas(256,64,(c,w,h)=>{ c.fillStyle='#ebe3cc'; c.fillRect(0,0,w,h); c.strokeStyle='#b5a888'; c.lineWidth=4; c.strokeRect(3,3,w-6,h-6);
+      c.fillStyle='#3d3a35'; c.textAlign='center'; c.textBaseline='middle'; c.font='600 40px Georgia,"Times New Roman",serif'; c.fillText(t,w/2,h/2+2); });   // an OPAQUE picture
+    K.plane(2.1,0.52,tex,x,4.82,wf+0.06); }
+  { const cx=-12.125, cy=4.45, pk=0xf29a8e;                                  // the Maltese cross: four flared arms and the seal
+    for(const [dx,dy] of [[0,1],[0,-1],[1,0],[-1,0]]){ const v=dx===0; E(cx+dx*0.12-(v?0.2:0)-(dx<0?0.38:0),cx+dx*0.12+(v?0.2:0)+(dx>0?0.38:0),cy+dy*0.12-(v?0:0.2)-(dy<0?0.38:0),cy+dy*0.12+(v?0:0.2)+(dy>0?0.38:0),wf,wf+0.08,pk);
+      const o=0.5; E(cx+dx*o-(v?0.38:0)-(dx<0?0.38:0),cx+dx*o+(v?0.38:0)+(dx>0?0.38:0),cy+dy*o-(v?0:0.38)-(dy<0?0.38:0),cy+dy*o+(v?0:0.38)+(dy>0?0.38:0),wf,wf+0.08,pk); }
+    K.cyl(0.4,0.4,0.06,14,0xc9a43a,cx,cy,wf+0.1,Math.PI/2,0,0); K.cyl(0.32,0.32,0.06,14,0x8a2a24,cx,cy,wf+0.13,Math.PI/2,0,0); E(cx-0.12,cx+0.12,cy-0.14,cy+0.16,wf+0.15,wf+0.17,0xe2b53a); }
+  E(-12.45,-11.8,1.55,3.25,wf,wf+0.03,0x8e2a22); K.cyl(0.1,0.13,0.95,7,0x8d8f93,-12.125,2.05,wf+0.12); K.cyl(0.08,0.08,0.18,7,0x8d8f93,-12.125,2.62,wf+0.12);   // the red niche and its statue
+  E(-11.4,-11.0,1.5,2.0,wf,wf+0.04,0x9c7a3c);                                // a brass plaque
+  /* ---- string courses, windows, the paired columns, the frieze and the cornice ---- */
+  for(const [y0,y1,dz] of [[Hg-0.1,Hg+0.25,0.15],[9.75,10.1,0.2]]){ E(X0-0.1,X1+0.1,y0,y1,wf,wf+dz,stone); E(X0-0.1,X0,y0,y1,zb,wf,stone); E(X1,X1+0.1,y0,y1,zb,wf,stone); }
+  for(let i=-5;i<=5;i++){ const x=i*3.15;
+    E(x-0.65,x+0.65,6.3,8.5,wf,wf+0.03,0x2b3238); E(x-0.6,x+0.6,6.35,7.3,wf,wf+0.04,0x8a98a2); E(x-0.6,x+0.6,7.3,7.36,wf,wf+0.05,0xd8d4c8);   // second floor
+    E(x-0.82,x+0.82,6.15,6.3,wf,wf+0.15,stone); E(x-0.78,x+0.78,8.5,8.78,wf,wf+0.04,buffDk);
+    if(i===-4||i===-1||i===3) E(x-0.35,x+0.35,6.4,6.85,wf,wf+0.35,0xe9e9e6);  // an air conditioner here and there
+    E(x-1.2,x+1.2,10.1,13.2,wf,wf+0.02,buffDk); E(x-0.8,x+0.8,10.3,12.75,wf,wf+0.04,0x2b3238); E(x-0.75,x+0.75,10.35,11.4,wf,wf+0.05,0x8a98a2); E(x-0.75,x+0.75,11.4,11.46,wf,wf+0.06,0xd8d4c8);   // third floor
+    E(x-1.0,x+1.0,13.5,14.2,wf+0.12,wf+0.16,stoneDk); }                      // the frieze's panels
+  for(let k=-6;k<=5;k++){ const p=(k+0.5)*3.15; for(const c of [p-0.28,p+0.28]){                // the paired columns
+    E(c-0.16,c+0.16,10.1,13.2,wf,wf+0.25,stone); E(c-0.22,c+0.22,10.1,10.35,wf,wf+0.3,stone); E(c-0.24,c+0.24,12.95,13.2,wf,wf+0.32,stone); } }
+  E(-0.55,0.55,8.9,10.25,wf+0.15,wf+0.42,stone); E(-0.35,0.35,9.1,10.0,wf+0.42,wf+0.47,stoneDk); for(const sg of [-1,1]) E(sg>0?0.55:-1.35,sg>0?1.35:-0.55,9.3,9.75,wf+0.15,wf+0.36,stone);   // the cartouche at the centre
+  E(X0,X1,13.2,14.5,wf,wf+0.12,stone); E(X0-0.12,X0,13.2,14.5,zb,wf,stone); E(X1,X1+0.12,13.2,14.5,zb,wf,stone);   // the frieze
+  E(X0-1.0,X1+1.0,14.5,15.0,wf-0.1,wf+1.0,stone); E(X0-1.0,X0,14.5,15.0,zb,wf,stone); E(X1,X1+1.0,14.5,15.0,zb,wf,stone);   // the cornice, round the sides too
+  E(X0-1.15,X1+1.15,15.0,15.25,wf+0.85,wf+1.15,stoneDk); E(X0-1.0,X1+1.0,14.4,14.5,wf+0.15,wf+0.95,stoneDk);
+  for(let x=X0-0.7;x<=X1+0.7;x+=0.45) E(x-0.11,x+0.11,14.25,14.4,wf+0.55,wf+0.8,stone);   // dentils
+  E(X0+0.2,X1-0.2,Hb,Hb+0.06,zb+0.2,wf-0.2,roof);
+  fhFlagOut(K,-15.45,5.75,wf+0.12,2.6,0.9,-1);                                 // the flag on its short pole out from the wall above the LADDER 18 sign, leaning left as in the owner's close-up
+  /* ---- the lower wings behind (the outline's), and the apron ---- */
+  E(X0,-1.7,0,9,fz-30.6,zb,buff); E(2.1,18.9,0,9,fz-46.4,zb,buff); E(X0+0.2,-1.9,9,9.06,fz-30.4,zb-0.2,roof); E(2.3,18.7,9,9.06,fz-46.2,zb-0.2,roof);
+  E(X0-1,X1+1,0.03,0.07,wf,wf+9.0,0xcfcbc1); for(const x of [-15.125,-9.125]) E(x-0.06,x+0.06,0.07,0.085,wf+0.15,wf+8.8,0xe2b53a);   // the apron and the bays' yellow lines
+  fhLadder(K,-15.125,wf-0.7,18);                                             // Ladder 18 in the left arch
+  K.mark(); fhEngine(K,-9.125,wf-0.75,59); fhArchDoor(K.doorBox,-9.125,1.575,2.45,wf-0.3,red,[1.4]);   // 🚒 Engine 59 in the next, or its arched door shut (fhRig)
+  return K.finish({W,D,H:15.25,engBayX:-9.125,halfW:31,xMin:-W/2,xMax:0,setback:9.3,spawnIn:5.0,yawFix:0}); }   // xMin..xMax = the firehouse's half (its outline), to the middle of the alley
+
+/* 🚒 ENGINE 12 — 4447 Main St, Manayunk, from the owner's Street View pictures (April 2025): dark red brick, its City outline 20.1 m along
+   Main St by 25.6 m deep. The two-storey main block has TWO great round arches in thick brick rings on granite feet, carved lion heads at
+   their springing: the left with its red door down (two rows of small windows), the right Engine 12's. Between them the pier with its
+   plaque, a lamp and the bench with its plants; on the left wall the "PLAY WITH FIRE / MESS WITH DEATH" banner under a square Maltese-cross
+   plaque, another plaque right of the right arch. Above, a stone sill band, EIGHT narrow round-arched windows with green frames, a
+   corbelled cornice and the panelled brick parapet with its stone coping, raised in the middle; the flag on its pole from the front,
+   all the way up (owner: never at half-staff). A narrow one-storey wing either side, each with a round-arched red door under a fanlight (the left one's
+   red ramp railing); the battlemented hose tower at the back right (the outline's back-right corner). Local x = a - 10.05. */
+function createE12Station(st){
+  const K=fhKit(), box=K.box, W=20.1, D=25.6, fz=D/2, wf=fz, zb=wf-25.4, Hg=6.0, Hb=9.05, wt=0.6, R=7.0;
+  const E=(x1,x2,y1,y2,z1,z2,c)=>box(x2-x1,y2-y1,z2-z1,c,(x1+x2)/2,(y1+y2)/2,(z1+z2)/2);     // a box by its extents
+  const brick=0xa2573f, brickDk=0x7d3f2c, ringC=0x924d36, stone=0xcdc9bf, granite=0xb5b2aa, red=0xc0302a, green=0x2f5d45, dark=0x17120e, roof=0x6c6964;   // a shade light: the front can face away from the sun
+  const M0=-7.45, M1=6.85, eng=3.15;                                         // the main block; Engine 12's arch on the right
+  const OP=[[-2.85,1.65,2.45,'shut'],[eng,1.65,2.45,'eng']];
+  /* ---- the main block: two storeys, the arches through its ground floor ---- */
+  E(M0,M1,Hg,Hb,zb,wf,brick); E(M0,M1,0,Hg,zb,wf-wt-R,brick);
+  let gx=M0; for(const [xc,r] of OP){ E(gx,xc-r,0,Hg,wf-wt-R,wf,brick); gx=xc+r; } E(gx,M1,0,Hg,wf-wt-R,wf,brick);
+  for(const [xc,r,hs,kind] of OP){ const N=8, dy=r/N, rt=0.65;
+    for(let i=0;i<N;i++){ const y0=hs+i*dy, ym=y0+dy/2, w=Math.sqrt(Math.max(0,r*r-(ym-hs)*(ym-hs))); E(xc-r,xc-w,y0,y0+dy,wf-wt,wf,brick); E(xc+w,xc+r,y0,y0+dy,wf-wt,wf,brick); }
+    E(xc-r,xc+r,hs+r,Hg,wf-wt,wf,brick);
+    const n=11, rr=r+rt/2; for(let k=0;k<n;k++){ const th=Math.PI*(k+0.5)/n; box(Math.PI*rr/n+0.03,rt,0.14,ringC,xc+rr*Math.cos(th),hs+rr*Math.sin(th),wf+0.06,0,0,th-Math.PI/2); }   // the thick brick ring
+    E(xc-r-rt,xc-r,0,hs,wf,wf+0.12,ringC); E(xc+r,xc+r+rt,0,hs,wf,wf+0.12,ringC);   // its jambs
+    for(const sg of [-1,1]){ E(xc+sg*(r+rt/2)-rt/2-0.05,xc+sg*(r+rt/2)+rt/2+0.05,0,0.9,wf,wf+0.16,granite);   // granite feet
+      E(xc+sg*(r+rt)-0.17+sg*0.12,xc+sg*(r+rt)+0.17+sg*0.12,hs-0.1,hs+0.32,wf,wf+0.3,stone); }   // the carved lion heads at the springing
+    if(kind==='eng'){ E(xc-r,xc+r,0,Hg,wf-wt-R,wf-wt-R+0.12,dark); E(xc-r,xc+r,0,0.08,wf-wt-R,wf-wt,0x2e2a25); E(xc-r,xc+r,Hg-0.08,Hg,wf-wt-R,wf-wt,0x1e1a16);
+      E(xc-r,xc-r+0.08,0,Hg,wf-wt-R,wf-wt,0x221d18); E(xc+r-0.08,xc+r,0,Hg,wf-wt-R,wf-wt,0x221d18); K.glowBox(2.4,0.1,0.4,0xfff2c4,xc,hs+r-0.3,wf-wt-2.0); }
+    else { E(xc-r,xc+r,0,Hg,wf-wt-R,wf-wt,brick); fhArchDoor(box,xc,r,hs,wf-0.3,red,[1.6,2.2]); } }   // the left arch: its red door down
+  E(M0,M1,0,0.5,wf,wf+0.06,granite);                                         // the granite base along the front (behind the doors' feet)
+  /* ---- the pier, its plaque, lamp and bench; the banner and the plaques ---- */
+  E(-0.3,0.6,2.4,3.4,wf,wf+0.05,0xe6e2d6); K.box(0.16,0.3,0.16,0x2b2b2b,0.15,4.6,wf+0.15); E(0.13,0.17,0.6,4.5,wf,wf+0.08,0x5a5f66);   // plaque, lamp and its conduit
+  E(-0.55,0.85,0.42,0.5,wf+0.3,wf+0.75,0x8b6a45); for(const x of [-0.45,0.75]) E(x-0.04,x+0.04,0,0.42,wf+0.35,wf+0.7,0x2f4f9a);   // the bench
+  for(const x of [-0.3,0.4]) K.cyl(0.12,0.09,0.2,7,0x9a5a3c,x,0.6,wf+0.5);
+  for(const x of [-0.3,0.4]) K.cyl(0.16,0.1,0.18,7,0x4f8a3a,x,0.79,wf+0.5);
+  const plaque=(x,y)=>{ E(x-0.42,x+0.42,y-0.42,y+0.42,wf,wf+0.08,stone); E(x-0.3,x+0.3,y-0.08,y+0.08,wf,wf+0.11,0xa9a498); E(x-0.08,x+0.08,y-0.3,y+0.3,wf,wf+0.11,0xa9a498); };   // a square Maltese-cross plaque
+  plaque(-6.3,5.0); plaque(6.15,4.1);
+  { const tex=fhCanvas(128,256,(c,w,h)=>{ c.fillStyle='#f3f1ea'; c.fillRect(0,0,w,h);   // the PLAY WITH FIRE / MESS WITH DEATH banner — an OPAQUE picture
+      c.fillStyle='#1d1d1f'; c.textAlign='center'; c.textBaseline='middle'; c.font='900 19px Arial,sans-serif'; c.fillText('PLAY WITH',w/2,18); c.fillText('FIRE',w/2,38);
+      c.fillText('MESS',w/2,214); c.fillText('WITH DEATH',w/2,236);
+      c.fillStyle='#4aa3d8'; c.beginPath(); c.moveTo(70,190); c.quadraticCurveTo(122,150,96,70); c.quadraticCurveTo(112,120,84,96); c.quadraticCurveTo(100,150,70,190); c.fill();   // blue flames
+      c.fillStyle='#6b6d72'; c.beginPath(); c.moveTo(34,200); c.lineTo(52,70); c.quadraticCurveTo(66,52,78,70); c.lineTo(92,200); c.closePath(); c.fill();   // the hooded figure
+      c.fillStyle='#f3f1ea'; c.beginPath(); c.arc(64,84,9,0,6.2832); c.fill();
+      c.strokeStyle='#2a2a2c'; c.lineWidth=3; c.beginPath(); c.moveTo(30,64); c.lineTo(46,196); c.stroke(); c.beginPath(); c.moveTo(30,64); c.quadraticCurveTo(48,48,70,58); c.stroke(); });   // and its scythe
+    K.plane(1.3,2.6,tex,-6.3,2.9,wf+0.05); }
+  /* ---- the second floor: the sill band, eight round-arched windows, the corbelled cornice, the parapet ---- */
+  E(M0-0.05,M1+0.05,6.05,6.3,wf,wf+0.18,stone);
+  for(let i=0;i<8;i++){ const x=0.15+(i-3.5)*1.26, N=4;
+    E(x-0.42,x+0.42,6.3,7.75,wf,wf+0.04,green); E(x-0.34,x+0.34,6.35,7.0,wf,wf+0.06,0xcfd2cf); E(x-0.34,x+0.34,7.0,7.72,wf,wf+0.06,0x34404a);   // green frame, the lower sash's blind, the glass
+    for(let k=0;k<N;k++){ const ym=7.75+(k+0.5)*0.42/N, w=Math.sqrt(Math.max(0,0.42*0.42-(ym-7.75)*(ym-7.75))); E(x-w,x+w,7.75+k*0.42/N,7.75+(k+1)*0.42/N,wf,wf+0.05,green); }   // its round head
+    for(let k=0;k<5;k++){ const th=Math.PI*(k+0.5)/5; box(0.3,0.18,0.1,brickDk,x+0.55*Math.cos(th),7.75+0.55*Math.sin(th),wf+0.06,0,0,th-Math.PI/2); }   // the brick hood
+    for(const sg of [-1,1]) E(x+sg*0.5-0.1,x+sg*0.5+0.1,7.6,7.85,wf,wf+0.12,stone); }   // its stone imposts
+  E(1.38,2.05,6.4,6.8,wf,wf+0.35,0xe9e9e6);                                  // an air conditioner
+  for(let x=M0+0.2;x<M1-0.1;x+=0.36) E(x-0.08,x+0.08,8.35,8.75,wf,wf+0.2,brickDk);   // the corbel table
+  E(M0-0.1,M1+0.1,8.75,9.05,wf-0.1,wf+0.32,brick);
+  const parapet=(x1,x2,y1,y2)=>{ E(x1,x2,y1,y2,wf-0.35,wf+0.12,brick); for(let x=x1+0.3;x<x2-0.15;x+=0.55) E(x-0.09,x+0.09,y1+0.25,y2-0.3,wf+0.12,wf+0.14,brickDk);
+    E(x1-0.06,x2+0.06,y2,y2+0.16,wf-0.4,wf+0.18,stone); };
+  parapet(M0,-3.3,Hb,10.7); parapet(-3.3,3.6,Hb,11.3); parapet(3.6,M1,Hb,10.7);
+  for(const sg of [-1,1]) E(sg<0?M0-0.1:M1-0.25,sg<0?M0+0.25:M1+0.1,Hb,10.86,zb,wf,brick);   // the parapet round the sides
+  E(M0+0.3,M1-0.3,Hb,Hb+0.06,zb+0.3,wf-0.4,roof);
+  E(0.05,0.25,7.4,7.6,wf,wf+0.5,0x5a5f66); fhFlagAt(K,0.15,7.4,wf+0.5,8.0,1,0.62);   // the flagpole on its bracket, the flag all the way up (half-staff in the picture; owner: never)
+  /* ---- the two wings, their arched doors; the ramp; the hose tower ---- */
+  const wing=(x1,x2,d,door)=>{ const zz=wf-d; E(x1,x2,0,4.6,zz,wf,brick); E(x1,x2,0,0.5,wf,wf+0.06,granite);
+    for(let x=x1+0.2;x<x2-0.1;x+=0.36) E(x-0.07,x+0.07,4.2,4.6,wf,wf+0.16,brickDk);
+    E(x1-0.06,x2+0.06,4.6,5.35,zz,wf+0.1,brick); for(let x=x1+0.3;x<x2-0.15;x+=0.5) E(x-0.08,x+0.08,4.75,5.2,wf+0.1,wf+0.12,brickDk);
+    E(x1-0.1,x2+0.1,5.35,5.5,zz-0.05,wf+0.14,stone); E(x1+0.2,x2-0.2,4.6,4.66,zz+0.2,wf-0.3,roof);
+    const xc=door, r=0.52; E(xc-r,xc+r,0.12,2.25,wf,wf+0.05,red); E(xc-0.24,xc+0.24,1.25,1.85,wf,wf+0.07,0xdfe3e8); E(xc-0.19,xc+0.19,1.3,1.8,wf,wf+0.08,0x34404a);   // the red door
+    for(let k=0;k<4;k++){ const ym=2.25+(k+0.5)*r/4, w=Math.sqrt(Math.max(0,r*r-(ym-2.25)*(ym-2.25))); E(xc-w,xc+w,2.25+k*r/4,2.25+(k+1)*r/4,wf,wf+0.05,k<3?0x3a3f45:red); }   // its fanlight
+    for(let k=0;k<7;k++){ const th=Math.PI*(k+0.5)/7; box(0.3,0.26,0.1,ringC,xc+0.67*Math.cos(th),2.25+0.67*Math.sin(th),wf+0.06,0,0,th-Math.PI/2); }   // the brick ring
+    E(xc-0.8,xc-0.54,0.12,2.25,wf,wf+0.08,ringC); E(xc+0.54,xc+0.8,0.12,2.25,wf,wf+0.08,ringC); };
+  wing(-9.95,M0,6.0,-8.7); wing(M1,10.05,11.3,8.45); E(-9.95,M0,0,4.6,wf-25.3,wf-6.0,brick);   // (behind the left wing the main block runs to the outline's back)
+  E(-9.6,-5.0,0.03,0.18,wf+0.1,wf+1.7,0xc9c5ba);                              // the ramp to the left door and its red railing
+  for(let x=-9.4;x<=-5.0;x+=0.55) E(x-0.03,x+0.03,0.18,1.15,wf+1.62,wf+1.68,red); E(-9.45,-4.95,1.1,1.16,wf+1.6,wf+1.7,red); E(-9.45,-4.95,0.62,0.66,wf+1.62,wf+1.68,red);
+  E(-9.45,-9.39,0.18,1.16,wf+0.1,wf+1.7,red); E(-9.47,-9.37,1.1,1.16,wf+0.1,wf+1.7,red);
+  { const t1=6.65, t2=9.05, z1=wf-25.6, z2=wf-20.5, Ht=17;                    // the hose tower
+    E(t1,t2,0,Ht-0.7,z1,z2,brick);
+    for(const [cx,cz,nx,nz] of [[(t1+t2)/2,z2,0,1],[(t1+t2)/2,z1,0,-1],[t2,(z1+z2)/2,1,0],[t1,(z1+z2)/2,-1,0]]) for(const o of [-0.5,0.5]){   // two narrow arched openings on each face
+      const L=nz?t2-t1:z2-z1, px=nz?cx+o*L/2.4:cx+nx*0.02, pz=nz?cz+nz*0.02:cz+o*L/2.4; box(nz?0.42:0.06,1.5,nz?0.06:0.42,dark,px,14.3,pz); box(nz?0.42:0.06,0.2,nz?0.06:0.42,dark,px,15.12,pz); }
+    E(t1-0.15,t2+0.15,Ht-1.3,Ht-0.7,z1-0.15,z2+0.15,brickDk);                // its corbelled top
+    for(const [x,z] of [[t1,z1],[t2-0.6,z1],[t1,z2-0.6],[t2-0.6,z2-0.6],[(t1+t2)/2-0.3,z1],[(t1+t2)/2-0.3,z2-0.6],[t1,(z1+z2)/2-0.3],[t2-0.6,(z1+z2)/2-0.3]]) E(x-0.12,x+0.72,Ht-0.7,Ht,z-0.12,z+0.72,brick); }   // the battlements
+  E(-10.2,10.2,0.03,0.07,wf,wf+6.4,0xcfcbc1); E(eng-0.06,eng+0.06,0.07,0.085,wf+0.15,wf+6.2,0xe2b53a);   // the apron and Engine 12's yellow line
+  K.mark(); fhEngine(K,eng,wf-0.75,12); fhArchDoor(K.doorBox,eng,1.65,2.45,wf-0.3,red,[1.6,2.2]);   // 🚒 Engine 12 in the right arch, or its arched door down (fhRig)
+  return K.finish({W,D,H:17,engBayX:eng,halfW:17,xMin:-W/2,xMax:W/2,setback:6.6,spawnIn:5.0,yawFix:0}); }
 
 function buildStationHouse(st){
   if(STHOUSE.group){ FLATCITY.group.remove(STHOUSE.group); fhDispose(STHOUSE.group); STHOUSE.group=null; }
