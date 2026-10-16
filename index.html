@@ -1251,6 +1251,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <div class="sxSec">DISPLAY</div>
     <div class="sxCard"><button class="sxRow sxTog on" id="btnMiniMap" type="button" role="switch" aria-checked="true"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 6.3 2.6 7.2h-5.2z" fill="currentColor"/></svg><span class="sxL"><b>Minimap</b><small>The round map, top right</small></span><span class="sxSw" aria-hidden="true"></span></button></div>
     <div class="sxCard"><button class="sxRow sxTog" id="btnMapView" type="button" role="switch" aria-checked="false"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20z"/><path d="M8.5 4v13.5M15.5 6.5V20"/></svg><span class="sxL"><b>Map view</b><small>Drive on a top-down map instead of the 3D street view</small></span><span class="sxSw" aria-hidden="true"></span></button></div>
+    <div class="sxCard"><button class="sxRow sxTog" id="btnRealBld" type="button" role="switch" aria-checked="false"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V9.5l6-3.5v14.5M10 20.5V4l10 3.6v12.9M2.8 20.5h18.4M13.4 9.6h3.2M13.4 13h3.2M13.4 16.4h3.2M6.4 12.4h1.4M6.4 15.8h1.4"/></svg><span class="sxL"><b>Real buildings (test)</b><small>The City's own building outlines in the 3D view</small></span><span class="sxSw" aria-hidden="true"></span></button></div>
   </section>
   <section class="sxPane" data-pane="acct">
     <div class="sxStats"><div id="saves"><span class="stat"><i>🔥</i><b>SAVES</b><u id="savesN">0</u></span><span class="stat"><i>🏆</i><b>BEST</b><u id="bestN">0</u></span></div></div>
@@ -1565,7 +1566,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v21x";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v21y";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4266,7 +4267,7 @@ document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx
 function toggleSiren(){ state.siren=!state.siren; document.getElementById('btnSiren').classList.toggle('on',state.siren); }
 const TILTCAM={back:18,h:26,ahead:27};                                     // GPS-nav camera rig — ~30°: tilted enough to see well down the street (user asked; 43° was too top-down, 23° was all horizon)
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
-  if(FLATCITY.built){ FLATCITY.tick();                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
+  if(FLATCITY.built){ fp3Tick(); FLATCITY.tick();                              // 🏠 fp3Tick: the real-building tiles (FP3), prefetched, and prepared when no rebuild is running                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
     if(!FLATCITY.job && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.requestRebuild(truck.x,truck.z); }
   const driveEdge=DRIVE.fromN?.adj.find(e=>e.to===DRIVE.toN);                 // an unnamed ramp must match only an unnamed bridge; null used to match nearby City Ave and lift the truck onto its deck
   const navY=navRoadY(truck.x,truck.z,driveEdge?.name??'',driveEdge?DRIVE.toN.x-DRIVE.fromN.x:undefined,driveEdge?DRIVE.toN.z-DRIVE.fromN.z:undefined);   // + heading: a ramp under a ramp bridge keeps its own level
@@ -4583,7 +4584,7 @@ function updateHUD(dt){
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
   { const sa=document.getElementById('satAttr'); if(sa){ const show=state.running;   // v20u: shown for the whole shift (the OpenStreetMap road and land data is on screen all the time; the CARTO credit stays by the owner's word), no longer only after a tile has loaded
-      if(show) sa.textContent = '© OpenStreetMap contributors © CARTO'+(MAPV.active&&FP.drawn?' · Buildings: City of Philadelphia':'');   // 🏠 the City's footprints, while Map view shows them
+      if(show) sa.textContent = '© OpenStreetMap contributors © CARTO'+((MAPV.active&&FP.drawn)||(!MAPV.active&&FLATCITY.fp3&&FLATCITY.fp3.nb)?' · Buildings: City of Philadelphia':'');   // 🏠 the City's footprints, while Map view shows them
       sa.classList.toggle('show', show); } }
   if(DRIVE.pending && DRIVE.arrowT>0){ const jn=DRIVE.pending.at, nx=DRIVE.pending.next;                 // next-turn banner
     elTurn.style.display='flex'; elTurn.querySelector('.dir').textContent=DRIVE.arrow>0?'→':'←';
@@ -5536,6 +5537,9 @@ function nearFadeGhostMat(src){ const m=src.clone(), kind=src.userData.nearFade;
   return m; }
 function nearFadeRegister(){ const L=NEAR_FADE.list, cap=NEAR_FADE.cap, mats=new Map(); L.length=0;   // one ghost material per part material (the canopy's two LODs share one)
   for(const o of FLATCITY.parts){ const nf=o.material&&o.material.userData&&o.material.userData.nearFade;
+    if(nf&&o.userData.fp3){ let gm=mats.get(o.material); if(!gm){ gm=nearFadeGhostMat(o.material); mats.set(o.material,gm); }   // 🏠 the real buildings (FP3): a ghost over the same buffers, drawn in groups over only the buildings near the camera
+      const g=o.geometry, gg=new THREE.BufferGeometry(); gg.setIndex(g.index); for(const k in g.attributes) gg.setAttribute(k,g.attributes[k]); gg.boundingBox=g.boundingBox; gg.boundingSphere=g.boundingSphere;
+      const gh=new THREE.Mesh(gg,[gm]); gh.frustumCulled=false; gh.visible=false; gh.name=(o.name||'part')+'-near'; o.add(gh); L.push({src:o,gh,fp3:o.userData.fp3,mesh:true,own:true,warm:true}); continue; }
     if(nf&&o.isMesh&&!o.isInstancedMesh){ let gm=mats.get(o.material); if(!gm){ gm=nearFadeGhostMat(o.material); mats.set(o.material,gm); }   // a merged mesh (the institutions): its ghost is the same geometry drawn again
       const gh=new THREE.Mesh(o.geometry,gm); gh.frustumCulled=false; gh.visible=false; gh.name=(o.name||'part')+'-near'; o.add(gh);
       if(!o.geometry.boundingBox) o.geometry.computeBoundingBox(); L.push({src:o,gh,mesh:true,box:o.geometry.boundingBox,boxes:o.userData.nfBoxes||null,warm:true}); continue; }
@@ -5555,11 +5559,11 @@ function nearFadeRegister(){ const L=NEAR_FADE.list, cap=NEAR_FADE.cap, mats=new
       C[j+3]=bs.radius*Math.sqrt(Math.max(e[m]*e[m]+e[m+1]*e[m+1]+e[m+2]*e[m+2],e[m+4]*e[m+4]+e[m+5]*e[m+5]+e[m+6]*e[m+6],e[m+8]*e[m+8]+e[m+9]*e[m+9]+e[m+10]*e[m+10])); }
     L.push({src:o,gh,C,inst,own:gg!==g,bb:[bb.min.x,bb.min.y,bb.min.z,bb.max.x,bb.max.y,bb.max.z],ids:new Int32Array(cap).fill(-1),warm:true}); } }
 function nearFadeRelease(){ const L=NEAR_FADE.list, mats=new Set();
-  for(const G of L){ if(!G.mesh) G.gh.dispose(); if(G.own) G.gh.geometry.dispose(); mats.add(G.gh.material); }   // a merged mesh's ghost owns nothing   // a shared geometry is freed with its part
+  for(const G of L){ if(!G.mesh) G.gh.dispose(); if(G.own) G.gh.geometry.dispose(); mats.add(Array.isArray(G.gh.material)?G.gh.material[0]:G.gh.material); }   // a merged mesh's ghost owns nothing   // a shared geometry is freed with its part
   for(const m of mats) FLATCITY.oldMats.push(m); L.length=0; }
 function nearFadeUpdate(){ const L=NEAR_FADE.list; if(!L.length) return;
   const p=camera.position, px=p.x, py=p.y, pz=p.z, B=NEAR_FADE.b+0.75, B2=B*B, cap=NEAR_FADE.cap;
-  for(const G of L){ if(G.mesh){ let near=false; const bx=G.boxes||[[G.box.min.x,G.box.min.y,G.box.min.z,G.box.max.x,G.box.max.y,G.box.max.z]];
+  for(const G of L){ if(G.fp3){ fp3Ghost(G,px,py,pz,B2); continue; } if(G.mesh){ let near=false; const bx=G.boxes||[[G.box.min.x,G.box.min.y,G.box.min.z,G.box.max.x,G.box.max.y,G.box.max.z]];
       for(const b of bx){ const dx=Math.max(b[0]-px,0,px-b[3]), dy=Math.max(b[1]-py,0,py-b[4]), dz=Math.max(b[2]-pz,0,pz-b[5]); if(dx*dx+dy*dy+dz*dz<B2){ near=true; break; } }
       G.gh.visible=G.warm||near; G.warm=false; continue; }
     const C=G.C, e=G.src.instanceMatrix.array, bb=G.bb, ids=G.ids, gh=G.gh, n=C.length>>2; let k=0, same=true;
@@ -5627,7 +5631,7 @@ function startLocalCity(cx,cz){ const R=LOCAL.R;                                
   const ends=new Map(), ek=endKey;                                            // junction map, now WORLD-ANCHORED: every value comes from endAt(), which reads the global
   for(const s of list) for(const q of [[s.ax,s.az],[s.bx,s.bz]]){             // segment grid, so the same endpoint answers the same from any rebuild centre. ENDS caches
     const k=ek(q[0],q[1]); if(!ends.has(k)) ends.set(k,endAt(q[0],q[1])); }   // across rebuilds, so a re-drive costs a Map hit instead of the segNear walk.
-  return {cx,cz,list,ends,ek,detail:STREET_DETAIL.enabled&&DRIVE.stationId===STREET_DETAIL.companyId,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[],term:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map()};
+  return {cx,cz,list,ends,ek,detail:STREET_DETAIL.enabled&&DRIVE.stationId===STREET_DETAIL.companyId,immersive:STREETSCAPE.all||DRIVE.stationId===STREETSCAPE.companyId,crossMap:new Map(),hws:{med:[],grass:[],guard:[],post:[],wall:[],term:[]},hwClose:[[],[]],i:0,B:[],T:[],S:[],grid:new Map(),fp3:fp3Job(cx,cz)};   // fp3: the real-building squares this job builds (null: switch off)
 }
 // ===== 🏘️ TYPED BUILDINGS — graphics step 6B (v19g), residential codes only =====
 // BTYPE (data/btype.js) gives one typology code per road-graph segment, baked from every OPA parcel's building code.
@@ -5651,7 +5655,7 @@ function typedBuildings(J,s,code,dx,dz,nx,nz,sl,rh,EV){ const {cx,cz,B,grid}=J, 
   const walk=s.cls<=1?4.2:3.2, ang=-Math.atan2(dz,dx), ca=Math.cos(ang), sa=Math.sin(ang);        // same frame as the generic immersive box: local x along the street, local z toward side +1
   const cells=(x,z,w,d)=>{ const out=[]; for(let ox=-w/2+2;ox<w/2;ox+=5.5) for(let oz=-d/2+2;oz<d/2;oz+=5.5) out.push(gk(x+ox*ca+oz*sa,z-ox*sa+oz*ca)); return out; };
   const place=(tc,off,side,w,d,extra)=>{ if(B.length>=LOCAL.maxB) return false; const off2=tc;   // off2: distance ALONG the segment, the building's anchor for bldId
-    const x=s.ax+dx*tc+nx*off*side, z=s.az+dz*tc+nz*off*side; if((x-cx)**2+(z-cz)**2>R2) return false;
+    const x=s.ax+dx*tc+nx*off*side, z=s.az+dz*tc+nz*off*side; if((x-cx)**2+(z-cz)**2>R2) return false; if(J.fp3&&fp3CoveredJ(J,x,z)){ J.fp3gen=(J.fp3gen|0)+1; return false; }   // 🏠 a real square (FP3)
     const reach=Math.hypot(w/2,d/2);
     if(inWater(x,z)||landBlocksBuilding(x,z,reach*0.6)||railNear(x,z,reach+4)||navSpan(x,z,null,reach+22)?.b.bridge) return false;
     if(CORRIDOR_PHOTO.enabled&&s.name==='Lincoln Drive'&&z>-780&&z<-330) return false;         // owner photo sequence: wooded shoulders before Gypsy Lane
@@ -5879,6 +5883,10 @@ function densityGridStep(J,t0,budgetMs){ if(!PAVE.on) return true;
       for(let dz=-rc;dz<=rc;dz++) for(let dx=-rc;dx<=rc;dx++){
         const ix=gx+dx, iz=gz+dz; if(ix<0||iz<0||ix>=N||iz>=N) continue;
         const d=Math.hypot(dx,dz)/(rc+1e-3); if(d>1) continue; D.g[iz*N+ix]+=(1-d*d); } } }
+  const FD=J.fp3&&J.fp3.dn; if(FD){ if(D.j===undefined) D.j=0; const nf=J.fp3.nb;   // 🏠 the real buildings (FP3), each weighted by its area against a generated house's ~95 m^2
+    while(D.j<nf){ if(performance.now()-t0>budgetMs) return false; const end=Math.min(nf,D.j+120);
+      for(;D.j<end;D.j++){ const w=FD[D.j*3+2], gx=Math.round(((FD[D.j*3]-D.ox)/D.SIZE)*N), gz=Math.round(((FD[D.j*3+1]-D.oz)/D.SIZE)*N);
+        for(let dz=-rc;dz<=rc;dz++) for(let dx=-rc;dx<=rc;dx++){ const ix=gx+dx, iz=gz+dz; if(ix<0||iz<0||ix>=N||iz>=N) continue; const d=Math.hypot(dx,dz)/(rc+1e-3); if(d>1) continue; D.g[iz*N+ix]+=w*(1-d*d); } } } }
   if(!D.data){ D.data=new Uint8Array(N*N);
     for(let k=0;k<D.g.length;k++) D.data[k]=Math.min(255,(D.g[k]/PAVE.knorm)*255)|0; }     // ABSOLUTE divisor, never the local max
   return true; }
@@ -6124,8 +6132,344 @@ function instBuild(J){ const I=J.inst; FLATCITY.instCut=J.instCut||{b:0,t:0}; if
   if(I.K.p.length){ const m=new THREE.Mesh(mk(I.K,false),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true}))); m.name='inst-roofs'; m.userData.shadeCast='mesh'; m.userData.nfBoxes=boxes; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
   if(I.G.p.length){ const m=new THREE.Mesh(mk(I.G,false),shadeReceive(new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true})));   // over the land, under the road, no depth: the park-land rule
     m.name='inst-ground'; m.renderOrder=0.55; m.material.depthWrite=false; FLATCITY.group.add(m); FLATCITY.parts.push(m); } }
+/* 🏠 REAL BUILDINGS IN THE 3D VIEW — a PROTOTYPE behind Settings → Controls & Display → "Real buildings (test)", OFF by default
+   (owner, October 15, 2026, after v21v put the City's footprints in Map view: "could we use this new data to help with the 3d
+   view?"). With the switch on, the City's own L&I building footprints (the data/fp/ tiles Map view reads) are extruded to their
+   real heights in place of the generated buildings, wherever a tile is in; where one is not (yet), the generated city stands in,
+   square by square — the Map view rule. Off, none of this runs and the generated city is exactly what it was.
+   - FP3.R is how far the real buildings reach (760 m, LOCAL.R, like the generated city); past LOCAL.R they are boxes only — a longer
+     reach was measured for the pop-in question (notes/real-buildings-3d.md) and is one number away.
+   - Tiles load around the truck (FP3.R + FP3.pre), nearest first; each is decoded ONCE into typed arrays and PREPARED once in
+     the background (fp3Tick, FP3.prepMs a frame, never during a rebuild job): box, centroid, area, oriented box, the ground under
+     every corner, heights, a small grid of its own (typed, so the JS heap barely moves), and its PARTY WALLS — a wall whose
+     outside is inside a neighbour is drawn only above that neighbour's walls, so a rowhouse's two shared walls cost nothing.
+   - Generation is a phase of stepLocalCity (fp3Step), under the frame budget, never in commit: the job takes the buildings within
+     FP3.R of its centre from the tiles that were in WHEN IT STARTED (J.fp3.keys — generated and real never share a square) and
+     writes three merged meshes' typed arrays: facade walls (the row-house tile), facade walls (the apartment tile, by floors) and
+     flat-coloured roofs, gables, cornices and parapets. Commit only wraps them.
+   - Level of detail: within FP3.near of the centre the exact outline, a cornice on a rowhouse's street front, a parapet and rooftop
+     units on a big roof; beyond, a near-rectangular building (>= 0.8 of its oriented box) is that box, party faces dropped. The
+     walls keep their facade at every distance, so a rebuild changes an outline, not the picture. Pitched roofs at every distance.
+   - Nothing stands inside a real building: the generated trees there are removed, a hydrant inside one is drawn just outside its
+     nearest wall, and a catenary mast waits for the next clear spot. The firehouse model and the real churches and schools (INST)
+     keep their own models: a footprint under them is not drawn.
+   - The near fade (NEAR_FADE) draws again only the buildings near the camera, through draw groups over the merged index. */
+const FP3={ on:false, R:760, near:300, pre:200, max:30, prepMs:2.5, conc:4, M:40, N:36, tiles:new Map(), byNum:new Map(), slots:[], stamp:0, dirty:false, last:null, stat:null,
+  bay:{row:5.1,apt:6.3,house:5.6}, floor:3.15, minH:2.6, parH:0.75,
+  wall:{row:[0xb9634b,0xc47d5f,0xd8b18c,0xe9dfcc,0xa9664f,0xcaa17f,0xbc8c6b], house:[0xc9a48a,0xdac7ad,0xb98b73,0xd3c9bd,0xc7ad93,0xe1d7c4], apt:[0xb06a4f,0xc49272,0xa8785c,0xd8cfc2,0x9c6a55,0xcdb9a6], tiny:[0xb7aa98,0xa59a8a,0xc4bcb0]},
+  roof:{flat:[0xc9cdd1,0xdfe1e3,0xa9afb5,0x80868d,0x5d6268,0xb8bcc1,0xcfc9bf], pitch:[0x8d9298,0x7f6c5d,0x676c72,0x93806d,0x715c50], memb:[0xe5e6e2,0xd4d6d7,0xc1c5c8,0xaeb2b6,0x959a9f], cornice:[0x5b4b43,0x6c5c53,0xe8e2d6], unit:0x9fa5ab, cap:0x8a8d90} };
+try{ FP3.on=localStorage.getItem('pfd_realbld')==='on'; }catch(e){}
+const fp3Num=(tx,tz)=>(tx+2000)*8192+(tz+2000);
+// load the tiles within R of each centre in C ([[x,z],...]), nearest first, FP3.conc at a time; past FP3.max the least recently used go —
+// never one a job holds, and never one inside these radii (that would fetch it again next time: a loop)
+function fp3Ensure(C,R){ if(FP.idxState==='idle') fpIndex(); if(FP.idxState!=='ready') return; const T=FP.T, now=performance.now(); let need=new Map();
+  for(const [cx,cz] of C) for(let tx=Math.floor((cx-R)/T);tx<=Math.floor((cx+R)/T);tx++) for(let tz=Math.floor((cz-R)/T);tz<=Math.floor((cz+R)/T);tz++){ const k=tx+'_'+tz; if(!FP.idx.tiles[k]) continue;
+    const dx=Math.max(tx*T-cx,0,cx-(tx+1)*T), dz=Math.max(tz*T-cz,0,cz-(tz+1)*T), d=Math.hypot(dx,dz); if(d>R) continue;
+    const t=FP3.tiles.get(k); if(t){ t.used=now; continue; } if(!need.has(k)||need.get(k)>d) need.set(k,d); }
+  need=[...need].map(([k,d])=>[d,k]);
+  need.sort((a,b)=>a[0]-b[0]);
+  for(const [,k] of need){ if(FP3.busy>=FP3.conc) break; FP3.busy=(FP3.busy|0)+1; const t={k,state:'loading',used:now}; FP3.tiles.set(k,t);
+    fetch('data/fp/'+k+'.bin?v='+FPV).then(r=>r.ok?r.arrayBuffer():Promise.reject(r.status)).then(buf=>{ if(FP3.tiles.get(k)!==t) return; Object.assign(t,fp3Decode(buf,k)); t.state='decoded'; })
+      .catch(()=>{ t.state='failed'; }).finally(()=>{ FP3.busy--; }); }
+  if(FP3.tiles.size>FP3.max){ const old=[...FP3.tiles.values()].filter(t=>t.state!=='loading'&&!t.pin&&t.used<now).sort((a,b)=>a.used-b.used);
+    for(let i=0;i<old.length&&FP3.tiles.size>FP3.max;i++) fp3Drop(old[i]); } }
+// a dropped tile leaves the grid; its neighbours forget they saw it, so it is re-joined (party walls across the border) if it comes back.
+// Slots are not reused before 4,096 loads, so a stale ref in a neighbour's arrays never names another tile's building in the meantime
+function fp3Drop(t){ FP3.tiles.delete(t.k); t.state='dropped'; if(t.slot===undefined) return; const num=fp3Num(t.tx,t.tz); FP3.slots[t.slot]=null; FP3.byNum.delete(num);
+  for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){ const u=FP3.byNum.get(fp3Num(t.tx+a,t.tz+b)); if(u&&u.seen){ u.seen.delete(num); u.final=false; } } }
+function fp3Clear(){ for(const t of [...FP3.tiles.values()]) if(t.state!=='loading') fp3Drop(t); }
+// a tile, decoded once into flat typed arrays: every ring's points in world metres, outlines turned counter-clockwise in x/z, courtyards clockwise
+function fp3Decode(buf,k){ const d=new Uint8Array(buf); if(d.length<8||d[0]!==70||d[1]!==80||d[2]!==84||d[3]!==49) throw new Error('not a footprint tile: '+k);
+  const [tx,tz]=k.split('_').map(Number), ox=tx*FP.T*10, oz=tz*FP.T*10, n=(d[4]|d[5]<<8|d[6]<<16)+d[7]*16777216; let p=8;
+  const vu=()=>{ let v=0,m=1,b; do{ b=d[p++]; v+=(b&127)*m; m*=128; }while(b&128); return v; }, vs=()=>{ const v=vu(); return v%2?-(v+1)/2:v/2; };
+  const pts=new Float32Array(d.length), hft=new Uint8Array(n), cls=new Uint8Array(n), b0=new Int32Array(n+1), rs=[], rn=[]; let np=0;   // a point is >= 2 bytes, so d.length bounds the floats
+  for(let i=0;i<n;i++){ hft[i]=d[p++]; cls[i]=d[p++]; const nr=vu(); b0[i]=rs.length;
+    for(let r=0;r<nr;r++){ const m=vu(), s=np; let X=ox, Z=oz, a=0; for(let j=0;j<m;j++){ X+=vs(); Z+=vs(); pts[np*2]=X/10; pts[np*2+1]=Z/10; np++; }
+      for(let j=0;j<m;j++){ const q=j+1<m?j+1:0; a+=pts[(s+j)*2]*pts[(s+q)*2+1]-pts[(s+q)*2]*pts[(s+j)*2+1]; }
+      if((r===0)!==(a>0)) for(let lo=s,hi=s+m-1;lo<hi;lo++,hi--) for(let c=0;c<2;c++){ const v=pts[lo*2+c]; pts[lo*2+c]=pts[hi*2+c]; pts[hi*2+c]=v; }
+      rs.push(s); rn.push(m); } }
+  b0[n]=rs.length;
+  return {n,tx,tz,hft,cls,b0,rs:Int32Array.from(rs),rn:Int32Array.from(rn),pts:pts.slice(0,np*2),np,i:0}; }
+// inside building i of tile t? (outline and courtyards, even-odd)
+function fp3In(t,i,x,z){ const b=t.bb, o=i*4; if(x<b[o]||x>b[o+2]||z<b[o+1]||z>b[o+3]) return false; let c=false; const P=t.pts;
+  for(let r=t.b0[i];r<t.b0[i+1];r++){ const s=t.rs[r], m=t.rn[r]; for(let j=0,q=m-1;j<m;q=j++){ const xi=P[(s+j)*2],zi=P[(s+j)*2+1],xj=P[(s+q)*2],zj=P[(s+q)*2+1]; if(((zi>z)!==(zj>z))&&(x<(xj-xi)*(z-zi)/(zj-zi)+xi)) c=!c; } }
+  return c; }
+// is (x,z) inside a real building? -> its ref (slot * 2^20 + index), or -1. Its own tile's grid, and a neighbour's within FP3.M of the border.
+// skip: the ref asking (a building testing its own walls)
+function fp3Inside(x,z,skip){ const T=FP.T, M=FP3.M, tx=Math.floor(x/T), tz=Math.floor(z/T), fx=x-tx*T, fz=z-tz*T;
+  for(let a=fx<M?-1:0;a<=(fx>T-M?1:0);a++) for(let b=fz<M?-1:0;b<=(fz>T-M?1:0);b++){ const t=FP3.byNum.get(fp3Num(tx+a,tz+b)); if(!t||!t.g) continue; const g=t.g, r0=t.slot*1048576;
+    const gx=Math.floor((x-g.X0)/g.C), gz=Math.floor((z-g.Z0)/g.C);
+    if(gx>=0&&gz>=0&&gx<g.N&&gz<g.N){ const c=gx*g.N+gz; for(let k=g.st[c];k<g.st[c+1];k++){ const i=g.it[k]; if(r0+i!==skip&&fp3In(t,i,x,z)) return r0+i; } }
+    for(const i of g.big) if(r0+i!==skip&&fp3In(t,i,x,z)) return r0+i; }
+  return -1; }
+// a tile's own grid (FP3.N cells a side over the tile and FP3.M around it), compressed rows; a building too big for the margin goes on .big
+function fp3Grid(t){ const T=FP.T, M=FP3.M, N=FP3.N, C=(T+2*M)/N, X0=t.tx*T-M, Z0=t.tz*T-M, st=new Int32Array(N*N+1), big=[], b=t.bb, span=i=>{ const o=i*4;
+    return [Math.floor((b[o]-X0)/C),Math.floor((b[o+1]-Z0)/C),Math.floor((b[o+2]-X0)/C),Math.floor((b[o+3]-Z0)/C)]; };
+  for(let i=0;i<t.n;i++){ const [a0,c0,a1,c1]=span(i); if(a0<0||c0<0||a1>=N||c1>=N){ big.push(i); continue; } for(let gx=a0;gx<=a1;gx++) for(let gz=c0;gz<=c1;gz++) st[gx*N+gz+1]++; }
+  for(let k=0;k<N*N;k++) st[k+1]+=st[k];
+  const it=new Int32Array(st[N*N]), fill=st.slice(0,N*N);
+  for(let i=0;i<t.n;i++){ const [a0,c0,a1,c1]=span(i); if(a0<0||c0<0||a1>=N||c1>=N) continue; for(let gx=a0;gx<=a1;gx++) for(let gz=c0;gz<=c1;gz++) it[fill[gx*N+gz]++]=i; }
+  t.g={X0,Z0,C,N,st,it,big:Int32Array.from(big)}; }
+// PREPARE, stage 1 (resumable, per building): box, centroid, area, the ground under each corner, heights, oriented box, Morton key; then the grid
+function fp3Prep1(t,t0,ms){ const n=t.n, P=t.pts;
+  if(!t.bb){ t.bb=new Float32Array(n*4); t.cxz=new Float32Array(n*2); t.area=new Float32Array(n); t.gmin=new Float32Array(n); t.gmean=new Float32Array(n);   // typed arrays count in the JS heap: kept lean
+    t.top=new Float32Array(n); t.wtop=new Float32Array(n); t.obb=new Float32Array(n*6); t.fill=new Uint8Array(n); t.mk=new Uint16Array(n); }
+  for(;t.i<n;t.i++){ if((t.i&31)===0&&performance.now()-t0>ms) return false; const i=t.i, s=t.rs[t.b0[i]], m=t.rn[t.b0[i]];
+    let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9,cx=0,cz=0,gmin=1e9,gs=0;
+    for(let j=0;j<m;j++){ const x=P[(s+j)*2], z=P[(s+j)*2+1]; if(x<x0)x0=x; if(x>x1)x1=x; if(z<z0)z0=z; if(z>z1)z1=z; cx+=x; cz+=z; const g=navGroundY(x,z); gs+=g; if(g<gmin) gmin=g; }
+    cx/=m; cz/=m; let a=0; for(let r=t.b0[i];r<t.b0[i+1];r++){ const s2=t.rs[r], m2=t.rn[r]; let ar=0; for(let j=0;j<m2;j++){ const q=j+1<m2?j+1:0; ar+=P[(s2+j)*2]*P[(s2+q)*2+1]-P[(s2+q)*2]*P[(s2+j)*2+1]; } a+=ar/2; }
+    t.bb[i*4]=x0; t.bb[i*4+1]=z0; t.bb[i*4+2]=x1; t.bb[i*4+3]=z1; t.cxz[i*2]=cx; t.cxz[i*2+1]=cz; t.area[i]=Math.max(1,a); t.gmin[i]=gmin; const gm=gs/m; t.gmean[i]=gm;
+    const c=t.cls[i], hm=t.hft[i]?t.hft[i]*0.3048:(c===0?9:c===1?8.5:c===2?7:3.2), top=Math.max(gm+Math.max(FP3.minH,hm),gmin+FP3.minH+0.6);
+    t.top[i]=top;
+    // the oriented box (rotating calipers over the hull), long side first: the far level of detail and every pitched roof
+    const H=[]; for(let j=0;j<m;j++) H.push([P[(s+j)*2],P[(s+j)*2+1]]); H.sort((p,q)=>p[0]-q[0]||p[1]-q[1]);
+    const cr=(o,p,q)=>(p[0]-o[0])*(q[1]-o[1])-(p[1]-o[1])*(q[0]-o[0]), lo=[], up=[];
+    for(const q of H){ while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],q)<=0) lo.pop(); lo.push(q); }
+    for(let j=H.length-1;j>=0;j--){ const q=H[j]; while(up.length>=2&&cr(up[up.length-2],up[up.length-1],q)<=0) up.pop(); up.push(q); }
+    const h=lo.slice(0,-1).concat(up.slice(0,-1)); let best=null;
+    for(let j=0;j<h.length;j++){ const A=h[j], B=h[(j+1)%h.length], L=Math.hypot(B[0]-A[0],B[1]-A[1]); if(L<1e-6) continue; const ux=(B[0]-A[0])/L, uz=(B[1]-A[1])/L;
+      let s0=1e9,s1=-1e9,u0=1e9,u1=-1e9; for(const q of h){ const sv=q[0]*ux+q[1]*uz, tv=-q[0]*uz+q[1]*ux; if(sv<s0)s0=sv; if(sv>s1)s1=sv; if(tv<u0)u0=tv; if(tv>u1)u1=tv; }
+      const A2=(s1-s0)*(u1-u0); if(!best||A2<best.A) best={A:A2,ux,uz,s0,s1,u0,u1}; }
+    const o=i*6;
+    if(best){ let ux=best.ux, uz=best.uz, hl=(best.s1-best.s0)/2, hw=(best.u1-best.u0)/2; const sc=(best.s0+best.s1)/2, tc=(best.u0+best.u1)/2, ocx=sc*ux-tc*uz, ocz=sc*uz+tc*ux;
+      if(hw>hl){ const q=hl; hl=hw; hw=q; const v=ux; ux=-uz; uz=v; }
+      t.obb[o]=ocx; t.obb[o+1]=ocz; t.obb[o+2]=ux; t.obb[o+3]=uz; t.obb[o+4]=hl; t.obb[o+5]=hw; t.fill[i]=Math.round(255*Math.min(1,t.area[i]/Math.max(1e-3,best.A))); }
+    else { t.obb[o]=cx; t.obb[o+1]=cz; t.obb[o+2]=1; t.obb[o+3]=0; t.obb[o+4]=(x1-x0)/2; t.obb[o+5]=(z1-z0)/2; t.fill[i]=0; }
+    // a pitched roof: the walls stop at the eaves, the ridge is the top
+    const W=t.obb[o+5]*2; t.wtop[i]=(c===1&&t.fill[i]>=179&&W<=16&&t.obb[o+4]*2<=32)?Math.max(top-Math.min(3.6,Math.max(1.6,W*0.38)),gmin+FP3.minH):top;
+    }
+  if(t.slot===undefined){ fp3Grid(t); const s=(FP3.nslot=(FP3.nslot|0)+1)%4096; t.slot=s; FP3.slots[s]=t; FP3.byNum.set(fp3Num(t.tx,t.tz),t); }
+  return true; }
+/* stage 2: the party walls. hr[q] = the neighbour pressed against the wall from point q (three samples along it, 0.6 m out, all inside a
+   neighbour), -1 where it is free; hid[q] = how high it hides that wall (the lowest of the samples' wall tops), in decimetres. ohr / ohid the
+   same for the four faces of the oriented box. A neighbour tile that comes in later re-runs it for the buildings near that border. */
+function fp3PartyAt(t,i){ const P=t.pts, ref=t.slot*1048576+i, s=t.rs[t.b0[i]], m=t.rn[t.b0[i]], wt=r=>{ const u=FP3.slots[r>>>20]; return u?u.wtop[r&1048575]:-1e9; };
+  for(let j=0;j<m;j++){ const q=j+1<m?j+1:0, ax=P[(s+j)*2], az=P[(s+j)*2+1], dx=P[(s+q)*2]-ax, dz=P[(s+q)*2+1]-az, L=Math.hypot(dx,dz); let hy=-1e9, hr=-1;
+    if(L>0.3){ const nx=dz/L, nz=-dx/L; hy=1e9; for(const f of [0.5,0.18,0.82]){ const r=fp3Inside(ax+dx*f+nx*0.6,az+dz*f+nz*0.6,ref); if(r<0){ hy=-1e9; hr=-1; break; } if(hr<0) hr=r; hy=Math.min(hy,wt(r)); } }
+    t.hid[s+j]=hr<0?0:Math.max(-32000,Math.min(32000,Math.round(hy*10))); t.hr[s+j]=hr; }
+  const o=i*6, cx=t.obb[o], cz=t.obb[o+1], ux=t.obb[o+2], uz=t.obb[o+3], hl=t.obb[o+4], hw=t.obb[o+5];
+  for(let f=0;f<4;f++){ const ax2=f<2, sg=f%2?-1:1, nx=ax2?ux*sg:-uz*sg, nz=ax2?uz*sg:ux*sg, tx=ax2?-uz:ux, tz=ax2?ux:uz, half=ax2?hw:hl, dist=ax2?hl:hw; let hy=1e9, hr=-1;
+    for(const g of [0,-0.64,0.64]){ const r=fp3Inside(cx+nx*(dist+0.6)+tx*half*g,cz+nz*(dist+0.6)+tz*half*g,ref); if(r<0){ hy=-1e9; hr=-1; break; } if(hr<0) hr=r; hy=Math.min(hy,wt(r)); }
+    t.ohid[i*4+f]=hr<0?0:Math.max(-32000,Math.min(32000,Math.round(hy*10))); t.ohr[i*4+f]=hr; } }
+function fp3Prep2(t,t0,ms,only){ const n=t.n; if(!t.hid){ t.hid=new Int16Array(t.np); t.hr=new Int32Array(t.np).fill(-1); t.ohid=new Int16Array(n*4); t.ohr=new Int32Array(n*4).fill(-1);
+    t.front=new Uint8Array(t.np); t.fdone=new Uint8Array(n); t.tri=new Array(n).fill(null); }
+  if(t.pi===undefined) t.pi=0;
+  for(;t.pi<n;t.pi++){ if((t.pi&15)===0&&performance.now()-t0>ms) return false; if(!only||only(t.pi)) fp3PartyAt(t,t.pi); }
+  t.pi=undefined; return true; }
+// this tile's neighbours that exist in the index, and whether each has a grid yet (a failed one never will)
+function fp3Nbrs(t){ const out=[]; for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){ if(!a&&!b) continue; if(FP.idx&&FP.idx.tiles[(t.tx+a)+'_'+(t.tz+b)]) out.push(fp3Num(t.tx+a,t.tz+b)); } return out; }
+// one prep step, nearest tile first: stage 1, then stage 2; a ready tile re-runs stage 2 near its borders once a neighbour has come in since
+function fp3PrepWork(cx,cz,t0,ms){ const T=FP.T, L=[]; for(const t of FP3.tiles.values()) if(t.state==='decoded'||t.state==='prep'||(t.state==='ready'&&!t.final)) L.push(t);
+  L.sort((a,b)=>Math.hypot((a.tx+0.5)*T-cx,(a.tz+0.5)*T-cz)-Math.hypot((b.tx+0.5)*T-cx,(b.tz+0.5)*T-cz));
+  for(const t of L){ if(performance.now()-t0>ms) return false;
+    if(t.state==='decoded') t.state='prep';
+    if(t.state==='prep'){ if(!fp3Prep1(t,t0,ms)) return false; t.seen=new Set(fp3Nbrs(t).filter(k=>FP3.byNum.has(k))); if(!fp3Prep2(t,t0,ms)) return false; t.state='ready'; continue; }
+    const nb=fp3Nbrs(t), fresh=nb.filter(k=>!t.seen.has(k)&&FP3.byNum.has(k));
+    if(!fresh.length&&!t.redo){ if(nb.every(k=>t.seen.has(k)||(()=>{ const [a,b]=[Math.floor(k/8192)-2000,k%8192-2000], u=FP3.tiles.get(a+'_'+b); return u&&u.state==='failed'; })())) t.final=true; continue; }
+    if(!t.redo){ const X0=t.tx*T, Z0=t.tz*T, m=FP3.M+2, b=t.bb; t.redo={keys:fresh,only:i=>b[i*4]<X0+m||b[i*4+2]>X0+T-m||b[i*4+1]<Z0+m||b[i*4+3]>Z0+T-m}; }
+    if(!fp3Prep2(t,t0,ms,t.redo.only)) return false; for(const k of t.redo.keys) t.seen.add(k); t.redo=null; }
+  return true; }
+// tests and the perf gate: load and prepare every tile within R (default FP3.R + 60) of each centre ([[x,z],...], or x,z) — what the game's
+// prefetch has done by the time the truck gets there. All the centres at once: one after the other, the second could evict the first's
+function fp3Preload(x,z,R){ const C=Array.isArray(x)?x:[[x,z]]; if(Array.isArray(x)) R=z; R=R||Math.max(LOCAL.R,FP3.R)+60; const T0=performance.now();
+  return new Promise(res=>{ const go=()=>{ if(performance.now()-T0>30000) return res(-2); fp3Ensure(C,Math.max(LOCAL.R,FP3.R)+FP3.pre); fp3PrepWork(C[0][0],C[0][1],performance.now(),1e9);
+    if(FP.idxState==='failed') return res(-1); if(FP.idxState!=='ready') return setTimeout(go,30);
+    const T=FP.T, want=Object.keys(FP.idx.tiles).filter(k=>{ const [tx,tz]=k.split('_').map(Number); return C.some(([x,z])=>Math.hypot(Math.max(tx*T-x,0,x-(tx+1)*T),Math.max(tz*T-z,0,z-(tz+1)*T))<=R); });
+    const busy=[...FP3.tiles.values()].some(t=>t.state==='loading'||t.state==='decoded'||t.state==='prep'||t.redo||(t.state==='ready'&&fp3Nbrs(t).some(k=>!t.seen.has(k)&&FP3.byNum.has(k))));
+    if(!busy&&want.every(k=>{ const t=FP3.tiles.get(k); return t&&(t.state==='failed'||t.state==='ready'); })) res(want.length); else setTimeout(go,30); }; go(); }); }
+// a job's view of the tiles: the ones within FP3.R that are ready (held until its commit) and the ones that are not (a rebuild once they are)
+function fp3Job(cx,cz){ if(!FP3.on||!NAVGEO.active||FP.idxState!=='ready') return null; const R=Math.max(LOCAL.R,FP3.R), T=FP.T, keys=new Set(), miss=[];
+  for(let tx=Math.floor((cx-R)/T);tx<=Math.floor((cx+R)/T);tx++) for(let tz=Math.floor((cz-R)/T);tz<=Math.floor((cz+R)/T);tz++){ const k=tx+'_'+tz; if(!FP.idx.tiles[k]) continue;
+    if(Math.hypot(Math.max(tx*T-cx,0,cx-(tx+1)*T),Math.max(tz*T-cz,0,cz-(tz+1)*T))>R) continue;
+    const t=FP3.tiles.get(k); if(t&&t.state==='ready'){ keys.add(k); t.pin=true; } else miss.push(k); }
+  return {keys,miss}; }
+// every frame (updateTiltMap): prefetch around the truck, prepare in the background (never during a rebuild job), and ask for a rebuild
+// when the switch moved or a square the city is missing has come in
+function fp3Tick(){ if(FP3.dirty&&FLATCITY.built&&!FLATCITY.job&&FLATCITY.cx!==undefined){ FP3.dirty=false; FLATCITY.requestRebuild(FLATCITY.cx,FLATCITY.cz); }
+  if(!FP3.on){ if(FP3.tiles.size&&!FLATCITY.job&&!FP3.busy) fp3Clear(); return; } const x=truck.x, z=truck.z, l=FP3.last;
+  if(!l||Math.hypot(x-l[0],z-l[1])>25||performance.now()-l[2]>700){ FP3.last=[x,z,performance.now()]; fp3Ensure([[x,z]],Math.max(LOCAL.R,FP3.R)+FP3.pre); }
+  if(FLATCITY.job) return;
+  fp3PrepWork(x,z,performance.now(),FP3.prepMs);
+  let miss=FLATCITY.fp3Miss; if(!miss||!FLATCITY.built||FLATCITY.cx===undefined) return;
+  if(miss==='idx'){ if(FP.idxState!=='ready') return; const j=fp3Job(FLATCITY.cx,FLATCITY.cz); if(j) for(const k of j.keys) FP3.tiles.get(k).pin=false; miss=FLATCITY.fp3Miss=j?[...j.keys,...j.miss]:null; if(!miss) return; }
+  if(miss.every(k=>{ const t=FP3.tiles.get(k); return t&&(t.state==='ready'||t.state==='failed'); })){ FLATCITY.fp3Miss=null;
+    if(miss.some(k=>FP3.tiles.get(k).state==='ready')) FLATCITY.requestRebuild(FLATCITY.cx,FLATCITY.cz); } }
+// is this square real for job J? (its tile was in when the job started, or the City has no building in it)
+function fp3CoveredJ(J,x,z){ const F=J.fp3; if(!F) return false; const k=Math.floor(x/FP.T)+'_'+Math.floor(z/FP.T); return F.keys.has(k)||!FP.idx.tiles[k]; }
+// the generation grid (J.grid, 11 m cells) claimed over every real building's box before the streets are walked, as a generated house claims
+// its own: street, park and woodland trees keep off the real buildings exactly as they kept off the generated ones
+function fp3Claim(J,t0,budgetMs){ const F=J.fp3; if(!F.ct){ F.ct=[]; for(const k of F.keys){ const t=FP3.tiles.get(k); if(t&&t.state==='ready') F.ct.push(t); } F.ci=0; }
+  const R2=(LOCAL.R+30)**2, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0), G=J.grid;
+  while(F.ci<F.ct.length){ if(performance.now()-t0>budgetMs) return false; const t=F.ct[F.ci++], b=t.bb;
+    for(let i=0;i<t.n;i++){ const cx=t.cxz[i*2], cz=t.cxz[i*2+1]; if((cx-J.cx)**2+(cz-J.cz)**2>R2) continue; const o=i*4;
+      for(let x=b[o];;x=Math.min(b[o+2],x+5.5)){ for(let z=b[o+1];;z=Math.min(b[o+3],z+5.5)){ G.set(gk(x,z),1); if(z>=b[o+3]) break; } if(x>=b[o+2]) break; } } }
+  F.claimed=true; return true; }
+// growable typed vertex buffers for one merged mesh (uv only on the facade meshes); normals and colours as normalised bytes
+function fp3Buf(uv,nv){ nv=Math.max(1024,nv|0); return {nv:0,ni:0,p:new Float32Array(nv*3),n:new Int8Array(nv*3),c:new Uint8Array(nv*3),t:uv?new Float32Array(nv*2):null,ix:new Uint32Array(nv*2)}; }
+function fp3Grow(B,v,i){ if(B.nv+v>B.p.length/3){ const cap=Math.ceil((B.nv+v)*1.6), g=(a,k)=>{ const b=new a.constructor(cap*k); b.set(a); return b; }; B.p=g(B.p,3); B.n=g(B.n,3); B.c=g(B.c,3); if(B.t) B.t=g(B.t,2); }
+  if(B.ni+i>B.ix.length){ const b=new Uint32Array(Math.ceil((B.ni+i)*1.6)); b.set(B.ix); B.ix=b; } }
+function fp3V(B,x,y,z,nx,ny,nz,c,u,v){ const k=B.nv++; B.p[k*3]=x; B.p[k*3+1]=y; B.p[k*3+2]=z; B.n[k*3]=Math.round(nx*127); B.n[k*3+1]=Math.round(ny*127); B.n[k*3+2]=Math.round(nz*127);
+  B.c[k*3]=(c>>16)&255; B.c[k*3+1]=(c>>8)&255; B.c[k*3+2]=c&255; if(B.t){ B.t[k*2]=u; B.t[k*2+1]=v; } return k; }
+// a planar quad: triangles (a,b,c) and (a,c,d), so a-b-c-d runs counter-clockwise seen from the side its normal faces
+function fp3Quad(B,a,b,c,d,nx,ny,nz,col){ fp3Grow(B,4,6); const k=fp3V(B,a[0],a[1],a[2],nx,ny,nz,col,0,0); fp3V(B,b[0],b[1],b[2],nx,ny,nz,col,0,0);
+  fp3V(B,c[0],c[1],c[2],nx,ny,nz,col,0,0); fp3V(B,d[0],d[1],d[2],nx,ny,nz,col,0,0); B.ix[B.ni]=k; B.ix[B.ni+1]=k+1; B.ix[B.ni+2]=k+2; B.ix[B.ni+3]=k; B.ix[B.ni+4]=k+2; B.ix[B.ni+5]=k+3; B.ni+=6; }
+/* one wall from (ax,az) to (bx,bz) along a counter-clockwise outline, outward normal (nx,nz), from ga / gb (the ground, or the neighbour's
+   wall top) up to top. The facade tiles across by whole bays, and up by the picture (row houses: one tile to the top) or by floors. */
+function fp3Wall(B,ax,az,ga,bx,bz,gb,top,nx,nz,col,mode,yRef){ const L=Math.hypot(bx-ax,bz-az); if(L<0.05||top-Math.max(ga,gb)<0.05) return;
+  const bay=mode===1?FP3.bay.apt:mode===2?FP3.bay.house:FP3.bay.row, U=L<bay*0.6?L/bay:Math.max(1,Math.round(L/bay));
+  const vv=y=>mode===1?(y-yRef)/FP3.floor:(y-yRef)/Math.max(0.5,top-yRef);
+  fp3Grow(B,4,6); const k=fp3V(B,ax,ga,az,nx,0,nz,col,0,vv(ga)); fp3V(B,bx,gb,bz,nx,0,nz,col,U,vv(gb)); fp3V(B,bx,top,bz,nx,0,nz,col,U,vv(top)); fp3V(B,ax,top,az,nx,0,nz,col,0,vv(top));
+  B.ix[B.ni]=k; B.ix[B.ni+1]=k+2; B.ix[B.ni+2]=k+1; B.ix[B.ni+3]=k; B.ix[B.ni+4]=k+3; B.ix[B.ni+5]=k+2; B.ni+=6; }   // seen from outside, bottom-a -> top-b -> bottom-b is counter-clockwise
+const fp3Pick=(a,h)=>a[h%a.length];
+// a wall hidden by a neighbour only if that neighbour is drawn by this job (one outside the radius, or under the firehouse, is not)
+const fp3Drawn=(F,r)=>{ if(r<0) return false; const u=FP3.slots[r>>>20]; return !!u&&u.mk[r&1048575]===F.stamp; };
+/* Generation, in stepLocalCity after the institutions (so their outlines are known). Init: the job's buildings (within FP3.R, from the
+   tiles that were in at its start, minus the firehouse's and the churches' and schools'), in Morton order so the near fade's draw groups
+   stay short; the generated trees inside a real building removed. Then one building at a time under the frame budget. */
+function fp3Step(J,t0,budgetMs){ const F=J.fp3; if(!F) return true;
+  if(!F.list){ const R2=FP3.R*FP3.R, tl=[]; let n=0; F.stamp=FP3.stamp=(FP3.stamp%65535)+1;
+    for(const k of F.keys){ const t=FP3.tiles.get(k); if(!t||t.state!=='ready'){ F.keys.delete(k); continue; } tl.push(t); n+=t.n; }
+    const IB=(J.inst&&J.inst.bld)||[], q=STHOUSE.group?STHOUSE.group.position:null, qr=(STHOUSE.halfW||20)+2, order=new Float64Array(n); let m=0; F.skip={inst:0,house:0};
+    for(let ti=0;ti<tl.length;ti++){ const t=tl[ti]; for(let i=0;i<t.n;i++){ const cx=t.cxz[i*2], cz=t.cxz[i*2+1]; if((cx-J.cx)**2+(cz-J.cz)**2>R2) continue;
+      if(q&&cx>q.x-qr&&cx<q.x+qr&&cz>q.z-qr&&cz<q.z+qr){ F.skip.house++; continue; }
+      let inInst=false; for(const e of IB){ if(cx<e.bb[0]||cx>e.bb[2]||cz<e.bb[1]||cz>e.bb[3]) continue; if(pipFlat(cx,cz,e.p)){ inInst=true; break; } } if(inInst){ F.skip.inst++; continue; }
+      let mk=0; const qx=Math.max(0,Math.min(4095,Math.floor(cx/32)+1024)), qz=Math.max(0,Math.min(4095,Math.floor(cz/32)+1024)); for(let bit=0,w=1;bit<12;bit++,w*=4) mk+=(((qx>>bit)&1)*2+((qz>>bit)&1))*w;
+      t.mk[i]=F.stamp; order[m++]=mk*67108864+ti*1048576+i; } }
+    const ord=order.subarray(0,m).sort(); F.list=new Int32Array(m*2); for(let j=0;j<m;j++){ const v=ord[j]; F.list[j*2]=Math.floor(v/1048576)%64; F.list[j*2+1]=v%1048576; }
+    F.tiles=tl; F.i=0; F.nb=m; F.B=[fp3Buf(true,m*14),fp3Buf(true,m*3),fp3Buf(false,m*10)]; F.box=new Float32Array(m*6); F.rng=[new Int32Array(m*2),new Int32Array(m*2),new Int32Array(m*2)]; F.dn=new Float32Array(m*3);
+    // no tree inside a real building (its trunk, or within a metre of it)
+    let cut=0; for(let k=J.T.length-1;k>=0;k--){ const tr=J.T[k]; if(!fp3CoveredJ(J,tr.x,tr.z)) continue;
+      if(fp3Inside(tr.x,tr.z,-1)>=0||fp3Inside(tr.x+1,tr.z,-1)>=0||fp3Inside(tr.x-1,tr.z,-1)>=0||fp3Inside(tr.x,tr.z+1,-1)>=0||fp3Inside(tr.x,tr.z-1,-1)>=0){ J.T.splice(k,1); cut++; } }
+    F.treeCut=cut; if(performance.now()-t0>budgetMs) return false; }
+  const L=F.list, nb=F.nb, B=F.B, near2=FP3.near*FP3.near;
+  for(;F.i<nb;F.i++){ if((F.i&7)===0&&performance.now()-t0>budgetMs) return false;
+    const j=F.i, t=F.tiles[L[j*2]], i=L[j*2+1], s0=B[0].ni, s1=B[1].ni, s2=B[2].ni, dx=t.cxz[i*2]-J.cx, dz=t.cxz[i*2+1]-J.cz;
+    fp3Building(F,t,i,dx*dx+dz*dz<=near2);
+    F.rng[0][j*2]=s0; F.rng[0][j*2+1]=B[0].ni-s0; F.rng[1][j*2]=s1; F.rng[1][j*2+1]=B[1].ni-s1; F.rng[2][j*2]=s2; F.rng[2][j*2+1]=B[2].ni-s2;
+    const bb=t.bb, o=i*4, e=j*6; F.box[e]=bb[o]; F.box[e+1]=t.gmin[i]-0.7; F.box[e+2]=bb[o+1]; F.box[e+3]=bb[o+2]; F.box[e+4]=t.top[i]+(t.cls[i]===2?2.4:0.4); F.box[e+5]=bb[o+3];
+    F.dn[j*3]=t.cxz[i*2]; F.dn[j*3+1]=t.cxz[i*2+1]; F.dn[j*3+2]=Math.min(2.5,Math.max(0.25,t.area[i]/95)); }
+  for(const b of B){ b.p=b.p.slice(0,b.nv*3); b.n=b.n.slice(0,b.nv*3); b.c=b.c.slice(0,b.nv*3); if(b.t) b.t=b.t.slice(0,b.nv*2); b.ix=b.ix.slice(0,b.ni); }   // only what was written stays (typed arrays count in the JS heap)
+  FP3.stat={buildings:nb,near:FP3.near,skip:F.skip,treeCut:F.treeCut,tiles:F.tiles.length,miss:F.miss.length,genCut:J.fp3gen|0};
+  return true; }
+// one building into the three buffers: B[0] row-house facade walls, B[1] apartment facade walls, B[2] flat-coloured roofs, trim and plain walls
+function fp3Building(F,t,i,near){ const B=F.B, P=t.pts, c=t.cls[i], top=t.top[i], wtop=t.wtop[i], gm=t.gmean[i], gable=wtop<top-0.5, s0=t.rs[t.b0[i]];
+  const hsh=((Math.round(P[s0*2]*10)*73856093)^(Math.round(P[s0*2+1]*10)*19349663))>>>0;
+  const mode=c===3?3:(c===2||wtop-gm>14)?1:c===1?2:0, WB=mode===3?B[2]:mode===1?B[1]:B[0];   // tiny ones: plain walls, no facade
+  const wcol=mode===3?fp3Pick(FP3.wall.tiny,hsh):mode===1?fp3Pick(FP3.wall.apt,hsh>>>3):mode===2?fp3Pick(FP3.wall.house,hsh>>>5):fp3Pick(FP3.wall.row,hsh>>>7);
+  const rcol=c===2?fp3Pick(FP3.roof.memb,hsh>>>9):c===1?fp3Pick(FP3.roof.pitch,hsh>>>11):fp3Pick(FP3.roof.flat,hsh>>>13);
+  const par=near&&c===2, wallTop=par?top+FP3.parH:wtop, o=i*6, box=!near&&t.fill[i]>=204;
+  if(box){ const cx=t.obb[o], cz=t.obb[o+1], ux=t.obb[o+2], uz=t.obb[o+3], hl=t.obb[o+4], hw=t.obb[o+5];
+    const C=[[cx-ux*hl+uz*hw,cz-uz*hl-ux*hw],[cx+ux*hl+uz*hw,cz+uz*hl-ux*hw],[cx+ux*hl-uz*hw,cz+uz*hl+ux*hw],[cx-ux*hl-uz*hw,cz-uz*hl+ux*hw]];   // -u-v, +u-v, +u+v, -u+v (v = u turned left): counter-clockwise
+    const G=[navGroundY(C[0][0],C[0][1])-0.6,navGroundY(C[1][0],C[1][1])-0.6,navGroundY(C[2][0],C[2][1])-0.6,navGroundY(C[3][0],C[3][1])-0.6];
+    for(const [a,b,f] of [[1,2,0],[3,0,1],[2,3,2],[0,1,3]]){ const hy=fp3Drawn(F,t.ohr[i*4+f])?t.ohid[i*4+f]/10:-1e9; if(hy>=wallTop-0.2) continue;   // faces +u, -u, +v, -v (ohid's order)
+      const ex=C[b][0]-C[a][0], ez=C[b][1]-C[a][1], el=Math.hypot(ex,ez)||1;
+      fp3Wall(WB,C[a][0],C[a][1],Math.max(G[a],hy),C[b][0],C[b][1],Math.max(G[b],hy),wallTop,ez/el,-ex/el,wcol,mode,gm); }
+    if(!gable){ const y=top+0.02; fp3Quad(B[2],[C[0][0],y,C[0][1]],[C[3][0],y,C[3][1]],[C[2][0],y,C[2][1]],[C[1][0],y,C[1][1]],0,1,0,rcol); } }
+  else { for(let r=t.b0[i];r<t.b0[i+1];r++){ const s=t.rs[r], m=t.rn[r], outer=r===t.b0[i];
+      for(let j=0;j<m;j++){ const q=j+1<m?j+1:0, ax=P[(s+j)*2], az=P[(s+j)*2+1], bx=P[(s+q)*2], bz=P[(s+q)*2+1], L=Math.hypot(bx-ax,bz-az); if(L<0.05) continue;
+        const hy=outer&&fp3Drawn(F,t.hr[s+j])?t.hid[s+j]/10:-1e9; if(hy>=wallTop-0.2) continue;
+        fp3Wall(WB,ax,az,Math.max(navGroundY(ax,az)-0.6,hy),bx,bz,Math.max(navGroundY(bx,bz)-0.6,hy),wallTop,(bz-az)/L,-(bx-ax)/L,wcol,mode,gm); } }
+    if(!gable) fp3Roof(B[2],t,i,top+0.02,rcol);
+    if(near&&c===0) fp3Cornice(F,B[2],t,i,top,fp3Pick(FP3.roof.cornice,hsh>>>15));
+    if(par) fp3Parapet(F,B[2],t,i,top,wallTop); }
+  if(gable) fp3Gable(B[2],t,i,wtop,top,rcol,wcol);
+  if(near&&c===2&&t.area[i]>=300){ const cx=t.obb[o], cz=t.obb[o+1], ux=t.obb[o+2], uz=t.obb[o+3], hl=t.obb[o+4], me=t.slot*1048576+i;   // rooftop units on a big roof
+    for(const f of [0.3,-0.3]){ const x=cx+ux*hl*f, z=cz+uz*hl*f; if(fp3In(t,i,x,z)&&fp3Inside(x,z,me)<0) fp3Box(B[2],x,top,z,ux,uz,1.2,0.9,1.3,FP3.roof.unit); } } }
+// the flat roof over the exact outline (courtyards open): a fan when the outline is convex, else earcut — once per building per session (t.tri)
+function fp3Roof(B,t,i,y,col){ let tri=t.tri[i]; const P=t.pts;
+  if(!tri){ const r0=t.b0[i], s=t.rs[r0], m=t.rn[r0]; let convex=t.b0[i+1]-r0===1;
+    for(let j=0;j<m&&convex;j++){ const a=s+j, b=s+(j+1)%m, c=s+(j+2)%m; if((P[b*2]-P[a*2])*(P[c*2+1]-P[b*2+1])-(P[b*2+1]-P[a*2+1])*(P[c*2]-P[b*2])<-1e-3) convex=false; }
+    if(convex){ tri=new Int32Array((m-2)*3); for(let j=1;j<m-1;j++){ tri[(j-1)*3]=s; tri[(j-1)*3+1]=s+j; tri[(j-1)*3+2]=s+j+1; } }
+    else if(t.b0[i+1]-r0===1&&m<=24&&(tri=fp3Ear(P,s,m))){}
+    else { const V=q=>new THREE.Vector2(P[q*2],P[q*2+1]), contour=[], hl=[], map=[]; for(let j=0;j<m;j++){ contour.push(V(s+j)); map.push(s+j); }
+      for(let r=r0+1;r<t.b0[i+1];r++){ const h=[]; for(let j=0;j<t.rn[r];j++){ h.push(V(t.rs[r]+j)); map.push(t.rs[r]+j); } hl.push(h); }
+      let f=[]; try{ f=THREE.ShapeUtils.triangulateShape(contour,hl); }catch(e){ f=[]; } tri=new Int32Array(f.length*3); f.forEach((q,k)=>{ tri[k*3]=map[q[0]]; tri[k*3+1]=map[q[1]]; tri[k*3+2]=map[q[2]]; }); }
+    t.tri[i]=tri; }
+  fp3Grow(B,tri.length,tri.length);
+  for(let k=0;k<tri.length;k+=3){ const a=tri[k], b=tri[k+1], c=tri[k+2], cr=(P[b*2]-P[a*2])*(P[c*2+1]-P[a*2+1])-(P[b*2+1]-P[a*2+1])*(P[c*2]-P[a*2]);   // counter-clockwise in x/z faces DOWN in three's y-up frame
+    const v0=fp3V(B,P[a*2],y,P[a*2+1],0,1,0,col,0,0), v1=fp3V(B,P[b*2],y,P[b*2+1],0,1,0,col,0,0), v2=fp3V(B,P[c*2],y,P[c*2+1],0,1,0,col,0,0);
+    B.ix[B.ni]=v0; B.ix[B.ni+1]=cr>0?v2:v1; B.ix[B.ni+2]=cr>0?v1:v2; B.ni+=3; } }
+/* ear clipping for a small outline with no courtyard (points s..s+m-1, counter-clockwise): a rowhouse with a rear ell is concave, and
+   ShapeUtils' Vector2s and checks were most of a first visit's roof time. null (a self-touching outline) falls back to ShapeUtils. */
+function fp3Ear(P,s,m){ const V=[], out=new Int32Array((m-2)*3); for(let j=0;j<m;j++) V.push(s+j); let o=0, guard=0;
+  const cr=(a,b,c)=>(P[b*2]-P[a*2])*(P[c*2+1]-P[a*2+1])-(P[b*2+1]-P[a*2+1])*(P[c*2]-P[a*2]);
+  while(V.length>3){ if(guard++>m*m) return null; let cut=false;
+    for(let k=0;k<V.length;k++){ const a=V[(k+V.length-1)%V.length], b=V[k], c=V[(k+1)%V.length]; if(cr(a,b,c)<=1e-9) continue;   // reflex or flat: not an ear
+      let blocked=false; for(const q of V){ if(q===a||q===b||q===c) continue; if(cr(a,b,q)>=0&&cr(b,c,q)>=0&&cr(c,a,q)>=0){ blocked=true; break; } }
+      if(blocked) continue; out[o++]=a; out[o++]=b; out[o++]=c; V.splice(k,1); cut=true; break; }
+    if(!cut) return null; }
+  out[o++]=V[0]; out[o++]=V[1]; out[o++]=V[2]; return out; }
+// the rowhouse cornice on its street front (a free wall >= 2.5 m whose outside is within 2 m of a roadway): a 0.32 m band over the wall top
+function fp3Cornice(F,B,t,i,top,col){ const P=t.pts, s=t.rs[t.b0[i]], m=t.rn[t.b0[i]];
+  if(!t.fdone[i]){ t.fdone[i]=1; for(let j=0;j<m;j++){ const q=j+1<m?j+1:0, ax=P[(s+j)*2], az=P[(s+j)*2+1], bx=P[(s+q)*2], bz=P[(s+q)*2+1], L=Math.hypot(bx-ax,bz-az);
+      if(L<2.5||t.hr[s+j]>=0) continue; const nx=(bz-az)/L, nz=-(bx-ax)/L; if(nearRoadEdge((ax+bx)/2+nx*3,(az+bz)/2+nz*3)<2) t.front[s+j]=1; } }
+  for(let j=0;j<m;j++){ if(!t.front[s+j]) continue; const q=j+1<m?j+1:0, ax=P[(s+j)*2], az=P[(s+j)*2+1], bx=P[(s+q)*2], bz=P[(s+q)*2+1], L=Math.hypot(bx-ax,bz-az), nx=(bz-az)/L, nz=-(bx-ax)/L, ex=nx*0.32, ez=nz*0.32;
+    const y0=top-0.55, y1=top+0.14;
+    fp3Quad(B,[bx+ex,y0,bz+ez],[ax+ex,y0,az+ez],[ax+ex,y1,az+ez],[bx+ex,y1,bz+ez],nx,0,nz,col);   // its face, out toward the street
+    fp3Quad(B,[ax,y1,az],[bx,y1,bz],[bx+ex,y1,bz+ez],[ax+ex,y1,az+ez],0,1,0,col); } }              // its top
+// a big flat roof's parapet: the walls run FP3.parH over the roof, with an inner face and a cap, so the roof sits inside a rim
+function fp3Parapet(F,B,t,i,roofY,capY){ const P=t.pts, s=t.rs[t.b0[i]], m=t.rn[t.b0[i]], col=FP3.roof.cap;
+  for(let j=0;j<m;j++){ const hy=fp3Drawn(F,t.hr[s+j])?t.hid[s+j]/10:-1e9; if(hy>=capY-0.2) continue;
+    const q=j+1<m?j+1:0, ax=P[(s+j)*2], az=P[(s+j)*2+1], bx=P[(s+q)*2], bz=P[(s+q)*2+1], L=Math.hypot(bx-ax,bz-az); if(L<0.3) continue;
+    const nx=(bz-az)/L, nz=-(bx-ax)/L, ix=-nx*0.28, iz=-nz*0.28;
+    fp3Quad(B,[ax+ix,roofY,az+iz],[bx+ix,roofY,bz+iz],[bx+ix,capY,bz+iz],[ax+ix,capY,az+iz],-nx,0,-nz,col);   // inner face, toward the roof
+    fp3Quad(B,[ax,capY,az],[ax+ix,capY,az+iz],[bx+ix,capY,bz+iz],[bx,capY,bz],0,1,0,col); } }               // cap
+// a gable over the oriented box: the ridge along the long side, 0.3 m eaves, the two ends in the wall colour
+function fp3Gable(B,t,i,ey,ry,rcol,wcol){ const o=i*6, cx=t.obb[o], cz=t.obb[o+1], ux=t.obb[o+2], uz=t.obb[o+3], hl=t.obb[o+4]+0.25, hw=t.obb[o+5]+0.3, vx=-uz, vz=ux;
+  const Pt=(a,b,y)=>[cx+ux*a+vx*b,y,cz+uz*a+vz*b], a1=Pt(-hl,-hw,ey), a2=Pt(hl,-hw,ey), a3=Pt(hl,hw,ey), a4=Pt(-hl,hw,ey), r1=Pt(-hl,0,ry), r2=Pt(hl,0,ry);
+  const nrm=(p,q,r)=>{ const e1=[q[0]-p[0],q[1]-p[1],q[2]-p[2]], e2=[r[0]-p[0],r[1]-p[1],r[2]-p[2]], n=[e1[1]*e2[2]-e1[2]*e2[1],e1[2]*e2[0]-e1[0]*e2[2],e1[0]*e2[1]-e1[1]*e2[0]], L=Math.hypot(n[0],n[1],n[2])||1; return [n[0]/L,n[1]/L,n[2]/L]; };
+  for(let [p,q,r,s] of [[a1,a2,r2,r1],[a3,a4,r1,r2]]){ let n=nrm(p,q,r); if(n[1]<0){ const x=q; q=s; s=x; n=nrm(p,q,r); } fp3Quad(B,p,q,r,s,n[0],n[1],n[2],rcol); }   // the two slopes, facing up
+  for(const [p,q,r,nx,nz] of [[a1,a4,r1,-ux,-uz],[a2,a3,r2,ux,uz]]){ const n=nrm(p,q,r), fw=n[0]*nx+n[2]*nz>0; fp3Grow(B,3,3);   // the two ends, facing out along the ridge
+    const k=fp3V(B,p[0],p[1],p[2],nx,0,nz,wcol,0,0); fp3V(B,q[0],q[1],q[2],nx,0,nz,wcol,0,0); fp3V(B,r[0],r[1],r[2],nx,0,nz,wcol,0,0);
+    B.ix[B.ni]=k; B.ix[B.ni+1]=fw?k+1:k+2; B.ix[B.ni+2]=fw?k+2:k+1; B.ni+=3; } }
+// a small box (a rooftop unit): centre x,z, base y, half-sizes along u and v, height h — four walls and a top
+function fp3Box(B,x,y,z,ux,uz,hu,hv,h,col){ const vx=-uz, vz=ux, P=(a,b)=>[x+ux*a+vx*b,z+uz*a+vz*b], c=[P(-hu,-hv),P(hu,-hv),P(hu,hv),P(-hu,hv)], y1=y+h;   // counter-clockwise
+  for(let k=0;k<4;k++){ const a=c[k], b=c[(k+1)%4], ex=b[0]-a[0], ez=b[1]-a[1], L=Math.hypot(ex,ez)||1; fp3Wall(B,a[0],a[1],y,b[0],b[1],y,y1,ez/L,-ex/L,col,3,y); }
+  fp3Quad(B,[c[0][0],y1,c[0][1]],[c[3][0],y1,c[3][1]],[c[2][0],y1,c[2][1]],[c[1][0],y1,c[1][1]],0,1,0,col); }
+// commit's hydrants: one standing inside a real building is drawn just outside it (a copy: the hydrant data are never changed)
+function fp3Hyd(J,h){ if(!J.fp3||!fp3CoveredJ(J,h[0],h[1])) return h; const r=fp3Inside(h[0],h[1],-1); if(r<0) return h; const q=fp3OutOf(r,h[0],h[1]); if(!q) return h;
+  const c=Array.prototype.slice.call(h); c[0]=q[0]; c[1]=q[1]; J.fp3.hydMoved=(J.fp3.hydMoved|0)+1; return c; }
+// a hydrant drawn inside a real building moves just outside it: the nearest wall first, 0.45 m out, then the next — the first spot that is
+// outside EVERY building (out through a party wall would be inside the house next door); then the same 1.5 m out. null: none found
+function fp3OutOf(ref,x,z){ const t=FP3.slots[ref>>>20]; if(!t) return null; const i=ref&1048575, P=t.pts, s=t.rs[t.b0[i]], m=t.rn[t.b0[i]], C=[];
+  for(let j=0;j<m;j++){ const q=j+1<m?j+1:0, ax=P[(s+j)*2], az=P[(s+j)*2+1], dx=P[(s+q)*2]-ax, dz=P[(s+q)*2+1]-az, L2=dx*dx+dz*dz; if(L2<1e-6) continue;
+    const u=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/L2)), L=Math.sqrt(L2); C.push([Math.hypot(x-ax-dx*u,z-az-dz*u),ax+dx*u,az+dz*u,dz/L,-dx/L]); }
+  C.sort((a,b)=>a[0]-b[0]);
+  for(const out of [0.45,1.5]) for(const c of C){ const qx=c[1]+c[3]*out, qz=c[2]+c[4]*out; if(fp3Inside(qx,qz,-1)<0) return [qx,qz]; }
+  return null; }
+/* commit: wrap the arrays (no copy, no bounds computed: the job knows its box). The walls take the facade decode and the near fade like
+   every building; all three cast the ground shadows (SHADE) as meshes; the near fade gets the per-building boxes and index ranges. */
+function fp3Build(J){ const F=J.fp3; FLATCITY.fp3=null; FLATCITY.fp3Tris=0; FLATCITY.fp3Miss=F?(F.miss.length?F.miss:null):(FP3.on?'idx':null);
+  for(const t of FP3.tiles.values()) t.pin=!!(F&&F.keys&&F.keys.has(t.k));
+  if(!F||!F.B) return; FLATCITY.fp3=F;
+  const names=['fp-walls-row','fp-walls-apt','fp-roofs'], mats=[()=>nearFadeMaterial(facadeLambert(rowFacade(),{vertexColors:true}),true),()=>nearFadeMaterial(facadeLambert(aptFacade(),{vertexColors:true}),true),()=>nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true}))];
+  let x0=1e9,y0=1e9,z0=1e9,x1=-1e9,y1=-1e9,z1=-1e9; const bx=F.box; for(let j=0;j<F.nb;j++){ const o=j*6; if(bx[o]<x0)x0=bx[o]; if(bx[o+1]<y0)y0=bx[o+1]; if(bx[o+2]<z0)z0=bx[o+2]; if(bx[o+3]>x1)x1=bx[o+3]; if(bx[o+4]>y1)y1=bx[o+4]; if(bx[o+5]>z1)z1=bx[o+5]; }
+  F.B.forEach((B,k)=>{ if(!B.ni) return; const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(B.p.subarray(0,B.nv*3),3)); g.setAttribute('normal',new THREE.BufferAttribute(B.n.subarray(0,B.nv*3),3,true));
+    g.setAttribute('color',new THREE.BufferAttribute(B.c.subarray(0,B.nv*3),3,true)); if(B.t) g.setAttribute('uv',new THREE.BufferAttribute(B.t.subarray(0,B.nv*2),2));
+    g.setIndex(new THREE.BufferAttribute(B.ix.subarray(0,B.ni),1));
+    g.boundingBox=new THREE.Box3(new THREE.Vector3(x0,y0,z0),new THREE.Vector3(x1,y1,z1)); g.boundingSphere=g.boundingBox.getBoundingSphere(new THREE.Sphere());
+    const m=new THREE.Mesh(g,mats[k]()); m.name=names[k]; m.userData.shadeCast='mesh'; m.userData.fp3={box:F.box,rng:F.rng[k],n:F.nb};
+    FLATCITY.group.add(m); FLATCITY.parts.push(m); FLATCITY.fp3Tris+=B.ni/3; }); }
+// the near fade's ghost of a real-building mesh: draw groups over the index ranges of the buildings near the camera (at most four,
+// joined over gaps of <= 900 indices); on its first frame one triangle, so its program compiles then and not when the camera arrives
+function fp3Ghost(G,px,py,pz,B2){ const F=G.fp3, bx=F.box, rg=F.rng, gg=G.gh.geometry, out=[]; gg.clearGroups();
+  if(G.warm){ G.warm=false; gg.addGroup(0,Math.min(3,gg.index.count),0); G.gh.visible=true; return; }
+  let cs=-1, ce=-1;
+  for(let j=0;j<F.n;j++){ const c=rg[j*2+1]; if(!c) continue; const o=j*6, dx=Math.max(bx[o]-px,0,px-bx[o+3]), dy=Math.max(bx[o+1]-py,0,py-bx[o+4]), dz=Math.max(bx[o+2]-pz,0,pz-bx[o+5]);
+    if(dx*dx+dy*dy+dz*dz>=B2) continue; const s=rg[j*2]; if(cs>=0&&s-ce<=900){ ce=Math.max(ce,s+c); continue; } if(cs>=0) out.push(cs,ce); cs=s; ce=s+c; }
+  if(cs>=0) out.push(cs,ce);
+  while(out.length>8){ let bi=2, bg=Infinity; for(let k=2;k<out.length;k+=2){ const gap=out[k]-out[k-1]; if(gap<bg){ bg=gap; bi=k; } } out[bi-1]=out[bi+1]; out.splice(bi,2); }
+  for(let k=0;k<out.length;k+=2) gg.addGroup(out[k],out[k+1]-out[k],0);
+  G.gh.visible=out.length>0; }
+// the minimap: the outlines of the real buildings the 3D view is showing, near the truck (no closePath: a ring ends on its first point)
+function fp3MiniMap(x,tx,tz,R){ const F=FLATCITY.fp3, L=F.list; x.fillStyle='#b4b4b4'; x.beginPath();
+  for(let j=0;j<F.nb;j++){ const t=F.tiles[L[j*2]], i=L[j*2+1], b=t.bb, o=i*4; if(b[o+2]<tx-R||b[o]>tx+R||b[o+3]<tz-R||b[o+1]>tz+R) continue; const P=t.pts, s=t.rs[t.b0[i]], m=t.rn[t.b0[i]];
+    x.moveTo(P[s*2],P[s*2+1]); for(let q=1;q<m;q++) x.lineTo(P[(s+q)*2],P[(s+q)*2+1]); x.lineTo(P[s*2],P[s*2+1]); }
+  x.fill(); }
 function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const {cx,cz,B,T,S,grid}=J;
+  if(J.fp3&&!J.fp3.claimed&&!fp3Claim(J,t0,budgetMs)) return false;                      // 🏠 the real buildings (FP3) claim their cells first, as generated houses do
   while(J.i<J.list.length){
     if(B.length>=LOCAL.maxB && T.length>=LOCAL.maxT && S.length>=LOCAL.maxS) break;
     if(performance.now()-t0>budgetMs) return false;                                        // out of time — resume next frame
@@ -6194,6 +6538,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
         if(typed||B.length>=LOCAL.maxB) continue;                                         // a typed street already has its houses; the tree branch above still runs for it
         const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=rh+3.2+reach;
         const bx=Math.round(px+nx*off*side), bz=Math.round(pz+nz*off*side), k=gk(bx,bz);
+        if(J.fp3&&fp3CoveredJ(J,bx,bz)){ J.fp3gen=(J.fp3gen|0)+1; continue; }             // 🏠 a real square (FP3): the City's own buildings stand here
         if(grid.has(k)||inWater(bx,bz)||landBlocksBuilding(bx,bz,reach)||railNear(bx,bz,reach+4)||navSpan(bx,bz,null,reach+22)?.b.bridge) continue;
         if(CORRIDOR_PHOTO.enabled&&s.name==='Lincoln Drive'&&pz>-780&&pz<-330)continue; // owner photo sequence: wooded shoulders before Gypsy Lane, no generated houses
         if(nearRoadEdge(bx,bz)<reach*(J.immersive?1.04:0.8)) continue;                     // rotated sample clears every roadway by its full bounding radius
@@ -6227,6 +6572,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   if(!rampRibbonStep(J,t0,budgetMs))return false;
   if(!parkGroundStep(J,t0,budgetMs))return false;
   if(!instStep(J,t0,budgetMs))return false;   // ⛪🏫 the real churches, schools, playgrounds, courts, fields and pools (v20r); clears what they overlap                                            // 🌳 park / wood / open ground, fences and lawn trees (v19i): one landcover feature per resume check                                            // 🎀 interchange ramp edge ribbon (v19f): needs the finished road surfaces, generated here not in commit
+  if(!fp3Step(J,t0,budgetMs))return false;   // 🏠 the City's real buildings (FP3 prototype, switch "Real buildings (test)"): after the institutions' outlines, before the density field
   if(!densityGridStep(J,t0,budgetMs))return false;   // 🛣️ paved-ground density field (v20d): built here, uploaded in commit
   trimTrees(J);                                      // 🌳 nearest-first tree cap (v20e), applied once the set is complete
   return true;
@@ -7027,7 +7373,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
             // the parapet line), and a mast whose spot — or the track beside it — is over a roadway waits for the next piece clear
             // of it (k is only spent when a mast is placed), as real catenary spans the road; the wire reaches across to it.
             const side=(k%2)?1:-1, off=rw.bridge?2.35:2.9, mx=px-uz*off*side, mz=pz+ux*off*side;
-            if(rw._mk!==k&&!onAsphalt(mx,mz)&&!onAsphalt(px,pz)){ rw._mk=k; const top=y+(rw.bridge?0.12:0.45);
+            if(rw._mk!==k&&!onAsphalt(mx,mz)&&!onAsphalt(px,pz)&&!(J.fp3&&fp3CoveredJ(J,mx,mz)&&fp3Inside(mx,mz,-1)>=0)){ rw._mk=k; const top=y+(rw.bridge?0.12:0.45);
               mastPost.push({x:mx,y:top+3.4,z:mz,w:0.22,h:6.8,l:0.22,ang,pitch:0}); mastArm.push({x:px-uz*off/2*side,y:top+5.9,z:pz+ux*off/2*side,w:0.14,h:0.14,l:off+0.2,ang:ang+Math.PI/2,pitch:0});
               if(rw._ml){ const l=rw._ml, dx=px-l.x, dz=pz-l.z, d=Math.hypot(dx,dz); if(d>8&&d<PARKS.mastGap*2.4) wire.push({x:(px+l.x)/2,y:(top+l.y)/2+5.4,z:(pz+l.z)/2,w:0.06,h:0.06,l:d,ang:Math.atan2(dx,dz),pitch:-Math.atan2(top-l.y,d)}); }
               rw._ml={x:px,y:top,z:pz}; } }
@@ -7192,7 +7538,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   { const HY=hydrantsNear(J.cx,J.cz,520);
     if(HY.length){ const K=FLATCITY.hydKit||(FLATCITY.hydKit=hydrantKit()), m=new THREE.InstancedMesh(K.geo,K.mat,HY.length);
       m.userData.keep=true; m.name='hydrants';
-      HY.forEach((h,i)=>{ const p=hydrantPose(h); dummy.position.set(h[0],p.y,h[1]); dummy.rotation.set(0,p.rot,0); dummy.scale.set(1,1,1); dummy.updateMatrix(); m.setMatrixAt(i,dummy.matrix); });
+      HY.forEach((h0,i)=>{ const h=fp3Hyd(J,h0), p=hydrantPose(h); dummy.position.set(h[0],p.y,h[1]); dummy.rotation.set(0,p.rot,0); dummy.scale.set(1,1,1); dummy.updateMatrix(); m.setMatrixAt(i,dummy.matrix); });
       m.instanceMatrix.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); } }
   if(T.length&&B.length){ const bg=new Map(), BC=16, bk=(x,z)=>((x/BC)|0)+':'+((z/BC)|0);   // 🌲❌ trees vs buildings: the 11m dedupe grid lets a tree land against/inside a building face — cull any tree overlapping a footprint (+2m)
     for(const b of B){ const k=bk(b.x,b.z); let a=bg.get(k); if(!a){a=[];bg.set(k,a);} a.push(b); }
@@ -7241,7 +7587,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     FLATCITY.group.add(pad); FLATCITY.group.add(trunk); FLATCITY.group.add(cano); FLATCITY.parts.push(pad,trunk,cano); cano.userData.shadeCast='tree';
     if(canoFar){ FLATCITY.group.add(canoFar); FLATCITY.parts.push(canoFar); canoFar.userData.shadeCast='tree'; }
     if(con){ con.name='conifer'; FLATCITY.group.add(con); FLATCITY.parts.push(con); con.userData.shadeCast='cone'; } }
-  FLATCITY.mmInst=null; instBuild(J); landEvict();
+  FLATCITY.mmInst=null; instBuild(J); fp3Build(J); landEvict();
   nearFadeRegister(); shadeBuild(J);
   if(routePts?.length>1)setRouteGeom(); // refresh the guide when its nearby pavement triangles are rebuilt
 };
@@ -9825,6 +10171,7 @@ function updateMiniMap(dt){ const el=MINIMAP.el||(MINIMAP.el=document.getElement
     for(const q of BB){ if(!q||Math.abs(q.x-tx)>R||Math.abs(q.z-tz)>R) continue; x.save(); x.translate(q.x,q.z); x.rotate(-(q.ang||0)); x.fillRect(-q.w/2,-q.d/2,q.w,q.d); x.restore(); } }
   const BI=FLATCITY.mmInst; if(BI&&BI.length){ x.fillStyle='#a9a9a9'; x.beginPath();   // ⛪🏫 the real church and school outlines (v20r)
     for(const e of BI){ if(e.bb[2]<tx-R||e.bb[0]>tx+R||e.bb[3]<tz-R||e.bb[1]>tz+R) continue; const p=e.p; x.moveTo(p[0],p[1]); for(let i=2;i<p.length;i+=2) x.lineTo(p[i],p[i+1]); x.closePath(); } x.fill(); }
+  if(FLATCITY.fp3) fp3MiniMap(x,tx,tz,R);   // 🏠 the City's real buildings (FP3), when the 3D view shows them
   // roads
   const seenS=new Set(), byW=new Map(), CW=[13,11,8,7,6,6,6];
   for(let gx=Math.floor((tx-R)/SEGCELL);gx<=Math.floor((tx+R)/SEGCELL);gx++) for(let gz=Math.floor((tz-R)/SEGCELL);gz<=Math.floor((tz+R)/SEGCELL);gz++){
@@ -9867,6 +10214,10 @@ try{ MAPV.on=localStorage.getItem('pfd_mapview')==='on'; }catch(e){}
 function mapvBtn(){ const b=document.getElementById('btnMapView'); if(b){ b.classList.toggle('on',MAPV.on); b.setAttribute('aria-checked',MAPV.on?'true':'false'); } }
 document.getElementById('btnMapView').addEventListener('click',e=>{ e.preventDefault(); MAPV.on=!MAPV.on; mapvBtn(); try{ localStorage.setItem('pfd_mapview',MAPV.on?'on':'off'); }catch(err){} });
 mapvBtn();
+// 🏠 Real buildings (test): the FP3 prototype's switch, remembered on this phone; a change rebuilds the city around the truck (fp3Tick)
+function fp3Btn(){ const b=document.getElementById('btnRealBld'); if(b){ b.classList.toggle('on',FP3.on); b.setAttribute('aria-checked',FP3.on?'true':'false'); } }
+document.getElementById('btnRealBld').addEventListener('click',e=>{ e.preventDefault(); FP3.on=!FP3.on; fp3Btn(); try{ localStorage.setItem('pfd_realbld',FP3.on?'on':'off'); }catch(err){} FP3.dirty=true; });
+fp3Btn();
 const MAPV_C={ ground:'#d3d9bd', park:'#9bc977', wood:'#7cb15c', cem:'#a7cd8a', water:'#8cc4e8', walk:'#e9dcba', curb:'#c3baa4', road:'#5b6169', roadMinor:'#686e76',
   hwy:'#50565e', center:'#f2c21b', zebra:'#f6f6f2', shadow:'rgba(34,38,34,.30)', edge:'rgba(55,59,65,.55)',
   flat:['#c9cdd1','#dfe1e3','#a9afb5','#80868d','#5d6268','#b8bcc1','#cfc9bf'],                      // rowhouse roofs from above: silver coat, white membrane, greys, tar, black
@@ -10109,12 +10460,20 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
     const [qx,qy]=T(f.lx+f.ux,f.lz+f.uz); let an=Math.atan2(qy-cy0,qx-cx0); if(an>Math.PI/2) an-=Math.PI; if(an<-Math.PI/2) an+=Math.PI;
     x.font='900 10px -apple-system,"Helvetica Neue",Arial,sans-serif'; const w10=x.measureText(f.label).width||1, Lp=f.len/mpp, Wp=f.wid/mpp;
     const fs=Math.max(10,Math.min(20,10*Lp*0.82/w10,Wp*0.72));
-    x.font='900 '+fs.toFixed(1)+'px -apple-system,"Helvetica Neue",Arial,sans-serif'; const tw=x.measureText(f.label).width, ac=Math.abs(Math.cos(an)), as=Math.abs(Math.sin(an)), hx=ac*tw/2+as*fs/2, hy=as*tw/2+ac*fs/2;
-    let px=cx0, py=cy0;                                                                  // along the roof to the first spot clear of the truck, its tag and the labels already placed (at quarters the truck stands at the door);
-    const cand=[0,0.28,-0.28,0.42,-0.42].map(k=>T(f.lx+f.ux*f.len*k,f.lz+f.uz*f.len*k));   // none on a small roof (Engine 12): just beside it, then a ring around it
-    { const vx=-(qy-cy0), vy=qx-cx0, vl=Math.hypot(vx,vy)||1, off=f.wid/2/mpp+hy+6; for(const sg of [1,-1]) cand.push([cx0+vx/vl*off*sg,cy0+vy/vl*off*sg]);
-      for(const r of [52,78]) for(let a=0;a<8;a++) cand.push([cx0+Math.cos(a*Math.PI/4)*r,cy0+Math.sin(a*Math.PI/4)*r]); }
-    for(const [ax2,ay2] of cand){ if(ax2-hx<4||ax2+hx>W-4||ay2-hy<topY||ay2+hy>H-140) continue; if(!taken.some(q=>Math.abs(ax2-q[0])<hx+q[2]&&Math.abs(ay2-q[1])<hy+q[3])){ px=ax2; py=ay2; break; } }
+    const ac=Math.abs(Math.cos(an)), as=Math.abs(Math.sin(an)), font=z=>'900 '+z.toFixed(1)+'px -apple-system,"Helvetica Neue",Arial,sans-serif';
+    const ok=(ax2,ay2,hx2,hy2)=>!(ax2-hx2<4||ax2+hx2>W-4||ay2-hy2<topY||ay2+hy2>H-140)&&!taken.some(q=>Math.abs(ax2-q[0])<hx2+q[2]&&Math.abs(ay2-q[1])<hy2+q[3]);
+    /* ON THE ROOF FIRST (owner, October 16: "E39 L30 not over building"): at quarters the truck covers one end of the roof and the
+       bottom controls can cut the other, and 30 of 336 views (screen height x zoom, Engine 39) found no spot among five, so the label
+       went beside the roof. Now: spots every 8% along the roof — never past its ends — at four sizes, before any spot beside it. */
+    let px=null, py=null, fz=fs, tw=0, hx=0, hy=0;
+    for(const sc of [1,0.84,0.7,0.58]){ if(px!==null) break; const z=Math.max(9,fs*sc); x.font=font(z); const w=x.measureText(f.label).width, h1=ac*w/2+as*z/2, h2=as*w/2+ac*z/2, half=w*mpp/2;
+      for(const k of [0,0.08,-0.08,0.16,-0.16,0.24,-0.24,0.32,-0.32,0.4,-0.4]){ if(Math.abs(k)*f.len+half>f.len/2+0.5) continue;
+        const [ax2,ay2]=T(f.lx+f.ux*f.len*k,f.lz+f.uz*f.len*k); if(ok(ax2,ay2,h1,h2)){ px=ax2; py=ay2; fz=z; tw=w; hx=h1; hy=h2; break; } } }
+    if(px===null){ fz=fs; x.font=font(fz); tw=x.measureText(f.label).width; hx=ac*tw/2+as*fz/2; hy=as*tw/2+ac*fz/2; px=cx0; py=cy0;   // no spot on the roof at any size: just beside it, then a ring around it
+      const cand=[]; { const vx=-(qy-cy0), vy=qx-cx0, vl=Math.hypot(vx,vy)||1, off=f.wid/2/mpp+hy+6; for(const sg of [1,-1]) cand.push([cx0+vx/vl*off*sg,cy0+vy/vl*off*sg]);
+        for(const r of [52,78]) for(let a=0;a<8;a++) cand.push([cx0+Math.cos(a*Math.PI/4)*r,cy0+Math.sin(a*Math.PI/4)*r]); }
+      for(const [ax2,ay2] of cand) if(ok(ax2,ay2,hx,hy)){ px=ax2; py=ay2; break; } }
+    x.font=font(fz);
     x.save(); x.translate(px,py); x.rotate(an); x.lineJoin='round'; x.lineWidth=3.2; x.strokeStyle='rgba(84,12,8,.9)'; x.strokeText(f.label,0,0); x.fillStyle='#fff'; x.fillText(f.label,0,0); x.restore();
     taken.push([px,py,hx,hy]); M.fhLab.push(f.label); M.fhAt=M.fhAt||[]; M.fhAt.push([f.label,Math.round(px),Math.round(py)]); }
   // the streets you can turn onto are named first — Map view has no cards — along each, just past its junction
