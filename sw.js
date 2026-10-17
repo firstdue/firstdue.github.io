@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v91';  // v22b: Engine 59 / Ladder 18's and Engine 12's own firehouses (E59's police half cut from its outline); every flag a cloth flag, all the way up.
+const CACHE = 'local-shell-v92';  // v22c: a building tile that fails to load is fetched again; the city round a firehouse keeps off only its own footprint.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {

@@ -1566,7 +1566,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22b";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22c";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -5660,8 +5660,7 @@ function typedBuildings(J,s,code,dx,dz,nx,nz,sl,rh,EV){ const {cx,cz,B,grid}=J, 
     if(inWater(x,z)||landBlocksBuilding(x,z,reach*0.6)||railNear(x,z,reach+4)||navSpan(x,z,null,reach+22)?.b.bridge) return false;
     if(CORRIDOR_PHOTO.enabled&&s.name==='Lincoln Drive'&&z>-780&&z<-330) return false;         // owner photo sequence: wooded shoulders before Gypsy Lane
     if(!footprintClearsRoadAt(x,z,w,d,ang)) return false;
-    for(const st of stations){ if((st.curated||st.id===DRIVE.stationId)&&Math.hypot(x-st.x,z-st.z)<62) return false; }
-    if(fhBlock(x,z,14)) return false;                                                            // the station house and every other firehouse model
+    if(fhBlock(x,z,7)) return false;                                                             // the station house and every other firehouse model: its own footprint (no more 62 m circle — owner, October 16)
     const ks=cells(x,z,w,d), fx=-nx*side, fz=-nz*side;                                          // fx/fz: unit vector from the building toward its street (porches and parking pads go there)
     if(extra.pad){ const px=x+fx*(d/2+BTYPED.stripPark/2), pz=z+fz*(d/2+BTYPED.stripPark/2), pw=w+6, pd=BTYPED.stripPark-1.5;   // the strip mall's parking pad is part of the footprint: off every roadway and on free cells too
       if(!footprintClearsRoadAt(px,pz,pw,pd,ang)) return false; ks.push(...cells(px,pz,pw,pd)); }
@@ -5781,7 +5780,7 @@ function parkFences(J,f,list,max,w,h){ const R=LOCAL.R*PARKS.fenceR; if(list.len
 function parkTrees(J){ const {T,grid}=J, R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0); let added=0;   // scattered lawn trees from the sites the ground phase collected
   for(const [px,pz] of J.park.sites){ if(added>=PARKS.treeMax) break; if((px-J.cx)**2+(pz-J.cz)**2>R2) continue;
     if(inWater(px,pz)||nearRoadEdge(px,pz)<6||railNear(px,pz,3.5)||navSpan(px,pz,null,20)?.b.bridge||grid.has(gk(px,pz))) continue;
-    if(stations.some(st=>(st.curated||st.id===DRIVE.stationId)&&Math.hypot(px-st.x,pz-st.z)<62)) continue;
+    if(fhBlock(px,pz,2)) continue;                                                       // off a firehouse model's footprint (was a 62 m circle)
     grid.set(gk(px,pz),1); T.push({x:px,z:pz,s:1.1+hash2(Math.round(px),Math.round(pz)+9)*1.2,forest:true}); added++; } }
 function parkGroundStep(J,t0,budgetMs){ if(!PARKS.on||!NAVGEO.active) return true;
   const R=LOCAL.R, cx=J.cx, cz=J.cz, farR2=(R*PARKS.farR)**2, openR=R*PARKS.openR;
@@ -6162,15 +6161,15 @@ try{ FP3.on=localStorage.getItem('pfd_realbld')==='on'; }catch(e){}
 const fp3Num=(tx,tz)=>(tx+2000)*8192+(tz+2000);
 // load the tiles within R of each centre in C ([[x,z],...]), nearest first, FP3.conc at a time; past FP3.max the least recently used go —
 // never one a job holds, and never one inside these radii (that would fetch it again next time: a loop)
-function fp3Ensure(C,R){ if(FP.idxState==='idle') fpIndex(); if(FP.idxState!=='ready') return; const T=FP.T, now=performance.now(); let need=new Map();
+function fp3Ensure(C,R){ if(FP.idxState==='idle'||FP.idxState==='failed') fpIndex(); if(FP.idxState!=='ready') return; const T=FP.T, now=performance.now(); let need=new Map();
   for(const [cx,cz] of C) for(let tx=Math.floor((cx-R)/T);tx<=Math.floor((cx+R)/T);tx++) for(let tz=Math.floor((cz-R)/T);tz<=Math.floor((cz+R)/T);tz++){ const k=tx+'_'+tz; if(!FP.idx.tiles[k]) continue;
     const dx=Math.max(tx*T-cx,0,cx-(tx+1)*T), dz=Math.max(tz*T-cz,0,cz-(tz+1)*T), d=Math.hypot(dx,dz); if(d>R) continue;
-    const t=FP3.tiles.get(k); if(t){ t.used=now; continue; } if(!need.has(k)||need.get(k)>d) need.set(k,d); }
+    const t=FP3.tiles.get(k); if(t){ t.used=now; if(t.state!=='failed'||!fpRetryDue('3:'+k)) continue; FP3.tiles.delete(k); } if(!need.has(k)||need.get(k)>d) need.set(k,d); }   // a failed tile, tried again when due
   need=[...need].map(([k,d])=>[d,k]);
   need.sort((a,b)=>a[0]-b[0]);
   for(const [,k] of need){ if(FP3.busy>=FP3.conc) break; FP3.busy=(FP3.busy|0)+1; const t={k,state:'loading',used:now}; FP3.tiles.set(k,t);
-    fetch('data/fp/'+k+'.bin?v='+FPV).then(r=>r.ok?r.arrayBuffer():Promise.reject(r.status)).then(buf=>{ if(FP3.tiles.get(k)!==t) return; Object.assign(t,fp3Decode(buf,k)); t.state='decoded'; })
-      .catch(()=>{ t.state='failed'; }).finally(()=>{ FP3.busy--; }); }
+    fetch('data/fp/'+k+'.bin?v='+FPV).then(r=>r.ok?r.arrayBuffer():Promise.reject(r.status)).then(buf=>{ if(FP3.tiles.get(k)!==t) return; Object.assign(t,fp3Decode(buf,k)); t.state='decoded'; if(FPRETRY.has('3:'+k)){ FPRETRY.delete('3:'+k); t.retried=true; } })
+      .catch(()=>{ t.state='failed'; fpFailed('3:'+k); }).finally(()=>{ FP3.busy--; }); }
   if(FP3.tiles.size>FP3.max){ const old=[...FP3.tiles.values()].filter(t=>t.state!=='loading'&&!t.pin&&t.used<now).sort((a,b)=>a.used-b.used);
     for(let i=0;i<old.length&&FP3.tiles.size>FP3.max;i++) fp3Drop(old[i]); } }
 // a dropped tile leaves the grid; its neighbours forget they saw it, so it is re-joined (party walls across the border) if it comes back.
@@ -6263,7 +6262,7 @@ function fp3PrepWork(cx,cz,t0,ms){ const T=FP.T, L=[]; for(const t of FP3.tiles.
   L.sort((a,b)=>Math.hypot((a.tx+0.5)*T-cx,(a.tz+0.5)*T-cz)-Math.hypot((b.tx+0.5)*T-cx,(b.tz+0.5)*T-cz));
   for(const t of L){ if(performance.now()-t0>ms) return false;
     if(t.state==='decoded') t.state='prep';
-    if(t.state==='prep'){ if(!fp3Prep1(t,t0,ms)) return false; t.seen=new Set(fp3Nbrs(t).filter(k=>FP3.byNum.has(k))); if(!fp3Prep2(t,t0,ms)) return false; t.state='ready'; continue; }
+    if(t.state==='prep'){ if(!fp3Prep1(t,t0,ms)) return false; t.seen=new Set(fp3Nbrs(t).filter(k=>FP3.byNum.has(k))); if(!fp3Prep2(t,t0,ms)) return false; t.state='ready'; if(t.retried){ t.retried=false; FP3.dirty=true; } continue; }   // a tile that came in on a second try: rebuild with it
     const nb=fp3Nbrs(t), fresh=nb.filter(k=>!t.seen.has(k)&&FP3.byNum.has(k));
     if(!fresh.length&&!t.redo){ if(nb.every(k=>t.seen.has(k)||(()=>{ const [a,b]=[Math.floor(k/8192)-2000,k%8192-2000], u=FP3.tiles.get(a+'_'+b); return u&&u.state==='failed'; })())) t.final=true; continue; }
     if(!t.redo){ const X0=t.tx*T, Z0=t.tz*T, m=FP3.M+2, b=t.bb; t.redo={keys:fresh,only:i=>b[i*4]<X0+m||b[i*4+2]>X0+T-m||b[i*4+1]<Z0+m||b[i*4+3]>Z0+T-m}; }
@@ -6531,8 +6530,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
           const walk=s.cls<=1?4.2:3.2, to=rh+walk+1.3, tx=Math.round(px+nx*to*side), tz=Math.round(pz+nz*to*side), tk=gk(tx,tz);
           if(grid.has(tk)||inWater(tx,tz)||landKind(tx,tz)==='open'||railNear(tx,tz,3.5)) continue;
           if(nearRoadEdge(tx,tz)<1.0) continue;                                            // probe EVERY road — near a junction the offset clears this street but can land in the crossing one
-          { const hs=DRIVE.stationId&&stations.find(q=>q.id===DRIVE.stationId); if(hs&&Math.hypot(tx-hs.x,tz-hs.z)<42) continue;   // no trees through the station house
-            if(fhBlock(tx,tz,12)) continue; }
+          if(fhBlock(tx,tz,2)) continue;                                                   // no tree through a firehouse model or on its apron (was a 42 m circle)
           grid.set(tk,1); T.push({x:tx,z:tz,s:0.8+rv*6}); continue; }
         if(typed||B.length>=LOCAL.maxB) continue;                                         // a typed street already has its houses; the tree branch above still runs for it
         const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=rh+3.2+reach;
@@ -6541,8 +6539,8 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
         if(grid.has(k)||inWater(bx,bz)||landBlocksBuilding(bx,bz,reach)||railNear(bx,bz,reach+4)||navSpan(bx,bz,null,reach+22)?.b.bridge) continue;
         if(CORRIDOR_PHOTO.enabled&&s.name==='Lincoln Drive'&&pz>-780&&pz<-330)continue; // owner photo sequence: wooded shoulders before Gypsy Lane, no generated houses
         if(nearRoadEdge(bx,bz)<reach*(J.immersive?1.04:0.8)) continue;                     // rotated sample clears every roadway by its full bounding radius
-        let clear=true; for(const st of stations){ if((st.curated||st.id===DRIVE.stationId)&&Math.hypot(bx-st.x,bz-st.z)<62){ clear=false; break; } }   // keep the curated + ACTIVE firehouse forecourts open (the station house mesh stands there now)
-        if(clear && fhBlock(bx,bz,14)) clear=false;                                    // explicit footprint around the built station (and every other firehouse model)
+        let clear=true;                                                                    // (the curated + active firehouses' 62 m forecourt circle is gone: the model's own footprint keeps them clear)s open (the station house mesh stands there now)
+        if(clear && fhBlock(bx,bz,7)) clear=false;                                     // a firehouse model's own footprint and apron (the station house and every other)
         if(!clear) continue;
         grid.set(k,1);
         const tall=hash2(bx,bz*3), h = s.cls<=1 ? (7+tall*7+(tall>0.9?tall*12:0)) : (5+tall*4+(tall>0.94?tall*6:0));   // lower-rise: nav maps read as streetscape, not canyon
@@ -6553,7 +6551,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   while(J.fi<J.forestSites.length&&J.forestCount<260){if(performance.now()-t0>budgetMs)return false;
     const p=J.forestSites[J.fi++],rv=hash2(p[0],p[1]),x=p[0]+(rv-.5)*12,z=p[1]+(hash2(p[0]+17,p[1])-.5)*12;
     if(landKind(x,z)!=='wood'||inWater(x,z)||nearRoadEdge(x,z)<6||railNear(x,z,3.5)||navSpan(x,z,null,20)?.b.bridge||grid.has(gk(x,z)))continue;
-    if(stations.some(st=>(st.curated||st.id===DRIVE.stationId)&&Math.hypot(x-st.x,z-st.z)<62))continue;
+    if(fhBlock(x,z,2))continue;                                                       // off a firehouse model's footprint (was a 62 m circle)
     grid.set(gk(x,z),1);T.push({x,z,s:1.25+rv*.45,forest:true});J.forestCount++;}
   if(!J.photoTrees&&CORRIDOR_PHOTO.enabled){J.photoTrees=true;let added=0;
     for(const s of J.list){if(s.name!=='Lincoln Drive'||!photoCorridorRoad(s))continue;const dx=s.bx-s.ax,dz=s.bz-s.az,L=Math.hypot(dx,dz)||1;
@@ -10257,17 +10255,23 @@ function fhPrep(n,o){ const st=stations.find(s=>s.num===n); if(!st||o.length<6) 
     if(x1<bb[0]) bb[0]=x1; if(z1<bb[1]) bb[1]=z1; if(x1>bb[2]) bb[2]=x1; if(z1>bb[3]) bb[3]=z1; }
   cx/=m; cz/=m; let lo=1e9,hi=-1e9,l2=1e9,h2=-1e9; for(let j=0;j<m;j++){ const ex=a[j*2]-cx, ez=a[j*2+1]-cz, a1=ex*ux+ez*uz, a2=-ex*uz+ez*ux; if(a1<lo) lo=a1; if(a1>hi) hi=a1; if(a2<l2) l2=a2; if(a2>h2) h2=a2; }
   return {n,id:st.id,o:a,bb,ux,uz,len:hi-lo,wid:h2-l2,lx:cx+ux*(lo+hi)/2-uz*(l2+h2)/2,lz:cz+uz*(lo+hi)/2+ux*(l2+h2)/2,label:'E'+n+(st.ladder?' \u00b7 L'+st.ladder:'')}; }
-function fpIndex(){ if(FP.idxState!=='idle') return; FP.idxState='loading';
+/* 🔁 A FETCH THAT FAILS IS TRIED AGAIN (owner's phone, October 16: a building tile that failed once — a dropped request as the shift
+   started, a 5G hand-off — was never fetched again, and with Real buildings on its whole block stayed generated, round Engine 35 bare).
+   fpFailed notes a failure and when to try again (2, 4, 8, 16, 30 s; six tries); fpRetryDue says the time has come. */
+const FPRETRY=new Map();
+function fpFailed(k){ const f=FPRETRY.get(k)||{n:0,at:0}; f.n++; f.at=performance.now()+Math.min(30000,2000*2**(f.n-1)); FPRETRY.set(k,f); }
+function fpRetryDue(k){ const f=FPRETRY.get(k); return !!f&&f.n<6&&performance.now()>=f.at; }
+function fpIndex(){ if(FP.idxState==='failed'&&fpRetryDue('idx')) FP.idxState='idle'; if(FP.idxState!=='idle') return; FP.idxState='loading';
   fetch('data/fp/firehouses.json?v='+FHV).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{ FP.fh=Object.entries(j.fh||{}).map(([n,f])=>fhPrep(+n,f.o)).filter(Boolean); }).catch(()=>{ FP.fh=[]; });
-  fetch('data/fp/index.json?v='+FPV).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{ FP.idx=j; FP.T=j.tile||500; FP.idxState='ready'; }).catch(()=>{ FP.idxState='failed'; }); }
-function fpEnsure(cx,cz,R){ if(FP.idxState==='idle') fpIndex(); if(FP.idxState!=='ready') return;
+  fetch('data/fp/index.json?v='+FPV).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{ FP.idx=j; FP.T=j.tile||500; FP.idxState='ready'; }).catch(()=>{ FP.idxState='failed'; fpFailed('idx'); }); }
+function fpEnsure(cx,cz,R){ if(FP.idxState==='idle'||FP.idxState==='failed') fpIndex(); if(FP.idxState!=='ready') return;
   const T=FP.T, need=[];
   for(let tx=Math.floor((cx-R)/T);tx<=Math.floor((cx+R)/T);tx++) for(let tz=Math.floor((cz-R)/T);tz<=Math.floor((cz+R)/T);tz++){ const k=tx+'_'+tz; if(!FP.idx.tiles[k]) continue;
-    const t=FP.tiles.get(k); if(t){ t.used=GT; continue; } need.push([Math.hypot((tx+0.5)*T-cx,(tz+0.5)*T-cz),k]); }
+    const t=FP.tiles.get(k); if(t){ t.used=GT; if(t.state!=='failed'||!fpRetryDue('m:'+k)) continue; FP.tiles.delete(k); } need.push([Math.hypot((tx+0.5)*T-cx,(tz+0.5)*T-cz),k]); }   // a failed tile, tried again when due
   need.sort((a,b)=>a[0]-b[0]);
   for(const [,k] of need){ if(FP.busy>=3) break; FP.busy++; const t={state:'loading',used:GT}; FP.tiles.set(k,t);
-    fetch('data/fp/'+k+'.bin?v='+FPV).then(r=>r.ok?r.arrayBuffer():Promise.reject(r.status)).then(buf=>{ Object.assign(t,fpDecode(buf,k)); t.state='ready'; })
-      .catch(()=>{ t.state='failed'; }).finally(()=>{ FP.busy--; }); }
+    fetch('data/fp/'+k+'.bin?v='+FPV).then(r=>r.ok?r.arrayBuffer():Promise.reject(r.status)).then(buf=>{ Object.assign(t,fpDecode(buf,k)); t.state='ready'; FPRETRY.delete('m:'+k); })
+      .catch(()=>{ t.state='failed'; fpFailed('m:'+k); }).finally(()=>{ FP.busy--; }); }
   if(FP.tiles.size>FP.max){ const old=[...FP.tiles].filter(e=>e[1].state!=='loading').sort((a,b)=>a[1].used-b[1].used);
     for(let i=0;i<old.length&&FP.tiles.size>FP.max;i++) FP.tiles.delete(old[i][0]); } }
 // real data rules here: its tile is in, or the City has no building in that square (a failed tile is not covered: the generated ones stand in)
@@ -10930,7 +10934,7 @@ function buildFirehouse(st,C){
   /* ---- broad concrete apron: every bay connects to the roadway, no grass in between ---- */
   { const apD=C.setback+6.5; box(W+C.wing*0.8,0.04,apD,0xd9d6cc,C.wing*0.3,0.1,fz+apD/2); }
   { const ex=bayX(bays-1); K.mark(); fhEngine(K,ex,fz-0.6,st.num); fhDoor(K,ex,C.bayW,C.bayH,fz-0.9); }   // 🚒 the house's own engine in the right bay (fhRig)
-  return K.finish({C,W,D,H,engBayX:((bays-1)*C.bayPitch)/2,halfW:W/2+(C.wing||0),xMin:-W/2,xMax:W/2+(C.wing>0?C.wing+1.6:0),setback:C.setback,spawnIn:C.spawnIn,yawFix:C.yawFix||0});
+  return K.finish({C,W,D,H,fp:[-W/2,W/2+(C.wing>0?C.wing:0),-D/2,fz+C.setback],engBayX:((bays-1)*C.bayPitch)/2,halfW:W/2+(C.wing||0),xMin:-W/2,xMax:W/2+(C.wing>0?C.wing+1.6:0),setback:C.setback,spawnIn:C.spawnIn,yawFix:C.yawFix||0});
 }
 /* 🚒 THE LADDER TRUCK IN ITS BAY (owner, October 16: "Can the ladder truck in the bay door look better") — a rear-mount aerial facing out
    of the bay, front at zf: red body with compartment doors and a white stripe, a red-and-white cab with its windshield, side windows,
@@ -11084,7 +11088,7 @@ function createE35Station(st){
   box(9,0.03,7.5,0x6e9a4b,wx+wW/2+4.4,0.04,wf+1.6);                          // the lawn and the flag
   fhFlag(K,wx+wW/2+3.0,wf+2.6);
   K.mark(); fhEngine(K,3.0,fz-0.9,35); fhDoor(K,(opW/2-0.28)/2,opW/2-0.28,opH,fz-0.55);   // 🚒 Engine 35 on the right, or that half's door shut (fhRig)
-  return K.finish({W,D,H,engBayX:3.0,halfW:W/2+wW+1,xMin:-W/2,xMax:W/2+wW+5,setback:6.5,spawnIn:5.0,yawFix:0}); }
+  return K.finish({W,D,H,fp:[-W/2,W/2+wW,-D/2,fz+8.5],engBayX:3.0,halfW:W/2+wW+1,xMin:-W/2,xMax:W/2+wW+5,setback:6.5,spawnIn:5.0,yawFix:0}); }
 
 /* 🚒 ENGINE 66 — 7727 Ridge Ave, Andorra, from the owner's Street View pictures (April 2025): a one-storey buff-brick house, its City
    outline 19.2 m along Ridge by 22.6 m deep. The higher bay block on the left has ONE wide opening with a red steel frame, under a
@@ -11134,7 +11138,7 @@ function createE66Station(st){
   E(2.9,9.8,0.03,0.065,wz-0.3,fz+6.6,0x6e9a4b);                              // the lawn and its young tree
   K.cyl(0.06,0.08,2.2,6,0x6b5a45,7.6,1.1,wz+1.6); K.cyl(0.55,0.75,1.5,7,0x5f8f3e,7.6,2.7,wz+1.6);
   K.mark(); fhEngine(K,eng,wz-0.5,66); fhDoor(K,(oL+oR)/2,oR-oL,oH,wz-0.15);   // 🚒 Engine 66 in the right of the bay, or the door shut (fhRig)
-  return K.finish({W,D,H,engBayX:eng,halfW:15,xMin:-W/2,xMax:W/2,setback:9.0,spawnIn:5.0,yawFix:0}); }
+  return K.finish({W,D,H,fp:[-W/2,W/2,-fz,fz+6.6],engBayX:eng,halfW:15,xMin:-W/2,xMax:W/2,setback:9.0,spawnIn:5.0,yawFix:0}); }
 
 /* 🚒 ENGINE 59 / LADDER 18 — 2201 W Hunting Park Ave, Nicetown, from the owner's Street View pictures (November 2018, May 2025): a
    three-storey buff-brick house, its City outline 39.2 m along Hunting Park by 16.7 m deep at the front (lower wings behind). The
@@ -11210,7 +11214,7 @@ function createE59Station(st){
   E(X0-1,X1+1,0.03,0.07,wf,wf+9.0,0xcfcbc1); for(const x of [-15.125,-9.125]) E(x-0.06,x+0.06,0.07,0.085,wf+0.15,wf+8.8,0xe2b53a);   // the apron and the bays' yellow lines
   fhLadder(K,-15.125,wf-0.7,18);                                             // Ladder 18 in the left arch
   K.mark(); fhEngine(K,-9.125,wf-0.75,59); fhArchDoor(K.doorBox,-9.125,1.575,2.45,wf-0.3,red,[1.4]);   // 🚒 Engine 59 in the next, or its arched door shut (fhRig)
-  return K.finish({W,D,H:15.25,engBayX:-9.125,halfW:31,xMin:-W/2,xMax:0,setback:9.3,spawnIn:5.0,yawFix:0}); }   // xMin..xMax = the firehouse's half (its outline), to the middle of the alley
+  return K.finish({W,D,H:15.25,fp:[-W/2,W/2,-fz,wf+9.0],engBayX:-9.125,halfW:31,xMin:-W/2,xMax:0,setback:9.3,spawnIn:5.0,yawFix:0}); }   // xMin..xMax = the firehouse's half (its outline), to the middle of the alley
 
 /* 🚒 ENGINE 12 — 4447 Main St, Manayunk, from the owner's Street View pictures (April 2025): dark red brick, its City outline 20.1 m along
    Main St by 25.6 m deep. The two-storey main block has TWO great round arches in thick brick rings on granite feet, carved lion heads at
@@ -11292,7 +11296,7 @@ function createE12Station(st){
     for(const [x,z] of [[t1,z1],[t2-0.6,z1],[t1,z2-0.6],[t2-0.6,z2-0.6],[(t1+t2)/2-0.3,z1],[(t1+t2)/2-0.3,z2-0.6],[t1,(z1+z2)/2-0.3],[t2-0.6,(z1+z2)/2-0.3]]) E(x-0.12,x+0.72,Ht-0.7,Ht,z-0.12,z+0.72,brick); }   // the battlements
   E(-10.2,10.2,0.03,0.07,wf,wf+6.4,0xcfcbc1); E(eng-0.06,eng+0.06,0.07,0.085,wf+0.15,wf+6.2,0xe2b53a);   // the apron and Engine 12's yellow line
   K.mark(); fhEngine(K,eng,wf-0.75,12); fhArchDoor(K.doorBox,eng,1.65,2.45,wf-0.3,red,[1.6,2.2]);   // 🚒 Engine 12 in the right arch, or its arched door down (fhRig)
-  return K.finish({W,D,H:17,engBayX:eng,halfW:17,xMin:-W/2,xMax:W/2,setback:6.6,spawnIn:5.0,yawFix:0}); }
+  return K.finish({W,D,H:17,fp:[-W/2,W/2,-fz,wf+6.4],engBayX:eng,halfW:17,xMin:-W/2,xMax:W/2,setback:6.6,spawnIn:5.0,yawFix:0}); }
 
 function buildStationHouse(st){
   if(STHOUSE.group){ FLATCITY.group.remove(STHOUSE.group); fhDispose(STHOUSE.group); STHOUSE.group=null; }
@@ -11316,11 +11320,18 @@ function buildStationHouse(st){
    or the default sized to the outline, ON its real building and facing its street, for every house within the local city — except
    the one you ride, whose STHOUSE stands where the truck starts. Kept between rebuilds; fhBlock keeps the city off all of them. */
 const FH3D={tbl:null,state:'idle',list:[]};
-function fh3dLoad(){ if(FH3D.state!=='idle') return; FH3D.state='loading';
-  fetch('data/fp/firehouses.json?v='+FHV).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{ FH3D.tbl=j.fh||{}; FH3D.state='ready'; }).catch(()=>{ FH3D.state='failed'; }); }
-function fhBlock(x,z,pad){ if(STHOUSE.group){ const q=STHOUSE.group.position, r=(STHOUSE.halfW||20)+pad; if(Math.abs(x-q.x)<r&&Math.abs(z-q.z)<r) return true; }
-  for(const m of FH3D.list){ const r=m.halfW+pad; if(Math.abs(x-m.x)<r&&Math.abs(z-m.z)<r) return true; } return false; }
-function fh3dSync(cx,cz){ if(FH3D.state==='idle') fh3dLoad(); const keep=new Set();
+function fh3dLoad(){ if(FH3D.state==='failed'&&fpRetryDue('fh')) FH3D.state='idle'; if(FH3D.state!=='idle') return; FH3D.state='loading';
+  fetch('data/fp/firehouses.json?v='+FHV).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{ FH3D.tbl=j.fh||{}; FH3D.state='ready'; }).catch(()=>{ FH3D.state='failed'; fpFailed('fh'); }); }
+/* the city keeps off a firehouse model: its own FOOTPRINT (userData.fp = [x0,x1,z0,z1] in the model's frame — the building and its apron),
+   turned to its street, grown by pad. (It was a square of the model's widest reach lined up with the map: round Engine 35 it took the
+   real building next door — owner, October 16.) A model without fp keeps the old square. */
+function fhIn(g,x,z,pad){ const U=g.userData, f=U.fp, dx=x-g.position.x, dz=z-g.position.z;
+  if(!f){ const r=(U.halfW||20)+pad; return Math.abs(dx)<r&&Math.abs(dz)<r; }
+  const c=Math.cos(g.rotation.y), s2=Math.sin(g.rotation.y), lx=dx*c-dz*s2, lz=dx*s2+dz*c;
+  return lx>f[0]-pad&&lx<f[1]+pad&&lz>f[2]-pad&&lz<f[3]+pad; }
+function fhBlock(x,z,pad){ if(STHOUSE.group&&fhIn(STHOUSE.group,x,z,pad)) return true;
+  for(const m of FH3D.list) if(fhIn(m.g,x,z,pad)) return true; return false; }
+function fh3dSync(cx,cz){ if(FH3D.state==='idle'||FH3D.state==='failed') fh3dLoad(); const keep=new Set();
   if(FH3D.state==='ready') for(const st of stations){ if(st.id===DRIVE.stationId) continue; const f=FH3D.tbl[st.num]; if(!f||!f.o||f.o.length<6) continue;
     const o=f.o, m=o.length/2; let fx=0,fz=0; for(let i=0;i<m;i++){ fx+=o[i*2]; fz+=o[i*2+1]; } fx/=m; fz/=m;
     if(Math.hypot(fx-cx,fz-cz)>LOCAL.R-60) continue; keep.add(st.id);
