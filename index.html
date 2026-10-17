@@ -1136,6 +1136,11 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #houseCard .hcGo svg { width:26px; height:26px; }
   #houseCard .hcPair { display:flex; gap:8px; margin-top:8px; }
   .stbtn.fav .stName::after { content:" ★"; color:#ffd23b; }
+  .stbtn .ownTag { display:inline-block; margin-left:6px; padding:1px 6px; border-radius:7px; background:#1f6b3d; color:#d9ffe6; font-size:10.5px; font-weight:900; letter-spacing:.5px; vertical-align:2px; }
+  .ownCount { margin:4px 0 2px; color:#9fe3b6; font-size:.86em; font-weight:700; }
+  #houseCard .hcOwn { display:inline-block; margin-left:7px; padding:1px 7px; border-radius:7px; font-size:11px; font-weight:900; letter-spacing:.5px; vertical-align:1px; background:#1f6b3d; color:#d9ffe6; }
+  #houseCard .hcOwn.std { background:#2a3550; color:#9fb2d4; }
+  #homeLegend .lgOwn i { background:#2fbf63; box-shadow:0 0 7px #2fbf63; }
   #homeListPane { position:absolute; inset:0; z-index:6; display:none; align-items:center; justify-content:center;
     background:rgba(5,8,16,.93); padding:10px; }
   #homeListPane.show { display:flex; }
@@ -1566,7 +1571,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22i";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22j";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -10875,6 +10880,11 @@ function createDefaultStation(st){                                          // e
   return buildFirehouse(st, Object.assign({}, STATION_CFG, { bays: st.ladder?3:2 }));
 }
 const STATION_TEMPLATES={ e2:createEngine2Ladder3Station, e9:createE9Station, e12:createE12Station, e35:createE35Station, e19:createE19Station, e37:createE37Station, e39:createE39Station, e45:createE45Station, e50:createE50Station, e59:createE59Station, e66:createE66Station };   // add more real houses here (each its own look)
+/* ✓ OWN LOOK — for the time being (owner, October 17: "something that will tell me when I look at the main page I can tell if that
+   engine has the new changes"): a house whose model is its own template built from the owner's Street View pictures — every
+   STATION_TEMPLATES entry but Engine 2's, the old reference design. Marked on the home map (a green check by the dot, with its legend
+   line), in the list (a tag, and the count) and on the firehouse card. Remove the marks when every house is done. */
+const fhOwnLook=st=>!!(st&&STATION_TEMPLATES[st.id]&&st.id!=='e2');
 
 /* 🏚️ A FIREHOUSE IS A FEW DRAW CALLS (owner, October 16, 2026: "Can we make each firehouse its own look"). Every box of a model goes
    into ONE vertex-coloured mesh (FHK.lam, shared), its lights into one unlit mesh (FHK.glow), its lettering onto a plane — so a model
@@ -11608,14 +11618,22 @@ function createE19Station(st){
   for(const d of [8.6,10.4,12.2]){ E(12.4,12.49,4.0,6.6,d-0.75,d+0.75,frame); E(12.4,12.52,4.12,6.48,d-0.65,d+0.65,0x7f9fa0); }   // its upper windows
   E(12.4,12.49,1.2,2.4,10.0,11.2,frame); E(12.4,12.52,1.3,2.3,10.1,11.1,0x7f9fa0);
   /* ---- the lawn, the low fieldstone walls, the tree, the flag; the apron; the rigs ---- */
-  E(A1,6.5,0.02,0.05,F-10,F2,0xbdb8ae); E(6.5,12.1,0.02,0.06,F-9.8,F2,lawn); E(A1,12.0,0.02,0.06,F2,8.0,lawn);   // paving before the corner piece, the corner lawn, the strip along the wing
-  E(6.5,9.6,0,0.75,F-9.9,F-9.55,fsC); E(11.95,12.3,0,0.75,F-7.4,F2-0.2,fsC);         // the low wall at the corner: along Chelten, along Baynton,
-  for(let k=0;k<5;k++){ const t=(k+0.5)/5*Math.PI/2, cx=9.6, cz=F-7.4, r=2.52; rot(r*Math.PI/2/5+0.08,0.75,0.35,fsC,cx+r*Math.sin(t),0.375,cz-r*Math.cos(t),t); }   // and its curve round the corner
-  { const [a0,d0]=on(-0.6,2.75), [a1,d1]=on(L,2.75), mid=[(a0+a1)/2,(d0+d1)/2], LL=Math.hypot(a1-a0,d1-d0); rot(0.35,0.75,LL,fsC,mid[0],0.375,mid[1],th);   // and along Baynton,
-    for(const s of [1.0,3.6]){ const [pa,pd]=on(s,2.75); rot(0.55,1.25,0.55,0xa2573f,pa,0.62,pd,th); } }   // its brick piers
-  K.cyl(0.12,0.16,2.6,7,0x6b5a45,X(10.4),1.3,Z(F-8.0)); K.cyl(1.9,1.3,1.1,9,0x6f8f3e,X(10.4),2.95,Z(F-8.0)); K.cyl(1.7,1.95,1.5,9,0x678a3a,X(10.4),4.25,Z(F-8.0)); K.cyl(0.6,1.7,1.1,9,0x739545,X(10.4),5.55,Z(F-8.0));   // the tree in the corner, its crown rounded,
-  for(const [a,d] of [[12.2,-8],[12.6,0]]) K.cyl(0.5,0.6,1.0,7,0x3f6b35,X(a),0.5,Z(d));   // shrubs by the wing
-  fhFlagAt(K,X(7.6),0,Z(F-5.5),11,1,1);                                                // the tall flagpole on the corner lawn, the flag all the way up
+  /* The corner (owner, October 17: "Can we fix the tree?" — it stood at the corner in the game's road). The game draws Baynton St 13 m wide,
+     as wide as Chelten, so its sidewalk covers part of the real corner: the bed now ends at the back of both sidewalks (Chelten's at d -30.4,
+     Baynton's along a = 7.29 + 0.0837 (d + 25), measured with nearRoadEdge + 2.9), the tree grows in it ~3 m in front of the corner piece,
+     the long Baynton wall hugs the wing, and the shrubs that stood in Baynton St are gone. */
+  const bA=d=>7.29+0.0837*(d+25)-0.15;                                                 // the bed's Baynton edge, just inside the back of the game's sidewalk
+  E(A1,4.5,0.02,0.05,F-10,F2,0xbdb8ae);                                                // paving before the corner piece
+  for(let d=-29.9;d<F2-0.21;d+=1.0){ const d2=Math.min(F2-0.2,d+1.0); E(4.5,bA(d),0.02,0.06,d,d2,lawn); }   // the corner bed, its edge following Baynton
+  E(4.5,5.6,0,0.75,-30.25,-29.9,fsC);                                                  // its low wall: along Chelten,
+  for(let k=0;k<5;k++){ const t=(k+0.5)/5*Math.PI/2, cx=5.6, cz=-28.6, r=1.47; rot(r*Math.PI/2/5+0.08,0.75,0.35,fsC,cx+r*Math.sin(t),0.375,cz-r*Math.cos(t),t); }   // round the corner,
+  { const d0=-28.6, d1=F2-0.2, a0=bA(d0)+0.1, a1=bA(d1)+0.1, LL=Math.hypot(a1-a0,d1-d0), tb=Math.atan2(-(a1-a0),d1-d0);
+    rot(0.35,0.75,LL,fsC,(a0+a1)/2,0.375,(d0+d1)/2,tb);                                // along Baynton,
+    for(const d of [-21.6,-19.2]) rot(0.5,1.2,0.5,0xa2573f,bA(d)+0.1,0.6,d,tb); }      // its brick piers
+  { const [a0,d0]=on(-0.6,0.55), [a1,d1]=on(L,0.55), mid=[(a0+a1)/2,(d0+d1)/2], LL=Math.hypot(a1-a0,d1-d0); rot(0.35,0.7,LL,fsC,mid[0],0.35,mid[1],th);   // and on along the wing, hugging it
+    const [la,ld]=on(L/2,0.19); rot(0.36,0.06,L,lawn,la,0.05,ld,th); }                 // a strip of green at its foot
+  K.cyl(0.12,0.16,2.6,7,0x6b5a45,X(6.0),1.3,Z(-22.6)); K.cyl(1.9,1.3,1.1,9,0x6f8f3e,X(6.0),2.95,Z(-22.6)); K.cyl(1.7,1.95,1.5,9,0x678a3a,X(6.0),4.25,Z(-22.6)); K.cyl(0.6,1.7,1.1,9,0x739545,X(6.0),5.55,Z(-22.6));   // the tree in the bed, its crown rounded
+  fhFlagAt(K,X(5.4),0,Z(-26.4),11,1,1);                                                // the tall flagpole in the bed, the flag all the way up
   E(A0,A1+0.3,0.03,0.07,F-10,F,0x9c9a95); for(const a of [-12.2,-7.9,-3.3,0.95]) E(a-0.06,a+0.06,0.07,0.085,F-9.8,F-0.1,0xe2b53a);   // the apron and its yellow lines
   fhLadder(K,X(lad),Z(F)-0.7,8);                                                       // Ladder 8 in the middle bay; the left is Engine 19's
   K.mark(); fhEngine(K,X(eng),Z(F)-0.9,19); fhDoor(K,X(eng),3.7-0.16,oH,Z(F+0.25));    // 🚒 Engine 19 in the left bay, or its door down (fhRig)
@@ -11956,6 +11974,8 @@ function resetRun(){ state.cash=0; state.saves=0; state.timeLeft=CONFIG.timer.st
 })();
 const homeEl=document.getElementById('home');
 (function buildStationList(){ const list=document.getElementById('stationList');
+  { const n=stations.filter(fhOwnLook).length, el=document.createElement('div'); el.className='ownCount'; el.id='ownCount';   // ✓ how many have their own look so far
+    el.textContent='✓ OWN LOOK: '+n+' of '+stations.length+' firehouses so far, built from Street View'; list.appendChild(el); }
   const byDiv={}; for(const st of stations){ const d=st.div||0; (byDiv[d]=byDiv[d]||[]).push(st); }   // Division → Battalion → Engine, matching the official PFD apparatus chart
   for(const dv of Object.keys(byDiv).map(Number).sort((a,b)=>a-b)){
     if(dv){ const dh=document.createElement('div'); dh.className='divHead'; dh.textContent=ordinalBn(dv)+' DIVISION'; list.appendChild(dh); }
@@ -11965,7 +11985,7 @@ const homeEl=document.getElementById('home');
       head.innerHTML='<span>'+(bn?ordinalBn(bn)+' BATTALION':'OTHER')+'</span><span class="bnCount">'+grp.length+'</span>';
       list.appendChild(head);
       for(const st of grp){ const b=document.createElement('button'); b.className='btn stbtn'; b.dataset.station=st.id;
-        b.innerHTML='<span class="eBadge">'+st.num+'</span><span class="stTxt"><span class="stName">Engine '+st.num+(st.ladder?' · Ladder '+st.ladder:'')+'</span><span class="sub2">'+st.address+'</span><span class="stCareer"></span></span>';
+        b.innerHTML='<span class="eBadge">'+st.num+'</span><span class="stTxt"><span class="stName">Engine '+st.num+(st.ladder?' · Ladder '+st.ladder:'')+(fhOwnLook(st)?'<span class="ownTag">✓ OWN LOOK</span>':'')+'</span><span class="sub2">'+st.address+'</span><span class="stCareer"></span></span>';
         b.addEventListener('click',()=>startShift(st)); list.appendChild(b); }
     }
   }
@@ -12069,7 +12089,7 @@ function drawHomeMap(now){
   c.save(); c.translate(W/2,H/2); c.scale(k,k); c.translate(-fcx,-fcy);
   const intro=Math.min(1,el/0.55);
   c.globalAlpha=intro; c.drawImage(HOMEMAP.base,0,0,HOMEMAP.bw,HOMEMAP.bh); c.globalAlpha=1;
-  const dots=HOMEMAP.dots.length?HOMEMAP.dots:homeDots();
+  const dots=HOMEMAP.dots.length?HOMEMAP.dots:homeDots(); HOMEMAP.ownDrawn=0;
   dots.forEach((d,i)=>{
     const pop=Math.max(0,Math.min(1,(el-0.25-i*0.012)/0.4));                  // staggered pop-in
     if(pop<=0) return;
@@ -12087,6 +12107,9 @@ function drawHomeMap(now){
       const sr=r*1.35, sx=(r+3)*0.8, sy=-(r+3)*0.8; c.beginPath();
       for(let j=0;j<10;j++){ const a=-Math.PI/2+j*Math.PI/5, rr=(j%2?0.45:1)*sr; c.lineTo(sx+Math.cos(a)*rr,sy+Math.sin(a)*rr); }
       c.closePath(); c.fillStyle='#ffd23b'; c.fill(); c.strokeStyle='#4a3500'; c.lineWidth=0.7; c.stroke(); }
+    if(fhOwnLook(d.st)){ HOMEMAP.ownDrawn=(HOMEMAP.ownDrawn||0)+1; const br=Math.max(2.6,r*0.62), bx=(r+1.2)*0.78, by=(r+1.2)*0.78;   // ✓ own look: a green check badge
+      c.fillStyle='#2fbf63'; c.strokeStyle='#07101d'; c.lineWidth=0.9; c.beginPath(); c.arc(bx,by,br,0,6.283); c.fill(); c.stroke();
+      c.strokeStyle='#fff'; c.lineWidth=Math.max(1,br*0.36); c.lineCap='round'; c.lineJoin='round'; c.beginPath(); c.moveTo(bx-br*0.48,by+br*0.02); c.lineTo(bx-br*0.12,by+br*0.4); c.lineTo(bx+br*0.52,by-br*0.38); c.stroke(); c.lineCap='butt'; }
     { const pe=PROFILE.engines[d.st.id]; if(pe&&pe.runs>0){                                            // 🧑‍🚒 career pips: due 1→4 left-to-right, colored by that position's rank; faint = not started
         c.strokeStyle='rgba(0,0,0,.35)'; c.lineWidth=.6;
         for(let i=0;i<POSITIONS.length;i++){ const t=pe.pos&&pe.pos[POSITIONS[i]];
@@ -12127,7 +12150,7 @@ let hcStation=null;
 function showHouseCard(st){ hcStation=st;
   document.getElementById('hcName').textContent=st.name;
   document.getElementById('hcAddr').textContent=st.address;
-  document.getElementById('hcBn').textContent=ordinalBn(st.bn)+' Battalion · Division '+st.div;
+  document.getElementById('hcBn').innerHTML=ordinalBn(st.bn)+' Battalion · Division '+st.div+(fhOwnLook(st)?'<span class="hcOwn" id="hcOwn">✓ OWN LOOK</span>':'<span class="hcOwn std" id="hcOwn">STANDARD LOOK</span>');
   { const e=PROFILE.engines[st.id], has=!!(e&&e.runs);                        // read-only — browsing a house must not create its career record
     const pct=has?Math.max(0,Math.min(100,companyMasteryOf(e)|0)):0, di=Math.max(0,(MAP.dueLevel|0)-1), t=has&&e.pos?e.pos[POSITIONS[di]]:null, r=t?(t.rank|0):0;
     document.getElementById('hcPct').textContent=pct+'%'; document.getElementById('hcBarFill').style.width=pct+'%';
@@ -12154,7 +12177,7 @@ function openHomeMap(){
 function closeHomeMap(){ if(HOMEMAP.raf){ cancelAnimationFrame(HOMEMAP.raf); HOMEMAP.raf=0; } }
 (function initHomeMap(){
   const leg=document.getElementById('homeLegend');
-  if(leg) leg.innerHTML=[1,2,3].map(d=>'<div style="color:'+DIV_COL[d]+'"><i></i><span style="color:#cfe0f2">DIVISION '+d+'</span></div>').join('');
+  if(leg) leg.innerHTML=[1,2,3].map(d=>'<div style="color:'+DIV_COL[d]+'"><i></i><span style="color:#cfe0f2">DIVISION '+d+'</span></div>').join('')+'<div class="lgOwn"><i></i><span>✓ OWN LOOK</span></div>';
   const cv=document.getElementById('homeMap');
   let sx=0,sy=0,moved=false;
   cv.addEventListener('pointerdown',e=>{ sx=e.clientX; sy=e.clientY; moved=false; });
