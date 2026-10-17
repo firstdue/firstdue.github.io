@@ -1566,7 +1566,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22c";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22d";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -10221,6 +10221,11 @@ const MAPV_C={ ground:'#d3d9bd', park:'#9bc977', wood:'#7cb15c', cem:'#a7cd8a', 
   membrane:'#e5e6e2', membranes:['#e5e6e2','#d4d6d7','#c1c5c8','#aeb2b6','#959a9f'],   // big real roofs: white to weathered grey
   inst:'#e4dac4', hatch:'rgba(62,66,72,.7)', hvac:'#9fa5ab', tree:'#5b9b3c', treeHi:'#79bd50', treeLo:'rgba(36,84,26,.24)', route:'rgba(40,120,255,.88)' };
 const mHash=n=>{ n=Math.sin(n*12.9898+78.233)*43758.5453; return n-Math.floor(n); };
+/* 🚒 THE TRUCK AT THE MAP'S SCALE (owner, October 16: "Can we have the truck get small when we zoom out on top-down view ... the truck
+   look huge and it's hard to tell where one might turn"). It was always 34 x 82 px — 34 m long at the normal zoom, 83 m zoomed out,
+   covering the junction it was coming to. Now it is 19 m long on the map, the 3D view's own truck: 82 px zoomed right in, 45 px at the
+   normal zoom, never under 22 px so it can still be found zoomed right out. Its glow, its E-number tag and its cab number follow. */
+function mapvTruckWH(M){ const asp=M.spr?M.spr.height/M.spr.width:2.42, th=Math.max(22,Math.min(84,19/(M.mpp||0.42))); return [th/asp,th]; }
 function mapvSprite(){ if(MAPV.sprState!=='idle') return; MAPV.sprState='loading'; const im=new Image();
   im.onload=()=>{ MAPV.spr=im; MAPV.sprState='ready'; }; im.onerror=()=>{ MAPV.sprState='failed'; }; im.src='assets/truck/pumper-top-v1.png'; }
 // heading-up pose: world (x,z) -> screen px with the truck at (W/2, 0.62 H) and its heading eased toward straight up
@@ -10440,7 +10445,7 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
   /* THE ARMED TURN — one arrow whoever armed it: a tap on the street, the pad's ◀ ▶, the keys (they all set DRIVE.pending).
      From up to 22 m before the junction (never from behind the truck), through it, 22 m into the street, arrowhead last.
      White on blue; gold on dark red for a wrong-way street, like its old card. It stays until the turn is taken or cancelled. */
-  { const [gx,gy]=T(truckG.position.x,truckG.position.z), gr=x.createRadialGradient(gx,gy,8,gx,gy,42); gr.addColorStop(0,'rgba(47,123,255,.30)'); gr.addColorStop(1,'rgba(47,123,255,0)'); x.fillStyle=gr; x.beginPath(); x.arc(gx,gy,42,0,6.2832); x.fill(); }   // the truck's glow, under the arrow
+  { const [gx,gy]=T(truckG.position.x,truckG.position.z), gR=Math.max(18,mapvTruckWH(M)[1]*0.52), gr=x.createRadialGradient(gx,gy,gR*0.2,gx,gy,gR); gr.addColorStop(0,'rgba(47,123,255,.30)'); gr.addColorStop(1,'rgba(47,123,255,0)'); x.fillStyle=gr; x.beginPath(); x.arc(gx,gy,gR,0,6.2832); x.fill(); }   // the glow, the truck's size   // the truck's glow, under the arrow
   M.arrow=null; { const pd=DRIVE.pending; if(pd&&pd.at&&pd.next&&!DRIVE.parked){ const at=pd.at;
     let a=DRIVE.fromN, b=DRIVE.toN, g=0; while(b&&b!==at&&g++<60){ const nx=keepStreet(a,b); a=b; b=nx; }
     const wp=[]; if(b===at&&a){ const L=Math.hypot(a.x-at.x,a.z-at.z)||1, dT=a===DRIVE.fromN?Math.hypot(truck.x-at.x,truck.z-at.z):L, k=Math.min(1,22/L,dT/L); if(k>0.05) wp.push([at.x+(a.x-at.x)*k,at.z+(a.z-at.z)*k]); }
@@ -10455,7 +10460,7 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
       x.beginPath(); x.moveTo(tip[0],tip[1]); x.lineTo(h1[0],h1[1]); x.lineTo(h2[0],h2[1]); x.lineTo(tip[0],tip[1]); x.lineWidth=3; x.strokeStyle=edge; x.stroke(); x.fillStyle=fill; x.fill();
       for(const q of sp) taken.push([q[0],q[1],10,10]); taken.push([e[0],e[1],14,14]);
       M.arrow={pts:sp,tip,wrong}; } } }
-  M.tagL=!!(M.arrow&&M.arrow.tip[0]>M.ax+4); taken.push([M.tagL?M.ax-52:M.ax+52,M.ay-6,28,15]);   // the E-number tag sits on the side AWAY from a turn's arrow (it hid a right turn at the truck)
+  M.tagL=!!(M.arrow&&M.arrow.tip[0]>M.ax+4); { const off=mapvTruckWH(M)[0]/2+35; taken.push([M.tagL?M.ax-off:M.ax+off,M.ay-6,28,15]); }   // the E-number tag sits on the side AWAY from a turn's arrow (it hid a right turn at the truck)
   // 🚒 the firehouses: their companies written along the red roof (owner: "would like to see firehouse names on building roofs"), before any street name
   M.fhLab=[]; M.fhAt=[]; x.textAlign='center'; x.textBaseline='middle';
   for(const f of (FP.drawn&&FP.fhVis)||[]){ const [cx0,cy0]=T(f.lx,f.lz); if(cx0<-80||cx0>W+80||cy0<-80||cy0>H+80) continue;
@@ -10511,11 +10516,11 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
     x.font='900 11px -apple-system,Arial'; const w=x.measureText(String(r.num)).width+10; x.fillStyle='#1f3157'; x.fillRect(px-w/2,py-29,w,16); x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(r.num),px,py-20.5); }
   // the truck: nose up, the company number on the cab, a heading arrow, the E-number tag
   { const [px,py]=T(truckG.position.x,truckG.position.z), fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta), rot=Math.atan2(M.b*fx+M.d*fz,M.a*fx+M.cc*fz)+Math.PI/2;
-    const tw=34, th=M.spr?tw*M.spr.height/M.spr.width:tw*2.42, num=engNum(DRIVE.stationId||'');
+    const [tw,th]=mapvTruckWH(M), num=engNum(DRIVE.stationId||'');                       // at the map's scale (it was always 34 x 82 px)
     x.save(); x.translate(px,py);                                                        // (its glow is drawn under the turn arrow, above)
     x.rotate(rot); x.shadowColor='rgba(0,0,0,.35)'; x.shadowBlur=6; x.shadowOffsetX=2; x.shadowOffsetY=3;
     if(M.spr) x.drawImage(M.spr,-tw/2,-th/2,tw,th); else mapvTruckVector(x,tw,th); x.shadowColor='transparent';
-    if(num){ x.fillStyle='#d32f2f'; x.font='900 '+Math.round(tw*0.36)+'px "Arial Black",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(num),0,-th/2+th*0.27+1); }
+    if(num&&tw>=15){ x.fillStyle='#d32f2f'; x.font='900 '+Math.round(tw*0.36)+'px "Arial Black",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(num),0,-th/2+th*0.27+1); }
     x.beginPath(); x.moveTo(0,-th/2-20); x.lineTo(12,-th/2-5); x.lineTo(0,-th/2-10); x.lineTo(-12,-th/2-5); x.closePath(); x.fillStyle='#2f7bff'; x.strokeStyle='#fff'; x.lineWidth=2.5; x.lineJoin='round'; x.stroke(); x.fill(); x.restore();
     if(num){ x.font='900 15px -apple-system,Arial'; const tag='E'+num, w=x.measureText(tag).width+18, lx=M.tagL?px-tw/2-10-w:px+tw/2+10; x.fillStyle='#d32f2f'; x.beginPath(); x.roundRect?x.roundRect(lx,py-19,w,26,13):x.rect(lx,py-19,w,26); x.fill();
       x.lineWidth=2.5; x.strokeStyle='#fff'; x.stroke(); x.fillStyle='#fff'; x.textAlign='left'; x.textBaseline='middle'; x.fillText(tag,lx+9,py-5.5); } }
