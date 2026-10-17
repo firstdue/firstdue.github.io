@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v93';  // v22d: Map view's truck at the map's scale — small when zoomed out.
+const CACHE = 'local-shell-v94';  // v22e: firehouse trucks come out on the street the owner checked (E37, E19, E10, E64, E38 ...); Engine 45 / Ladder 14's own house.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
