@@ -1566,7 +1566,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22f";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22g";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2403,9 +2403,10 @@ const PFD_DROP=new Set([15,32,78]);   // marine (E15, E32 fireboats) + airport (
      its building stands 25 m back behind a narrow strip that reaches the street, and the truck started at the strip. Otherwise, when the
      nearest street is in neither half of the house's "X & Y" location (E28, E41, E60 did), the nearer of the location's streets is taken.
      NOT the City's address (OPA, tried and undone): it named the other street for E45 and E57, both right as they were; nor simply the
-     location's first street (E22, E27 and E38 face their second). */
-  const FACE={37:'W HIGHLAND AVE',19:'E CHELTEN AVE',10:'S 12TH ST',64:'RISING SUN AVE',45:'N 26TH ST',57:'S 56TH ST',22:'COMLY RD',27:'W OXFORD ST',
-    38:['MAGEE AVE',40.020513,-75.045340]};   // [street, lat, lon]: snap from that point (E38's building middle, its outline's area centroid), not the PFD's
+     location's first street (E22, E27 and E38 face their second). Engine 50: its bays are on W Cambria St (the owner's Street View of 1323
+     W Cambria St, October 17); it sat on N Park Ave, its first street and its City address. */
+  const FACE={37:['W HIGHLAND AVE',40.074559,-75.208077],19:['E CHELTEN AVE',40.038931,-75.171254],10:'S 12TH ST',64:'RISING SUN AVE',45:'N 26TH ST',57:'S 56TH ST',22:'COMLY RD',27:'W OXFORD ST',50:'W CAMBRIA ST',
+    38:['MAGEE AVE',40.020513,-75.045340]};   // [street, lat, lon]: snap from that point, not the PFD's — E38's building middle (its outline's area centroid); E19's engine bay (the left of its three) and E37's (the glass-door bay of its new house) — the owner's Street View
   for(const h of PFD_STATIONS){ if(PFD_DROP.has(h.n)) continue; const id="e"+h.n; if(have.has(id)) continue;
     const fa=FACE[h.n], at=Array.isArray(fa), want=at?fa[0]:fa, x=(h.lon-lon0)*mLon, z=(lat0-h.lat)*110540, sx=at?(fa[2]-lon0)*mLon:x, sz=at?(lat0-fa[1])*110540:z;
     const listed=(want?[want]:String(h.loc||'').split('&')).map(q=>canonStreet(q.trim())).filter(Boolean);
@@ -10864,7 +10865,7 @@ function createEngine2Ladder3Station(st){                                   // t
 function createDefaultStation(st){                                          // every other house, sized to its companies
   return buildFirehouse(st, Object.assign({}, STATION_CFG, { bays: st.ladder?3:2 }));
 }
-const STATION_TEMPLATES={ e2:createEngine2Ladder3Station, e12:createE12Station, e35:createE35Station, e45:createE45Station, e59:createE59Station, e66:createE66Station };   // add more real houses here (each its own look)
+const STATION_TEMPLATES={ e2:createEngine2Ladder3Station, e12:createE12Station, e35:createE35Station, e19:createE19Station, e37:createE37Station, e45:createE45Station, e50:createE50Station, e59:createE59Station, e66:createE66Station };   // add more real houses here (each its own look)
 
 /* 🏚️ A FIREHOUSE IS A FEW DRAW CALLS (owner, October 16, 2026: "Can we make each firehouse its own look"). Every box of a model goes
    into ONE vertex-coloured mesh (FHK.lam, shared), its lights into one unlit mesh (FHK.glow), its lettering onto a plane — so a model
@@ -11435,6 +11436,271 @@ function fhPatch45(c,cx,cy,R){                                               // 
   for(const [dx,dy] of [[0,-1],[1,0],[0,1],[-1,0]]){ c.moveTo(cx+dx*b-dy*b*0.9,cy+dy*b+dx*b*0.9); c.lineTo(cx+dx*a-dy*a*0.55,cy+dy*a+dx*a*0.55); c.lineTo(cx+dx*a+dy*a*0.55,cy+dy*a-dx*a*0.55); c.lineTo(cx+dx*b+dy*b*0.9,cy+dy*b-dx*b*0.9); } c.fill();
   c.fillStyle='#b3261e'; c.beginPath(); c.arc(cx,cy,R*0.32,0,6.2832); c.fill();
   c.fillStyle='#ffffff'; c.font='900 '+Math.round(R*0.34)+'px Arial,sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('45',cx,cy+R*0.02); }
+
+/* 🚒 ENGINE 50 / LADDER 12 — 1323 W Cambria St at N Park Ave, from the owner's Street View pictures (April 2025): a two-storey house of
+   1901. The Cambria front: a white-painted rusticated ground floor with THREE segmental-arched bays — narrow, wide, narrow, under
+   windows grouped 2 · 3 · 2 — Ladder 12 in the left bay (a rig marked 12 stands there in one picture), Engine 50 in the middle, the
+   right bay's red door down (shut in every picture); the fuel pump and its bollards on the pier between the first two, two bronze
+   plaques on the next; a white stone belt course; the brick upper floor with white stone quoins and window surrounds, the black
+   ENGINE 50 and red LADDER 12 helmet-shield panels ("1901") over the two piers, the flag on its short pole over the middle arch; the
+   frieze, the modillions and the cornice. The N Park Ave side (right): natural limestone below — the red door at 2900 by the corner,
+   the framed firefighter mural, the floodlights — and the brick floor above with its windows; the west wall one big mural over the
+   parking lot behind its chain-link fence. The murals are stand-ins in coloured blocks, not the paintings. Built in the City
+   outline's own frame: a along W Cambria St (right as seen from it; N Park Ave's centreline at a 11.9), d from the street into the lot
+   (front -16.94, back 8.84); local x = a + 2.555, z = -4.05 - d. */
+function createE50Station(st){
+  const K=fhKit(), box=K.box, ac=-2.555, dc=-4.05, W=18.0, D=25.8, fz=D/2;
+  const E=(a1,a2,y1,y2,d1,d2,c)=>box(a2-a1,y2-y1,d2-d1,c,(a1+a2)/2-ac,(y1+y2)/2,dc-(d1+d2)/2);   // a box by its extents in the outline's frame
+  const X=a=>a-ac, Z=d=>dc-d;
+  const A0=-11.55, A1=6.44, F=-16.94, BK=8.84, Hb=5.5, Hc=9.85, spring=3.5;
+  const white=0xf1efe9, joint=0xd2cfc7, ring=0xe0ddd4, stoneW=0xe8e5dd, brick=0xb35c40, lime=0xd9ceb4, limeJ=0xbcb197, red=0xbf3129, roof=0x6c6964, dark=0x17120e, glass=0x34404a, mural=0xa9bfd8;   // a shade light: the front can face away from the sun
+  const B=[[-9.85,-6.45,'lad'],[-4.75,-0.35,'eng'],[1.35,4.75,'shut']], lad=-8.15, eng=-2.55;
+  const rise=(a1,a2)=>a2-a1>4?0.7:0.55, arcW=(half,ri,y)=>{ const R=(half*half+ri*ri)/(2*ri), yc=spring+ri-R; return Math.sqrt(Math.max(0,R*R-(y-yc)*(y-yc))); };   // a segmental arch's half-width at height y
+  /* ---- the Cambria front, ground floor: white rusticated piers, three segmental arches ---- */
+  let ga=A0; for(const [a1,a2] of B){ E(ga,a1,0,Hb,F,F+0.6,white); ga=a2; } E(ga,A1,0,Hb,F,F+0.6,white);   // the piers
+  for(const [a1,a2,kind] of B){ const half=(a2-a1)/2, xc=(a1+a2)/2, ri=rise(a1,a2), N=6, top=spring+ri;
+    for(let i=0;i<N;i++){ const y0=spring+i*ri/N, w=arcW(half,ri,y0+ri/N/2); E(a1,xc-w,y0,y0+ri/N,F,F+0.6,white); E(xc+w,a2,y0,y0+ri/N,F,F+0.6,white); }   // the wall round the arch
+    E(a1,a2,top,Hb,F,F+0.6,white);
+    const R=(half*half+ri*ri)/(2*ri), yc=spring+ri-R, t0=Math.asin(Math.min(1,half/R)), n=9;          // the voussoirs and the keystone
+    for(let k=0;k<n;k++){ const t=-t0+(k+0.5)*2*t0/n, rr=R+0.24; box(2*t0*rr/n-0.05,k===4?0.62:0.46,0.07,k===4?stoneW:ring,X(xc+rr*Math.sin(t)),yc+rr*Math.cos(t)+(k===4?0.06:0),Z(F)+0.035,0,0,-t); }
+    if(kind!=='shut'){ E(a1,a2,0,top,F+9.0,F+9.15,dark); E(a1,a2,0,0.08,F,F+9.0,0x2e2a25); E(a1,a2,top-0.08,top,F+0.6,F+9.0,0x1e1a16);   // an open bay: dark inside
+      E(a1,a1+0.08,0,top,F+0.6,F+9.0,0x221d18); E(a2-0.08,a2,0,top,F+0.6,F+9.0,0x221d18); K.glowBox(2.0,0.1,0.45,0xfff2c4,X(xc),top-0.18,Z(F+3.5)); }
+    else fhSegDoor(box,X(xc),half,spring,ri,Z(F+0.35),red); }                    // the right bay: its red door down
+  for(let y=0.42;y<Hb-0.25;y+=0.38){ let a=A0;                                       // the rustication: a channel every course, round the openings
+    for(const [a1,a2] of B){ const half=(a2-a1)/2, xc=(a1+a2)/2, ri=rise(a1,a2); let o1=a1, o2=a2; if(y>=spring+ri){ o1=o2=xc; } else if(y>=spring){ const w=arcW(half,ri,y); o1=xc-w; o2=xc+w; }
+      if(o1>a+0.05) E(a,o1,y,y+0.035,F-0.012,F,joint); a=o2; }
+    if(A1>a+0.05) E(a,A1,y,y+0.035,F-0.012,F,joint); }
+  { let a=A0; for(const [a1,a2] of B){ E(a,a1,0,0.4,F-0.05,F,0xe4e1d9); a=a2; } E(a,A1,0,0.4,F-0.05,F,0xe4e1d9); }   // the plinth, on the piers
+  /* ---- the walls behind: the mural wall (west), the limestone and brick on N Park Ave (east), the back; the roof ---- */
+  E(A0,A0+0.5,0,Hb,F+0.6,BK,mural); E(A1-0.5,A1,0,Hb,F+0.6,BK,lime); E(A0,A1,0,Hb,BK-0.5,BK,brick);
+  E(A0,A1,Hb,Hc,F,BK,brick); E(A0+0.3,A1-0.4,Hc,Hc+0.05,F+0.4,BK-0.3,roof);
+  for(let y=0.42;y<Hb-0.25;y+=0.38) E(A1,A1+0.012,y,y+0.035,F+0.3,BK,limeJ);       // the Park Ave limestone's courses
+  /* ---- the belt course, the quoins, the windows, the shield panels, the cornice ---- */
+  E(A0-0.03,A1+0.14,Hb-0.05,Hb+0.25,F-0.14,F,stoneW); E(A1,A1+0.14,Hb-0.05,Hb+0.25,F,BK,stoneW);
+  for(let y=Hb+0.3,i=0;y<Hc-0.6;y+=0.36,i++){ const L=i%2?0.95:0.55;
+    E(A0,A0+L,y,y+0.32,F-0.05,F,stoneW); E(A1-L,A1,y,y+0.32,F-0.05,F,stoneW); E(A1,A1+0.05,y,y+0.32,F,F+(i%2?0.55:0.95),stoneW); }   // the quoins: both front corners, round onto Park Ave
+  const win=(xc,n,face)=>{ const lw=0.82, gp=0.16, wd=n*lw+(n-1)*gp, x0=xc-wd/2, x1=xc+wd/2;           // a group of windows in its white stone surround
+    face(x0-0.24,x1+0.24,5.98,8.96,0.06,stoneW); face(x0-0.36,x1+0.36,5.92,6.06,0.16,stoneW); face(x0-0.36,x1+0.36,8.94,9.1,0.13,stoneW);
+    for(let i=0;i<n;i++){ const a=x0+i*(lw+gp); face(a,a+lw,6.16,7.86,0.08,glass); face(a,a+lw,8.02,8.78,0.08,glass); } return [x0,x1,lw]; };
+  const front=(a1,a2,y1,y2,o,c)=>E(a1,a2,y1,y2,F-o,F,c);
+  for(const [xc,n] of [[lad,2],[eng,3],[3.05,2]]) win(xc,n,front);
+  { const [x0]=win(lad,2,()=>{}); E(x0,x0+0.8,6.2,6.62,F-0.42,F,0xe9e9e6); }        // air conditioners in two windows
+  { const [x0]=win(eng,3,()=>{}); E(x0,x0+0.8,6.2,6.62,F-0.42,F,0xe9e9e6); }
+  K.plane(1.4,2.0,fhShield(['ENGINE 50','50','1901'],'#1c1f24'),X(-5.6),7.1,Z(F)+0.03);   // the black ENGINE 50 and red LADDER 12 shields
+  K.plane(1.4,2.0,fhShield(['LADDER 12','12','1901'],'#c8302a'),X(0.5),7.1,Z(F)+0.03);
+  for(const d of [-12.5,-8.0,-3.5,1.0,5.5]){ E(A1,A1+0.06,5.98,8.96,d-0.79,d+0.79,stoneW); E(A1,A1+0.15,5.92,6.06,d-0.9,d+0.9,stoneW); E(A1,A1+0.09,6.16,8.78,d-0.55,d+0.55,glass); }   // the Park Ave windows
+  E(A1+0.09,A1+0.5,6.2,6.62,-8.4,-7.6,0xe9e9e6);
+  E(A0-0.03,A1+0.15,9.2,9.55,F-0.1,F,stoneW); E(A1,A1+0.15,9.2,9.55,F,BK,stoneW);   // the frieze,
+  for(let a=A0+0.3;a<A1;a+=0.6) E(a-0.11,a+0.11,9.55,9.85,F-0.45,F-0.1,stoneW);       // the modillions,
+  for(let d=F+0.3;d<BK;d+=0.6) E(A1+0.15,A1+0.5,9.55,9.85,d-0.11,d+0.11,stoneW);
+  E(A0-0.08,A1+0.6,Hc,Hc+0.36,F-0.62,F+0.4,stoneW); E(A1-0.4,A1+0.6,Hc,Hc+0.36,F,BK,stoneW);   // the cornice round front and Park Ave,
+  E(A0-0.05,A0+0.3,Hc,Hc+0.16,F+0.4,BK,0xc9c5bb); E(A0,A1-0.4,Hc,Hc+0.16,BK-0.3,BK,0xc9c5bb);  // a plain coping on the mural wall and the back
+  K.cyl(0.06,0.06,Hc-0.3,6,0x9a9a98,X(6.1),(Hc-0.3)/2,Z(F)+0.12);                  // the downspout at the corner
+  /* ---- the little things: the pump, the plaques, the flag; the Park Ave door, mural and lights; the murals ---- */
+  E(-6.5,-4.7,0,0.12,F-1.25,F,0xd6d2c8); E(-5.95,-5.3,0.12,1.5,F-0.8,F-0.3,0x5e6468); E(-5.9,-5.35,1.05,1.35,F-0.82,F-0.78,0xe8e3d0);   // the fuel pump on its pad,
+  for(const [a,d] of [[-6.3,F-0.35],[-6.3,F-1.1],[-4.9,F-0.35],[-4.9,F-1.1]]) K.cyl(0.11,0.11,1.1,8,0xe5dbb0,X(a),0.67,Z(d));   // its bollards
+  E(-0.15,0.3,1.7,2.15,F-0.03,F,0x7a5a2e); E(0.7,1.15,1.7,2.15,F-0.03,F,0x7a5a2e);   // the bronze plaques
+  E(-2.62,-2.48,4.95,5.25,F-0.32,F,0x8a8d90); fhFlagAt(K,X(eng),5.15,Z(F)+0.32,2.7,1,0.55);   // the flag on its short pole over the middle arch, all the way up
+  E(A1,A1+0.06,0,2.6,F+1.6,F+2.6,red); E(A1+0.06,A1+0.08,1.45,2.4,F+1.75,F+2.45,glass);   // the red door at 2900
+  for(const d of [F+2.1,F+5.6]) E(A1,A1+0.3,4.45,4.7,d-0.2,d+0.2,0x2b2b2b);          // floodlights over the door and the mural
+  E(A1,A1+0.12,0.9,4.3,F+3.3,F+7.9,0xd8d8d4); E(A1+0.12,A1+0.16,1.05,4.15,F+3.55,F+7.65,0xbfc3c6);   // the mural's frame and its pilasters,
+  { const M=(d1,d2,y1,y2,c,o)=>E(A1+0.16,A1+0.16+(o||0.02),y1,y2,F+d1,F+d2,c);                // the firefighter mural, in blocks: a stand-in
+    M(3.55,7.65,1.05,4.15,0x9ccbe6); M(4.0,4.8,1.15,3.6,0x2f5f86,0.03); M(4.0,4.8,2.2,2.3,0xe8d36a,0.04); M(4.0,4.8,1.7,1.8,0xe8d36a,0.04); M(4.15,4.65,3.6,3.95,0x5a3a28,0.03);
+    M(4.9,6.1,2.1,3.2,0xb8473b,0.03); M(5.6,6.0,3.4,3.8,0x1c1f24,0.03); M(6.2,6.6,3.4,3.8,0xc8302a,0.03); M(5.0,7.2,1.15,1.6,0xd23b2f,0.03); M(5.0,5.5,1.25,1.55,0xf2f2ee,0.04); }
+  { const M=(d1,d2,y1,y2,c,o)=>E(A0-(o||0.02),A0,y1,y2,d1,d2,c), L=BK-F-0.6, d0=F+0.4, at=(f,g)=>[d0+f*L,d0+g*L];   // the west wall's mural, in blocks: a stand-in
+    M(F+0.4,BK-0.2,0.15,4.9,0xb7c3e3); M(F+0.4,BK-0.2,4.9,9.7,0x93c3e6);
+    for(const [f,g,y1,y2,c] of [[0.04,0.21,0.8,7.8,0xe7a3c4],[0.2,0.34,0.4,9.0,0x7d6bc4],[0.42,0.68,0.2,4.2,0xf2c66b],[0.7,0.82,1.0,9.0,0x5fa6d6],[0.84,0.98,0.2,5.6,0xd9785f],[0.31,0.41,6.0,9.3,0x9fd3c7]]){ const [a,b]=at(f,g); M(a,b,y1,y2,c,0.03); }
+    { const [a,b]=at(0.56,0.66), [c1,c2]=at(0.575,0.645); M(a,b,0.6,8.8,0xefe3c8,0.04); M(c1,c2,1.4,7.4,0x3d5f8f,0.05); }   // an arched doorway motif
+    for(const [f,c] of [[0.29,0x3b4e8c],[0.37,0x2f7aa8],[0.46,0x7a4d9c]]){ const [a,b]=at(f-0.04,f+0.04), [h1,h2]=at(f-0.017,f+0.017); M(a,b,0.4,3.6,c,0.04); M(h1,h2,3.8,5.1,0x7a4e34,0.04); } }
+  /* ---- the parking lot on the west and its chain-link fence; the apron and its lines; the rigs ---- */
+  E(-19,A0,0.02,0.05,F,BK,0x8f8b84); for(let a=-19;a<=A0-0.3;a+=2.5) K.cyl(0.04,0.04,2.2,6,0x8f9396,X(a),1.1,Z(F+0.3));
+  for(const y of [0.5,1.2,1.85,2.17]) E(-19,A0,y,y+0.03,F+0.28,F+0.32,0x8f9396);
+  E(A0,A1,0.03,0.07,F-6.5,F,0xcfcbc1); for(const a of [-10.0,-5.6,0.5,4.9]) E(a-0.06,a+0.06,0.07,0.085,F-6.3,F-0.1,0xf3f3ee);
+  fhLadder(K,X(lad),Z(F)-0.75,12);                                                    // Ladder 12 in the left bay; the middle is Engine 50's
+  K.mark(); fhEngine(K,X(eng),Z(F)-0.9,50); fhSegDoor(K.doorBox,X(eng),2.2,spring,0.7,Z(F+0.35),red);   // 🚒 Engine 50 in the middle bay, or its door down (fhRig)
+  return K.finish({W,D,H:10.2,fp:[X(-19),X(A1),-fz,Z(F-6.5)],engBayX:+X(eng).toFixed(2),halfW:13,xMin:X(A0),xMax:X(A1),setback:6.35,spawnIn:5.0,yawFix:0,inside:[X(eng),Z(F+3)]}); }   // setback: riding E50 the model stands on its outline
+function fhSegDoor(fn,xc,half,spring,rise,z,c){ const R=(half*half+rise*rise)/(2*rise), yc=spring+rise-R, N=6, k=v=>Math.round(v*0.72), dk=(k(c>>16&255)<<16)|(k(c>>8&255)<<8)|k(c&255);   // a sectional bay door, shut, under a segmental arch
+  fn(2*half,spring,0.1,c,xc,spring/2,z); for(let i=0;i<N;i++){ const ym=spring+(i+0.5)*rise/N, w=Math.sqrt(Math.max(0,R*R-(ym-yc)*(ym-yc))); fn(2*w,rise/N+0.01,0.1,c,xc,ym,z); }
+  for(let i=1;i<6;i++) fn(2*half-0.1,0.04,0.04,dk,xc,i*spring/6,z+0.06);
+  for(const y of [spring*0.58,spring*0.72]) for(let i=-1;i<=1;i++) fn(half*0.42,0.18,0.04,0x2d3a44,xc+i*half*0.6,y,z+0.07); }   // its two rows of small windows
+function fhShield(lines,col){ return fhCanvas(140,200,(c,w,h)=>{ c.fillStyle='#f1efe8'; c.fillRect(0,0,w,h); c.strokeStyle='#b9b6ad'; c.lineWidth=5; c.strokeRect(3,3,w-6,h-6);   // a company's helmet-shield panel — an OPAQUE picture
+    c.fillStyle=col; c.beginPath(); c.moveTo(w*0.16,h*0.34); c.quadraticCurveTo(w*0.5,h*0.02,w*0.84,h*0.34); c.lineTo(w*0.88,h*0.74); c.lineTo(w*0.5,h*0.9); c.lineTo(w*0.12,h*0.74); c.closePath(); c.fill();
+    c.fillStyle='#f4f4f0'; c.textAlign='center'; c.textBaseline='middle'; c.font='700 14px Arial,sans-serif'; c.fillText(lines[0],w/2,h*0.25);
+    c.font='900 54px Arial,sans-serif'; c.fillText(lines[1],w/2,h*0.53); c.fillRect(w*0.32,h*0.71,w*0.36,h*0.08); c.fillStyle='#1c1f24'; c.font='700 12px Arial,sans-serif'; c.fillText(lines[2],w/2,h*0.75); }); }
+
+/* 🚒 ENGINE 19 / LADDER 8 — 200 E Chelten Ave at Baynton St, Germantown, from the owner's Street View pictures (October 2024, May and
+   June 2025): a mid-century house. On E Chelten Ave the bay block of beige concrete panels, THREE wide square openings, the doors rolled
+   up, black-and-yellow guards at every jamb, a small round medallion over each bay and a lamp on a pier; Engine 19 in the left bay,
+   Tower Ladder 8 in the middle (the game's ladder truck stands for it), the right bay the medic's (left empty here, as Engine 35's
+   ambulance is); the fuel pump, its bollards and a cone on the pier before it; vent stacks on the roof. At the corner the lower
+   fieldstone piece with its red door, the lawn inside a low curved fieldstone wall, a tree and the tall flagpole (the flag all the way
+   up). Down Baynton St the long one-storey wing of buff stucco and green ribbon windows under a thin fascia, its side following the
+   street's angle, behind a low fieldstone wall with brick piers; the fieldstone tower carved "ENGINE 19 / LADDER 8"; the two-storey
+   block at the back, fieldstone below and buff brick above. Built in the City outline's own frame: a along E Chelten Ave (right as seen
+   from it; Baynton St's centreline at a 18.7), d from the street (bay front -19.52, back 13.93); local x = a + 0.48, z = -2.815 - d. */
+function createE19Station(st){
+  const K=fhKit(), box=K.box, ac=-0.48, dc=-2.815, W=26.14, D=33.49, fz=D/2;
+  const E=(a1,a2,y1,y2,d1,d2,c)=>box(a2-a1,y2-y1,d2-d1,c,(a1+a2)/2-ac,(y1+y2)/2,dc-(d1+d2)/2);   // a box by its extents in the outline's frame
+  const X=a=>a-ac, Z=d=>dc-d, rot=(w,h,dp,c,a,y,d,th)=>box(w,h,dp,c,X(a),y,Z(d),0,th,0);
+  const A0=-13.21, A1=1.88, F=-19.52, F2=-18.41, Hb=6.6, oH=4.3, Hw=4.2, Hk=7.4, BK=13.93, DB=6.3;
+  const conc=0xd2c9b9, concDk=0xb3aa9a, cope=0xdad9d4, roof=0x6c6964, dark=0x17120e, buff=0xddd0b6, brickB=0xd5bf98, glassG=0x9cc4b4, frame=0xd8dcdc, red=0xb3302a, fsC=0x857a6a, lawn=0x6e9a4b;   // a shade light: the front can face away from the sun
+  const stones=[0x8a7f70,0x9b8f7c,0x766b5d,0xa59a86,0x857a6a,0x938875,0x6f655a];
+  const B=[[-12.11,-8.41,'eng'],[-7.46,-3.76,'lad'],[-2.81,0.89,'med']], eng=-10.26, lad=-5.61;
+  const ash=(u0,u1,y0,y1,seed,put)=>{ let y=y0, j=0;                         // fieldstone: courses of grey-brown stones of mixed lengths
+    while(y<y1-0.04){ const h=Math.min(0.32+((j*7+seed)%4)*0.06,y1-y); let u=u0, i=0, first=true;
+      while(u<u1-0.04){ let w=0.6+((i*5+j*3+seed)%6)*0.12; if(first){ w=Math.max(0.25,w-(j%3)*0.3); first=false; } w=Math.min(w,u1-u);
+        put(u+0.02,u+w-0.02,y+0.02,y+h-0.02,stones[(i*3+j*5+seed)%7]); u+=w; i++; }
+      y+=h; j++; } };
+  const stoneFront=(a1,a2,y1,y2,d,seed)=>{ E(a1,a2,y1,y2,d-0.01,d+0.02,0x5f574c); ash(a1,a2,y1,y2,seed,(u1,u2,v1,v2,c)=>E(u1,u2,v1,v2,d-0.05,d,c)); };   // a fieldstone face toward Chelten
+  const stoneSide=(d1,d2,y1,y2,a,seed)=>{ E(a-0.02,a+0.01,y1,y2,d1,d2,0x5f574c); ash(d1,d2,y1,y2,seed,(u1,u2,v1,v2,c)=>E(a,a+0.05,v1,v2,u1,u2,c)); };   // ... toward Baynton
+  /* ---- the bay block on E Chelten Ave ---- */
+  let ga=A0; for(const [a1,a2] of B){ E(ga,a1,0,Hb,F,F+0.5,conc); ga=a2; } E(ga,A1,0,Hb,F,F+0.5,conc);   // the piers,
+  for(const [a1,a2] of B) E(a1,a2,oH,Hb,F,F+0.5,conc);                                // the wall over the openings,
+  E(A0,A0+0.5,0,Hb,F+0.5,DB,conc); E(A1-0.5,A1,0,Hb,F+0.5,DB,conc); E(A0+0.3,A1-0.3,Hb-0.2,Hb,F+0.5,DB,roof);   // its sides and roof
+  for(const [a1,a2,d1,d2] of [[A0-0.05,A1+0.05,F-0.05,F+0.3],[A0-0.05,A0+0.3,F,DB],[A1-0.3,A1+0.05,F,DB]]) E(a1,a2,Hb,Hb+0.14,d1,d2,cope);   // the coping
+  for(const y of [1.6,3.2]) for(const [a1,a2] of [[A0,-12.11],[-8.41,-7.46],[-3.76,-2.81],[0.89,A1]]) E(a1,a2,y,y+0.03,F-0.01,F,concDk);   // the panel joints
+  E(A0,A1,5.1,5.13,F-0.01,F,concDk);
+  for(const [a1,a2,kind] of B){ const xc=(a1+a2)/2;
+    E(a1,a2,0,oH,F+10,F+10.15,dark); E(a1,a2,0,0.08,F,F+10,0x2e2a25); E(a1,a2,oH-0.08,oH,F+0.5,F+10,0x1e1a16);   // the open bays: dark inside,
+    E(a1,a1+0.08,0,oH,F+0.5,F+10,0x221d18); E(a2-0.08,a2,0,oH,F+0.5,F+10,0x221d18); E(a1,a2,oH-0.4,oH-0.08,F+0.5,F+0.95,0x6e6e6e);   // the rolled-up door at the head
+    K.glowBox(2.0,0.1,0.45,0xfff2c4,X(xc),oH-0.18,Z(F+3.5)); K.glowBox(2.0,0.1,0.45,0xfff2c4,X(xc),oH-0.18,Z(F+7.5));
+    for(const ax of [a1-0.16,a2]) for(let i=0;i<8;i++) E(ax,ax+0.16,i*0.2,(i+1)*0.2,F-0.12,F+0.04,i%2?0x1a1a1a:0xe2c13a);   // the black-and-yellow guards
+    K.cyl(0.32,0.32,0.07,14,0xbdb3a0,X(xc),5.55,Z(F)+0.035,Math.PI/2,0,0); K.cyl(0.22,0.22,0.09,14,0xa89e8b,X(xc),5.55,Z(F)+0.05,Math.PI/2,0,0);   // its medallion
+    if(kind==='med') for(let i=0;i<3;i++) E(a1+0.12,a1+0.65,0.2,2.2,F+3+i*1.0,F+3.9+i*1.0,0x34322f); }   // the medic's bay: lockers (the medic is not drawn)
+  E(-3.42,-3.15,4.75,5.05,F-0.25,F,0x2b2b2b); K.glowBox(0.2,0.06,0.15,0xfff1c8,X(-3.29),4.72,Z(F-0.15));   // the lamp on the pier
+  E(-3.62,-2.96,0,0.12,F-1.3,F,0xd6d2c8); E(-3.55,-3.03,0.12,1.5,F-0.85,F-0.35,0x5e6468); E(-3.5,-3.08,1.0,1.3,F-0.87,F-0.83,0xe8e3d0);   // the fuel pump,
+  for(const [a,d] of [[-3.75,F-0.4],[-2.83,F-0.4],[-3.75,F-1.15],[-2.83,F-1.15]]) K.cyl(0.1,0.1,1.05,8,0xe2c13a,X(a),0.52,Z(d));   // its bollards
+  K.cyl(0.02,0.17,0.7,8,0xf26a1b,X(-3.29),0.35,Z(F-1.8));                            // and the cone
+  K.cyl(0.17,0.17,2.2,8,0x9a9a98,X(-4.6),Hb+1.1,Z(-8)); K.cyl(0.12,0.12,1.2,8,0x9a9a98,X(-9.5),Hb+0.6,Z(-3));   // vent stacks
+  /* ---- the corner piece: fieldstone, its red door ---- */
+  E(A1,9.0,0,4.25,F2,F2+6,0x7d7466); stoneFront(A1,9.0,0,4.0,F2,1);
+  E(2.45,3.5,0,2.45,F2-0.08,F2,red); E(2.6,3.35,1.25,2.3,F2-0.1,F2,0x34404a);       // the red door,
+  E(4.2,6.0,1.0,2.5,F2-0.08,F2,red); E(4.32,5.88,1.12,2.38,F2-0.1,F2,0x34404a);      // its red-framed window
+  E(A1-0.1,9.3,4.0,4.3,F2-0.4,F2+0.2,cope); E(A1,9.0,4.25,4.3,F2,F2+6,roof);
+  /* ---- the Baynton St wing: its side follows the street (from (9.13, F2) to (11.3, 7.68)) ---- */
+  const P0=[9.13,F2], P1=[11.3,7.68], L=Math.hypot(P1[0]-P0[0],P1[1]-P0[1]), u=[(P1[0]-P0[0])/L,(P1[1]-P0[1])/L], n=[u[1],-u[0]], th=-Math.asin(u[0]);   // u along the side, n out toward Baynton
+  const edge=d=>P0[0]+(d-P0[1])*u[0]/u[1], on=(s,o)=>[P0[0]+u[0]*s+n[0]*o,P0[1]+u[1]*s+n[1]*o];   // the side at d; a point s along it, o out from it
+  for(let i=0;i<6;i++){ const d0=F2+6+i*(P1[1]-F2-6)/6, d1=F2+6+(i+1)*(P1[1]-F2-6)/6, ea=edge(d0)-0.36;   // the wing, in slices inside its slanted wall
+    E(A1,ea,0,Hw,d0,d1,buff); E(A1,ea,Hw,Hw+0.06,d0,d1,roof); }
+  { const [a,d]=on(L/2,-0.18); rot(0.36,Hw,L,buff,a,Hw/2,d,th); }                     // its outer wall,
+  { const [a,d]=on(L*0.55,0.03); rot(0.06,2.0,L*0.72,glassG,a,2.35,d,th); for(let k=0;k<=18;k++){ const [a2,d2]=on(L*0.19+k*L*0.72/18,0.07); rot(0.08,2.0,0.09,frame,a2,2.35,d2,th); }   // the green ribbon windows and their mullions,
+    const [a3,d3]=on(L*0.55,0.08); rot(0.12,0.08,L*0.72,frame,a3,3.37,d3,th); rot(0.12,0.08,L*0.72,frame,a3,1.33,d3,th); }
+  { const [a,d]=on(L/2,0.15); rot(0.6,0.24,L+0.4,cope,a,Hw+0.1,d,th); }               // the thin fascia
+  /* ---- the fieldstone tower, carved ENGINE 19 / LADDER 8 ---- */
+  { const ta=edge(5.0)-1.4, tb=edge(5.0)+1.0, t0=3.9, t1=6.3, Ht=9.4; E(ta,tb,0,Ht,t0,t1,0x7d7466); stoneFront(ta,tb,0,Ht-0.1,t0,3); stoneSide(t0,t1,0,Ht-0.1,tb,4);
+    E(ta-0.08,tb+0.08,Ht,Ht+0.12,t0-0.08,t1+0.08,cope);
+    const tex=fhCanvas(256,128,(c,w,h)=>{ c.fillStyle='#857a6a'; c.fillRect(0,0,w,h); c.fillStyle='#d6cfc2'; c.textAlign='center'; c.textBaseline='middle';   // the carved letters — an OPAQUE picture
+      c.font='600 40px Georgia,"Times New Roman",serif'; c.fillText('ENGINE 19',w/2,h*0.3); c.fillText('LADDER 8',w/2,h*0.74); });
+    K.plane(tb-ta-0.2,(tb-ta-0.2)/2,tex,X((ta+tb)/2),Ht-1.1,Z(t0)+0.07); }
+  /* ---- the two-storey block at the back ---- */
+  E(-11.77,11.1,0,Hk,DB,7.6,brickB); E(-11.77,12.4,0,Hk,7.6,BK,brickB); E(-11.5,12.1,Hk,Hk+0.06,DB+0.3,BK-0.3,roof);   // (its right edge follows the outline's jog at 7.6)
+  E(-11.9,11.25,Hk,Hk+0.18,DB-0.1,7.6,cope); E(-11.9,12.6,Hk,Hk+0.18,7.6,BK+0.1,cope);
+  E(12.4,12.45,0,3.2,7.6,BK,0x7d7466); stoneSide(7.6,BK,0,3.2,12.45,5);
+  for(const d of [8.6,10.4,12.2]){ E(12.4,12.49,4.0,6.6,d-0.75,d+0.75,frame); E(12.4,12.52,4.12,6.48,d-0.65,d+0.65,0x7f9fa0); }   // its upper windows
+  E(12.4,12.49,1.2,2.4,10.0,11.2,frame); E(12.4,12.52,1.3,2.3,10.1,11.1,0x7f9fa0);
+  /* ---- the lawn, the low fieldstone walls, the tree, the flag; the apron; the rigs ---- */
+  E(A1,6.5,0.02,0.05,F-10,F2,0xbdb8ae); E(6.5,12.1,0.02,0.06,F-9.8,F2,lawn); E(A1,12.0,0.02,0.06,F2,8.0,lawn);   // paving before the corner piece, the corner lawn, the strip along the wing
+  E(6.5,9.6,0,0.75,F-9.9,F-9.55,fsC); E(11.95,12.3,0,0.75,F-7.4,F2-0.2,fsC);         // the low wall at the corner: along Chelten, along Baynton,
+  for(let k=0;k<5;k++){ const t=(k+0.5)/5*Math.PI/2, cx=9.6, cz=F-7.4, r=2.52; rot(r*Math.PI/2/5+0.08,0.75,0.35,fsC,cx+r*Math.sin(t),0.375,cz-r*Math.cos(t),t); }   // and its curve round the corner
+  { const [a0,d0]=on(-0.6,2.75), [a1,d1]=on(L,2.75), mid=[(a0+a1)/2,(d0+d1)/2], LL=Math.hypot(a1-a0,d1-d0); rot(0.35,0.75,LL,fsC,mid[0],0.375,mid[1],th);   // and along Baynton,
+    for(const s of [1.0,3.6]){ const [pa,pd]=on(s,2.75); rot(0.55,1.25,0.55,0xa2573f,pa,0.62,pd,th); } }   // its brick piers
+  K.cyl(0.12,0.16,2.6,7,0x6b5a45,X(10.4),1.3,Z(F-8.0)); K.cyl(1.9,1.3,1.1,9,0x6f8f3e,X(10.4),2.95,Z(F-8.0)); K.cyl(1.7,1.95,1.5,9,0x678a3a,X(10.4),4.25,Z(F-8.0)); K.cyl(0.6,1.7,1.1,9,0x739545,X(10.4),5.55,Z(F-8.0));   // the tree in the corner, its crown rounded,
+  for(const [a,d] of [[12.2,-8],[12.6,0]]) K.cyl(0.5,0.6,1.0,7,0x3f6b35,X(a),0.5,Z(d));   // shrubs by the wing
+  fhFlagAt(K,X(7.6),0,Z(F-5.5),11,1,1);                                                // the tall flagpole on the corner lawn, the flag all the way up
+  E(A0,A1+0.3,0.03,0.07,F-10,F,0x9c9a95); for(const a of [-12.2,-7.9,-3.3,0.95]) E(a-0.06,a+0.06,0.07,0.085,F-9.8,F-0.1,0xe2b53a);   // the apron and its yellow lines
+  fhLadder(K,X(lad),Z(F)-0.7,8);                                                       // Ladder 8 in the middle bay; the left is Engine 19's
+  K.mark(); fhEngine(K,X(eng),Z(F)-0.9,19); fhDoor(K,X(eng),3.7-0.16,oH,Z(F+0.25));    // 🚒 Engine 19 in the left bay, or its door down (fhRig)
+  return K.finish({W,D,H:Hk,fp:[X(-13.6),X(14.6),-fz,Z(F-10)],engBayX:+X(eng).toFixed(2),halfW:15,xMin:X(-13.55),xMax:X(12.59),setback:14.7,spawnIn:5.0,yawFix:0,inside:[X(eng),Z(F+3)]}); }
+
+/* 🚒 ENGINE 37 — 101 W Highland Ave at Shawnee St, Chestnut Hill, from the owner's Street View pictures (September 2022; owner: "They
+   have a newer style glass door and the older brick style to the right was the old bay doors"). The old house of 1894 is the City's
+   outline: grey schist with cream sandstone, its two great round arches — the old bays, their red wooden doors shut under glazed
+   fanlights, the voussoirs cream and grey, a red fleur-de-lis between — the string course, the upper windows between fluted
+   pilasters, the tall front gable with its checkerboard, triple window and lunette, the slate roof with two dormers on the west slope
+   and a chimney. The new house on its left (not in the City's outlines — built after the survey; drawn on the open ground beside):
+   cream panels on a charcoal base, its tall frosted window, "ENGINE 37" over the left bay (open), the charcoal pier, the right bay
+   with its red-framed glass bi-fold doors — Engine 37's (it shows behind the glass), its leaves folded back while the bay is open —
+   yellow bollards, the louvred screen on the roof; the low glass link between the two on its river-rock bed. In front: the apron, the
+   lawns, the paved court with its curved bench, a young magnolia and the flag (none in the pictures — every house flies one). WHYY on the addition (Cecil Baker + Partners): a one-storey,
+   two-bay building on the next lot, joined by a glass walkway; the old house no longer holds vehicles (storage, the crew's quarters). Built in
+   the old house's outline frame: a along W Highland Ave (right as seen from it; Shawnee St's centreline at a 17.6), d from the street
+   (front -11.48, back 11.83); local x = a - 3.67, z = 0.175 - d. */
+function createE37Station(st){
+  const K=fhKit(), box=K.box, ac=3.67, dc=0.175, W=12.72, D=23.31, fz=D/2;
+  const E=(a1,a2,y1,y2,d1,d2,c)=>box(a2-a1,y2-y1,d2-d1,c,(a1+a2)/2-ac,(y1+y2)/2,dc-(d1+d2)/2);   // a box by its extents in the outline's frame
+  const X=a=>a-ac, Z=d=>dc-d, rotZ=(w,h,dp,c,a,y,d,t)=>box(w,h,dp,c,X(a),y,Z(d),0,0,t), rotY=(w,h,dp,c,a,y,d,t)=>box(w,h,dp,c,X(a),y,Z(d),0,t,0);
+  const O0=-1.65, O1=9.97, F=-11.48, BK=11.83, Hs=8.6, Hp=13.6, gc=(O0+O1)/2;
+  const schist=0x7f7c74, cream=0xd8cdb2, creamDk=0xbfb398, slate=0x5e636a, red=0x8e2a24, dark=0x17120e, glass=0x34404a;
+  const stones=[0x847f75,0x76726a,0x8e8a80,0x6c6962,0x938e83,0x7a766d,0x9a958a];
+  const panel=0xe0d6bf, panelJ=0xc9bea6, charcoal=0x45484c, cope=0xcfcfca, roof=0x6c6964;
+  /* ---- the old house: grey schist in courses, cut round its two arches ---- */
+  const AR=[[0.0,2.9],[5.2,8.1]], spring=2.9, R=1.45;   // the old doors are nine and a half feet wide (WHYY, on the addition)
+  const open=(a1,a2,y)=>{ const xc=(a1+a2)/2; if(y<spring) return [a1,a2]; if(y<spring+R+0.5){ const w=Math.sqrt(Math.max(0,(R+0.5)*(R+0.5)-(y-spring)*(y-spring))); return [xc-w,xc+w]; } return null; };
+  E(O0,O1,0,Hs,F+0.5,BK,schist); E(-2.45,O0,0,Hs,-7.9,-1.97,schist); E(-2.69,O0,0,Hs,3.14,6.42,schist);   // the house and the two breasts on its west side
+  { let y=0, j=0; while(y<Hs-0.05){ const h=Math.min(0.3+((j*7)%4)*0.06,Hs-y), ym=y+h/2; const runs=[]; let a=O0;   // its front, in courses, round the arches
+      for(const [a1,a2] of AR){ const o=open(a1,a2,ym); if(o){ runs.push([a,o[0]]); a=o[1]; } } runs.push([a,O1]);
+      for(const [r0,r1] of runs){ if(r1-r0<0.05) continue; E(r0,r1,y,y+h,F,F+0.5,0x5c5952); let u=r0, i=0; while(u<r1-0.03){ let w=Math.min(0.55+((i*5+j*3)%6)*0.13,r1-u); E(u+0.02,u+w-0.02,y+0.02,y+h-0.02,F-0.04,F,stones[(i*3+j*5)%7]); u+=w; i++; } }
+      y+=h; j++; } }
+  for(const [a1,a2] of AR){ const xc=(a1+a2)/2, n=11;
+    for(let k=0;k<n;k++){ const t=Math.PI*(k+0.5)/n, rr=R+0.27; rotZ(Math.PI*rr/n+0.02,0.56,0.1,k%2?schist:cream,xc+rr*Math.cos(t),spring+rr*Math.sin(t),F-0.05,t-Math.PI/2); }   // the voussoirs, cream and grey
+    for(const sg of [-1,1]) E(xc+sg*(R+0.27)-0.36,xc+sg*(R+0.27)+0.36,spring-0.24,spring,F-0.1,F,cream);   // the imposts
+    E(xc-R,xc+R,0,spring,F+0.3,F+0.42,red); E(xc-0.03,xc+0.03,0,spring,F+0.28,F+0.3,0x5e1b17);           // the red wooden doors, shut,
+    for(const sg of [-1,1]) for(const [y1,y2] of [[0.35,1.35],[1.6,2.6]]) E(xc+sg*0.2-(sg<0?R-0.4:0),xc+sg*0.2+(sg>0?R-0.4:0),y1,y2,F+0.27,F+0.3,0x7a231e);   // their panels
+    E(xc-R,xc+R,spring-0.1,spring,F+0.2,F+0.3,0x3a2a22);
+    for(let i=0;i<6;i++){ const y0=spring+i*R/6, ym=y0+R/12, w=Math.sqrt(Math.max(0,R*R-(ym-spring)*(ym-spring))); E(xc-w,xc+w,y0,y0+R/6,F+0.3,F+0.42,glass); }   // the fanlight
+    for(let k=1;k<8;k++){ const t=Math.PI*k/8; rotZ(0.05,R,0.04,0xd8d2c4,xc+R/2*Math.cos(t),spring+R/2*Math.sin(t),F+0.27,t-Math.PI/2); } }   // and its muntins
+  E(3.9,4.2,3.8,5.2,F-0.08,F,red); E(3.6,4.5,4.55,4.75,F-0.08,F,red); E(3.85,4.25,5.2,5.45,F-0.08,F,red);   // the red fleur-de-lis between the arches
+  E(O0-0.05,O1+0.05,5.55,5.85,F-0.12,F,cream); E(O1,O1+0.12,5.55,5.85,F,BK,cream); E(-2.7,O0,5.55,5.85,-7.9,6.42,cream);   // the string course
+  for(const a of [-1.2,1.45,4.05,6.65,9.5]){ E(a-0.24,a+0.24,5.85,8.3,F-0.1,F,cream); for(const o of [-0.12,0,0.12]) E(a+o-0.025,a+o+0.025,6.0,8.15,F-0.12,F-0.1,creamDk);   // fluted pilasters,
+    E(a-0.3,a+0.3,8.1,8.3,F-0.14,F,cream); }
+  for(const a of [0.12,2.75,5.35,8.07]){ E(a-0.9,a+0.9,6.05,8.05,F-0.05,F,0x6e2420); E(a-0.8,a+0.8,6.12,7.98,F-0.07,F,glass); E(a-0.8,a+0.8,7.02,7.08,F-0.08,F,0x6e2420); }   // the upper windows
+  E(O0-0.1,O1+0.1,8.3,8.6,F-0.16,F,cream);                                             // the cornice band
+  /* ---- the gable, its checkerboard, triple window and lunette; the slate roof, the dormers, the chimney ---- */
+  const half=(O1-O0)/2+0.15, rise=Hp-Hs, th=Math.atan2(rise,half), gw=y=>half*(1-(y-Hs)/rise);
+  for(let i=0;i<12;i++){ const y0=Hs+i*rise/12, w=gw(y0+rise/24); E(gc-w,gc+w,y0,y0+rise/12,F,F+0.5,schist); E(gc-w,gc+w,y0,y0+rise/12,BK-0.5,BK,schist); }   // the front and back gables
+  for(let y=10.95,r=0;y<Hp-0.9;y+=0.4,r++){ const w=gw(y+0.4)-0.35; for(let a=gc-w,k=0;a<gc+w-0.38;a+=0.4,k++) E(a,a+0.4,y,y+0.4,F-0.04,F,(k+r)%2?cream:0x6f727a); }   // the checkerboard
+  for(const [a1,a2,y2] of [[gc-2.1,gc-0.82,10.2],[gc-0.68,gc+0.68,10.45],[gc+0.82,gc+2.1,10.2]]){ E(a1-0.08,a2+0.08,8.75,y2+0.08,F-0.06,F,0x6e2420); E(a1,a2,8.8,y2,F-0.08,F,glass); E(a1,a2,9.45,9.5,F-0.09,F,0x6e2420); }   // the triple window, red frames
+  for(const a of [gc-2.25,gc-0.75,gc+0.75,gc+2.25]) E(a-0.12,a+0.12,8.7,10.5,F-0.1,F,cream); E(gc-2.4,gc+2.4,8.62,8.75,F-0.14,F,cream);
+  for(let i=0;i<5;i++){ const y0=10.65+i*0.16, w=Math.sqrt(Math.max(0,0.8*0.8-(y0+0.08-10.65)**2)); E(gc-w,gc+w,y0,y0+0.16,F-0.06,F,glass); }   // the lunette
+  for(let k=0;k<9;k++){ const t=Math.PI*(k+0.5)/9, rr=1.02; rotZ(0.38,0.34,0.08,cream,gc+rr*Math.cos(t),10.65+rr*Math.sin(t),F-0.07,t-Math.PI/2); }
+  const sl=Math.hypot(half,rise)+0.35, mx=half/2, my=Hs+rise/2;
+  for(const sg of [-1,1]){ rotZ(sl,0.24,BK-F+0.5,slate,gc+sg*(mx+0.08),my+0.12,(F+BK)/2,-sg*th); rotZ(sl,0.28,0.4,cream,gc+sg*mx,my+0.05,F-0.05,-sg*th); }   // the slate roof and the gable's cream coping
+  for(const d of [-4.2,1.8]){ E(-1.9,0.6,Hs,10.3,d-1.1,d+1.1,schist); E(-1.95,-1.85,8.9,9.9,d-0.55,d+0.55,glass);   // two dormers on the west slope,
+    for(let i=0;i<5;i++){ const y0=10.3+i*0.22, w=1.1*(1-(i+0.5)/5); E(-1.9,0.6,y0,y0+0.22,d-w,d+w,i%2?cream:0x6f727a); } for(const sg of [-1,1]) box(2.8,0.12,1.45,slate,X(-0.6),10.85,Z(d+sg*0.55),sg*0.75,0,0); }   // and their pitched roofs
+  E(0.3,1.2,Hs,14.4,6.0,6.9,schist); E(0.22,1.28,14.3,14.5,5.92,6.98,cream);             // the chimney
+  /* ---- the new house on the old one's left: cream panels, two bays, the glass doors; the glass link ---- */
+  const N0=-20.5, N1=-4.6, NF=-11.0, NB=6.0, Hn=6.4, oH=4.4, B1=[-15.2,-11.3], B2=[-10.4,-6.5], eng=(B2[0]+B2[1])/2;
+  E(N0,B1[0],0,Hn,NF,NB,panel); E(B2[1],N1,0,Hn,NF,NB,panel); E(B1[1],B2[0],0,Hn,NF,NF+0.5,charcoal); E(B1[1],B2[0],0,oH,NF+0.5,NF+9,0x2a2622);   // its walls, the charcoal pier,
+  for(const [a1,a2] of [B1,B2]) E(a1,a2,oH,Hn,NF,NF+0.5,panel); E(B1[0],B2[1],0,Hn,NF+9.15,NB,panel); E(N0+0.25,N1-0.25,Hn-0.15,Hn-0.03,NF+0.25,NB-0.25,roof);   // over the bays, behind them, the roof
+  for(const [a1,a2,d1,d2] of [[N0-0.05,N1+0.05,NF-0.05,NF+0.25],[N0-0.05,N1+0.05,NB-0.25,NB+0.05],[N0-0.05,N0+0.25,NF,NB],[N1-0.25,N1+0.05,NF,NB]]) E(a1,a2,Hn,Hn+0.12,d1,d2,cope);
+  for(let y=1.0;y<Hn-0.3;y+=0.62) for(const [a1,a2] of [[N0,B1[0]],[B2[1],N1]]) E(a1,a2,y,y+0.025,NF-0.01,NF,panelJ);   // the panels' joints
+  for(let y=oH+0.6;y<Hn-0.3;y+=0.62) E(B1[0],B2[1],y,y+0.025,NF-0.01,NF,panelJ);
+  for(let a=N0+1.2;a<N1-0.2;a+=1.2) if(a<B1[0]-0.1||a>B2[1]+0.1) E(a,a+0.025,0.9,Hn,NF-0.01,NF,panelJ);
+  E(N0,B1[0],0,0.9,NF-0.04,NF,charcoal); E(B2[1],N1,0,2.6,NF-0.04,NF,charcoal);       // the charcoal base,
+  E(-19.6,-17.0,0.95,5.3,NF-0.06,NF,0x3a3e42); for(let i=0;i<3;i++) for(let k=0;k<6;k++) E(-19.5+i*0.84,-18.78+i*0.84,1.02+k*0.7,1.66+k*0.7,NF-0.08,NF,0xc3ced2);   // its tall frosted window
+  for(const [a,y] of [[-16.0,3.1],[-15.45,3.6]]){ E(a-0.18,a+0.18,y,y+0.22,NF-0.22,NF,0x2b2b2b); K.glowBox(0.24,0.05,0.1,0xfff1c8,X(a),y-0.03,Z(NF-0.15)); }   // wall lamps
+  { const tex=fhCanvas(512,80,(c,w,h)=>{ c.fillStyle='#e0d6bf'; c.fillRect(0,0,w,h); c.fillStyle='#bfb49b'; c.textAlign='center'; c.textBaseline='middle'; c.font='600 54px "Arial Narrow",Arial,sans-serif'; c.fillText('ENGINE 37',w/2,h*0.55); });   // ENGINE 37 in the panel — an OPAQUE picture
+    K.plane(2.9,0.45,tex,X((B1[0]+B1[1])/2),5.3,Z(NF)+0.02); }
+  for(const [a1,a2] of [B1,B2]){ E(a1,a2,0,oH,NF+9,NF+9.15,dark); E(a1,a2,0,0.08,NF,NF+9,0x2e2a25); E(a1,a2,oH-0.08,oH,NF+0.5,NF+9,0x1e1a16);   // the open bays,
+    E(a1,a1+0.08,0,oH,NF+0.5,NF+9,0x221d18); E(a2-0.08,a2,0,oH,NF+0.5,NF+9,0x221d18); K.glowBox(2.0,0.1,0.45,0xfff2c4,X((a1+a2)/2),oH-0.18,Z(NF+3.5)); }
+  E(B1[0],B1[1],oH-0.45,oH-0.08,NF+0.5,NF+0.9,0x6e6e6e);                               // the left bay's door rolled up
+  for(const [a,dir] of [[B2[0]+0.06,1],[B2[1]-0.06,-1]]) for(let k=0;k<2;k++){ const aa=a+dir*(0.06+k*0.09);   // the glass doors folded back at the jambs:
+    E(aa-0.04,aa+0.04,0,oH-0.1,NF+0.05,NF+0.98,0xa52a24); E(aa-0.045,aa+0.045,0.15,oH-0.25,NF+0.12,NF+0.91,0x52606a); }   // red frames, dark glass
+  for(const a of [B1[0]-0.3,B2[0]-0.2,B1[1]+0.2,B2[1]+0.3]) K.cyl(0.13,0.13,1.1,8,0xe8b923,X(a),0.55,Z(NF-0.3));   // the yellow bollards
+  E(-8.6,-4.9,Hn,7.6,-3.5,2.5,0x3a3d40); for(let y=Hn+0.15;y<7.5;y+=0.22) E(-8.62,-4.88,y,y+0.05,-3.52,-3.48,0x55595d);   // the louvred screen on the roof
+  E(N1,-2.69,0,3.4,-8.6,0.5,0xc3ced2); E(N1,-2.69,3.3,3.5,-8.7,0.6,0x2c3135);           // the glass link,
+  for(const a of [N1+0.02,-3.65,-2.75]) E(a,a+0.07,0,3.3,-8.66,-8.6,0x2c3135); for(const y of [0.05,1.3,2.55]) E(N1,-2.69,y,y+0.07,-8.66,-8.6,0x2c3135);
+  E(N1,-2.69,0,0.12,NF,-8.6,0x9a958c);                                                  // its river-rock bed
+  /* ---- the apron, the lawns, the court and its bench, the magnolia, the flag; the rig ---- */
+  E(N0,N1,0.03,0.07,NF-8.3,NF,0xcfcbc1); for(const a of [-15.4,-10.85,-6.3]) E(a-0.06,a+0.06,0.07,0.085,NF-8.1,NF-0.1,0xf3f3ee);
+  E(N1,-0.6,0.02,0.06,NF-8.3,NF,0x6e9a4b); E(-0.6,3.6,0.02,0.05,F-8.0,F,0xbdb8ae); E(3.6,11.8,0.02,0.06,F-8.0,F,0x6e9a4b); E(O1,11.8,0.02,0.06,F,BK,0x6e9a4b);   // lawns and the court
+  for(let k=0;k<5;k++){ const t=-0.9+k*0.45, cx=1.6, cz=F-3.2, r=1.9; rotY(1.0,0.45,0.5,0xe2dccb,cx+r*Math.sin(t),0.225,cz-r*Math.cos(t),t); rotY(0.95,0.5,0.08,0x7a5638,cx+(r+0.25)*Math.sin(t),0.7,cz-(r+0.25)*Math.cos(t),t); }   // the curved bench
+  K.cyl(0.06,0.08,1.8,6,0x6b5a45,X(11.0),0.9,Z(F-1.6)); K.cyl(0.8,1.15,1.6,8,0x3f6b35,X(11.0),2.4,Z(F-1.6)); K.cyl(0.25,0.8,1.0,8,0x46743a,X(11.0),3.7,Z(F-1.6));   // the young magnolia
+  fhFlagAt(K,X(10.8),0,Z(F-6.0),10,-1,1);                                              // the flag on the lawn by Shawnee St, all the way up
+  K.mark(); fhEngine(K,X(eng),Z(NF)-0.9,37);                                            // 🚒 Engine 37 in the glass-door bay, or its doors shut (fhRig):
+  for(let k=0;k<4;k++){ const a=B2[0]+0.05+k*(B2[1]-B2[0]-0.1)/4, w=(B2[1]-B2[0]-0.1)/4; K.doorBox(w,oH-0.1,0.1,0xa52a24,X(a+w/2),(oH-0.1)/2,Z(NF+0.3));   // four red-framed leaves,
+    for(const [y1,y2] of [[0.25,1.9],[2.05,3.7]]) K.doorBox(w-0.2,y2-y1,0.04,0x52606a,X(a+w/2),(y1+y2)/2,Z(NF+0.24)); }   // their glass
+  return K.finish({W,D,H:Hp,fp:[X(-20.8),X(12.0),-fz,Z(NF-8.3)],engBayX:+X(eng).toFixed(2),halfW:20,xMin:X(-2.69),xMax:X(10.03),setback:11.27,spawnIn:5.0,yawFix:0,inside:[X(4.0),Z(F+3)]}); }
 
 function buildStationHouse(st){
   if(STHOUSE.group){ FLATCITY.group.remove(STHOUSE.group); fhDispose(STHOUSE.group); STHOUSE.group=null; }
