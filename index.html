@@ -1566,7 +1566,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22e";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22f";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -10221,12 +10221,20 @@ document.getElementById('btnMiniMap').addEventListener('click',e=>{ e.preventDef
    either view (street cards, tap-at-a-junction, the call arrow). */
 const MAPV={ on:false, active:false, a:1, b:0, cc:0, d:1, e:0, f:0, cx:0, cz:0, ax:0, ay:0, ang:null, mpp:0.42, spr:null, sprState:'idle', cv:null, ms:0, wa:null };
 try{ MAPV.on=localStorage.getItem('pfd_mapview')==='on'; }catch(e){}
-function mapvBtn(){ const b=document.getElementById('btnMapView'); if(b){ b.classList.toggle('on',MAPV.on); b.setAttribute('aria-checked',MAPV.on?'true':'false'); } }
+function mapvBtn(){ const b=document.getElementById('btnMapView'); if(b){ b.classList.toggle('on',MAPV.on); b.setAttribute('aria-checked',MAPV.on?'true':'false'); } fp3Note(); }
 document.getElementById('btnMapView').addEventListener('click',e=>{ e.preventDefault(); MAPV.on=!MAPV.on; mapvBtn(); try{ localStorage.setItem('pfd_mapview',MAPV.on?'on':'off'); }catch(err){} });
 mapvBtn();
 // 🏠 Real buildings (test): the FP3 prototype's switch, remembered on this phone; a change rebuilds the city around the truck (fp3Tick)
-function fp3Btn(){ const b=document.getElementById('btnRealBld'); if(b){ b.classList.toggle('on',FP3.on); b.setAttribute('aria-checked',FP3.on?'true':'false'); } }
-document.getElementById('btnRealBld').addEventListener('click',e=>{ e.preventDefault(); FP3.on=!FP3.on; fp3Btn(); try{ localStorage.setItem('pfd_realbld',FP3.on?'on':'off'); }catch(err){} FP3.dirty=true; });
+/* It is the 3D view's test — Map view always draws the City's buildings — so with Map view on a touch seemed to do nothing (owner,
+   October 16: "If someone want to do the test of the new buildings but is also on top down view nothing will change it needs to be
+   turned off"). Turning it ON leaves Map view (that switch flips off too, remembered) and says so; its row tells you first. Turning it
+   off, or Map view back on, changes nothing else. */
+function fp3Note(){ const sm=document.querySelector('#btnRealBld small'); if(!sm||typeof FP3==='undefined') return;
+  sm.textContent=!MAPV.on?"The City's own building outlines in the 3D view":FP3.on?"On for the 3D view — Map view always draws the City's buildings":"For the 3D view — turning it on leaves Map view"; }
+function fp3Btn(){ const b=document.getElementById('btnRealBld'); if(b){ b.classList.toggle('on',FP3.on); b.setAttribute('aria-checked',FP3.on?'true':'false'); } fp3Note(); }
+document.getElementById('btnRealBld').addEventListener('click',e=>{ e.preventDefault(); FP3.on=!FP3.on; try{ localStorage.setItem('pfd_realbld',FP3.on?'on':'off'); }catch(err){} FP3.dirty=true;
+  if(FP3.on&&MAPV.on){ MAPV.on=false; try{ localStorage.setItem('pfd_mapview','off'); }catch(err){} mapvBtn(); popup('3D VIEW · REAL BUILDINGS'); }   // the test is in the 3D view
+  fp3Btn(); });
 fp3Btn();
 const MAPV_C={ ground:'#d3d9bd', park:'#9bc977', wood:'#7cb15c', cem:'#a7cd8a', water:'#8cc4e8', walk:'#e9dcba', curb:'#c3baa4', road:'#5b6169', roadMinor:'#686e76',
   hwy:'#50565e', center:'#f2c21b', zebra:'#f6f6f2', shadow:'rgba(34,38,34,.30)', edge:'rgba(55,59,65,.55)',
