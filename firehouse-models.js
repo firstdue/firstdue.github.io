@@ -1156,9 +1156,11 @@ function createE29Station(st){
    light stone coping. The bay block on the left: ONE wide opening, "ENGINE COMPANY 20" in raised cream capitals over it and "Ladder 23"
    in script between two small lamps; a lantern on its right corner. The lower wing on the right, set back 1.6 m: the red door, the black
    "House of Dragons" board with its green dragon, a band of white-framed windows. Toward Cherry St: brick piers and iron railings round
-   the yard, the flagpole, the red lamp post on the deep sidewalk. Left of the bays, behind the apron, the mural wall: "ENGINE 20 / LADDER
-   23 / MEDIC 1 / HOUSE OF DRAGONS" with its dragon (the City's 3.2 m kiosk there is under the house's keep-out). Medic 1 parks on the
-   apron. Ladder 23 left, Engine 20 right — UNCONFIRMED (the pictures show the medics out front). Built in the outline's frame: a along
+   the yard, the flagpole, the red lamp post on the deep sidewalk. Left of the bays, at the apron's north edge, the mural wall FACING CHERRY
+   ST (owner, October 19, with a picture of it: "this one I'm talking about"; it faced N 10th St in v22o): "ENGINE 20 / LADDER 23 / MEDIC 1"
+   at its street end, "HOUSE OF DRAGON SALUTES" at its back, the dragon over the waves, flames, mountains - drawn after the owner's picture
+   (the City's 3.2 m kiosk there is under the house's keep-out). (A parked Medic 1 stood
+   on the apron in v22o; the owner: "remove the medic unit".) Ladder 23 left, Engine 20 right — UNCONFIRMED (the pictures show the medics out front). Built in the outline's frame: a along
    N 10th St (right as seen from it), d from it (bay front -10.75, wing -9.15, back 19.93); local x = a + 0.145, z = 4.6 - d. */
 function createE20Station(st){
   const K=fhKit(), box=K.box, ac=-0.145, dc=4.6, W=19.77, D=30.72;
@@ -1180,8 +1182,8 @@ function createE20Station(st){
   { const pw=o1-o0+0.4, ph=Hb-oH-0.75, ch=Math.round(1024*ph/pw);                                         // ENGINE COMPANY 20 / Ladder 23 — an OPAQUE picture
     const tex=fhCanvas(1024,ch,(c,w,h)=>{ c.fillStyle='#a14f3c'; c.fillRect(0,0,w,h); c.strokeStyle='rgba(80,32,22,.45)'; c.lineWidth=2;
       for(let y=h/6;y<h;y+=h/6){ c.beginPath(); c.moveTo(0,y); c.lineTo(w,y); c.stroke(); }
-      c.fillStyle='#e8dcc0'; c.textAlign='center'; c.textBaseline='middle'; const fs=Math.round(h*0.3);
-      c.font='600 '+fs+'px Georgia,"Times New Roman",serif'; c.fillText('E N G I N E    C O M P A N Y    2 0',w/2,h*0.3);
+      c.fillStyle='#e8dcc0'; c.textAlign='center'; c.textBaseline='middle'; const t1='E N G I N E    C O M P A N Y    2 0'; let fs=Math.round(h*0.3);
+      c.font='600 '+fs+'px Georgia,"Times New Roman",serif'; while(c.measureText(t1).width>w*0.9&&fs>10){ fs-=2; c.font='600 '+fs+'px Georgia,"Times New Roman",serif'; } c.fillText(t1,w/2,h*0.3);   // sized to fit (v22o cut off its E and 0)
       c.font='italic 600 '+Math.round(fs*1.05)+'px "Brush Script MT","Segoe Script","Lucida Handwriting",cursive'; c.fillText('Ladder  23',w/2,h*0.74);
       c.fillStyle='#2a2522'; for(const x of [w*0.33,w*0.67]){ c.fillRect(x-9,h*0.6,18,h*0.28); c.fillStyle='#f3e3b0'; c.fillRect(x-5,h*0.65,10,h*0.12); c.fillStyle='#2a2522'; } });   // the two small lamps
     K.plane(pw,ph,tex,X((o0+o1)/2),oH+0.3+ph/2,Z(F)+0.02); }
@@ -1209,29 +1211,38 @@ function createE20Station(st){
   E(11.65,12.05,0,0.2,FE-0.9,FE-0.5,0x9a8f84); fhFlagAt(K,X(11.85),0.2,Z(FE-0.7),11.5,1,1);               // the flagpole by the railings, the flag all the way up
   K.cyl(0.07,0.1,4.2,8,red,X(11.0),2.1,Z(-17.2)); E(10.75,11.25,4.2,4.75,-17.45,-16.95,red); E(10.82,11.18,4.25,4.65,-17.4,-17.0,0xf6ecc8);   // the red lamp post
   E(12.7,14.4,0.42,0.5,FE-1.6,FE-1.1,0x8a6a4a); E(12.7,14.4,0.5,0.95,FE-1.12,FE-1.04,0x8a6a4a); for(const a of [12.8,14.3]) E(a-0.05,a+0.05,0,0.42,FE-1.55,FE-1.15,iron);   // a bench
-  /* ---- left of the bays: the mural wall, the apron, Medic 1 ---- */
-  { const m0=-16.5, m1=B0-0.05, md=-9.6, mh=4.2; E(m0,m1,0,mh,md,md+0.5,0xd9a7b6); E(m0-0.05,m1,mh,mh+0.15,md-0.05,md+0.55,stone);   // the mural wall, behind the apron
-    const pw=m1-m0-0.1, ph=mh-0.2, tex=fhCanvas(1024,Math.round(1024*ph/pw),(c,w,h)=>{ const g=c.createLinearGradient(0,0,w,0); g.addColorStop(0,'#f1a9c4'); g.addColorStop(0.6,'#d79fcf'); g.addColorStop(1,'#a9b7e3'); c.fillStyle=g; c.fillRect(0,0,w,h);   // ENGINE 20 / LADDER 23 / MEDIC 1 / HOUSE OF DRAGONS — an OPAQUE picture
-      c.fillStyle='#5f7fc9'; c.beginPath(); c.moveTo(0,h*0.8); for(let x=0;x<=w;x+=w/12) c.quadraticCurveTo(x+w/24,h*0.74,x+w/12,h*0.8); c.lineTo(w,h); c.lineTo(0,h); c.fill();   // the water
-      c.fillStyle='#7b8fd2'; c.beginPath(); c.moveTo(w*0.55,h*0.8); c.lineTo(w*0.72,h*0.32); c.lineTo(w*0.86,h*0.6); c.lineTo(w*0.95,h*0.4); c.lineTo(w,h*0.55); c.lineTo(w,h*0.8); c.fill();   // the mountains
-      c.lineCap='round'; c.strokeStyle='#2f8d3a'; c.lineWidth=h*0.08; c.beginPath(); c.moveTo(w*0.2,h*0.82); c.bezierCurveTo(w*0.25,h*0.45,w*0.42,h*0.95,w*0.48,h*0.55); c.bezierCurveTo(w*0.52,h*0.3,w*0.62,h*0.45,w*0.6,h*0.3); c.stroke();   // the dragon
-      c.fillStyle='#2f8d3a'; c.beginPath(); c.arc(w*0.6,h*0.27,h*0.07,0,6.2832); c.fill(); c.fillStyle='#e8c23a'; c.beginPath(); c.arc(w*0.615,h*0.25,h*0.018,0,6.2832); c.fill();
-      c.fillStyle='#e0402e'; c.beginPath(); c.moveTo(w*0.64,h*0.3); c.lineTo(w*0.76,h*0.24); c.lineTo(w*0.7,h*0.33); c.fill();   // its fire
-      c.textAlign='left'; c.textBaseline='middle'; c.font='800 '+Math.round(h*0.12)+'px Arial,sans-serif';
-      for(const [t,y,col] of [['ENGINE 20',0.1,'#2b2d6e'],['LADDER 23',0.24,'#d0302a'],['MEDIC 1',0.38,'#2552b8']]){ c.fillStyle=col; c.fillText(t,w*0.03,h*y); }
-      c.textAlign='center'; c.font='700 '+Math.round(h*0.08)+'px Georgia,serif'; c.fillStyle='#c42d3b'; c.fillText('HOUSE',w*0.82,h*0.1); c.fillText('OF',w*0.82,h*0.19); c.fillText('DRAGONS',w*0.82,h*0.28); });
-    K.plane(pw,ph,tex,X((m0+m1)/2),ph/2+0.05,Z(md)+0.02); }
+  /* ---- left of the bays: the mural wall, the apron ---- */
+  { const MA=-16.5, md0=-16.0, md1=-9.6, mh=4.2;                                                            // the mural wall along the apron's north edge, its face to Cherry St (+a)
+    E(MA-0.5,MA,0,mh,md0,md1,0xe48ea0); E(MA-0.55,MA+0.05,mh,mh+0.15,md0-0.05,md1+0.05,stone);
+    const pw=md1-md0-0.1, ph=mh-0.2, tex=fhCanvas(1024,Math.round(1024*ph/pw),(c,w,h)=>{                     // ENGINE 20 / LADDER 23 / MEDIC 1 / HOUSE OF DRAGON SALUTES - an OPAQUE picture, after the owner's
+      c.fillStyle='#e8899c'; c.fillRect(0,0,w,h); c.strokeStyle='rgba(150,60,80,.25)'; c.lineWidth=2;          // pink-painted block
+      for(let y=h/12;y<h;y+=h/12){ c.beginPath(); c.moveTo(0,y); c.lineTo(w,y); c.stroke(); }
+      c.fillStyle='#3456c4'; c.beginPath(); c.moveTo(w*0.42,h*0.82); c.lineTo(w*0.62,h*0.27); c.lineTo(w*0.7,h*0.38); c.lineTo(w*0.82,h*0.22); c.lineTo(w,h*0.5); c.lineTo(w,h*0.82); c.fill();   // the mountains
+      c.fillStyle='#5b7be0'; c.beginPath(); c.moveTo(w*0.62,h*0.27); c.lineTo(w*0.66,h*0.5); c.lineTo(w*0.58,h*0.6); c.fill(); c.beginPath(); c.moveTo(w*0.82,h*0.22); c.lineTo(w*0.86,h*0.45); c.lineTo(w*0.78,h*0.52); c.fill();
+      for(const [x,s2,col] of [[0.0,1,'#e8332a'],[0.07,0.8,'#f39a2a'],[0.12,0.6,'#f6cf3a']]){ c.fillStyle=col; c.beginPath(); c.moveTo(w*x,h*0.86);   // the flames
+        for(let k=0;k<5;k++){ const xx=w*(x+0.035*k*s2+0.02); c.lineTo(xx,h*(0.86-0.3*s2*(0.6+0.4*((k*7)%3)/2))); c.lineTo(xx+w*0.018,h*0.8); } c.lineTo(w*(x+0.2*s2),h*0.86); c.fill(); }
+      c.fillStyle='#3d7fe0'; c.fillRect(0,h*0.8,w,h*0.2); c.strokeStyle='#a9d4f5'; c.lineWidth=h*0.012;         // the waves
+      for(let r=0;r<2;r++) for(let x=r*w/28;x<w;x+=w/14){ c.beginPath(); c.arc(x,h*(0.86+r*0.07),w/34,Math.PI,Math.PI*1.9); c.stroke(); }
+      const path=[[0.33,0.5],[0.31,0.64],[0.36,0.8],[0.46,0.6],[0.56,0.82],[0.66,0.6],[0.76,0.8],[0.86,0.62],[0.95,0.66]];   // the dragon's body, head to tail
+      const body=(lw,col)=>{ c.strokeStyle=col; c.lineWidth=lw; c.lineCap='round'; c.lineJoin='round'; c.beginPath(); c.moveTo(w*path[0][0],h*path[0][1]);
+        for(let k=1;k<path.length-1;k++){ const p=path[k], q=path[k+1]; c.quadraticCurveTo(w*p[0],h*p[1],w*(p[0]+q[0])/2,h*(p[1]+q[1])/2); } c.lineTo(w*path[path.length-1][0],h*path[path.length-1][1]); c.stroke(); };
+      body(h*0.12,'#e0a62a'); body(h*0.09,'#1f9a4a'); body(h*0.035,'#f4c84a');                                 // green scales, yellow belly, a gold crest
+      c.fillStyle='#2a63c9'; for(let k=0;k<6;k++){ c.beginPath(); c.moveTo(w*(0.33+0.012*k),h*0.44); c.lineTo(w*(0.37+0.02*k),h*(0.3+0.02*k)); c.lineTo(w*(0.36+0.014*k),h*0.48); c.fill(); }   // the blue mane
+      c.fillStyle='#1f9a4a'; c.beginPath(); c.ellipse(w*0.3,h*0.51,w*0.055,h*0.07,0,0,6.2832); c.fill();          // the head,
+      c.fillStyle='#d8352a'; c.beginPath(); c.moveTo(w*0.25,h*0.52); c.lineTo(w*0.3,h*0.56); c.lineTo(w*0.24,h*0.61); c.fill();   // its open red mouth,
+      c.fillStyle='#ffffff'; c.beginPath(); c.arc(w*0.305,h*0.47,h*0.018,0,6.2832); c.fill(); c.fillStyle='#16181c'; c.beginPath(); c.arc(w*0.305,h*0.47,h*0.009,0,6.2832); c.fill();   // its eye
+      c.strokeStyle='#d8352a'; c.lineWidth=h*0.008; c.beginPath(); c.moveTo(w*0.255,h*0.5); c.quadraticCurveTo(w*0.2,h*0.42,w*0.23,h*0.38); c.stroke();   // a whisker
+      c.fillStyle='#ffffff'; for(const [x,y] of [[0.36,0.82],[0.56,0.84],[0.76,0.82]]) for(let k=0;k<3;k++){ c.beginPath(); c.moveTo(w*(x-0.015+k*0.015),h*y); c.lineTo(w*(x-0.01+k*0.015),h*(y+0.05)); c.lineTo(w*(x-0.005+k*0.015),h*y); c.fill(); }   // claws
+      c.textAlign='left'; c.textBaseline='middle'; c.font='800 '+Math.round(h*0.11)+'px "Arial Black",Arial,sans-serif';
+      for(const [t,y,col] of [['ENGINE 20',0.09,'#2b2238'],['LADDER 23',0.21,'#c8202a'],['MEDIC 1',0.33,'#2349c8']]){ c.fillStyle=col; c.fillText(t,w*0.03,h*y); }
+      c.textAlign='center'; c.font='800 '+Math.round(h*0.095)+'px "Arial Black",Arial,sans-serif'; c.lineWidth=h*0.012; c.strokeStyle='#f4c84a';
+      for(const [t,y] of [['HOUSE',0.11],['OF',0.21],['DRAGON',0.31],['SALUTES',0.41]]){ c.strokeText(t,w*0.79,h*y); c.fillStyle='#c8202a'; c.fillText(t,w*0.79,h*y); } });
+    K.plane(pw,ph,tex,X(MA)+0.02,ph/2+0.05,Z((md0+md1)/2),false,Math.PI/2); }                                // turned to face Cherry St: its street end is its left
   E(-16.6,B1,0.03,0.07,-18.0,F,0xcfcbc1); E(W0,C1,0.03,0.06,-18.0,FE-0.55,0xd3cfc5);                        // the apron; the deep sidewalk before the wing
   for(const a of [-16.0,-12.9,o0+0.1,(o0+o1)/2,o1-0.1]) E(a-0.06,a+0.06,0.07,0.085,-17.8,F-0.1,0xf3f3ee);  // its white lines
-  { const a=lad, d0=-11.6, L=6.2, mb=(y1,y2,d1,d2,c,w)=>E(a-w/2,a+w/2,y1,y2,d1,d2,c);                       // Medic 1, parked nose out before the ladder's half
-    mb(0.75,3.05,d0-L*0.62,d0,white,2.35); mb(0.75,1.25,d0-L*0.62,d0,red,2.37); mb(1.25,1.38,d0-L*0.62,d0,0xe8c23a,2.38);   // the box: white, red skirt, yellow stripe
-    for(const x of [-0.75,-0.25,0.25,0.75]) E(a+x-0.15,a+x+0.15,2.85,3.0,d0-L*0.62-0.02,d0-L*0.62+0.02,0xd3302a);   // its red lights
-    mb(0.55,2.25,d0-L,d0-L*0.62,red,2.25); mb(2.25,2.4,d0-L,d0-L*0.62,white,2.25); mb(1.45,2.15,d0-L-0.02,d0-L+0.2,0x2b3440,2.0);   // the cab, its windshield
-    mb(0.55,0.95,d0-L-0.06,d0-L+0.05,0xd5dade,2.3); mb(2.42,2.52,d0-L*0.95,d0-L*0.7,0xd3302a,1.6);              // the bumper, the light bar
-    for(const [x,d] of [[-1.05,d0-L*0.85],[1.05,d0-L*0.85],[-1.05,d0-L*0.18],[1.05,d0-L*0.18]]) E(a+x-0.15,a+x+0.15,0,0.82,d-0.41,d+0.41,0x222222); }
   fhLadder(K,X(lad),Z(F)-0.75,23);                                                                          // Ladder 23 in the left half (unconfirmed)
   K.mark(); fhEngine(K,X(eng),Z(F)-0.9,20); fhDoor(K,X(eng),(o1-o0)/2,oH,Z(F+0.3));                        // 🚒 Engine 20 in the right half, or that half's door down (fhRig)
-  return K.finish({W,D,H:Hb,fp:[X(-16.6),X(C1),Z(BK),Z(-18.0)],engBayX:+X(eng).toFixed(2),halfW:17,xMin:X(B0),xMax:X(W1),setback:8.85,spawnIn:5.0,yawFix:0,inside:[X(eng),Z(F+3)]}); }
+  return K.finish({W,D,H:Hb,fp:[X(-17.1),X(C1),Z(BK),Z(-18.0)],engBayX:+X(eng).toFixed(2),halfW:17,xMin:X(B0),xMax:X(W1),setback:8.85,spawnIn:5.0,yawFix:0,inside:[X(eng),Z(F+3)]}); }
 
 // every house with its own model (STATION_TEMPLATES in the game script is this table)
 const FH_MODELS={ e2:createE2Station, e9:createE9Station, e12:createE12Station, e13:createE13Station, e35:createE35Station, e19:createE19Station, e27:createE27Station, e29:createE29Station, e37:createE37Station, e39:createE39Station, e45:createE45Station, e50:createE50Station, e59:createE59Station, e66:createE66Station, e20:createE20Station };

@@ -1541,7 +1541,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22o"></script>
+<script src="firehouse-models.js?v=v22p"></script>
 <script src="data/inst.js"></script>
 <script>
 /* ================================================================================
@@ -1573,7 +1573,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22o";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22p";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -11009,7 +11009,7 @@ function fhKit(){ const L=[], G=[], planes=[], DR=[], FL=[], OB=[], m4=new THREE
     glowBox:(w,h,d,c,x,y,z)=>bx(G,w,h,d,c,x,y,z),
     glowCyl:(rt,rb,h,sg,c,x,y,z)=>put(G,new THREE.CylinderGeometry(rt,rb,h,sg),c,x,y,z),
     poly:(pts,y,c)=>{ const g=new THREE.ShapeGeometry(new THREE.Shape(pts.map(p=>new THREE.Vector2(p[0],-p[1])))); g.rotateX(-Math.PI/2); put(L,g,c,0,y,0); },   // a flat polygon of local [x,z] points at height y, face up (a lot), in the house mesh
-    plane:(w,h,tex,x,y,z,transparent)=>planes.push({w,h,tex,x,y,z,transparent}),
+    plane:(w,h,tex,x,y,z,transparent,ry)=>planes.push({w,h,tex,x,y,z,transparent,ry}),   // ry: turned about the vertical (E20's mural faces Cherry St)
     doorBox:(w,h,d,c,x,y,z)=>bx(DR,w,h,d,c,x,y,z),        // the bay door: its own mesh, hidden while the door is up
     mark:()=>{ M={l:L.length,g:G.length,p:planes.length}; },                        // everything after this is the house's own engine (fhRig)
     flag:o=>FL.push(o),                                                              // fhFlagAt notes each flag it draws (userData.flags)
@@ -11018,7 +11018,7 @@ function fhKit(){ const L=[], G=[], planes=[], DR=[], FL=[], OB=[], m4=new THREE
       if(!FHK.lam){ FHK.lam=new THREE.MeshLambertMaterial({vertexColors:true}); FHK.glow=new THREE.MeshBasicMaterial({vertexColors:true}); }
       if(L.length){ const l0=M?cnt(L,M.l):0, me=new THREE.Mesh(merge(L),FHK.lam); g.add(me); if(rig){ rig.lam=me; rig.l0=l0; rig.l1=me.geometry.attributes.position.count; } }
       if(G.length){ const g0=M?cnt(G,M.g):0, me=new THREE.Mesh(merge(G),FHK.glow); g.add(me); if(rig){ rig.glow=me; rig.g0=g0; rig.g1=me.geometry.attributes.position.count; } }
-      planes.forEach((p,i)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(p.w,p.h),new THREE.MeshBasicMaterial({map:p.tex,transparent:!!p.transparent})); m.position.set(p.x,p.y,p.z); g.add(m); if(rig&&i>=M.p) rig.planes.push(m); });
+      planes.forEach((p,i)=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(p.w,p.h),new THREE.MeshBasicMaterial({map:p.tex,transparent:!!p.transparent})); m.position.set(p.x,p.y,p.z); if(p.ry) m.rotation.y=p.ry; g.add(m); if(rig&&i>=M.p) rig.planes.push(m); });
       if(DR.length){ const me=new THREE.Mesh(merge(DR),FHK.lam); me.visible=false; g.add(me); if(rig) rig.door=me; }
       for(const o of OB) g.add(o);
       g.userData=Object.assign({fhKit:true},U||{}); if(rig) g.userData.rig=rig; g.userData.flags=FL; return g; } }; }
