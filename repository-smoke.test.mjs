@@ -39,7 +39,7 @@ test('every script compiles, and external scripts are local files loaded before 
     if (src) {
       sawExternal = true;
       assert.equal(source.trim(), '', 'a script with src must have no body');
-      new Script(readFileSync(localAsset(src), 'utf8'), { filename: src });
+      new Script(readFileSync(localAsset(src.replace(/\?.*$/, '')), 'utf8'), { filename: src });   // firehouse-models.js?v=<BUILD>
       continue;
     }
     const type = attributes.match(/\btype\s*=\s*["']([^"']+)["']/i)?.[1];
@@ -63,6 +63,16 @@ test('extracted data loads before the game script that reads it', () => {
     assert.doesNotMatch(html, new RegExp(`^const ${name}\\s*=`, 'm'), `${name} should live in ${file}`);
     assert.match(readFileSync(localAsset(file), 'utf8'), new RegExp(`^const ${name}\\s*=`));
   }
+});
+
+test('the firehouse models load under the BUILD, before the game', () => {
+  // sw.js serves firehouse-models.js cache-first: only a new address (?v=<BUILD>) makes a release fetch it fresh (October 19, 2026).
+  const tag = html.match(/<script src="firehouse-models\.js\?v=([^"]+)"><\/script>/), build = html.match(/const BUILD="([^"]+)"/);
+  assert.ok(tag, 'index.html loads firehouse-models.js?v=<BUILD>');
+  assert.equal(tag[1], build[1], 'the ?v of firehouse-models.js must be the BUILD (bump both at a release)');
+  const models = readFileSync(localAsset('firehouse-models.js'), 'utf8');
+  assert.match(models, /^'use strict';/, 'the game script is strict, so are its models');
+  assert.ok(models.split('\n').every(l => l.length < 8000), 'no giant lines in firehouse-models.js');
 });
 
 test('index.html stays small enough to edit on a phone', () => {
