@@ -1256,7 +1256,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <div class="sxSec">DISPLAY</div>
     <div class="sxCard"><button class="sxRow sxTog on" id="btnMiniMap" type="button" role="switch" aria-checked="true"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 6.3 2.6 7.2h-5.2z" fill="currentColor"/></svg><span class="sxL"><b>Minimap</b><small>The round map, top right</small></span><span class="sxSw" aria-hidden="true"></span></button></div>
     <div class="sxCard"><button class="sxRow sxTog" id="btnMapView" type="button" role="switch" aria-checked="false"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6.5l5.5-2.5 7 2.5 5.5-2.5v13.5l-5.5 2.5-7-2.5L3 20z"/><path d="M8.5 4v13.5M15.5 6.5V20"/></svg><span class="sxL"><b>Map view</b><small>Drive on a top-down map instead of the 3D street view</small></span><span class="sxSw" aria-hidden="true"></span></button></div>
-    <div class="sxCard"><button class="sxRow sxTog" id="btnRealBld" type="button" role="switch" aria-checked="false"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V9.5l6-3.5v14.5M10 20.5V4l10 3.6v12.9M2.8 20.5h18.4M13.4 9.6h3.2M13.4 13h3.2M13.4 16.4h3.2M6.4 12.4h1.4M6.4 15.8h1.4"/></svg><span class="sxL"><b>Real buildings (test)</b><small>The City's own building outlines in the 3D view</small></span><span class="sxSw" aria-hidden="true"></span></button></div>
+    <div class="sxCard"><button class="sxRow sxTog on" id="btnRealBld" type="button" role="switch" aria-checked="true"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V9.5l6-3.5v14.5M10 20.5V4l10 3.6v12.9M2.8 20.5h18.4M13.4 9.6h3.2M13.4 13h3.2M13.4 16.4h3.2M6.4 12.4h1.4M6.4 15.8h1.4"/></svg><span class="sxL"><b>Real buildings</b><small>The City's own building outlines in the 3D view</small></span><span class="sxSw" aria-hidden="true"></span></button></div>
   </section>
   <section class="sxPane" data-pane="acct">
     <div class="sxStats"><div id="saves"><span class="stat"><i>🔥</i><b>SAVES</b><u id="savesN">0</u></span><span class="stat"><i>🏆</i><b>BEST</b><u id="bestN">0</u></span></div></div>
@@ -1571,7 +1571,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22l";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22m";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2620,22 +2620,28 @@ function hydrantsNear(x,z,rad){ const cell=HYD_GRID.cell,g=HYD_GRID.g,out=[],r=M
 // dark flange, the barrel, a collar, the bonnet and its operating nut, two hose nozzles and a pumper nozzle with chrome caps.
 // About 2x a real hydrant (built at 1.5x, then scaled 1.3: 1.55 m above its pad, 1.2 m across the nozzles) so it reads from the TILT camera — the owner asked for them "a little bit more noticeable". y = 0 is the
 // surface it stands on; +Z is the pumper nozzle, turned to face the street. 256 triangles; built once (FLATCITY.hydKit).
+/* ✂️ A CYLINDER (or cone) WITHOUT THE CAP NOBODY SEES - the bottom of a part standing on the ground or on another part, the inner end
+   of a nozzle cap. three builds the torso, then the top cap (a cone has none), then the bottom cap, each radialSegments x 3 indices for
+   one height segment. Fewer triangles, the same picture (October 18, 2026: room for Real buildings as the default). */
+function dropCap(geo,which){ const p=geo.parameters, n=p.radialSegments*3, t0=p.radialSegments*p.heightSegments*6, top=p.radiusTop>0, I=geo.index&&geo.index.array;
+  if(!I||p.openEnded) return geo; const c0=which==='top'?(top?t0:-1):t0+(top?n:0); if(c0<0) return geo;
+  const k=[]; for(let i=0;i<I.length;i++) if(i<c0||i>=c0+n) k.push(I[i]); geo.setIndex(k); geo.clearGroups(); return geo; }
 function hydrantKit(){ const pos=[], nor=[], col=[], M=new THREE.Matrix4(), C=new THREE.Color();
   const RED=0xd42f24, DARK=0x9b2018, CHROME=0xd2d6db, NUT=0x3a3e44, PAD=0xb7b1a3;
   const part=(geo,col_,mat)=>{ const g=geo.toNonIndexed(); g.applyMatrix4(mat); C.setHex(col_);
     const P=g.attributes.position.array, N=g.attributes.normal.array; for(let i=0;i<P.length;i++){ pos.push(P[i]); nor.push(N[i]); }
     for(let i=0;i<P.length/3;i++) col.push(C.r,C.g,C.b); g.dispose(); geo.dispose(); };
-  const up=(r0,r1,y0,y1,seg,c,open)=>part(new THREE.CylinderGeometry(r0,r1,y1-y0,seg,1,!!open),c,M.makeTranslation(0,(y0+y1)/2,0));
-  const side=(r,len,x,y,z,ax,seg,c,open)=>{ const R=new THREE.Matrix4(); if(ax==='x') R.makeRotationZ(Math.PI/2); else R.makeRotationX(Math.PI/2);
-    part(new THREE.CylinderGeometry(r,r,len,seg,1,!!open),c,new THREE.Matrix4().makeTranslation(x,y,z).multiply(R)); };
+  const up=(r0,r1,y0,y1,seg,c,open,drop)=>part(dropCap(new THREE.CylinderGeometry(r0,r1,y1-y0,seg,1,!!open),drop),c,M.makeTranslation(0,(y0+y1)/2,0));   // drop: the cap that is never seen
+  const side=(r,len,x,y,z,ax,seg,c,open,drop)=>{ const R=new THREE.Matrix4(); if(ax==='x') R.makeRotationZ(Math.PI/2); else R.makeRotationX(Math.PI/2);   // turned about z the top faces -x; about x it faces +z
+    part(dropCap(new THREE.CylinderGeometry(r,r,len,seg,1,!!open),drop),c,new THREE.Matrix4().makeTranslation(x,y,z).multiply(R)); };
   up(0.30,0.30,-0.47,0.00,8,PAD,true);                         // footing, 0.61 m down once scaled: as far as hydrantPose ever lifts one onto a slab (0.6), so none floats
-  up(0.29,0.29,0.00,0.09,8,DARK);                              // base flange
+  up(0.29,0.29,0.00,0.09,8,DARK,false,'bottom');             // base flange (its bottom on the surface)
   up(0.20,0.22,0.09,0.80,8,RED,true);                          // barrel
-  up(0.27,0.27,0.80,0.89,8,DARK);                              // collar
-  up(0.11,0.24,0.89,1.10,8,RED);                               // bonnet
-  up(0.05,0.07,1.10,1.19,5,NUT);                               // operating nut
-  for(const sx of [-1,1]){ side(0.075,0.20,sx*0.28,0.56,0,'x',6,RED,true); side(0.095,0.06,sx*0.41,0.56,0,'x',6,CHROME); }   // hose nozzles + caps
-  side(0.11,0.18,0,0.44,0.29,'z',6,RED,true); side(0.135,0.07,0,0.44,0.415,'z',6,CHROME);                                   // pumper nozzle + cap
+  up(0.27,0.27,0.80,0.89,8,DARK,false,'bottom');             // collar (its underside faces the ground: the camera is always above)
+  up(0.11,0.24,0.89,1.10,8,RED,false,'bottom');              // bonnet (on the collar)
+  up(0.05,0.07,1.10,1.19,5,NUT,false,'bottom');              // operating nut (on the bonnet)
+  for(const sx of [-1,1]){ side(0.075,0.20,sx*0.28,0.56,0,'x',6,RED,true); side(0.095,0.06,sx*0.41,0.56,0,'x',6,CHROME,false,sx>0?'top':'bottom'); }   // hose nozzles + caps (a cap's end toward the barrel dropped)
+  side(0.11,0.18,0,0.44,0.29,'z',6,RED,true); side(0.135,0.07,0,0.44,0.415,'z',6,CHROME,false,'bottom');                                   // pumper nozzle + cap
   const geo=new THREE.BufferGeometry(); for(let i=0;i<pos.length;i++) pos[i]*=1.3;   // the 1.3 scale about the base (y = 0 stays the surface)
   geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
   geo.setAttribute('normal',new THREE.Float32BufferAttribute(nor,3)); geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
@@ -6151,7 +6157,9 @@ function instBuild(J){ const I=J.inst; FLATCITY.instCut=J.instCut||{b:0,t:0}; if
   if(I.K.p.length){ const m=new THREE.Mesh(mk(I.K,false),nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true}))); m.name='inst-roofs'; m.userData.shadeCast='mesh'; m.userData.nfBoxes=boxes; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
   if(I.G.p.length){ const m=new THREE.Mesh(mk(I.G,false),shadeReceive(new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true})));   // over the land, under the road, no depth: the park-land rule
     m.name='inst-ground'; m.renderOrder=0.55; m.material.depthWrite=false; FLATCITY.group.add(m); FLATCITY.parts.push(m); } }
-/* 🏠 REAL BUILDINGS IN THE 3D VIEW — a PROTOTYPE behind Settings → Controls & Display → "Real buildings (test)", OFF by default
+/* 🏠 REAL BUILDINGS IN THE 3D VIEW — Settings → Controls & Display → "Real buildings", ON BY DEFAULT since October 18, 2026 (owner, on
+   v22l: "Would it help if we made real buildings the default and not a test"; then "Run any and all you said would help"). Until then
+   it was a prototype, "Real buildings (test)", OFF by default
    (owner, October 15, 2026, after v21v put the City's footprints in Map view: "could we use this new data to help with the 3d
    view?"). With the switch on, the City's own L&I building footprints (the data/fp/ tiles Map view reads) are extruded to their
    real heights in place of the generated buildings, wherever a tile is in; where one is not (yet), the generated city stands in,
@@ -6173,11 +6181,11 @@ function instBuild(J){ const I=J.inst; FLATCITY.instCut=J.instCut||{b:0,t:0}; if
      nearest wall, and a catenary mast waits for the next clear spot. The firehouse model and the real churches and schools (INST)
      keep their own models: a footprint under them is not drawn.
    - The near fade (NEAR_FADE) draws again only the buildings near the camera, through draw groups over the merged index. */
-const FP3={ on:false, R:760, near:300, pre:200, max:30, prepMs:2.5, conc:4, M:40, N:36, tiles:new Map(), byNum:new Map(), slots:[], stamp:0, dirty:false, last:null, stat:null,
+const FP3={ on:true, R:760, near:300, pre:200, max:30, prepMs:2.5, conc:4, M:40, N:36, tiles:new Map(), byNum:new Map(), slots:[], stamp:0, dirty:false, last:null, stat:null,
   bay:{row:5.1,apt:6.3,house:5.6}, floor:3.15, minH:2.6, parH:0.75,
   wall:{row:[0xb9634b,0xc47d5f,0xd8b18c,0xe9dfcc,0xa9664f,0xcaa17f,0xbc8c6b], house:[0xc9a48a,0xdac7ad,0xb98b73,0xd3c9bd,0xc7ad93,0xe1d7c4], apt:[0xb06a4f,0xc49272,0xa8785c,0xd8cfc2,0x9c6a55,0xcdb9a6], tiny:[0xb7aa98,0xa59a8a,0xc4bcb0]},
   roof:{flat:[0xc9cdd1,0xdfe1e3,0xa9afb5,0x80868d,0x5d6268,0xb8bcc1,0xcfc9bf], pitch:[0x8d9298,0x7f6c5d,0x676c72,0x93806d,0x715c50], memb:[0xe5e6e2,0xd4d6d7,0xc1c5c8,0xaeb2b6,0x959a9f], cornice:[0x5b4b43,0x6c5c53,0xe8e2d6], unit:0x9fa5ab, cap:0x8a8d90} };
-try{ FP3.on=localStorage.getItem('pfd_realbld')==='on'; }catch(e){}
+try{ FP3.on=localStorage.getItem('pfd_realbld')!=='off'; }catch(e){}   // ON by default since October 18, 2026 (owner: "made real buildings the default and not a test"); a phone that switched it off keeps it off
 const fp3Num=(tx,tz)=>(tx+2000)*8192+(tz+2000);
 // load the tiles within R of each centre in C ([[x,z],...]), nearest first, FP3.conc at a time; past FP3.max the least recently used go —
 // never one a job holds, and never one inside these radii (that would fetch it again next time: a loop)
@@ -6589,7 +6597,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
   if(!rampRibbonStep(J,t0,budgetMs))return false;
   if(!parkGroundStep(J,t0,budgetMs))return false;
   if(!instStep(J,t0,budgetMs))return false;   // ⛪🏫 the real churches, schools, playgrounds, courts, fields and pools (v20r); clears what they overlap                                            // 🌳 park / wood / open ground, fences and lawn trees (v19i): one landcover feature per resume check                                            // 🎀 interchange ramp edge ribbon (v19f): needs the finished road surfaces, generated here not in commit
-  if(!fp3Step(J,t0,budgetMs))return false;   // 🏠 the City's real buildings (FP3 prototype, switch "Real buildings (test)"): after the institutions' outlines, before the density field
+  if(!fp3Step(J,t0,budgetMs))return false;   // 🏠 the City's real buildings (FP3, switch "Real buildings", on by default): after the institutions' outlines, before the density field
   if(!densityGridStep(J,t0,budgetMs))return false;   // 🛣️ paved-ground density field (v20d): built here, uploaded in commit
   trimTrees(J);                                      // 🌳 nearest-first tree cap (v20e), applied once the set is complete
   return true;
@@ -7154,18 +7162,20 @@ function hwySupports(b,J,hw,piers){ const BL=b.length||1; if(BL<12) return;
    N 16th-18th ...: 1,402 pieces over 500 m, 527 over the 760 m radius). The road surface and the sidewalk slabs were drawn only when a
    piece's MIDDLE was within LOCAL.R of the city centre, so near the far end of a long piece there was no street at all - Engine 50's
    truck stood on bare ground. segWindow(s,cx,cz,R) is the stretch of the piece (metres from its start) within R of the centre, null if
-   none; segPart is that stretch as the piece itself (its prototype), its crossings shifted to it. A piece whose middle IS in range is
-   drawn exactly as before; freeways are left as they were. */
+   none; segClipped(J,s,t0,t1,fn) runs fn with the piece ITSELF cut to that stretch, its crossings shifted to it, and puts it back. A
+   piece whose middle IS in range is drawn exactly as before; freeways are left as they were. (The first cut handed roadGeomSeg a
+   stand-in, Object.create(s): a second shape of segment made every property read in that hot function polymorphic, and the quiet
+   gate, October 19, read the interchange 11 ms slower — nothing in the call keeps the piece, so cut-and-restore is safe.) */
 function segWindow(s,cx,cz,R){ const dx=s.bx-s.ax, dz=s.bz-s.az, l=Math.hypot(dx,dz); if(l<1e-6) return null; const ux=dx/l, uz=dz/l;
   const tp=(cx-s.ax)*ux+(cz-s.az)*uz, pd=(cz-s.az)*ux-(cx-s.ax)*uz, h2=R*R-pd*pd; if(h2<=0) return null; const h=Math.sqrt(h2), t0=Math.max(0,tp-h), t1=Math.min(l,tp+h);
   return t1-t0>1?[t0,t1]:null; }
-function segPart(J,s,t0,t1){ const l=Math.hypot(s.bx-s.ax,s.bz-s.az)||1, ux=(s.bx-s.ax)/l, uz=(s.bz-s.az)/l, p=Object.create(s);
-  p.ax=t0>0?s.ax+ux*t0:s.ax; p.az=t0>0?s.az+uz*t0:s.az; p.bx=t1<l?s.ax+ux*t1:s.bx; p.bz=t1<l?s.az+uz*t1:s.bz; p.part=s;   // a real end stays exact, so its junction is found
-  const EV=J.crossMap&&J.crossMap.get(s); if(EV) J.crossMap.set(p,EV.filter(e=>e.t>t0&&e.t<t1).map(e=>Object.assign({},e,{t:e.t-t0})));
-  return p; }
+function segClipped(J,s,t0,t1,fn){ const l=Math.hypot(s.bx-s.ax,s.bz-s.az)||1, ux=(s.bx-s.ax)/l, uz=(s.bz-s.az)/l, ax=s.ax, az=s.az, bx=s.bx, bz=s.bz, EV=J.crossMap&&J.crossMap.get(s);
+  if(t0>0){ s.ax=ax+ux*t0; s.az=az+uz*t0; } if(t1<l){ s.bx=ax+ux*t1; s.bz=az+uz*t1; }                     // a real end stays exact, so its junction is still found
+  if(EV) J.crossMap.set(s,EV.filter(e=>e.t>t0&&e.t<t1).map(e=>({t:e.t-t0,hw:e.hw,both:e.both,side:e.side,ramp:e.ramp})));   // the crossings' own shape
+  try{ fn(); } finally{ s.ax=ax; s.az=az; s.bx=bx; s.bz=bz; if(EV) J.crossMap.set(s,EV); } }
 function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOCAL.R*LOCAL.R, cx=J.cx, cz=J.cz;
   const ROAD_Y=0.06, MARK_Y=0.085;
-  st.roadName=s.name;st.roadDx=s.bx-s.ax;st.roadDz=s.bz-s.az;st.paintSurfaces=[];st.profile=null;const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2){ const w=s.hw?null:segWindow(s,cx,cz,LOCAL.R); if(!w) return; return roadGeomSeg(J,segPart(J,s,w[0],w[1])); }   // a LONG piece: the part in range
+  st.roadName=s.name;st.roadDx=s.bx-s.ax;st.roadDz=s.bz-s.az;st.paintSurfaces=[];st.profile=null;const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2){ const w=s.hw?null:segWindow(s,cx,cz,LOCAL.R); if(w) segClipped(J,s,w[0],w[1],()=>roadGeomSeg(J,s)); return; }   // a LONG piece: the part in range, ON the piece itself
   let dx=s.bx-s.ax, dz=s.bz-s.az; const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
   const hw=segHalf(s), nx=-dz*hw, nz=dx*hw, ex=dx*hw, ez=dz*hw;                 // extend by a half-width at each end so bends/junctions fill in
   const ax=s.ax-ex, az=s.az-ez, bx=s.bx+ex, bz=s.bz+ez;
@@ -7593,9 +7603,9 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     const canoMat=nearFadeMaterial(new THREE.MeshLambertMaterial({color:0xffffff,flatShading:true}));
     const cano=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,1),canoMat,(T.length-nFar-nCon)*per);
     const canoFar=nFar?new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),canoMat,nFar*per):null; let iN=0,iF=0,iC=0;
-    const con=nCon?new THREE.InstancedMesh(new THREE.ConeGeometry(1,1,7),canoMat,nCon*2):null;   // unit cone, base at -0.5
-    const trunk=new THREE.InstancedMesh(J.immersive?new THREE.CylinderGeometry(0.5,0.7,1,6):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?0x75624d:0x9b7d5d}),T.length);
-    const pad=new THREE.InstancedMesh(J.immersive?new THREE.CylinderGeometry(1,1,1,10):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?0x93a574:0xcfe6bb}),T.length);
+    const con=nCon?new THREE.InstancedMesh(dropCap(new THREE.ConeGeometry(1,1,7),'bottom'),canoMat,nCon*2):null;   // unit cone, base at -0.5
+    const trunk=new THREE.InstancedMesh(J.immersive?dropCap(new THREE.CylinderGeometry(0.5,0.7,1,6),'bottom'):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?0x75624d:0x9b7d5d}),T.length);
+    const pad=new THREE.InstancedMesh(J.immersive?dropCap(new THREE.CylinderGeometry(1,1,1,10),'bottom'):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?0x93a574:0xcfe6bb}),T.length);
     T.forEach((t,i)=>{ const s=t.s*2.2, cf=conifer(t), th=cf?s*0.45:s*1.15;
       const seed=J.immersive?Math.floor(hash2(t.x,t.z)*10000):i;
       if(cf){ const gy=navGroundY(t.x,t.z), a=seed*1.7;
@@ -10248,7 +10258,7 @@ try{ MAPV.on=localStorage.getItem('pfd_mapview')==='on'; }catch(e){}
 function mapvBtn(){ const b=document.getElementById('btnMapView'); if(b){ b.classList.toggle('on',MAPV.on); b.setAttribute('aria-checked',MAPV.on?'true':'false'); } fp3Note(); }
 document.getElementById('btnMapView').addEventListener('click',e=>{ e.preventDefault(); MAPV.on=!MAPV.on; mapvBtn(); try{ localStorage.setItem('pfd_mapview',MAPV.on?'on':'off'); }catch(err){} });
 mapvBtn();
-// 🏠 Real buildings (test): the FP3 prototype's switch, remembered on this phone; a change rebuilds the city around the truck (fp3Tick)
+// 🏠 Real buildings: the FP3 switch (on by default since October 18), remembered on this phone; a change rebuilds the city around the truck (fp3Tick)
 /* It is the 3D view's test — Map view always draws the City's buildings — so with Map view on a touch seemed to do nothing (owner,
    October 16: "If someone want to do the test of the new buildings but is also on top down view nothing will change it needs to be
    turned off"). Turning it ON leaves Map view (that switch flips off too, remembered) and says so; its row tells you first. Turning it
