@@ -1540,6 +1540,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/pfdrun.js"></script>
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
+<script src="data/roadw.js"></script>
 <script src="data/inst.js"></script>
 <script>
 /* ================================================================================
@@ -1571,7 +1572,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22m";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22n";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -1741,7 +1742,11 @@ const CLASSW=[20,16,13,9,8];
 // name band, curb confinement, kerb snapping and junction trims all agree on where the asphalt ends.
 const HWY_LANE=3.6;
 function hwyHalf(s){ const n=s.ln||(s.hw===1?2:1); return s.hw===1 ? (n*HWY_LANE+3.6)/2 : Math.max(CLASSW[4],n*HWY_LANE+2.4)/2; }
-function segHalf(s){ return s.hw ? hwyHalf(s) : CLASSW[s.cls]*0.5; }
+// DRAWN WIDTH (Oct 19, 2026): the City's measured curb width, ROADW (bake_road_widths.js); notes/street-widths.md
+function segHalf(s){ return s.hw ? hwyHalf(s) : s.rh; }
+function segBand(s){ return s.hw ? hwyHalf(s) : CLASSW[s.cls]*0.5; }   // the class band: which street a point is ON; driving reads this, never segHalf
+// the truck's lane: 1.6-3 m right of centre; on a narrow street 0.3 m clear of the curb
+function streetLaneOff(h){ return h>=3.2?Math.max(1.6,Math.min(3.0,h*0.5)):Math.max(0,Math.min(h*0.5,h-1.55)); }
 function hwyLanes(s){ const n=s.ln||(s.hw===1?2:1), h=hwyHalf(s), left=s.hw===1?-h+1.2:-n*HWY_LANE/2; return {n,left,right:left+n*HWY_LANE}; }   // lane-block edges from the centreline, right-of-travel positive
 function hwyLaneOff(s){ const L=hwyLanes(s), k=L.n%2?(L.n-1)/2:L.n/2; return L.left+(k+0.5)*HWY_LANE; }                                  // the lane a rig rides: the middle lane, or centre-right of an even count
 // Apple-Maps 2D palette: primary arterials get a pale-gold fill+casing, everything else white with a soft warm-grey casing.
@@ -1827,14 +1832,17 @@ const SEGCELL=64, segGrid=new Map();
 function segPut(s){ const steps=Math.max(1,Math.ceil(Math.hypot(s.bx-s.ax,s.bz-s.az)/SEGCELL));
   for(let i=0;i<=steps;i++){ const t=i/steps,x=s.ax+(s.bx-s.ax)*t,z=s.az+(s.bz-s.az)*t;
     const k=Math.floor(x/SEGCELL)+':'+Math.floor(z/SEGCELL); let a=segGrid.get(k); if(!a){a=[];segGrid.set(k,a);} a.push(s); } }
-for(let ri=0;ri<RB.st.length;ri++){ const [name,cls,pts,ow,hw,ln]=RB.st[ri]; for(let i=1;i<pts.length;i++) segPut({ax:pts[i-1][0],az:pts[i-1][1],bx:pts[i][0],bz:pts[i][1],name,cls,ow:ow||0,hw:hw||0,ln:ln||0,ri,si:i-1}); }   // ow: baked one-way flag (v12o) — markings use it; ri/si: record + segment index, the key into the BTYPE side table (v19g)
+const RB_K0=new Int32Array(RB.st.length+1); for(let ri=0;ri<RB.st.length;ri++) RB_K0[ri+1]=RB_K0[ri]+Math.max(0,RB.st[ri][2].length-1);
+const ROADW_S=(function(){ if(typeof ROADW==='undefined'||!ROADW||ROADW.n!==RB.st.length) return null; const s=ROADW.s.join(''), n=RB_K0[RB.st.length]; return s.length===n&&ROADW.segs===n?s:null; })();   // index-locked to RB.st
+function roadRh(ri,si){ const c=ROADW_S?ROADW_S.charCodeAt(RB_K0[ri]+si):35, code=c<92?c-35:c-36; return code?code/8:CLASSW[RB.st[ri][1]]*0.5; }   // drawn half-width of piece si of RB.st[ri]
+for(let ri=0;ri<RB.st.length;ri++){ const [name,cls,pts,ow,hw,ln]=RB.st[ri]; for(let i=1;i<pts.length;i++) segPut({ax:pts[i-1][0],az:pts[i-1][1],bx:pts[i][0],bz:pts[i][1],name,cls,ow:ow||0,hw:hw||0,ln:ln||0,ri,si:i-1,rh:roadRh(ri,i-1)}); }   // ow: baked one-way flag (v12o) — markings use it; ri/si: record + segment index, the key into the BTYPE side table (v19g)
 function segNear(x,z){ const o=[],gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCELL);
   for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=segGrid.get(a+':'+b); if(l) o.push(...l); } return o; }
 function closestSeg(x,z,s){ const dx=s.bx-s.ax,dz=s.bz-s.az,L=dx*dx+dz*dz||1; let t=((x-s.ax)*dx+(z-s.az)*dz)/L; t=Math.max(0,Math.min(1,t));
   const cx=s.ax+dx*t,cz=s.az+dz*t; return {cx,cz,d:Math.hypot(x-cx,z-cz)}; }
 function segDistTo(x,z,s){ const dx=s.bx-s.ax,dz=s.bz-s.az,L=dx*dx+dz*dz||1; let t=((x-s.ax)*dx+(z-s.az)*dz)/L; t=Math.max(0,Math.min(1,t));   // == closestSeg(x,z,s).d, same arithmetic, no object — for the hot generation probes
   const cx=s.ax+dx*t,cz=s.az+dz*t; return Math.hypot(x-cx,z-cz); }
-function streetName(x,z){ let bn='—',bd=22; for(const s of segNear(x,z)){ if(!s.name) continue; const c=closestSeg(x,z,s); const e=c.d-segHalf(s); if(e<bd){ bd=e; bn=s.name; } } return bn; }
+function streetName(x,z){ let bn='—',bd=22; for(const s of segNear(x,z)){ if(!s.name) continue; const c=closestSeg(x,z,s); const e=c.d-segBand(s); if(e<bd){ bd=e; bn=s.name; } } return bn; }
 function roadSegAt(x,z,dx,dz){ let best=null,bs=Infinity;                       // the road under a point, judged by distance AND heading — (dx,dz) is the direction of travel, so a ramp beside
   for(const s of segNear(x,z)){ const sx=s.bx-s.ax,sz=s.bz-s.az,sl=Math.hypot(sx,sz)||1,hl=Math.hypot(dx,dz)||1;   // a carriageway, or a road passing over another, resolves to the one actually being driven
     const score=closestSeg(x,z,s).d+20*(1-Math.abs((sx*dx+sz*dz)/(sl*hl))); if(score<bs){bs=score;best=s;} } return best; }
@@ -1896,7 +1904,7 @@ function onAsphalt(x,z){ for(const s of segNear(x,z)){ const c=closestSeg(x,z,s)
       if(streetName(tx,tz)===want){ px=tx; pz=tz; break; } }
     L.x=px; L.z=pz; } })();
 // --- hard-curb confinement (Post-C): keep the truck on the drivable asphalt band; COLLISION only, never steers the car ---
-function driveHalf(s){ return segHalf(s) + ARC.curbPad; }          // "tuned wide" = painted asphalt half-width + a curb margin
+function driveHalf(s){ return segBand(s) + ARC.curbPad; }          // "tuned wide" = painted asphalt half-width + a curb margin
 function segNearWide(x,z){ const gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCELL);   // expanding search for the rare off-road gap (parks/woods) so confine always finds a road
   for(let r=2;r<=14;r++){ const o=[]; for(let a=gx-r;a<=gx+r;a++)for(let b=gz-r;b<=gz+r;b++){ const l=segGrid.get(a+':'+b); if(l) o.push(...l); } if(o.length) return o; } return []; }
 function confine(x,z){ if(onBridge(x,z)) return null;                    // bridge decks are drivable
@@ -2409,8 +2417,8 @@ const PFD_DROP=new Set([15,32,78]);   // marine (E15, E32 fireboats) + airport (
      nearest street is in neither half of the house's "X & Y" location (E28, E41, E60 did), the nearer of the location's streets is taken.
      NOT the City's address (OPA, tried and undone): it named the other street for E45 and E57, both right as they were; nor simply the
      location's first street (E22, E27 and E38 face their second). Engine 50: its bays are on W Cambria St (the owner's Street View of 1323
-     W Cambria St, October 17); it sat on N Park Ave, its first street and its City address. */
-  const FACE={2:['N 2ND ST',39.98752,-75.135842],29:['W GIRARD AVE',39.969858,-75.143376],13:['PARRISH ST',39.969465,-75.163058],9:['GERMANTOWN AVE',40.054969,-75.18728],37:['W HIGHLAND AVE',40.074549,-75.208075],19:['E CHELTEN AVE',40.038931,-75.171254],10:'S 12TH ST',64:'RISING SUN AVE',45:'N 26TH ST',57:'S 56TH ST',22:'COMLY RD',27:['W OXFORD ST',39.978459,-75.166605],50:'W CAMBRIA ST',
+     W Cambria St, October 17); it sat on N Park Ave, its first street and its City address. Engine 20: N 10th St (Oct 19; was Cherry St). */
+  const FACE={2:['N 2ND ST',39.98752,-75.135842],29:['W GIRARD AVE',39.969858,-75.143376],13:['PARRISH ST',39.969465,-75.163058],9:['GERMANTOWN AVE',40.054969,-75.18728],37:['W HIGHLAND AVE',40.074549,-75.208075],19:['E CHELTEN AVE',40.038931,-75.171254],10:'S 12TH ST',64:'RISING SUN AVE',45:'N 26TH ST',57:'S 56TH ST',22:'COMLY RD',27:['W OXFORD ST',39.978459,-75.166605],50:'W CAMBRIA ST',20:'N 10TH ST',
     38:['MAGEE AVE',40.020513,-75.045340]};   // [street, lat, lon]: snap from that point, not the PFD's — E38's building middle (its outline's area centroid); E19's engine bay (the left of its three) E37's (the glass-door bay of its new house) E9's (the left of its wide bay; the house is turned 28° to Germantown Ave) E2's (its right bay), E27's (its one bay) and E13's (its right bay) — the owner's Street View
   for(const h of PFD_STATIONS){ if(PFD_DROP.has(h.n)) continue; const id="e"+h.n; if(have.has(id)) continue;
     const fa=FACE[h.n], at=Array.isArray(fa), want=at?fa[0]:fa, x=(h.lon-lon0)*mLon, z=(lat0-h.lat)*110540, sx=at?(fa[2]-lon0)*mLon:x, sz=at?(lat0-fa[1])*110540:z;
@@ -3781,6 +3789,11 @@ function nearRoadEdge(x,z){ let best=1e9; const gx=Math.floor(x/SEGCELL),gz=Math
   for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=segGrid.get(a+':'+b); if(!l) continue;   // without the 9-cell array and an object per segment — a min ignores order and duplicates (October 2026, interchange genMs)
     for(const s of l){ const e=segDistTo(x,z,s)-segHalf(s); if(e<best) best=e; } }
   return best; }
+// nearRoadEdge over the class bands: generated houses keep v22m's places
+function nearRoadBand(x,z){ let best=1e9; const gx=Math.floor(x/SEGCELL),gz=Math.floor(z/SEGCELL);
+  for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const l=segGrid.get(a+':'+b); if(!l) continue;
+    for(const s of l){ const e=segDistTo(x,z,s)-segBand(s); if(e<best) best=e; } }
+  return best; }
 function footprintClearsRoad(cx,cz,w,d){ const hw=w/2,hd=d/2;   // every corner + center must be off the asphalt
   return [[0,0],[hw,hd],[-hw,hd],[hw,-hd],[-hw,-hd]].every(o=>nearRoadEdge(cx+o[0],cz+o[1])>0.5); }
 function genCityData(){ if(buildData.length) return; const rng=mulberry(19129),   // idempotent: procedural building/tree data, reused by both the Chase city and the flat tilt-map city
@@ -4309,7 +4322,7 @@ function updateTiltMap(dt){                                                    /
   { let tgt=0;                                                                // 🚚 lane offset: the graph rides the street CENTRELINE, so the truck straddled the yellow line — shift the VISUAL into the right-hand lane like a real nav app (DRIVE/route/logic untouched)
     if(!DRIVE.parked && !INTRO.active){ let bhw=0,bd=1e9;
       let bs=null; for(const sg of segNear(truck.x,truck.z)){ const c=closestSeg(truck.x,truck.z,sg); if(c.d<bd){bd=c.d;bhw=segHalf(sg);bs=sg;} }
-      if(bs&&bs.hw) tgt=hwyLaneOff(bs); else if(bhw) tgt=Math.max(1.6,Math.min(3.0,bhw*0.5)); }   // freeway: sit in a real lane centre from the baked lane count
+      if(bs&&bs.hw) tgt=hwyLaneOff(bs); else if(bhw) tgt=streetLaneOff(bhw); }   // freeway: sit in a real lane centre from the baked lane count
     MAP.laneOff=(MAP.laneOff||0)+(tgt-(MAP.laneOff||0))*Math.min(1,dt*3);     // ease so junction width changes and parking don't pop
     const lfx=-Math.sin(truck.theta), lfz=-Math.cos(truck.theta);             // right of travel = (-fz, fx)
     truckG.position.x=vx-lfz*MAP.laneOff; truckG.position.z=vz+lfx*MAP.laneOff; }
@@ -4706,7 +4719,7 @@ function setRouteGeom(){ const old=routeMesh.geometry, oldF=routeMeshFlat.geomet
     const rs=NAVGEO.active?roadSegAt(p.x,p.z,dx,dz):null, routeName=rs?rs.name:null;   // the road this stretch of route rides — by distance and heading, so it lands on the right deck at a crossing
     const navY=navRoadY(p.x,p.z,routeName,dx,dz);
     pos.push(p.x+nx*hw,navY+0.42,p.z+nz*hw, p.x-nx*hw,navY+0.42,p.z-nz*hw);
-    const LN=(rs&&rs.hw)?hwyLaneOff(rs):2.4;                                              // shift the flat ribbon into the right-hand lane (a freeway lane centre under the lane-offset truck) so it runs under the lane-offset truck (nx,nz is already right-of-travel)
+    const LN=(rs&&rs.hw)?hwyLaneOff(rs):rs?Math.min(2.4,streetLaneOff(segHalf(rs))):2.4;                                              // shift the flat ribbon into the right-hand lane (a freeway lane centre under the lane-offset truck) so it runs under the lane-offset truck (nx,nz is already right-of-travel)
     const fy=(o,lift)=>{const x=p.x+nx*o,z=p.z+nz*o,road=guideSurfaceY(x,z,navY,routeName);return Math.max(navY+lift,road===null?-Infinity:road+lift);};
     posF.push(p.x+nx*(LN+hwF),fy(LN+hwF,0.52),p.z+nz*(LN+hwF), p.x+nx*(LN-hwF),fy(LN-hwF,0.52),p.z+nz*(LN-hwF));
     posE.push(p.x+nx*(LN+hwE),fy(LN+hwE,0.46),p.z+nz*(LN+hwE), p.x+nx*(LN-hwE),fy(LN-hwE,0.46),p.z+nz*(LN-hwE));
@@ -5282,7 +5295,7 @@ function parkAtStation(st){ DRIVE.parked=true; DRIVE.going=false; DRIVE.pending=
   DRIVE.stPerp={x:px, z:pz}; DRIVE.stOff=off;                                                   // unit normal toward the firehouse side + the curb offset (the intro pulls the truck up along this)
   truck.x=ax+px*off; truck.z=az+pz*off; truck.theta=Math.atan2(px,pz);                          // forward(-sinθ,-cosθ) = -normal → nose toward the street
   truck.vx=0; truck.vz=0; }
-function onNamedStreet(x,z,name){ for(const s of segNear(x,z)){ if(s.name===name && closestSeg(x,z,s).d<segHalf(s)+4) return true; } return false; }
+function onNamedStreet(x,z,name){ for(const s of segNear(x,z)){ if(s.name===name && closestSeg(x,z,s).d<segBand(s)+4) return true; } return false; }
 /* Nearest graph edge under a point, on street `nm`, running roughly along (hx,hz). Legality is NOT filtered
    here — the caller decides. Used to start driving from where the truck actually IS. */
 function edgeUnderTruckToward(px,pz,nm,hx,hz){
@@ -5676,7 +5689,7 @@ function blockFacePieces(J,s,EV,side,walk,sl){ const eA=J.ends.get(J.ek(s.ax,s.a
     if(w1<=a0) continue; if(w0>=sl-T1) break; if(w0>a0) outs.push([a0,w0]); a0=Math.max(a0,w1); }
   if(a0<sl-T1) outs.push([a0,sl-T1]); return outs; }
 function footprintClearsRoadAt(cx,cz,w,d,ang){ const hw=w/2,hd=d/2,ca=Math.cos(ang),sa=Math.sin(ang);   // footprintClearsRoad for a street-aligned box: the ROTATED corners + centre must be off every roadway
-  return [[0,0],[hw,hd],[-hw,hd],[hw,-hd],[-hw,-hd]].every(([ox,oz])=>nearRoadEdge(cx+ox*ca+oz*sa,cz-ox*sa+oz*ca)>0.5); }
+  return [[0,0],[hw,hd],[-hw,hd],[hw,-hd],[-hw,-hd]].every(([ox,oz])=>nearRoadBand(cx+ox*ca+oz*sa,cz-ox*sa+oz*ca)>0.5); }
 function typedBuildings(J,s,code,dx,dz,nx,nz,sl,rh,EV){ const {cx,cz,B,grid}=J, R2=LOCAL.R*LOCAL.R, gk=(x,z)=>((x/11)|0)+':'+((z/11)|0);
   const walk=s.cls<=1?4.2:3.2, ang=-Math.atan2(dz,dx), ca=Math.cos(ang), sa=Math.sin(ang);        // same frame as the generic immersive box: local x along the street, local z toward side +1
   const cells=(x,z,w,d)=>{ const out=[]; for(let ox=-w/2+2;ox<w/2;ox+=5.5) for(let oz=-d/2+2;oz<d/2;oz+=5.5) out.push(gk(x+ox*ca+oz*sa,z-ox*sa+oz*ca)); return out; };
@@ -6182,7 +6195,7 @@ function instBuild(J){ const I=J.inst; FLATCITY.instCut=J.instCut||{b:0,t:0}; if
      keep their own models: a footprint under them is not drawn.
    - The near fade (NEAR_FADE) draws again only the buildings near the camera, through draw groups over the merged index. */
 const FP3={ on:true, R:760, near:300, pre:200, max:30, prepMs:2.5, conc:4, M:40, N:36, tiles:new Map(), byNum:new Map(), slots:[], stamp:0, dirty:false, last:null, stat:null,
-  bay:{row:5.1,apt:6.3,house:5.6}, floor:3.15, minH:2.6, parH:0.75,
+  bay:{row:5.1,apt:6.3,house:5.6}, floor:3.15, minH:2.6, parH:0.75, passIn:0.75, passH:4.6,
   wall:{row:[0xb9634b,0xc47d5f,0xd8b18c,0xe9dfcc,0xa9664f,0xcaa17f,0xbc8c6b], house:[0xc9a48a,0xdac7ad,0xb98b73,0xd3c9bd,0xc7ad93,0xe1d7c4], apt:[0xb06a4f,0xc49272,0xa8785c,0xd8cfc2,0x9c6a55,0xcdb9a6], tiny:[0xb7aa98,0xa59a8a,0xc4bcb0]},
   roof:{flat:[0xc9cdd1,0xdfe1e3,0xa9afb5,0x80868d,0x5d6268,0xb8bcc1,0xcfc9bf], pitch:[0x8d9298,0x7f6c5d,0x676c72,0x93806d,0x715c50], memb:[0xe5e6e2,0xd4d6d7,0xc1c5c8,0xaeb2b6,0x959a9f], cornice:[0x5b4b43,0x6c5c53,0xe8e2d6], unit:0x9fa5ab, cap:0x8a8d90} };
 try{ FP3.on=localStorage.getItem('pfd_realbld')!=='off'; }catch(e){}   // ON by default since October 18, 2026 (owner: "made real buildings the default and not a test"); a phone that switched it off keeps it off
@@ -6265,8 +6278,40 @@ function fp3Prep1(t,t0,ms){ const n=t.n, P=t.pts;
     // a pitched roof: the walls stop at the eaves, the ridge is the top
     const W=t.obb[o+5]*2; t.wtop[i]=(c===1&&t.fill[i]>=179&&W<=16&&t.obb[o+4]*2<=32)?Math.max(top-Math.min(3.6,Math.max(1.6,W*0.38)),gmin+FP3.minH):top;
     }
-  if(t.slot===undefined){ fp3Grid(t); const s=(FP3.nslot=(FP3.nslot|0)+1)%4096; t.slot=s; FP3.slots[s]=t; FP3.byNum.set(fp3Num(t.tx,t.tz),t); }
+  if(t.slot===undefined){ fp3Grid(t); fp3RoadFlags(t); const s=(FP3.nslot=(FP3.nslot|0)+1)%4096; t.slot=s; FP3.slots[s]=t; FP3.byNum.set(fp3Num(t.tx,t.tz),t); }
   return true; }
+/* A STREET UNDER A BUILDING (Oct 19): a wall deeper than passIn in a street's asphalt starts passH up (fp3WallPass); t.rd marks them */
+function fp3PtSeg2(px,pz,ax,az,bx,bz){ const dx=bx-ax, dz=bz-az, L=dx*dx+dz*dz; let u=L>0?((px-ax)*dx+(pz-az)*dz)/L:0; u=u<0?0:u>1?1:u; const x=ax+dx*u-px, z=az+dz*u-pz; return x*x+z*z; }
+function fp3SegSeg2(ax,az,bx,bz,cx,cz,dx,dz){ const o=(px,pz,qx,qz,rx,rz)=>(qx-px)*(rz-pz)-(qz-pz)*(rx-px), d1=o(cx,cz,dx,dz,ax,az), d2=o(cx,cz,dx,dz,bx,bz), d3=o(ax,az,bx,bz,cx,cz), d4=o(ax,az,bx,bz,dx,dz);
+  if(((d1>0&&d2<0)||(d1<0&&d2>0))&&((d3>0&&d4<0)||(d3<0&&d4>0))) return 0;
+  return Math.min(fp3PtSeg2(ax,az,cx,cz,dx,dz),fp3PtSeg2(bx,bz,cx,cz,dx,dz),fp3PtSeg2(cx,cz,ax,az,bx,bz),fp3PtSeg2(dx,dz,ax,az,bx,bz)); }
+function fp3RoadFlags(t){ const P=t.pts, n=t.n, rd=new Uint8Array(n), seen=new Uint32Array(n), g=t.g, T=FP.T, M=FP3.M, IN=FP3.passIn, segs=new Set(); let stamp=0;
+  for(let a=Math.floor((t.tx*T-M)/SEGCELL);a<=Math.floor(((t.tx+1)*T+M)/SEGCELL);a++) for(let c=Math.floor((t.tz*T-M)/SEGCELL);c<=Math.floor(((t.tz+1)*T+M)/SEGCELL);c++){ const l=segGrid.get(a+':'+c); if(l) for(const s of l) if(!s.hw) segs.add(s); }
+  const hit=(i,s,r2)=>{ const o=i*4, b=t.bb; if(b[o]>Math.max(s.ax,s.bx)+Math.sqrt(r2)||b[o+2]<Math.min(s.ax,s.bx)-Math.sqrt(r2)||b[o+1]>Math.max(s.az,s.bz)+Math.sqrt(r2)||b[o+3]<Math.min(s.az,s.bz)-Math.sqrt(r2)) return false;
+    const st=t.rs[t.b0[i]], m=t.rn[t.b0[i]]; for(let j=0;j<m;j++){ const q=j+1<m?j+1:0; if(fp3SegSeg2(P[(st+j)*2],P[(st+j)*2+1],P[(st+q)*2],P[(st+q)*2+1],s.ax,s.az,s.bx,s.bz)<r2) return true; }
+    return fp3In(t,i,s.ax,s.az); };
+  for(const s of segs){ const r=segHalf(s)-IN; if(r<=0) continue; const r2=r*r; stamp++;
+    const gx0=Math.max(0,Math.floor((Math.min(s.ax,s.bx)-r-g.X0)/g.C)), gx1=Math.min(g.N-1,Math.floor((Math.max(s.ax,s.bx)+r-g.X0)/g.C)), gz0=Math.max(0,Math.floor((Math.min(s.az,s.bz)-r-g.Z0)/g.C)), gz1=Math.min(g.N-1,Math.floor((Math.max(s.az,s.bz)+r-g.Z0)/g.C));
+    for(let gx=gx0;gx<=gx1;gx++) for(let gz=gz0;gz<=gz1;gz++){ const c=gx*g.N+gz; for(let k=g.st[c];k<g.st[c+1];k++){ const i=g.it[k]; if(rd[i]||seen[i]===stamp) continue; seen[i]=stamp; if(hit(i,s,r2)) rd[i]=1; } }
+    for(const i of g.big){ if(!rd[i]&&hit(i,s,r2)) rd[i]=1; } }
+  t.rd=rd; }
+// [t0,t1] of wall a->b within r of piece s, or null
+function fp3Capsule(ax,az,bx,bz,s,r){ const ex=bx-ax, ez=bz-az, sx=s.bx-s.ax, sz=s.bz-s.az, Ls=Math.hypot(sx,sz)||1e-9, ux=sx/Ls, uz=sz/Ls; let lo=1, hi=0;
+  const add=(a,c)=>{ a=Math.max(0,a); c=Math.min(1,c); if(a<c){ if(a<lo) lo=a; if(c>hi) hi=c; } };
+  let t0=0, t1=1; const clip=(p0,dp,mn,mx)=>{ if(Math.abs(dp)<1e-12){ if(p0<=mn||p0>=mx){ t0=1; t1=0; } return; } let a=(mn-p0)/dp, c=(mx-p0)/dp; if(a>c){ const q=a; a=c; c=q; } if(a>t0) t0=a; if(c<t1) t1=c; };
+  clip((ax-s.ax)*ux+(az-s.az)*uz,ex*ux+ez*uz,0,Ls); clip(-(ax-s.ax)*uz+(az-s.az)*ux,-ex*uz+ez*ux,-r,r); if(t0<t1) add(t0,t1);
+  for(const [cx,cz] of [[s.ax,s.az],[s.bx,s.bz]]){ const fx=ax-cx, fz=az-cz, A=ex*ex+ez*ez, B=2*(fx*ex+fz*ez), C=fx*fx+fz*fz-r*r, D=B*B-4*A*C; if(A<1e-12||D<=0) continue; const q=Math.sqrt(D); add((-B-q)/(2*A),(-B+q)/(2*A)); }
+  return lo<hi?[lo,hi]:null; }
+function fp3WallPass(B,ax,az,bx,bz,hy,top,nx,nz,col,mode,yRef){ const L=Math.hypot(bx-ax,bz-az), S=new Set(), iv=[];
+  for(let k=0,n=Math.ceil(L/60);k<=n;k++){ for(const s of segNear(ax+(bx-ax)*k/Math.max(1,n),az+(bz-az)*k/Math.max(1,n))) if(!s.hw) S.add(s); }
+  for(const s of S){ const r=segHalf(s)-FP3.passIn; if(r<=0) continue; const q=fp3Capsule(ax,az,bx,bz,s,r); if(q) iv.push(q); }
+  iv.sort((p,q)=>p[0]-q[0]);
+  const at=f=>[ax+(bx-ax)*f,az+(bz-az)*f], part=(f0,f1,lift)=>{ if((f1-f0)*L<0.05) return; const [x0,z0]=at(f0), [x1,z1]=at(f1), q0=navGroundY(x0,z0), q1=navGroundY(x1,z1);
+    let g0=Math.max(q0-0.6,hy), g1=Math.max(q1-0.6,hy); if(lift){ g0=Math.max(g0,q0+FP3.passH); g1=Math.max(g1,q1+FP3.passH); if(top-Math.max(g0,g1)<1) return; }
+    fp3Wall(B,x0,z0,g0,x1,z1,g1,top,nx,nz,col,mode,yRef); };
+  let f=0; for(let k=0;k<iv.length;k++){ let [s0,s1]=iv[k]; while(k+1<iv.length&&iv[k+1][0]<=s1){ s1=Math.max(s1,iv[k+1][1]); k++; }
+    if(s0>f) part(f,s0,false); part(Math.max(f,s0),s1,true); f=Math.max(f,s1); }
+  if(f<1) part(f,1,false); }
 /* stage 2: the party walls. hr[q] = the neighbour pressed against the wall from point q (three samples along it, 0.6 m out, all inside a
    neighbour), -1 where it is free; hid[q] = how high it hides that wall (the lowest of the samples' wall tops), in decimetres. ohr / ohid the
    same for the four faces of the oriented box. A neighbour tile that comes in later re-runs it for the buildings near that border. */
@@ -6384,7 +6429,7 @@ function fp3Building(F,t,i,near){ const B=F.B, P=t.pts, c=t.cls[i], top=t.top[i]
   const mode=c===3?3:(c===2||wtop-gm>14)?1:c===1?2:0, WB=mode===3?B[2]:mode===1?B[1]:B[0];   // tiny ones: plain walls, no facade
   const wcol=mode===3?fp3Pick(FP3.wall.tiny,hsh):mode===1?fp3Pick(FP3.wall.apt,hsh>>>3):mode===2?fp3Pick(FP3.wall.house,hsh>>>5):fp3Pick(FP3.wall.row,hsh>>>7);
   const rcol=c===2?fp3Pick(FP3.roof.memb,hsh>>>9):c===1?fp3Pick(FP3.roof.pitch,hsh>>>11):fp3Pick(FP3.roof.flat,hsh>>>13);
-  const par=near&&c===2, wallTop=par?top+FP3.parH:wtop, o=i*6, box=!near&&t.fill[i]>=204;
+  const par=near&&c===2, wallTop=par?top+FP3.parH:wtop, o=i*6, rdi=!!(t.rd&&t.rd[i]), box=!near&&!rdi&&t.fill[i]>=204;
   if(box){ const cx=t.obb[o], cz=t.obb[o+1], ux=t.obb[o+2], uz=t.obb[o+3], hl=t.obb[o+4], hw=t.obb[o+5];
     const C=[[cx-ux*hl+uz*hw,cz-uz*hl-ux*hw],[cx+ux*hl+uz*hw,cz+uz*hl-ux*hw],[cx+ux*hl-uz*hw,cz+uz*hl+ux*hw],[cx-ux*hl-uz*hw,cz-uz*hl+ux*hw]];   // -u-v, +u-v, +u+v, -u+v (v = u turned left): counter-clockwise
     const G=[navGroundY(C[0][0],C[0][1])-0.6,navGroundY(C[1][0],C[1][1])-0.6,navGroundY(C[2][0],C[2][1])-0.6,navGroundY(C[3][0],C[3][1])-0.6];
@@ -6395,7 +6440,8 @@ function fp3Building(F,t,i,near){ const B=F.B, P=t.pts, c=t.cls[i], top=t.top[i]
   else { for(let r=t.b0[i];r<t.b0[i+1];r++){ const s=t.rs[r], m=t.rn[r], outer=r===t.b0[i];
       for(let j=0;j<m;j++){ const q=j+1<m?j+1:0, ax=P[(s+j)*2], az=P[(s+j)*2+1], bx=P[(s+q)*2], bz=P[(s+q)*2+1], L=Math.hypot(bx-ax,bz-az); if(L<0.05) continue;
         const hy=outer&&fp3Drawn(F,t.hr[s+j])?t.hid[s+j]/10:-1e9; if(hy>=wallTop-0.2) continue;
-        fp3Wall(WB,ax,az,Math.max(navGroundY(ax,az)-0.6,hy),bx,bz,Math.max(navGroundY(bx,bz)-0.6,hy),wallTop,(bz-az)/L,-(bx-ax)/L,wcol,mode,gm); } }
+        if(rdi&&outer) fp3WallPass(WB,ax,az,bx,bz,hy,wallTop,(bz-az)/L,-(bx-ax)/L,wcol,mode,gm);
+        else fp3Wall(WB,ax,az,Math.max(navGroundY(ax,az)-0.6,hy),bx,bz,Math.max(navGroundY(bx,bz)-0.6,hy),wallTop,(bz-az)/L,-(bx-ax)/L,wcol,mode,gm); } }
     if(!gable) fp3Roof(B[2],t,i,top+0.02,rcol);
     if(near&&c===0) fp3Cornice(F,B[2],t,i,top,fp3Pick(FP3.roof.cornice,hsh>>>15));
     if(par) fp3Parapet(F,B[2],t,i,top,wallTop); }
@@ -6477,7 +6523,33 @@ function fp3Build(J){ const F=J.fp3; FLATCITY.fp3=null; FLATCITY.fp3Tris=0; FLAT
     g.setIndex(new THREE.BufferAttribute(B.ix.subarray(0,B.ni),1));
     g.boundingBox=new THREE.Box3(new THREE.Vector3(x0,y0,z0),new THREE.Vector3(x1,y1,z1)); g.boundingSphere=g.boundingBox.getBoundingSphere(new THREE.Sphere());
     const m=new THREE.Mesh(g,mats[k]()); m.name=names[k]; m.userData.shadeCast='mesh'; m.userData.fp3={box:F.box,rng:F.rng[k],n:F.nb};
-    FLATCITY.group.add(m); FLATCITY.parts.push(m); FLATCITY.fp3Tris+=B.ni/3; }); }
+    FLATCITY.group.add(m); FLATCITY.parts.push(m); FLATCITY.fp3Tris+=B.ni/3;
+    let cap=3; for(let j=0;j<F.nb;j++){ const t=F.tiles[F.list[j*2]]; if(t.rd&&t.rd[F.list[j*2+1]]) cap=Math.max(cap,F.rng[k][j*2+1]); }
+    const xg=new THREE.BufferGeometry(); for(const a in g.attributes) xg.setAttribute(a,g.attributes[a]); xg.setIndex(new THREE.BufferAttribute(new Uint32Array(cap),1).setUsage(THREE.DynamicDrawUsage));
+    xg.boundingBox=g.boundingBox; xg.boundingSphere=g.boundingSphere; const x=new THREE.Mesh(xg,fp3XrayMat(m.material)); x.frustumCulled=false; x.visible=false; x.name=names[k]+'-xray'; x.userData.k=k;
+    m.add(x); FP3X.meshes.push(x); });
+  FP3X.warm=true; }
+/* THE TRUCK UNDER A BUILDING: that building is emptied from the merged index and drawn see-through from a copy (FP3X) */
+const FP3X={meshes:[], applied:[], key:'', warm:false, warmed:false, alpha:0.3};
+function fp3XrayMat(src){ const m=src.clone(), a=FP3X.alpha.toFixed(2); m.transparent=true; m.depthWrite=false;
+  m.userData=src.userData.facadeArr?{facadeArr:src.userData.facadeArr}:{}; if(src.defines) m.defines=Object.assign({},src.defines);
+  m.onBeforeCompile=src.userData.nearFade===3?sh=>{ facadeUniforms(sh,m); sh.vertexShader=baseVS(sh.vertexShader); sh.fragmentShader=baseFS(sh.fragmentShader).replace('#include <dithering_fragment>','#include <dithering_fragment>\n  gl_FragColor.a*='+a+';'); }
+                                         :sh=>{ sh.fragmentShader=sh.fragmentShader.replace('#include <dithering_fragment>','#include <dithering_fragment>\n  gl_FragColor.a*='+a+';'); };
+  return m; }
+function fp3XrayOff(){ const X=FP3X; for(const q of X.applied){ q.ix.array.set(q.saved,q.s); fp3IxRange(q.ix,q.s,q.c); } X.applied=[]; for(const x of X.meshes) x.visible=false; X.key=''; }
+function fp3IxRange(ix,s,c){ const r=ix.updateRange, e=r.count<0?s+c:Math.max(r.offset+r.count,s+c); r.offset=r.count<0?s:Math.min(r.offset,s); r.count=e-r.offset; ix.needsUpdate=true; }
+function fp3XrayRelease(){ for(const x of FP3X.meshes){ x.parent&&x.parent.remove(x); x.geometry.dispose(); FLATCITY.oldMats.push(x.material); } FP3X.meshes=[]; FP3X.applied=[]; FP3X.key=''; FP3X.warm=FP3X.warmed=false; }
+function fp3XrayUpdate(){ const X=FP3X, F=FLATCITY.fp3; if(!F||!X.meshes.length) return;
+  if(X.warm){ X.warm=false; X.warmed=true; for(const x of X.meshes){ const A=x.parent.geometry.index.array; if(A.length<3) continue; x.geometry.index.array.set(A.subarray(0,3)); x.geometry.index.needsUpdate=true; x.geometry.setDrawRange(0,3); x.visible=true; } return; }
+  if(X.warmed){ X.warmed=false; for(const x of X.meshes) x.visible=false; }
+  const p=truckG.position, fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta), refs=[];
+  if(FP3.on) for(const d of [0,4.5,-4.5]){ const r=fp3Inside(p.x+fx*d,p.z+fz*d,-1); if(r>=0&&!refs.includes(r)) refs.push(r); }
+  const key=refs.join(','); if(key===X.key) return; fp3XrayOff(); X.key=key; if(!refs.length) return;
+  const js=[]; for(let j=0;j<F.nb;j++){ const t=F.tiles[F.list[j*2]]; if(refs.includes(t.slot*1048576+F.list[j*2+1])) js.push(j); }
+  for(const x of X.meshes){ const k=x.userData.k, ix=x.parent.geometry.index, A=ix.array, xi=x.geometry.index; let n=0;
+    for(const j of js){ const s=F.rng[k][j*2], c=F.rng[k][j*2+1]; if(!c||n+c>xi.array.length) continue;
+      xi.array.set(A.subarray(s,s+c),n); n+=c; X.applied.push({ix,s,c,saved:A.slice(s,s+c)}); A.fill(A[s],s,s+c); fp3IxRange(ix,s,c); }
+    if(n){ xi.needsUpdate=true; x.geometry.setDrawRange(0,n); x.visible=true; } } }
 // the near fade's ghost of a real-building mesh: draw groups over the index ranges of the buildings near the camera (at most four,
 // joined over gaps of <= 900 indices); on its first frame one triangle, so its program compiles then and not when the camera arrives
 function fp3Ghost(G,px,py,pz,B2){ const F=G.fp3, bx=F.box, rg=F.rng, gg=G.gh.geometry, out=[]; gg.clearGroups();
@@ -6544,11 +6616,11 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
             for(const p0 of outs){ const pc=[Math.max(p0[0],win[0]),Math.min(p0[1],win[1])], L=pc[1]-pc[0]; if(L<2) continue;
               const tc=(pc[0]+pc[1])/2, px2=s.ax+dx*tc, pz2=s.az+dz*tc;
               const sx2=px2+nx*(rh+walk/2)*side, sz2=pz2+nz*(rh+walk/2)*side;
-              if(nearRoadEdge(sx2,sz2)<0.4) continue;                                      // the slab would sit ON another roadway's drawn band — stacked carriageways (Broad St) render as one wide road, so no strip of ANY colour belongs there; Henry Ave's real gaps pass this test and keep their grass
+              if(nearRoadEdge(sx2,sz2)<0.4||isMed&&nearRoadBand(px2+nx*(segBand(s)+walk/2)*side,pz2+nz*(segBand(s)+walk/2)*side)<0.4) continue;   // medians only where v22m had them                                      // the slab would sit ON another roadway's drawn band — stacked carriageways (Broad St) render as one wide road, so no strip of ANY colour belongs there; Henry Ave's real gaps pass this test and keep their grass
               S.push({x:sx2, z:sz2, len:L, w:walk, ang, name:s.name, g:isMed?1:0});
               if(S.length>=LOCAL.maxS) break; } } } } }
     const bcode=(s.name&&!s.hw)?btypeOf(s):'-', typed='RTDACS'.includes(bcode)&&bcode!=='';   // 🏘️ typed massing (v19g rows/twins/detached, v19h apartments/storefronts/strips) from the BTYPE side table; I / P / unknown keep the generic building below
-    if(typed) typedBuildings(J,s,bcode,dx,dz,nx,nz,sl,rh,EV);
+    if(typed) typedBuildings(J,s,bcode,dx,dz,nx,nz,sl,segBand(s),EV);
     for(let t=0;t<sl;t+=LOCAL.step){ const px=s.ax+dx*t, pz=s.az+dz*t;
       if((px-cx)**2+(pz-cz)**2>R2) continue;
       for(const side of [1,-1]){ const rv=hash2(Math.round(px)*2+ (side>0?1:0), Math.round(pz));
@@ -6562,12 +6634,12 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
           if(fhBlock(tx,tz,2)) continue;                                                   // no tree through a firehouse model or on its apron (was a 42 m circle)
           grid.set(tk,1); T.push({x:tx,z:tz,s:0.8+rv*6}); continue; }
         if(typed||B.length>=LOCAL.maxB) continue;                                         // a typed street already has its houses; the tree branch above still runs for it
-        const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=rh+3.2+reach;
+        const w=8+rv*7, d=8+((rv*7)%5), reach=Math.hypot(w/2,d/2), off=segBand(s)+3.2+reach;
         const bx=Math.round(px+nx*off*side), bz=Math.round(pz+nz*off*side), k=gk(bx,bz);
         if(J.fp3&&fp3CoveredJ(J,bx,bz)){ J.fp3gen=(J.fp3gen|0)+1; continue; }             // 🏠 a real square (FP3): the City's own buildings stand here
         if(grid.has(k)||inWater(bx,bz)||landBlocksBuilding(bx,bz,reach)||railNear(bx,bz,reach+4)||navSpan(bx,bz,null,reach+22)?.b.bridge) continue;
         if(CORRIDOR_PHOTO.enabled&&s.name==='Lincoln Drive'&&pz>-780&&pz<-330)continue; // owner photo sequence: wooded shoulders before Gypsy Lane, no generated houses
-        if(nearRoadEdge(bx,bz)<reach*(J.immersive?1.04:0.8)) continue;                     // rotated sample clears every roadway by its full bounding radius
+        if(nearRoadBand(bx,bz)<reach*(J.immersive?1.04:0.8)) continue;                     // rotated sample clears every roadway by its full bounding radius
         let clear=true;                                                                    // (the curated + active firehouses' 62 m forecourt circle is gone: the model's own footprint keeps them clear)s open (the station house mesh stands there now)
         if(clear && fhBlock(bx,bz,7)) clear=false;                                     // a firehouse model's own footprint and apron (the station house and every other)
         if(!clear) continue;
@@ -6662,10 +6734,10 @@ function rampDetailSeg(s){
 function rampRibbonStep(J,t0,budgetMs){
   if(!RAMP_DETAIL.ribbon||!NAVGEO.active||!J.road) return true;
   if(!J.ribbon){ const chains=[], R2=(RAMP_DETAIL.R+40)**2, b=RAMP_DETAIL.bbox;               // first call: pick the ramp chains in this block, then the surface index
-    for(const rec of RB.st){ const [name,cls,pts,ow,hwk,ln]=rec; if(name||cls!==4||(hwk&&hwk!==2)||pts.length<2) continue;
+    for(let ri=0;ri<RB.st.length;ri++){ const [name,cls,pts,ow,hwk,ln]=RB.st[ri]; if(name||cls!==4||(hwk&&hwk!==2)||pts.length<2) continue;
       if(!pts.some(p=>(p[0]-J.cx)**2+(p[1]-J.cz)**2<R2)) continue;
       if(!RAMP_DETAIL.citywide&&!pts.some(p=>p[0]>b[0]&&p[0]<b[2]&&p[1]>b[1]&&p[1]<b[3])) continue;
-      chains.push({pts,hw:hwk||0,ln:ln||0}); }                                               // hw/ln ride along: segHalf gives a freeway ramp its own width, not the cls-4 default
+      chains.push({pts,hw:hwk||0,ln:ln||0,ri}); }                                               // hw/ln ride along: segHalf gives a freeway ramp its own width, not the cls-4 default
     J.ribbon={chains,i:0,out:[],earth:[],gore:[]}; J.gsi=guideSurfaceIndex(J.road.guideSurfaces); }
   // The ribbon works at the scale of a kerb line, so it does not need the full 760 m scenery radius: at 520 m
   // it is still guaranteed for 140 m around the truck (the rebuild threshold is 380 m), and the piece count --
@@ -6704,7 +6776,7 @@ function rampRibbonStep(J,t0,budgetMs){
     for(let i=0;i<n;i++){ const d0=dir[Math.max(0,i-1)], d1=dir[Math.min(n-2,i)], n0=[-d0[1],d0[0]], n1=[-d1[1],d1[0]];
       let mx=n0[0]+n1[0], mz=n0[1]+n1[1]; const ml=Math.hypot(mx,mz)||1; mx/=ml; mz/=ml;
       const sc=1/Math.max(0.5,mx*n0[0]+mz*n0[1]); mit.push([mx*sc,mz*sc]); }
-    for(let i=0;i<n-1;i++){ const a=pts[i], b=pts[i+1], seg={name:'',hw:chain.hw,ln:chain.ln,cls:4,ax:a[0],az:a[1],bx:b[0],bz:b[1]};
+    for(let i=0;i<n-1;i++){ const a=pts[i], b=pts[i+1], seg={ax:a[0],az:a[1],bx:b[0],bz:b[1],name:'',cls:4,ow:0,hw:chain.hw,ln:chain.ln,ri:chain.ri,si:i,rh:roadRh(chain.ri,i)};   // a real piece's shape and width
       if(!rampDetailSeg(seg)) continue; const L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L<0.5) continue;
       // Distance level of detail, the owner's rule for anything that widens. Two dials, and BOTH only make the
       // edge coarser -- nothing disappears as you approach, which a radius cut would do: the scenery rebuilds
@@ -7303,7 +7375,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   // rebuild: the first render after the commit recompiled them all — 85 ms of the interchange's 110 ms commit frame, a hitch
   // any phone GPU pays too. Now the replaced parts' materials wait in oldMats (geometry is still freed at once), so the new
   // materials hit the program cache, and the generation before THAT is disposed here, sharing programs with the one waiting.
-  const staleMats=FLATCITY.oldMats||[]; FLATCITY.oldMats=[]; nearFadeRelease();
+  const staleMats=FLATCITY.oldMats||[]; FLATCITY.oldMats=[]; nearFadeRelease(); fp3XrayRelease();
   for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); if(o.userData.keep){ o.dispose(); continue; } o.geometry.dispose(); FLATCITY.oldMats.push(o.material); }   // keep: shared kit (hydrants) — free only the instance buffer
   for(const m of staleMats) m.dispose();
   FLATCITY.parts=[];
@@ -12656,7 +12728,7 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
   for(const s of PRESENT) s(dt);
   updateSky(dt);
   if(BOXD.pending&&!INTRO.active) newDispatch();
-  if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateRivalTrucks(); updateTiltMap(dt); if(mapvFrame(dt)){ updateParkedStreetChoices(); mapvDraw(); } else { updateParkedStreetChoices(); nearFadeUpdate(); shadeUpdate(); renderer.render(scene,camera); } }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
+  if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateRivalTrucks(); updateTiltMap(dt); if(mapvFrame(dt)){ updateParkedStreetChoices(); mapvDraw(); } else { updateParkedStreetChoices(); nearFadeUpdate(); fp3XrayUpdate(); shadeUpdate(); renderer.render(scene,camera); } }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
   else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
