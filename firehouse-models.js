@@ -1156,9 +1156,10 @@ function createE29Station(st){
    light stone coping. The bay block on the left: ONE wide opening, "ENGINE COMPANY 20" in raised cream capitals over it and "Ladder 23"
    in script between two small lamps; a lantern on its right corner. The lower wing on the right, set back 1.6 m: the red door, the black
    "House of Dragons" board with its green dragon, a band of white-framed windows. Toward Cherry St: brick piers and iron railings round
-   the yard, the flagpole, the red lamp post on the deep sidewalk. Left of the bays, at the apron's north edge, the mural wall FACING CHERRY
-   ST (owner, October 19, with a picture of it: "this one I'm talking about"; it faced N 10th St in v22o): "ENGINE 20 / LADDER 23 / MEDIC 1"
-   at its street end, "HOUSE OF DRAGON SALUTES" at its back, the dragon over the waves, flames, mountains - drawn after the owner's picture
+   the yard, the flagpole, the red lamp post on the deep sidewalk. At the bay block's left front corner the mural wall runs out toward
+   N 10th St, FACING CHERRY ST (owner, October 19, with a picture of it: "this one I'm talking about" — it faced N 10th St in v22o; then
+   "Move the mural to the fire station" with Street View — it stood at the apron's far edge in v22p): "ENGINE 20 / LADDER 23 / MEDIC 1"
+   at its street end, "HOUSE OF DRAGON SALUTES" by the station, the dragon over the waves, flames, mountains - drawn after the owner's picture
    (the City's 3.2 m kiosk there is under the house's keep-out). (A parked Medic 1 stood
    on the apron in v22o; the owner: "remove the medic unit".) Ladder 23 left, Engine 20 right — UNCONFIRMED (the pictures show the medics out front). Built in the outline's frame: a along
    N 10th St (right as seen from it), d from it (bay front -10.75, wing -9.15, back 19.93); local x = a + 0.145, z = 4.6 - d. */
@@ -1212,7 +1213,7 @@ function createE20Station(st){
   K.cyl(0.07,0.1,4.2,8,red,X(11.0),2.1,Z(-17.2)); E(10.75,11.25,4.2,4.75,-17.45,-16.95,red); E(10.82,11.18,4.25,4.65,-17.4,-17.0,0xf6ecc8);   // the red lamp post
   E(12.7,14.4,0.42,0.5,FE-1.6,FE-1.1,0x8a6a4a); E(12.7,14.4,0.5,0.95,FE-1.12,FE-1.04,0x8a6a4a); for(const a of [12.8,14.3]) E(a-0.05,a+0.05,0,0.42,FE-1.55,FE-1.15,iron);   // a bench
   /* ---- left of the bays: the mural wall, the apron ---- */
-  { const MA=-16.5, md0=-16.0, md1=-9.6, mh=4.2;                                                            // the mural wall along the apron's north edge, its face to Cherry St (+a)
+  { const MA=B0, md0=F-6.4, md1=F, mh=4.2;                                                                  // the mural wall from the bay block's left front corner toward the street, its face to Cherry St (+a)
     E(MA-0.5,MA,0,mh,md0,md1,0xe48ea0); E(MA-0.55,MA+0.05,mh,mh+0.15,md0-0.05,md1+0.05,stone);
     const pw=md1-md0-0.1, ph=mh-0.2, tex=fhCanvas(1024,Math.round(1024*ph/pw),(c,w,h)=>{                     // ENGINE 20 / LADDER 23 / MEDIC 1 / HOUSE OF DRAGON SALUTES - an OPAQUE picture, after the owner's
       c.fillStyle='#e8899c'; c.fillRect(0,0,w,h); c.strokeStyle='rgba(150,60,80,.25)'; c.lineWidth=2;          // pink-painted block
