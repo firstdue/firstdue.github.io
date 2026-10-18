@@ -1571,7 +1571,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22k";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22l";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -6515,10 +6515,11 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
     if(!s.name||s.hw) continue;                                                            // freeways likewise; unnamed = ramps/connectors: road surface only — no sidewalks, trees or buildings on an on-ramp (owner, City Ave interchange)
     if(sl>=6 && S.length<LOCAL.maxS){                                                      // 🛣️ kerb / sidewalk slab down each side of this street
       const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2;
-      if((mx-cx)**2+(mz-cz)**2<=R2){ const walk=s.cls<=1?4.2:3.2, ang=Math.atan2(dx,dz);
+      const win=(mx-cx)**2+(mz-cz)**2<=R2?[0,sl]:segWindow(s,cx,cz,LOCAL.R);              // a LONG piece whose middle is out of range still gets its slabs where it passes (segWindow)
+      if(win){ const walk=s.cls<=1?4.2:3.2, ang=Math.atan2(dx,dz);
         const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));              // trim the slab short of each junction by the CROSSING street's width — full-length slabs shot white bars across intersections and boxed the corners
         const T0=(eA&&eA.n>=3)?eA.hw+walk+0.6:0, T1=(eB&&eB.n>=3)?eB.hw+walk+0.6:0;
-        if(sl-T0-T1>2){ const tm=sl/2, pmx=s.ax+dx*tm, pmz=s.az+dz*tm;
+        if(sl-T0-T1>2){ const tm=(win[0]+win[1])/2, pmx=s.ax+dx*tm, pmz=s.az+dz*tm;
           for(const side of [1,-1]){
             let isMed=false;
             if(s.ow&&s.cls<=2){ const qx=pmx+nx*(rh+walk+6)*side, qz=pmz+nz*(rh+walk+6)*side;   // divided road? probe past the slab for the SAME street's other carriageway → grass median, not sidewalk. cls<=2 only — a minor one-way with a stray twin was greening whole side streets
@@ -6532,7 +6533,7 @@ function stepLocalCity(J,budgetMs){ const t0=performance.now(), R2=LOCAL.R*LOCAL
               if(w1<=a0) continue; if(w0>=sl-T1) break;
               if(w0>a0) outs.push([a0,w0]); a0=Math.max(a0,w1); }
             if(a0<sl-T1) outs.push([a0,sl-T1]);
-            for(const pc of outs){ const L=pc[1]-pc[0]; if(L<2) continue;
+            for(const p0 of outs){ const pc=[Math.max(p0[0],win[0]),Math.min(p0[1],win[1])], L=pc[1]-pc[0]; if(L<2) continue;
               const tc=(pc[0]+pc[1])/2, px2=s.ax+dx*tc, pz2=s.az+dz*tc;
               const sx2=px2+nx*(rh+walk/2)*side, sz2=pz2+nz*(rh+walk/2)*side;
               if(nearRoadEdge(sx2,sz2)<0.4) continue;                                      // the slab would sit ON another roadway's drawn band — stacked carriageways (Broad St) render as one wide road, so no strip of ANY colour belongs there; Henry Ave's real gaps pass this test and keep their grass
@@ -7148,9 +7149,23 @@ function hwySupports(b,J,hw,piers){ const BL=b.length||1; if(BL<12) return;
     piers.push({x,y:ground+h/2,z,w:W,h,l:2.2,ang:dirAt(d),pitch:0}); }
   for(const [from,dir] of [[0,1],[BL,-1]]){ for(let d=from+dir*4;d>0&&d<BL&&Math.abs(d-from)<=45;d+=dir*5){ const p=pt(d),y=deckY(b,d/BL),ground=navGroundY(p[0],p[1]),lift=y-ground;
       if(lift<1.0) continue; if(Math.hypot(p[0]-J.cx,p[1]-J.cz)<=LOCAL.R&&!overRoad(p[0],p[1],d)) piers.push({x:p[0],y:ground+(lift+0.6)/2-0.4,z:p[1],w:hw*2+1.6,h:lift+0.6,l:3.2,ang:dirAt(d),pitch:0}); break; } } }
+/* 🛣️ LONG STREET PIECES (owner, October 18, riding Engine 50: "Can we fix Cambria St street"). The bake keeps a straight street
+   as few points as it needs, so W Cambria St east of Glenwood Ave is ONE piece 2,007 m long (Pine St 3.3 km, Spruce, Locust, Sansom,
+   N 16th-18th ...: 1,402 pieces over 500 m, 527 over the 760 m radius). The road surface and the sidewalk slabs were drawn only when a
+   piece's MIDDLE was within LOCAL.R of the city centre, so near the far end of a long piece there was no street at all - Engine 50's
+   truck stood on bare ground. segWindow(s,cx,cz,R) is the stretch of the piece (metres from its start) within R of the centre, null if
+   none; segPart is that stretch as the piece itself (its prototype), its crossings shifted to it. A piece whose middle IS in range is
+   drawn exactly as before; freeways are left as they were. */
+function segWindow(s,cx,cz,R){ const dx=s.bx-s.ax, dz=s.bz-s.az, l=Math.hypot(dx,dz); if(l<1e-6) return null; const ux=dx/l, uz=dz/l;
+  const tp=(cx-s.ax)*ux+(cz-s.az)*uz, pd=(cz-s.az)*ux-(cx-s.ax)*uz, h2=R*R-pd*pd; if(h2<=0) return null; const h=Math.sqrt(h2), t0=Math.max(0,tp-h), t1=Math.min(l,tp+h);
+  return t1-t0>1?[t0,t1]:null; }
+function segPart(J,s,t0,t1){ const l=Math.hypot(s.bx-s.ax,s.bz-s.az)||1, ux=(s.bx-s.ax)/l, uz=(s.bz-s.az)/l, p=Object.create(s);
+  p.ax=t0>0?s.ax+ux*t0:s.ax; p.az=t0>0?s.az+uz*t0:s.az; p.bx=t1<l?s.ax+ux*t1:s.bx; p.bz=t1<l?s.az+uz*t1:s.bz; p.part=s;   // a real end stays exact, so its junction is found
+  const EV=J.crossMap&&J.crossMap.get(s); if(EV) J.crossMap.set(p,EV.filter(e=>e.t>t0&&e.t<t1).map(e=>Object.assign({},e,{t:e.t-t0})));
+  return p; }
 function roadGeomSeg(J,s){ const st=J.road, rp=st.rp, mk=st.mk, my=st.my, R2=LOCAL.R*LOCAL.R, cx=J.cx, cz=J.cz;
   const ROAD_Y=0.06, MARK_Y=0.085;
-  st.roadName=s.name;st.roadDx=s.bx-s.ax;st.roadDz=s.bz-s.az;st.paintSurfaces=[];st.profile=null;const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2) return;
+  st.roadName=s.name;st.roadDx=s.bx-s.ax;st.roadDz=s.bz-s.az;st.paintSurfaces=[];st.profile=null;const mx=(s.ax+s.bx)/2, mz=(s.az+s.bz)/2; if((mx-cx)**2+(mz-cz)**2>R2){ const w=s.hw?null:segWindow(s,cx,cz,LOCAL.R); if(!w) return; return roadGeomSeg(J,segPart(J,s,w[0],w[1])); }   // a LONG piece: the part in range
   let dx=s.bx-s.ax, dz=s.bz-s.az; const l=Math.hypot(dx,dz)||1; dx/=l; dz/=l;
   const hw=segHalf(s), nx=-dz*hw, nz=dx*hw, ex=dx*hw, ez=dz*hw;                 // extend by a half-width at each end so bends/junctions fill in
   const ax=s.ax-ex, az=s.az-ez, bx=s.bx+ex, bz=s.bz+ez;
@@ -7449,10 +7464,11 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         const y0=navRoadY(px-sx*pl/2,pz-sz*pl/2,p.name), y1=navRoadY(px+sx*pl/2,pz+sz*pl/2,p.name);
         out.push({x:px,z:pz,y:(y0+y1)/2,w:p.w,len:n>1?pl*1.07:pl,ang:p.ang,pitch:n>1?-Math.atan2(y1-y0,pl):0}); } } return out; };
     const wp=slabPieces(walkS), mp2=slabPieces(medS);
-    if(wp.length){ const sw=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),shadeReceive(new THREE.MeshLambertMaterial({color:0xf3f0e8})),wp.length);   // kerb slabs sit proud of the darker roadway
+    const topBox=()=>{ const g=new THREE.BoxGeometry(1,1,1), I=g.index.array, k=[]; for(let i=0;i<I.length;i++) if(i<18||i>=24) k.push(I[i]); g.setIndex(k); g.clearGroups(); return g; };   // a unit box WITHOUT its bottom face (indices 18-23, -y): a slab lies on the ground, so it is never seen - 10 triangles, not 12 (the long streets drawn since October 18 cost slabs; this pays for them)
+    if(wp.length){ const sw=new THREE.InstancedMesh(topBox(),shadeReceive(new THREE.MeshLambertMaterial({color:0xf3f0e8})),wp.length);   // kerb slabs sit proud of the darker roadway
       wp.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.11,p.z); dummy.scale.set(p.w,0.22,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); sw.setMatrixAt(i,dummy.matrix); });
       sw.instanceMatrix.needsUpdate=true; FLATCITY.group.add(sw); FLATCITY.parts.push(sw); }
-    if(mp2.length){ const gm=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),shadeReceive(new THREE.MeshLambertMaterial({color:0x6eb643})),mp2.length);   // 🌿 grass median between divided-road carriageways
+    if(mp2.length){ const gm=new THREE.InstancedMesh(topBox(),shadeReceive(new THREE.MeshLambertMaterial({color:0x6eb643})),mp2.length);   // 🌿 grass median between divided-road carriageways
       mp2.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
       gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
   // 🧰 v2 KIT MODULES (v19o): RailTerminal and GoreAttenuator are fixed real-world objects, so they are
@@ -10284,7 +10300,7 @@ const FP={idx:null,idxState:'idle',tiles:new Map(),busy:0,T:500,max:40,drawn:0};
    bake_footprints.js — each PFD house's building as the City names it ("Fire Engine 59/Ladder 18"; 55 houses), else the one its point
    lies in (7; E39 shares the Ridge & Cinnaminson building the City calls "Police 5th District"). The roof is painted fire-engine red
    and its companies are written along it, from the game's own roster: "E59 · L18". */
-const FHV='20261016c';   // bump with every change to firehouses.json (b: Engine 39's building cut from the 5th Police District's; c: Engine 59's from the police station's half)
+const FHV='20261018a';   // bump with every change to firehouses.json (b: Engine 39's building cut from the 5th Police District's; c: Engine 59's from the police station's half; 20261018a: Engine 29's from the buildings to its west)
 /* 🚒 A FIREHOUSE'S SECOND BUILDING, in none of the City's outlines (nor OpenStreetMap's — the same import): Engine 37's new house of the
    2010s beside the 1894 one (owner, October 17: "you're right no building behind it. For Google maps view it's both boxes"). Measured
    from the owner's Google Maps picture against the old house's own outline: as deep as it, ~12.5 m along W Highland Ave, 2.9 m clear of
@@ -10909,6 +10925,7 @@ function fhKit(){ const L=[], G=[], planes=[], DR=[], FL=[], OB=[], m4=new THREE
     cyl:(rt,rb,h,sg,c,x,y,z,rx,ry,rz)=>put(L,new THREE.CylinderGeometry(rt,rb,h,sg),c,x,y,z,rx,ry,rz),
     glowBox:(w,h,d,c,x,y,z)=>bx(G,w,h,d,c,x,y,z),
     glowCyl:(rt,rb,h,sg,c,x,y,z)=>put(G,new THREE.CylinderGeometry(rt,rb,h,sg),c,x,y,z),
+    poly:(pts,y,c)=>{ const g=new THREE.ShapeGeometry(new THREE.Shape(pts.map(p=>new THREE.Vector2(p[0],-p[1])))); g.rotateX(-Math.PI/2); put(L,g,c,0,y,0); },   // a flat polygon of local [x,z] points at height y, face up (a lot), in the house mesh
     plane:(w,h,tex,x,y,z,transparent)=>planes.push({w,h,tex,x,y,z,transparent}),
     doorBox:(w,h,d,c,x,y,z)=>bx(DR,w,h,d,c,x,y,z),        // the bay door: its own mesh, hidden while the door is up
     mark:()=>{ M={l:L.length,g:G.length,p:planes.length}; },                        // everything after this is the house's own engine (fhRig)
@@ -11528,13 +11545,33 @@ function createE50Station(st){
     for(const [f,g,y1,y2,c] of [[0.04,0.21,0.8,7.8,0xe7a3c4],[0.2,0.34,0.4,9.0,0x7d6bc4],[0.42,0.68,0.2,4.2,0xf2c66b],[0.7,0.82,1.0,9.0,0x5fa6d6],[0.84,0.98,0.2,5.6,0xd9785f],[0.31,0.41,6.0,9.3,0x9fd3c7]]){ const [a,b]=at(f,g); M(a,b,y1,y2,c,0.03); }
     { const [a,b]=at(0.56,0.66), [c1,c2]=at(0.575,0.645); M(a,b,0.6,8.8,0xefe3c8,0.04); M(c1,c2,1.4,7.4,0x3d5f8f,0.05); }   // an arched doorway motif
     for(const [f,c] of [[0.29,0x3b4e8c],[0.37,0x2f7aa8],[0.46,0x7a4d9c]]){ const [a,b]=at(f-0.04,f+0.04), [h1,h2]=at(f-0.017,f+0.017); M(a,b,0.4,3.6,c,0.04); M(h1,h2,3.8,5.1,0x7a4e34,0.04); } }
-  /* ---- the parking lot on the west and its chain-link fence; the apron and its lines; the rigs ---- */
-  E(-19,A0,0.02,0.05,F,BK,0x8f8b84); for(let a=-19;a<=A0-0.3;a+=2.5) K.cyl(0.04,0.04,2.2,6,0x8f9396,X(a),1.1,Z(F+0.3));
-  for(const y of [0.5,1.2,1.85,2.17]) E(-19,A0,y,y+0.03,F+0.28,F+0.32,0x8f9396);
+  /* ---- the apron and its lines; the rigs ---- */
+  /* ---- the parking lot (owner, October 18: "include the parking lot of E50"; Street View of 1325-1340 W Cambria St and 1335-1346 W
+     Glenwood Ave, Google's aerial): asphalt from the west wall to where W Glenwood Ave's sidewalk meets W Cambria St's, ~34 m, its
+     chain-link fence along both (the gate open on Cambria by the house), stalls and parked cars, a light pole; concrete behind the house to Park Ave.
+     GL(a) is the lot's edge along Glenwood's sidewalk (the street's centre in this frame: d = -28.8 + 0.7008 (a + 83); 8 m half-width,
+     4.2 m sidewalk). ---- */
+  { const GL=a=>-43.94+0.7008*(a+83), aT=(F+0.3+43.94)/0.7008-83, aS=(BK+43.94)/0.7008-83, fe=0x8f9396, white=0xeeeeea, nA=0.574, nD=-0.819, ryN=Math.atan2(nA,-nD), ryU=Math.atan2(-nD,-nA);
+    K.poly([[X(aT),Z(F+0.3)],[X(A0),Z(F+0.3)],[X(A0),Z(GL(A0))]],0.04,0x4d5054);                          // the asphalt
+    K.poly([[X(aS),Z(BK)],[X(A1),Z(BK)],[X(A1),Z(GL(A1))]],0.04,0x9a968e); E(aT,A0,0.025,0.06,-19.2,F+0.3,0xc9c5bb);   // concrete behind the house; the sidewalk before the fence
+    const L2=(a,d)=>[X(a),Z(d)], rot=(w,h,l,c,a,d,y,ry)=>box(w,h,l,c,X(a),y,Z(d),0,ry,0);
+    for(let a=A0-9.5;a>aT+9;a-=2.7) E(a-0.06,a+0.06,0.045,0.055,F+0.6,F+5.6,white);                       // stalls along Cambria west of the gate, nose to the north
+    for(let a=aT+11;a<A0-4;a+=2.75){ const d=GL(a); rot(0.12,0.01,5.0,white,a+nA*2.5,d+nD*2.5,0.05,ryN); }      // and along Glenwood, square to it
+    const car=(a,d,ry,c)=>{ const x=X(a), z=Z(d), sx=Math.sin(ry), sz=Math.cos(ry); box(1.85,0.7,4.5,c,x,0.62,z,0,ry,0); box(1.7,0.5,2.3,0x2a3238,x-sx*0.2,1.22,z-sz*0.2,0,ry,0); box(1.72,0.06,2.1,c,x-sx*0.2,1.5,z-sz*0.2,0,ry,0);
+      for(const o of [-1.45,1.45]) box(1.95,0.5,0.62,0x161616,x+sx*o,0.3,z+sz*o,0,ry,0); };                 // a parked car: body, glass, roof, wheels
+    car(A0-10.85,F+3.2,0,0xb32a24); car(A0-13.55,F+3.2,0,0x2c3f6b); car(A0-18.95,F+3.2,0,0xc4c8cc);
+    for(const [a,c] of [[-25.5,0x5a5f66],[-20,0x23262a]]){ const d=GL(a); car(a+nA*2.6,d+nD*2.6,ryN,c); }
+    car(3.6,BK+3.0,0,0xe8e8e4);
+    for(const [a0,a1] of [[aT,A0-9],[A0-2,A0]]){ for(let a=a0;a<=a1+0.01;a+=Math.max(0.5,(a1-a0)/Math.max(1,Math.round((a1-a0)/2.5)))) K.cyl(0.04,0.04,2.2,6,fe,X(a),1.1,Z(F+0.3));   // the fence on Cambria, the gate open,
+      for(const y of [0.06,1.2,2.17]) E(a0,a1,y,y+0.03,F+0.28,F+0.32,fe); for(const y of [0.5,0.85,1.55,1.85]) E(a0,a1,y,y+0.012,F+0.29,F+0.31,0xa3a7ab); }
+    for(const [a0,a1] of [[aT,A0],[aS,A1]]){ const len=(a1-a0)*1.2211, am=(a0+a1)/2, dm=(GL(a0)+GL(a1))/2;           // and along Glenwood, behind the house to Park Ave
+      for(const y of [0.06,1.2,2.17]) rot(0.03,0.03,len,fe,am,dm,y,ryU); for(const y of [0.5,0.85,1.55,1.85]) rot(0.012,0.012,len,0xa3a7ab,am,dm,y,ryU);
+      const n=Math.max(1,Math.round(len/2.5)); for(let i=0;i<=n;i++){ const a=a0+(a1-a0)*i/n; K.cyl(0.04,0.04,2.2,6,fe,X(a),1.1,Z(GL(a))); } }
+    K.cyl(0.09,0.12,8.0,8,0x8b8f93,X(aT+5.5),4.0,Z(F+0.9)); E(aT+5.4,aT+6.9,7.85,8.0,F+0.8,F+1.05,0x8b8f93); K.glowBox(0.5,0.08,0.22,0xfff2c4,X(aT+6.6),7.8,Z(F+0.92)); }   // the light pole
   E(A0,A1,0.03,0.07,F-6.5,F,0xcfcbc1); for(const a of [-10.0,-5.6,0.5,4.9]) E(a-0.06,a+0.06,0.07,0.085,F-6.3,F-0.1,0xf3f3ee);
   fhLadder(K,X(lad),Z(F)-0.75,12);                                                    // Ladder 12 in the left bay; the middle is Engine 50's
   K.mark(); fhEngine(K,X(eng),Z(F)-0.9,50); fhSegDoor(K.doorBox,X(eng),2.2,spring,0.7,Z(F+0.35),red);   // 🚒 Engine 50 in the middle bay, or its door down (fhRig)
-  return K.finish({W,D,H:10.2,fp:[X(-19),X(A1),-fz,Z(F-6.5)],engBayX:+X(eng).toFixed(2),halfW:13,xMin:X(A0),xMax:X(A1),setback:6.35,spawnIn:5.0,yawFix:0,inside:[X(eng),Z(F+3)]}); }   // setback: riding E50 the model stands on its outline
+  return K.finish({W,D,H:10.2,fp:[X(-44.5),X(A1),-fz,Z(F-6.5)],engBayX:+X(eng).toFixed(2),halfW:13,xMin:X(A0),xMax:X(A1),setback:6.35,spawnIn:5.0,yawFix:0,inside:[X(eng),Z(F+3)]}); }   // setback: riding E50 the model stands on its outline
 function fhSegDoor(fn,xc,half,spring,rise,z,c){ const R=(half*half+rise*rise)/(2*rise), yc=spring+rise-R, N=6, k=v=>Math.round(v*0.72), dk=(k(c>>16&255)<<16)|(k(c>>8&255)<<8)|k(c&255);   // a sectional bay door, shut, under a segmental arch
   fn(2*half,spring,0.1,c,xc,spring/2,z); for(let i=0;i<N;i++){ const ym=spring+(i+0.5)*rise/N, w=Math.sqrt(Math.max(0,R*R-(ym-yc)*(ym-yc))); fn(2*w,rise/N+0.01,0.1,c,xc,ym,z); }
   for(let i=1;i<6;i++) fn(2*half-0.1,0.04,0.04,dk,xc,i*spring/6,z+0.06);
@@ -12120,10 +12157,10 @@ function createE13Station(st){
    lamp over each. Behind the wing the taller block rises with its row of clerestory windows; the long low wing runs back along 4th St;
    the flag on its pole at the corner. Medic 15's door down (the medic is not drawn), Engine 29 in the middle bay, Rescue 1 in the right
    one, its door up (July 2025). The City's outline also takes in the two buildings to the west, to N Leithgow St; the firehouse is its
-   first 20.2 m from 4th St (Google's aerial). Built in the outline's frame: a along Girard Ave (right as seen from it), d from it (front
+   first 20.2 m from 4th St (Google's aerial; the outline is cut there, FH_CUT[29], the model still draws the two). Built in the outline's frame: a along Girard Ave (right as seen from it), d from it (front
    -14.5, back 16.5); local x = a + 7.21, z = 0.645 − d. */
 function createE29Station(st){
-  const K=fhKit(), box=K.box, ac=-7.21, dc=0.645, W=31.9, D=31.97;
+  const K=fhKit(), box=K.box, ac=-7.21, dc=0.645, W=22.71, D=30.29;   // the outline cut to the firehouse (bake_footprints.js FH_CUT[29]): a -23.16..-0.45, front -14.5
   const E=(a1,a2,y1,y2,d1,d2,c)=>box(a2-a1,y2-y1,d2-d1,c,(a1+a2)/2-ac,(y1+y2)/2,dc-(d1+d2)/2);   // a box by its extents in the outline's frame
   const X=a=>a-ac, Z=d=>dc-d;
   const brick=0xa65340, brickDk=0x7d3b2c, bronze=0x3b342e, bronze2=0x4b4239, post=0x2a2521, red=0xb8302a, dark=0x17120e, glass=0x28323a, roof=0x77736c, conc=0xc9c5bb;
@@ -12217,7 +12254,7 @@ function createE29Station(st){
     for(const sg of [-1,1]){ K.glowBox(0.32,0.24,0.06,0xfff3c8,x+sg*0.88,1.16,zf+0.03); K.glowBox(0.2,0.2,0.06,0xff3b2a,x+sg*1.07,1.78,zf+0.03); }
     box(2.5,2.5,0.06,0x8f1812,x,2.0,zr+0.03); }
   K.mark(); fhEngine(K,X(eng),Z(F)-0.9,29); fhDoor(K,X(eng),BAY[1][1]-BAY[1][0],oH,Z(F+0.25));             // 🚒 Engine 29 in the middle bay, or its door down (fhRig)
-  return K.finish({W,D,H:Hb,fp:[X(A0-2.6),X(8.74),Z(BK+0.2),Z(F-4.2)],engBayX:+X(eng).toFixed(2),halfW:16,xMin:X(-23.16),xMax:X(8.74),setback:5.35,spawnIn:5.0,yawFix:0,inside:[X(eng),Z(F+3)]}); }
+  return K.finish({W,D,H:Hb,fp:[X(A0-2.6),X(8.74),Z(BK+0.2),Z(F-4.2)],engBayX:+X(eng).toFixed(2),halfW:16,xMin:X(-23.16),xMax:X(-0.45),setback:6.2,spawnIn:5.0,yawFix:0,inside:[X(eng),Z(F+3)]}); }
 
 function buildStationHouse(st){
   if(STHOUSE.group){ FLATCITY.group.remove(STHOUSE.group); fhDispose(STHOUSE.group); STHOUSE.group=null; }
