@@ -1541,7 +1541,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22q"></script>
+<script src="firehouse-models.js?v=v22r"></script>
 <script src="data/inst.js"></script>
 <script>
 /* ================================================================================
@@ -1573,7 +1573,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22q";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22r";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4307,7 +4307,7 @@ document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx
 function toggleSiren(){ state.siren=!state.siren; document.getElementById('btnSiren').classList.toggle('on',state.siren); }
 const TILTCAM={back:18,h:26,ahead:27};                                     // GPS-nav camera rig — ~30°: tilted enough to see well down the street (user asked; 43° was too top-down, 23° was all horizon)
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
-  if(FLATCITY.built){ fp3Tick(); FLATCITY.tick();                              // 🏠 fp3Tick: the real-building tiles (FP3), prefetched, and prepared when no rebuild is running                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
+  if(FLATCITY.built){ const pt=PERFDIAG.on?performance.now():0; fp3Tick(); if(pt) PERFDIAG.tiles+=performance.now()-pt; FLATCITY.tick();                              // 🏠 fp3Tick: the real-building tiles (FP3), prefetched, and prepared when no rebuild is running                                          // keep the dense block of buildings/trees/kerbs centred on the truck, built a few ms per frame
     if(!FLATCITY.job && FLATCITY.cx!==undefined && Math.hypot(truck.x-FLATCITY.cx,truck.z-FLATCITY.cz)>380) FLATCITY.requestRebuild(truck.x,truck.z); }
   const driveEdge=DRIVE.fromN?.adj.find(e=>e.to===DRIVE.toN);                 // an unnamed ramp must match only an unnamed bridge; null used to match nearby City Ave and lift the truck onto its deck
   const navY=navRoadY(truck.x,truck.z,driveEdge?.name??'',driveEdge?DRIVE.toN.x-DRIVE.fromN.x:undefined,driveEdge?DRIVE.toN.z-DRIVE.fromN.z:undefined);   // + heading: a ramp under a ramp bridge keeps its own level
@@ -6361,7 +6361,8 @@ function fp3Job(cx,cz){ if(!FP3.on||!NAVGEO.active||FP.idxState!=='ready') retur
 function fp3Tick(){ if(FP3.dirty&&FLATCITY.built&&!FLATCITY.job&&FLATCITY.cx!==undefined){ FP3.dirty=false; FLATCITY.requestRebuild(FLATCITY.cx,FLATCITY.cz); }
   if(!FP3.on){ if(FP3.tiles.size&&!FLATCITY.job&&!FP3.busy) fp3Clear(); return; } const x=truck.x, z=truck.z, l=FP3.last;
   if(!l||Math.hypot(x-l[0],z-l[1])>25||performance.now()-l[2]>700){ FP3.last=[x,z,performance.now()]; fp3Ensure([[x,z]],Math.max(LOCAL.R,FP3.R)+FP3.pre); }
-  if(FLATCITY.job) return;
+  if(FLATCITY.job||!NAVGEO.active) return;   // heights come from the terrain, which reads 0 until a shift starts (NAVGEO.active): a tile prepared on the home
+  // screen kept ground 0 for good and its buildings stood ~60 m underground all shift — Engine 35's block, the home screen's centre (owner's phone, Oct 18, 2026)
   fp3PrepWork(x,z,performance.now(),FP3.prepMs);
   let miss=FLATCITY.fp3Miss; if(!miss||!FLATCITY.built||FLATCITY.cx===undefined) return;
   if(miss==='idx'){ if(FP.idxState!=='ready') return; const j=fp3Job(FLATCITY.cx,FLATCITY.cz); if(j) for(const k of j.keys) FP3.tiles.get(k).pin=false; miss=FLATCITY.fp3Miss=j?[...j.keys,...j.miss]:null; if(!miss) return; }
@@ -7359,14 +7360,35 @@ function clearanceSigns(J){ if(typeof CLEARANCE==='undefined'||!CLEARANCE.signs.
   if(!pos.length) return;
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
   const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:clearSignAtlas().tex})); m.name='clearance-signs'; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
+// 📊 PERFDIAG (October 18, 2026) — diagnostics, OFF unless the page is opened with ?perf=1 (remembered on this device as pfd_perf, so
+// the installed app shows it too; ?perf=0 forgets it). The tools are in perf-tools.js, fetched ONLY then; until it has loaded, and
+// always when off, PERFDIAG.on is false and each hook in the game is one boolean test. What it collects, the fixed phone route
+// (?perfroute=) and PERFDIAG.report() / .send(): perf-tools.js. Bump rev when perf-tools.js changes — the service worker keeps a
+// root-level script by its full address, so an unchanged address would serve the old copy.
+const PERFDIAG=(()=>{ let want=false; try{ const q=new URLSearchParams(location.search).get('perf'); if(q==='1') localStorage.setItem('pfd_perf','1'); else if(q==='0') localStorage.removeItem('pfd_perf'); want=localStorage.getItem('pfd_perf')==='1'; }catch(e){}
+  return { on:false, want, rev:'6', tag:'', tiles:0, rms:0 }; })();
+if(PERFDIAG.want){ const s=document.createElement('script'); s.src='perf-tools.js?v='+BUILD+'.'+PERFDIAG.rev; s.onerror=()=>{ PERFDIAG.loadError=true; }; document.head.appendChild(s); }
+// 🧪 PROGKEEP (October 18, 2026) — a DEVELOPMENT FLAG, OFF by default (?progkeep=1 turns it on and remembers it as pfd_progkeep;
+// ?progkeep=0 forgets it). The route baseline (tests/route-baseline.browser.cjs) found the city's shader programs freed when the truck
+// drives away from the scenery that uses them (the interchange's guardrails, terminals and ramp ribbon, the Lincoln Dr arch, the real
+// buildings' see-through pair) and compiled again, identical, when it comes back: 1-3 in a rebuild near Engine 35, 16 on the way back
+// from another part of the city. With the flag on, the FIRST retired material of each program is kept (never disposed, never drawn),
+// so the program stays compiled for the shift; every other material is disposed as before. Nothing drawn changes. At most max held.
+// (Checked first: only a material that is the LAST user of a program is kept — a program still in use elsewhere is never freed.)
+const PROGKEEP=(()=>{ let on=false; try{ const q=new URLSearchParams(location.search).get('progkeep'); if(q==='1') localStorage.setItem('pfd_progkeep','1'); else if(q==='0') localStorage.removeItem('pfd_progkeep'); on=localStorage.getItem('pfd_progkeep')==='1'; }catch(e){}
+  return { on, max:48, held:new Map() }; })();
+function progKeep(m){ const ps=renderer.properties.get(m).programs; if(!ps||PROGKEEP.held.size>=PROGKEEP.max) return false;   // only a program this material is the LAST user of (usedTimes 1):
+  let last=false; for(const p of ps.values()) if(p.usedTimes<=1) last=true; if(!last) return false;                                   // one still drawn elsewhere is never freed anyway
+  for(const p of ps.values()) PROGKEEP.held.set(p.cacheKey,m); return true; }
+renderer.domElement.addEventListener('webglcontextrestored',()=>{ PROGKEEP.held.clear(); });   // three re-creates its program cache on a restore: what was kept points at programs that no longer exist
 // Refresh the block WITHOUT a frame hitch: generation runs a few ms per frame while the old scenery stays up,
 // and the meshes are swapped in one go when it finishes. (A full synchronous rebuild cost ~20-90ms = a visible stutter.)
-FLATCITY.tick=function(){ if(!FLATCITY.job) return;
-  if(!stepLocalCity(FLATCITY.job,3.5)) return;                                  // still working — try again next frame
-  const J=FLATCITY.job; FLATCITY.job=null; FLATCITY.commit(J);
+FLATCITY.tick=function(){ if(!FLATCITY.job) return; const pd=PERFDIAG.on?performance.now():0;
+  if(!stepLocalCity(FLATCITY.job,3.5)){ if(pd) pdgSlice(performance.now()-pd); return; }                                  // still working — try again next frame
+  const J=FLATCITY.job; FLATCITY.job=null; const pc=pd?performance.now():0; FLATCITY.commit(J); if(pd) pdgSwap(pc-pd,performance.now()-pc);
 };
 FLATCITY.requestRebuild=function(cx,cz){ if(FLATCITY.job) return;               // one job at a time
-  FLATCITY.cx=cx; FLATCITY.cz=cz; FLATCITY.job=startLocalCity(cx,cz); };
+  FLATCITY.cx=cx; FLATCITY.cz=cz; const pd=PERFDIAG.on?performance.now():0; FLATCITY.job=startLocalCity(cx,cz); if(pd) pdgRequest(cx,cz,performance.now()-pd); };
 FLATCITY.rebuild=function(cx,cz){ FLATCITY.job=null; FLATCITY.cx=cx; FLATCITY.cz=cz; FLATCITY.commit(genLocalCity(cx,cz)); };
 FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Color(), vGuard=[], vPost=[];   // vGuard/vPost: the viaduct's W-beam tiles, built here in commit and kept OFF J.hws so committing the same job twice never doubles them
   FLATCITY.companyId=DRIVE.stationId; FLATCITY.immersive=J.immersive;
@@ -7378,7 +7400,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   // materials hit the program cache, and the generation before THAT is disposed here, sharing programs with the one waiting.
   const staleMats=FLATCITY.oldMats||[]; FLATCITY.oldMats=[]; nearFadeRelease(); fp3XrayRelease();
   for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); if(o.userData.keep){ o.dispose(); continue; } o.geometry.dispose(); FLATCITY.oldMats.push(o.material); }   // keep: shared kit (hydrants) — free only the instance buffer
-  for(const m of staleMats) m.dispose();
+  for(const m of staleMats){ if(PROGKEEP.on&&progKeep(m)) continue; m.dispose(); }   // 🧪 PROGKEEP (dev flag, off): keep one retired material per program
   FLATCITY.parts=[];
   const B=J.B, T=J.T, S=J.S; FLATCITY.mmB=B;   // v20m: the minimap draws these footprints
   if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[],roadGirder=[];
@@ -11575,7 +11597,7 @@ updateBest();
 /* ============================ 11. MAIN LOOP (fixed timestep) ============================ */
 let GT=0, last=performance.now(), acc=0;
 const FPSM={t:0,winT:0,avg:0,min:999,shownMin:999};
-function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=now; if(dt>CONFIG.maxDt) dt=CONFIG.maxDt; GT=now/1000;
+function frame(now){ const pd0=PERFDIAG.on?performance.now():0; requestAnimationFrame(frame); let dt=(now-last)/1000; last=now; if(dt>CONFIG.maxDt) dt=CONFIG.maxDt; GT=now/1000;
   if(GL.lost) return;                                         // 3D context gone: don't simulate behind a frozen canvas
   { const rn=performance.now(); if(FPSM.t){ const d=rn-FPSM.t; if(d>0&&d<1000){ const f=1000/d; FPSM.avg=FPSM.avg?FPSM.avg*0.92+f*0.08:f; if(f<FPSM.min)FPSM.min=f; } }
     FPSM.t=rn; if(rn-FPSM.winT>2000){ FPSM.shownMin=FPSM.min; FPSM.min=999; FPSM.winT=rn; } }   // owner perf review: rolling avg + worst frame of the last 2s, shown on the SAVES line
@@ -11585,8 +11607,9 @@ function frame(now){ requestAnimationFrame(frame); let dt=(now-last)/1000; last=
   for(const s of PRESENT) s(dt);
   updateSky(dt);
   if(BOXD.pending&&!INTRO.active) newDispatch();
-  if(state.cam===3){ if(!FLATCITY.built) buildFlatCity(); LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateRivalTrucks(); updateTiltMap(dt); if(mapvFrame(dt)){ updateParkedStreetChoices(); mapvDraw(); } else { updateParkedStreetChoices(); nearFadeUpdate(); fp3XrayUpdate(); shadeUpdate(); renderer.render(scene,camera); } }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
-  else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); } } // chase: sync truck, labels + clamped parked choices
+  if(state.cam===3){ if(!FLATCITY.built){ buildFlatCity(); if(pd0) PERFDIAG.tag+=' build'; } LIVE3D.group.visible=true; FLATCITY.group.visible=true; setProcVisible(false); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateRivalTrucks(); updateTiltMap(dt); if(mapvFrame(dt)){ updateParkedStreetChoices(); mapvDraw(); } else { updateParkedStreetChoices(); nearFadeUpdate(); fp3XrayUpdate(); shadeUpdate(); if(pd0){ const r0=performance.now(); renderer.render(scene,camera); PERFDIAG.rms=performance.now()-r0; } else renderer.render(scene,camera); } }   // 🧭 tilted live-tile map + flat extruded buildings (procedural world hidden)
+  else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }
+  if(pd0) pdgFrame(pd0); } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 requestAnimationFrame(frame);
 </script>
