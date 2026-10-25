@@ -1541,7 +1541,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22t"></script>
+<script src="firehouse-models.js?v=v22u"></script>
 <script src="data/inst.js"></script>
 <script>
 /* ================================================================================
@@ -1573,7 +1573,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22t";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22u";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -7457,7 +7457,9 @@ if(PERFDIAG.want){ const s=document.createElement('script'); s.src='perf-tools.j
 // so the program stays compiled for the shift; every other material is disposed as before. Nothing drawn changes. At most max held.
 // (Checked first: only a material that is the LAST user of a program is kept — a program still in use elsewhere is never freed.)
 const PROGKEEP=(()=>{ let on=false; try{ const q=new URLSearchParams(location.search).get('progkeep'); if(q==='1') localStorage.setItem('pfd_progkeep','1'); else if(q==='0') localStorage.removeItem('pfd_progkeep'); on=localStorage.getItem('pfd_progkeep')==='1'; }catch(e){}
-  return { on, max:48, held:new Map() }; })();
+  return { on:on||GFX.high, max:48, held:new Map() }; })();   // 🖥 PC High keeps them ALWAYS (October 25, 2026): its shaders (shadow map + contact
+// shading) take about twice as long to build, and a drive round East Falls rebuilt the interchange's (terminals, guardrails, ramp edges)
+// on every visit — 20 builds / 373 ms of waiting in the swap frames, 5 / 231 ms kept (tests/swap-frame-live.browser.cjs). Phones: the A/B test decides.
 function progKeep(m){ const ps=renderer.properties.get(m).programs; if(!ps||PROGKEEP.held.size>=PROGKEEP.max) return false;   // only a program this material is the LAST user of (usedTimes 1):
   let last=false; for(const p of ps.values()) if(p.usedTimes<=1) last=true; if(!last) return false;                                   // one still drawn elsewhere is never freed anyway
   for(const p of ps.values()) PROGKEEP.held.set(p.cacheKey,m); return true; }

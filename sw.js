@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v109';  // v22t: PC High contact shading (?gfx=high), off unless asked for.
+const CACHE = 'local-shell-v110';  // v22u: PC High keeps its shaders (fewer stutters when the city swaps), off unless ?gfx=high.
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
