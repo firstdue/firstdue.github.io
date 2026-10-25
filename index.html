@@ -1541,7 +1541,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22r"></script>
+<script src="firehouse-models.js?v=v22s"></script>
 <script src="data/inst.js"></script>
 <script>
 /* ================================================================================
@@ -1573,7 +1573,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22r";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22s";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3038,9 +3038,17 @@ function callGoals(t){ const e=t&&t.edge; if(!e||t.narrow||!e.a||!e.b) return nu
   return m.size?m:null; }
 
 /* ============================ 3. ENGINE ============================ */
-const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});
+// 🖥 GFX — the graphics level (October 24, 2026; owner: "better graphics ... for PC ... how BeamNG looks", path 1 of 3). 'phone' is the
+// game as it has always been. 'high' is for a PC's graphics card: a real sun shadow map that follows the truck — every building, tree,
+// hydrant, firehouse and the truck cast and receive it — in place of the painted ground shadows (SHADE); lit roads and lines so the
+// shadows land on them (their colours divided by the day's light, so they read as before in the sun); edge smoothing (MSAA). Chosen
+// ONCE at page load (MSAA belongs to the WebGL context): ?gfx=high turns it on and remembers it on this device (pfd_gfx), ?gfx=phone
+// forgets it. Off unless asked for, so phones and the perf gate never see it. notes/pc-graphics.md
+const GFX=(()=>{ let high=false; try{ const q=new URLSearchParams(location.search).get('gfx'); if(q==='high') localStorage.setItem('pfd_gfx','high'); else if(q==='phone') localStorage.removeItem('pfd_gfx'); high=localStorage.getItem('pfd_gfx')==='high'; }catch(e){}
+  return { high, S:220, map:4096, L:null, flagsAt:0 }; })();
+const renderer=new THREE.WebGLRenderer({antialias:GFX.high,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,CONFIG.render.prCap));
-renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=false;
+renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=GFX.high; if(GFX.high) renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 document.getElementById('wrap').appendChild(renderer.domElement);
 // three.js already preventDefaults webglcontextlost and re-initialises the context on restore, so the
 // renderer recovers on its own. What it cannot do is tell the GAME: without this the fixed-timestep sim
@@ -3056,6 +3064,8 @@ function onResize(){ camera.aspect=innerWidth/innerHeight; camera.updateProjecti
 addEventListener('resize',onResize); addEventListener('orientationchange',()=>setTimeout(onResize,120));
 const hemi=new THREE.HemisphereLight(0xeaf2f6,0x8d8e86,0.60); scene.add(hemi);   // Phase-1 look: fill LOWERED (0.78->0.60) so the stronger sun below carries form -- free depth without shadow maps
 const sun=new THREE.DirectionalLight(0xfff1cf,1.02); sun.position.set(-300,270,-120); scene.add(sun);   // Phase-1 look: warmer + stronger key from a steeper side angle -> the bright, high-contrast sunny concept
+if(GFX.high){ sun.castShadow=true; const c=sun.shadow.camera; c.left=-GFX.S; c.right=GFX.S; c.top=GFX.S; c.bottom=-GFX.S; c.near=20; c.far=1800; c.updateProjectionMatrix();
+  sun.shadow.mapSize.set(GFX.map,GFX.map); sun.shadow.bias=-0.0003; sun.shadow.normalBias=0.45; GFX.L=sun.position.clone().normalize(); scene.add(sun.target); }   // 🖥 the shadow map's box follows the truck (gfxUpdate)
 const DAYBG=new THREE.Color(0xc2ddf0), NIGHTBG=new THREE.Color(CONFIG.env.nightBg);   // day target = sky horizon; the (latent) day/night lerp drives fog+lights+sky between these
 /* ☀️ Phase-1 look pass: a camera-following sky dome (vertical gradient + a small cloud cap) replaces the
    flat single-colour background. Its HORIZON colour matches scene.fog, so distant geometry fades into the same
@@ -5960,6 +5970,54 @@ function paveTerrain(mesh,J){ if(!PAVE.on||!J.dens||!J.dens.data) return;
    roofs, gables and canopies, drawn from the parts' own instance buffers (shared, never copied, never disposed here).
    The picture is ONE persistent render target, reused every rebuild (the PAVE.tex rule). */
 const SHADE={ on:true, N:2048, S:1400, K:[0.60,0.64,0.74], tree:0.3, rt:null, scene:null, cam:null, dirty:false, own:null, proxies:[], u:null };
+if(GFX.high) SHADE.on=false;   // 🖥 PC High: the real shadow map replaces the painted ground shadows
+// 🖥 GFX helpers. gfxFlat: a road or line material — unlit as always, or (PC High) lit, its colour divided by the day's light on a level
+// surface so it reads the same in the sun and darkens in a shadow. gfxShadowFlags: who casts and receives the sun's shadow map (lit,
+// opaque scenery casts; flat ground only receives). gfxUpdate (PRESENT): the shadow box follows the truck, its centre snapped to the
+// map's texel grid in the light's own frame so the shadow edges do not crawl while driving.
+function gfxFlat(hex){ if(!GFX.high) return new THREE.MeshBasicMaterial({color:hex});
+  const c=new THREE.Color(hex), L=GFX.L, up=Math.max(0.05,L.y), E=CONFIG.env, h=hemi.color, u=sun.color;
+  const m=new THREE.MeshLambertMaterial({color:new THREE.Color(Math.min(1,c.r/(h.r*E.dayHemi+u.r*E.daySun*up)),Math.min(1,c.g/(h.g*E.dayHemi+u.g*E.daySun*up)),Math.min(1,c.b/(h.b*E.dayHemi+u.b*E.daySun*up)))});
+  m.userData.gfxFlat=true; return m; }
+function gfxUp(g){ if(!GFX.high||g.attributes.normal) return; const n=new Float32Array(g.attributes.position.count*3); for(let i=1;i<n.length;i+=3) n[i]=1; g.setAttribute('normal',new THREE.BufferAttribute(n,3)); }   // a road built for an unlit material has no normals: level, lit like the ground
+// 🖥 PC High surfaces: one generated 512x512 texture (built once, kept for the page) painted by WORLD position — no UVs, no new geometry,
+// no visible repeat (two scales, a 4 m grain and a 37 m wear/patch layer). Asphalt: aggregate grain, darker tar patches, repair
+// rectangles, thin cracks. Concrete: fine grain and the slab joints every 1.6 m. Each channel averages ~1 so the colour stays the same.
+function gfxSurface(mat,kind){ if(!GFX.high) return mat; const T=gfxSurfTex();
+  mat.onBeforeCompile=sh=>{ sh.uniforms.uGfxSurf={value:T};
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vGfxXZ;').replace('#include <project_vertex>','#include <project_vertex>\nvec4 gfxW=vec4(transformed,1.0);\n#ifdef USE_INSTANCING\ngfxW=instanceMatrix*gfxW;\n#endif\nvGfxXZ=(modelMatrix*gfxW).xz;');
+    const body=kind==='asphalt'
+      ?'vec4 gS=texture2D(uGfxSurf,vGfxXZ*0.25), gL=texture2D(uGfxSurf,vGfxXZ*0.027+vec2(0.31,0.17)); diffuseColor.rgb*=(0.82+0.36*gS.r)*(0.9+0.2*gL.g)*mix(1.0,0.74,gS.b);'
+      :'vec4 gS=texture2D(uGfxSurf,vGfxXZ*0.4), gL=texture2D(uGfxSurf,vGfxXZ*0.031+vec2(0.6,0.2)); vec2 gj=abs(fract(vGfxXZ/1.6)-0.5); float joint=smoothstep(0.47,0.495,max(gj.x,gj.y)); diffuseColor.rgb*=(0.9+0.2*gS.r)*(0.92+0.16*gL.g)*(1.0-0.22*joint);';
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D uGfxSurf; varying vec2 vGfxXZ;').replace('#include <color_fragment>','#include <color_fragment>\n'+body); };
+  mat.customProgramCacheKey=()=>'gfx-'+kind; return mat; }
+function gfxSurfTex(){ if(GFX.surf) return GFX.surf; const N=512, d=new Uint8Array(N*N*4);
+  let seed=1234567; const rnd=()=>((seed=Math.imul(seed^(seed>>>15),2246822507)+0x9e3779b9|0)>>>0)/4294967296;
+  const grid=(f)=>{ const g=new Float32Array((f+1)*(f+1)); for(let i=0;i<g.length;i++) g[i]=rnd(); for(let i=0;i<=f;i++){ g[i*(f+1)+f]=g[i*(f+1)]; g[f*(f+1)+i]=g[i]; } return g; };   // tileable value noise
+  const oct=[[8,0.5],[32,0.3],[128,0.2]].map(([f,w])=>[f,w,grid(f)]), big=[[4,0.6],[16,0.4]].map(([f,w])=>[f,w,grid(f)]);
+  const val=(L,x,y)=>{ let v=0; for(const [f,w,g] of L){ const fx=x/N*f, fy=y/N*f, i=Math.floor(fx), j=Math.floor(fy), a=fx-i, b=fy-j, s=t=>t*t*(3-2*t), A=s(a), B=s(b), r=f+1;
+      v+=w*((g[j*r+i]*(1-A)+g[j*r+i+1]*A)*(1-B)+(g[(j+1)*r+i]*(1-A)+g[(j+1)*r+i+1]*A)*B); } return v; };
+  const crack=new Float32Array(N*N);
+  for(let c=0;c<26;c++){ let x=rnd()*N, y=rnd()*N, a=rnd()*6.283; for(let k=0;k<140;k++){ a+=(rnd()-0.5)*0.7; x=(x+Math.cos(a)+N)%N; y=(y+Math.sin(a)+N)%N; crack[(y|0)*N+(x|0)]=1; } }
+  for(let y=0;y<N;y++) for(let x=0;x<N;x++){ const i=(y*N+x)*4, sp=rnd()<0.06?(rnd()-0.5)*0.5:0;
+    d[i]=Math.max(0,Math.min(255,Math.round((val(oct,x,y)+sp)*255)));          // R: grain + aggregate speckle
+    d[i+1]=Math.round(val(big,x,y)*255);                                         // G: wear and patches
+    d[i+2]=crack[y*N+x]?255:0; d[i+3]=255; }                                     // B: cracks
+  for(let p=0;p<9;p++){ const w=20+rnd()*70|0, h=14+rnd()*40|0, x0=rnd()*N|0, y0=rnd()*N|0, v=rnd()<0.5?70:200;   // repair patches (darker or lighter)
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=(((y0+y)%N)*N+((x0+x)%N))*4; d[i+1]=v; } }
+  const t=new THREE.DataTexture(d,N,N,THREE.RGBAFormat); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.magFilter=THREE.LinearFilter; t.minFilter=THREE.LinearMipmapLinearFilter;
+  t.generateMipmaps=true; t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); t.needsUpdate=true; return GFX.surf=t; }
+function gfxShadowFlags(root){ root.traverse(o=>{ if(!(o.isMesh||o.isInstancedMesh)) return; const m=Array.isArray(o.material)?o.material[0]:o.material; if(!m) return;
+  const lit=m.isMeshLambertMaterial||m.isMeshStandardMaterial||m.isMeshPhongMaterial;
+  if(!lit){ o.castShadow=false; o.receiveShadow=false; return; }
+  o.receiveShadow=true; o.castShadow=!(m.userData.gfxFlat||/^land-|^inst-ground|-xray$/.test(o.name||'')); }); }
+const GFXV={ a:new THREE.Vector3(), r:new THREE.Vector3(), u:new THREE.Vector3(), f:new THREE.Vector3(), c:new THREE.Vector3() };
+function gfxUpdate(){ if(!GFX.high) return; const V=GFXV, L=GFX.L, step=2*GFX.S/GFX.map;
+  V.f.copy(L).negate(); V.r.set(0,1,0).cross(V.f).normalize(); V.u.copy(V.f).cross(V.r).normalize();
+  V.a.set(truck.x,truck.y||0,truck.z); const x=Math.round(V.a.dot(V.r)/step)*step, y=Math.round(V.a.dot(V.u)/step)*step, z=V.a.dot(V.f);
+  V.c.copy(V.r).multiplyScalar(x).addScaledVector(V.u,y).addScaledVector(V.f,z);
+  sun.target.position.copy(V.c); sun.position.copy(V.c).addScaledVector(L,900); sun.target.updateMatrixWorld();
+  const t=performance.now(); if(t-GFX.flagsAt>1000){ GFX.flagsAt=t; gfxShadowFlags(scene); } }   // the truck model and the firehouses arrive after a commit
 function shadeInit(){ if(SHADE.u) return;
   const L=sun.position.clone().normalize(), gl2=renderer.capabilities.isWebGL2; if(!gl2) SHADE.N=1024;   // the scene's one sun: a fixed direction, night only dims it
   SHADE.u={ uShade:{value:null}, uShadeC:{value:new THREE.Vector3()}, uShadeL:{value:new THREE.Vector2(L.x/L.y,L.z/L.y)}, uShadeS:{value:1/SHADE.S}, uShadeK:{value:new THREE.Vector3(...SHADE.K)}, uShadeT:{value:0.6/SHADE.N} };
@@ -7534,7 +7592,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     for(let x=x0;x<J.cx+r;x+=step)for(let z=z0;z<J.cz+r;z+=stepZ){                                     //    linear DEM samples with zero cut depth, so they meet the coarse neighbours without a crack
       if(cutCell(x,z)){const N=8,sx=step/N,sz=stepZ/N;for(let i=0;i<N;i++)for(let j=0;j<N;j++)cell(x+sx*i,z+sz*j,sx,sz);} else cell(x,z,step,stepZ); }
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();
-    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x9eb78a}));paveTerrain(m,J);shadeReceive(m.material);FLATCITY.group.add(m);FLATCITY.parts.push(m);   // DEM terrain = the filler ground TILT actually renders (NOT a ramp embankment)
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x9eb78a}));paveTerrain(m,J);if(GFX.high)m.material.userData.gfxFlat=true;shadeReceive(m.material);FLATCITY.group.add(m);FLATCITY.parts.push(m);   // DEM terrain = the filler ground TILT actually renders (NOT a ramp embankment)
   }
   // Restore missing multipart rivers; island holes are retained.
   for(const w of NAVGEO.water)for(const ring of w.outer){const bb=ring.bounds;if(J.cx+LOCAL.R<bb[0]||J.cx-LOCAL.R>bb[2]||J.cz+LOCAL.R<bb[1]||J.cz-LOCAL.R>bb[3])continue;
@@ -7556,11 +7614,11 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   if(J.road){ const {rp,mk,my}=J.road;
     FLATCITY.guideSurfaces=J.gsi||guideSurfaceIndex(J.road.guideSurfaces);                        // the ramp ribbon step may already have built the index under the frame budget
     if(rp.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(rp,3));
-      const rd=new THREE.Mesh(g,shadeReceive(new THREE.MeshBasicMaterial({color:J.immersive?TILT_ROAD:TILT_ROAD_FLAT}))); rd.renderOrder=1; FLATCITY.group.add(rd); FLATCITY.parts.push(rd); }
+      gfxUp(g); const rd=new THREE.Mesh(g,shadeReceive(gfxSurface(gfxFlat(J.immersive?TILT_ROAD:TILT_ROAD_FLAT),'asphalt'))); rd.renderOrder=1; FLATCITY.group.add(rd); FLATCITY.parts.push(rd); }
     if(mk.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(mk,3));
-      const ml=new THREE.Mesh(g,shadeReceive(new THREE.MeshBasicMaterial({color:0xf5f6f8}))); ml.renderOrder=2; FLATCITY.group.add(ml); FLATCITY.parts.push(ml); }
+      gfxUp(g); const ml=new THREE.Mesh(g,shadeReceive(gfxFlat(0xf5f6f8))); ml.renderOrder=2; FLATCITY.group.add(ml); FLATCITY.parts.push(ml); }
     if(my.length){ const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(my,3));
-      const ml=new THREE.Mesh(g,shadeReceive(new THREE.MeshBasicMaterial({color:0xe8c85a}))); ml.renderOrder=2; FLATCITY.group.add(ml); FLATCITY.parts.push(ml); } }
+      gfxUp(g); const ml=new THREE.Mesh(g,shadeReceive(gfxFlat(0xe8c85a))); ml.renderOrder=2; FLATCITY.group.add(ml); FLATCITY.parts.push(ml); } }
   if(S&&S.length){ const walkS=S.filter(p=>!p.g), medS=S.filter(p=>p.g);
     // On terrain (E35), a block-long flat slab floats downhill and buries uphill — split each slab
     // into ≤12m pieces, each at its own height and pitched along the street; flat ground = 1 piece.
@@ -7570,7 +7628,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         out.push({x:px,z:pz,y:(y0+y1)/2,w:p.w,len:n>1?pl*1.07:pl,ang:p.ang,pitch:n>1?-Math.atan2(y1-y0,pl):0}); } } return out; };
     const wp=slabPieces(walkS), mp2=slabPieces(medS);
     const topBox=()=>{ const g=new THREE.BoxGeometry(1,1,1), I=g.index.array, k=[]; for(let i=0;i<I.length;i++) if(i<18||i>=24) k.push(I[i]); g.setIndex(k); g.clearGroups(); return g; };   // a unit box WITHOUT its bottom face (indices 18-23, -y): a slab lies on the ground, so it is never seen - 10 triangles, not 12 (the long streets drawn since October 18 cost slabs; this pays for them)
-    if(wp.length){ const sw=new THREE.InstancedMesh(topBox(),shadeReceive(new THREE.MeshLambertMaterial({color:0xf3f0e8})),wp.length);   // kerb slabs sit proud of the darker roadway
+    if(wp.length){ const sw=new THREE.InstancedMesh(topBox(),shadeReceive(gfxSurface(new THREE.MeshLambertMaterial({color:0xf3f0e8}),'concrete')),wp.length);   // kerb slabs sit proud of the darker roadway
       wp.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.11,p.z); dummy.scale.set(p.w,0.22,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); sw.setMatrixAt(i,dummy.matrix); });
       sw.instanceMatrix.needsUpdate=true; FLATCITY.group.add(sw); FLATCITY.parts.push(sw); }
     if(mp2.length){ const gm=new THREE.InstancedMesh(topBox(),shadeReceive(new THREE.MeshLambertMaterial({color:0x6eb643})),mp2.length);   // 🌿 grass median between divided-road carriageways
@@ -7725,7 +7783,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     if(canoFar){ FLATCITY.group.add(canoFar); FLATCITY.parts.push(canoFar); canoFar.userData.shadeCast='tree'; }
     if(con){ con.name='conifer'; FLATCITY.group.add(con); FLATCITY.parts.push(con); con.userData.shadeCast='cone'; } }
   FLATCITY.mmInst=null; instBuild(J); fp3Build(J); landEvict();
-  nearFadeRegister(); shadeBuild(J);
+  nearFadeRegister(); shadeBuild(J); if(GFX.high) gfxShadowFlags(FLATCITY.group);
   if(routePts?.length>1)setRouteGeom(); // refresh the guide when its nearby pavement triangles are rebuilt
 };
 function __oldBuildFlatCity(){ genCityData(); if(!buildData.length) return;
@@ -10687,7 +10745,7 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
     x.rotate(Math.atan2(ny,nx)+Math.PI/2); x.fillStyle='#d32f2f'; x.beginPath(); x.moveTo(0,-11); x.lineTo(5,2); x.lineTo(-5,2); x.closePath(); x.fill(); x.fillStyle='#555'; x.beginPath(); x.moveTo(0,11); x.lineTo(5,2); x.lineTo(-5,2); x.closePath(); x.fill(); x.restore(); }
   const ms=performance.now()-t0; M.ms=M.ms?M.ms*0.9+ms*0.1:ms; }
 mmToggleBtn();
-const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip,updateMiniMap,updateFireBays];                 // frame() renders the Tilt view
+const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip,updateMiniMap,updateFireBays,gfxUpdate];                 // frame() renders the Tilt view
 
 state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
