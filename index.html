@@ -1541,7 +1541,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22s"></script>
+<script src="firehouse-models.js?v=v22t"></script>
 <script src="data/inst.js"></script>
 <script>
 /* ================================================================================
@@ -1573,7 +1573,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22s";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22t";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -5970,7 +5970,8 @@ function paveTerrain(mesh,J){ if(!PAVE.on||!J.dens||!J.dens.data) return;
    roofs, gables and canopies, drawn from the parts' own instance buffers (shared, never copied, never disposed here).
    The picture is ONE persistent render target, reused every rebuild (the PAVE.tex rule). */
 const SHADE={ on:true, N:2048, S:1400, K:[0.60,0.64,0.74], tree:0.3, rt:null, scene:null, cam:null, dirty:false, own:null, proxies:[], u:null };
-if(GFX.high) SHADE.on=false;   // 🖥 PC High: the real shadow map replaces the painted ground shadows
+if(GFX.high){ SHADE.ao=true; SHADE.K=[0.6,0.62,0.67]; SHADE.tree=0.8; }   // 🖥 PC High: the shadow map casts the sun's shadows; SHADE turns into contact shading —
+// the buildings drawn STRAIGHT DOWN and blurred (shadeBlur) into a soft halo that darkens the ground beside every wall (trees lightly, under their canopy)
 // 🖥 GFX helpers. gfxFlat: a road or line material — unlit as always, or (PC High) lit, its colour divided by the day's light on a level
 // surface so it reads the same in the sun and darkens in a shadow. gfxShadowFlags: who casts and receives the sun's shadow map (lit,
 // opaque scenery casts; flat ground only receives). gfxUpdate (PRESENT): the shadow box follows the truck, its centre snapped to the
@@ -6007,10 +6008,24 @@ function gfxSurfTex(){ if(GFX.surf) return GFX.surf; const N=512, d=new Uint8Arr
     for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=(((y0+y)%N)*N+((x0+x)%N))*4; d[i+1]=v; } }
   const t=new THREE.DataTexture(d,N,N,THREE.RGBAFormat); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.magFilter=THREE.LinearFilter; t.minFilter=THREE.LinearMipmapLinearFilter;
   t.generateMipmaps=true; t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy()); t.needsUpdate=true; return GFX.surf=t; }
+// 🖥 PC High contact shading on UPRIGHT surfaces: a wall, a trunk, the truck's sides darken towards the ground over their first ~2.6 m (height
+// above the terrain, read from GFX.ground — the terrain heights as one half-float texture). Level surfaces are left alone (the ground has
+// SHADE's halo). Patched into every lit material once, before its first compile where possible (gfxShadowFlags runs at each commit).
+function gfxGround(){ if(GFX.ground!==undefined) return GFX.ground; const g=NAVGEO.terrain; GFX.ground=null;
+  if(!g||!g.hdm||!renderer.capabilities.isWebGL2) return null; const n=g.nx*g.nz, d=new Uint16Array(n); for(let i=0;i<n;i++) d[i]=THREE.DataUtils.toHalfFloat(Math.max(0,g.hdm[i]/10));
+  const t=new THREE.DataTexture(d,g.nx,g.nz,THREE.RedFormat,THREE.HalfFloatType); t.magFilter=t.minFilter=THREE.LinearFilter; t.needsUpdate=true;
+  GFX.ground={tex:{value:t},T:{value:new THREE.Vector4(g.minX-0.5*g.dx,g.minZ-0.5*g.dz,1/(g.dx*g.nx),1/(g.dz*g.nz))}}; return GFX.ground; }
+function gfxAOWall(m){ if(m.userData.gfxAO||m.userData.shade) return; const G=gfxGround(); if(!G) return; m.userData.gfxAO=1;
+  const prev=m.onBeforeCompile, key=m.customProgramCacheKey();   // the key is read BEFORE the wrap: it keeps differently patched materials apart
+  m.onBeforeCompile=function(sh,r){ prev.call(this,sh,r); sh.uniforms.uGfxG=G.tex; sh.uniforms.uGfxGT=G.T;
+    sh.vertexShader='varying vec3 vGfxP;\nvarying float vGfxUp;\n'+sh.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\n  vec4 _gp=vec4(transformed,1.0); vec3 _gn=objectNormal;\n#ifdef USE_INSTANCING\n  _gp=instanceMatrix*_gp; _gn=mat3(instanceMatrix)*_gn;\n#endif\n  vGfxP=(modelMatrix*_gp).xyz; vGfxUp=normalize(mat3(modelMatrix)*_gn).y;');
+    sh.fragmentShader='uniform sampler2D uGfxG;\nuniform vec4 uGfxGT;\nvarying vec3 vGfxP;\nvarying float vGfxUp;\n'+sh.fragmentShader.replace('#include <tonemapping_fragment>',
+      '  { float _h=vGfxP.y-texture2D(uGfxG,(vGfxP.xz-uGfxGT.xy)*uGfxGT.zw).r; gl_FragColor.rgb*=mix(1.0,mix(0.62,1.0,smoothstep(0.0,2.4,_h)),1.0-abs(vGfxUp)); }\n#include <tonemapping_fragment>'); };
+  m.customProgramCacheKey=()=>key+'|gfxao'; m.needsUpdate=true; }
 function gfxShadowFlags(root){ root.traverse(o=>{ if(!(o.isMesh||o.isInstancedMesh)) return; const m=Array.isArray(o.material)?o.material[0]:o.material; if(!m) return;
   const lit=m.isMeshLambertMaterial||m.isMeshStandardMaterial||m.isMeshPhongMaterial;
   if(!lit){ o.castShadow=false; o.receiveShadow=false; return; }
-  o.receiveShadow=true; o.castShadow=!(m.userData.gfxFlat||/^land-|^inst-ground|-xray$/.test(o.name||'')); }); }
+  gfxAOWall(m); o.receiveShadow=true; o.castShadow=!(m.userData.gfxFlat||/^land-|^inst-ground|-xray$/.test(o.name||'')); }); }
 const GFXV={ a:new THREE.Vector3(), r:new THREE.Vector3(), u:new THREE.Vector3(), f:new THREE.Vector3(), c:new THREE.Vector3() };
 function gfxUpdate(){ if(!GFX.high) return; const V=GFXV, L=GFX.L, step=2*GFX.S/GFX.map;
   V.f.copy(L).negate(); V.r.set(0,1,0).cross(V.f).normalize(); V.u.copy(V.f).cross(V.r).normalize();
@@ -6019,11 +6034,17 @@ function gfxUpdate(){ if(!GFX.high) return; const V=GFXV, L=GFX.L, step=2*GFX.S/
   sun.target.position.copy(V.c); sun.position.copy(V.c).addScaledVector(L,900); sun.target.updateMatrixWorld();
   const t=performance.now(); if(t-GFX.flagsAt>1000){ GFX.flagsAt=t; gfxShadowFlags(scene); } }   // the truck model and the firehouses arrive after a commit
 function shadeInit(){ if(SHADE.u) return;
-  const L=sun.position.clone().normalize(), gl2=renderer.capabilities.isWebGL2; if(!gl2) SHADE.N=1024;   // the scene's one sun: a fixed direction, night only dims it
-  SHADE.u={ uShade:{value:null}, uShadeC:{value:new THREE.Vector3()}, uShadeL:{value:new THREE.Vector2(L.x/L.y,L.z/L.y)}, uShadeS:{value:1/SHADE.S}, uShadeK:{value:new THREE.Vector3(...SHADE.K)}, uShadeT:{value:0.6/SHADE.N} };
+  const L=SHADE.ao?new THREE.Vector3(0,1,0):sun.position.clone().normalize(), gl2=renderer.capabilities.isWebGL2; if(!gl2) SHADE.N=1024;   // the scene's one sun: a fixed direction, night only dims it
+  SHADE.u={ uShade:{value:null}, uShadeC:{value:new THREE.Vector3()}, uShadeL:{value:new THREE.Vector2(L.x/L.y,L.z/L.y)}, uShadeS:{value:1/SHADE.S}, uShadeK:{value:new THREE.Vector3(...SHADE.K)}, uShadeT:{value:(SHADE.ao?1.6:0.6)/SHADE.N} };
   SHADE.rt=new THREE.WebGLRenderTarget(SHADE.N,SHADE.N,{format:gl2?THREE.RedFormat:THREE.RGBAFormat,type:THREE.UnsignedByteType,minFilter:THREE.LinearFilter,
     magFilter:THREE.LinearFilter,generateMipmaps:false,depthBuffer:false,stencilBuffer:false,samples:gl2?4:0});   // 4x MSAA: edges come out antialiased, not stair-stepped
   SHADE.u.uShade.value=SHADE.rt.texture;
+  if(SHADE.ao){ const o={format:gl2?THREE.RedFormat:THREE.RGBAFormat,type:THREE.UnsignedByteType,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,generateMipmaps:false,depthBuffer:false,stencilBuffer:false};
+    SHADE.rtT=new THREE.WebGLRenderTarget(SHADE.N,SHADE.N,o); SHADE.rtB=new THREE.WebGLRenderTarget(SHADE.N,SHADE.N,o); SHADE.u.uShade.value=SHADE.rtB.texture;
+    const bl=d=>new THREE.ShaderMaterial({uniforms:{t:{value:null}},depthTest:false,depthWrite:false,vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }',
+      fragmentShader:'uniform sampler2D t; varying vec2 vUv; void main(){ vec2 d=vec2('+d+')/'+SHADE.N.toFixed(1)+'; float w[7]; w[0]=0.1736; w[1]=0.1596; w[2]=0.1238; w[3]=0.0813; w[4]=0.0450; w[5]=0.0211; w[6]=0.0083;'+
+        ' float s=w[0]*texture2D(t,vUv).r; for(int i=1;i<7;i++){ float k=float(i)*1.5; s+=w[i]*(texture2D(t,vUv+d*k).r+texture2D(t,vUv-d*k).r); } gl_FragColor=vec4(s,s,s,1.0); }'});
+    SHADE.blurH=bl('1.0,0.0'); SHADE.blurV=bl('0.0,1.0'); SHADE.quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),SHADE.blurH); SHADE.quad.frustumCulled=false; SHADE.qs=new THREE.Scene(); SHADE.qs.add(SHADE.quad); }
   SHADE.scene=new THREE.Scene(); SHADE.cam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);   // the caster shader writes clip space itself; the camera is a formality
   const U={uShadeC:SHADE.u.uShadeC,uShadeL:SHADE.u.uShadeL,uShadeS:SHADE.u.uShadeS}, minOK=gl2||renderer.extensions.has('EXT_blend_minmax');
   const vs='uniform vec3 uShadeC;\nuniform vec2 uShadeL;\nuniform float uShadeS;\nvoid main(){ vec4 w=vec4(position,1.0);\n#ifdef USE_INSTANCING\n  w=instanceMatrix*w;\n#endif\n'+
@@ -6036,6 +6057,8 @@ function shadeInit(){ if(SHADE.u) return;
   shadeDraw(false); }
 function shadeDraw(casters){ const r=renderer, prev=r.getRenderTarget(), cc=r.getClearColor(SHADE.cc||(SHADE.cc=new THREE.Color())), ca=r.getClearAlpha(), ac=r.autoClear;
   r.setRenderTarget(SHADE.rt); r.setClearColor(0xffffff,1); if(casters){ r.autoClear=true; r.render(SHADE.scene,SHADE.cam); } else r.clear(true,false,false);
+  if(SHADE.ao){ r.autoClear=true; SHADE.blurH.uniforms.t.value=SHADE.rt.texture; SHADE.quad.material=SHADE.blurH; r.setRenderTarget(SHADE.rtT); r.render(SHADE.qs,SHADE.cam);   // a ~2 m Gaussian, in two passes
+    SHADE.blurV.uniforms.t.value=SHADE.rtT.texture; SHADE.quad.material=SHADE.blurV; r.setRenderTarget(SHADE.rtB); r.render(SHADE.qs,SHADE.cam); }
   r.setRenderTarget(prev); r.setClearColor(cc,ca); r.autoClear=ac; }
 function shadeReceive(mat){ if(!SHADE.on||mat.userData.shade) return mat; shadeInit();
   const prev=mat.onBeforeCompile, key=mat.customProgramCacheKey();   // chained after any patch already on it (the paved terrain); the key keeps the two programs apart
