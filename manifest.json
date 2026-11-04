@@ -1,7 +1,7 @@
 {
-  "name": "Local",
+  "name": "Know Your Local",
   "short_name": "Local",
-  "description": "Learn your local Philadelphia fire engines — run real firehouses, race rival engines to the box, and learn the streets.",
+  "description": "Know your local — Philadelphia fire engines: run real firehouses, race rival engines to the box, and learn the streets.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,8 +9,23 @@
   "background_color": "#000000",
   "theme_color": "#1a1e24",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }

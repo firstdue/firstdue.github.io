@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Philly Fire Dispatch — Learn Your Local</title>
+<title>Philly Fire Dispatch — Know Your Local</title>
 <meta name="description" content="Drive real Philadelphia streets, hold your due, and learn every box in your firehouse's first-due. A local-knowledge trainer for firefighters.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Philly Fire Dispatch">
-<meta property="og:title" content="Philly Fire Dispatch — Learn Your Local">
+<meta property="og:title" content="Philly Fire Dispatch — Know Your Local">
 <meta property="og:description" content="Drive real Philadelphia streets, hold your due, and learn every box in your firehouse's first-due. A local-knowledge trainer for firefighters.">
 <meta property="og:url" content="https://firstdue.github.io/">
 <meta property="og:image" content="https://firstdue.github.io/og-card.png">
 <meta property="og:image:type" content="image/png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Philly Fire Dispatch — learn your engine's local">
+<meta property="og:image:alt" content="Philly Fire Dispatch — know your engine's local">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Philly Fire Dispatch — Learn Your Local">
+<meta name="twitter:title" content="Philly Fire Dispatch — Know Your Local">
 <meta name="twitter:description" content="Drive real Philadelphia streets, hold your due, and learn every box in your firehouse's first-due.">
 <meta name="twitter:image" content="https://firstdue.github.io/og-card.png">
 <!-- PWA / Add to Home Screen ("Local"). Icon + manifest files live beside index.html on the host (Netlify); they 404 harmlessly on the single-file artifact. -->
@@ -30,6 +30,14 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+/* ⚠ BOOT WATCH (October 30, 2026). A data file that fails to download (a 404, a cut connection, a half file) used to leave the home
+   screen DEAD with no word: the game script threw on its first use of the missing table and nothing after it ran. Until the game
+   script reports in (window.__booted, the last line of it), a script error — an uncaught throw, or a <script> that did not load —
+   writes a plain message where TAP A FIREHOUSE stands. Font and image load errors are not script errors and are ignored. */
+addEventListener('error',function(e){ if(window.__booted) return; var isScript=(typeof ErrorEvent!=='undefined'&&e instanceof ErrorEvent)||(e.target&&e.target.tagName==='SCRIPT'); if(!isScript) return;
+  if(e.target&&e.target.getAttribute&&e.target.getAttribute('data-opt')) return;   // a local server without data/pfd*.js: the game fetches them instead (PFDT)
+  var h=document.querySelector('#homeHud .tag'); if(!h||window.__bootErr) return; window.__bootErr=String((e&&e.message)||(e.target&&e.target.src)||'error');
+  h.textContent='⚠️ COULD NOT LOAD THE GAME — CHECK YOUR CONNECTION AND REOPEN'; h.style.color='#ffb3b3'; },true);
 /* 📲 INSTALL APP (v20j). Chromium fires beforeinstallprompt once, possibly before the big data scripts finish, so it is
    caught HERE and parked on window; the home-screen button replays it. iOS Safari never fires it (Apple allows no prompt). */
 addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__installEvt=e;if(window.__installSync)window.__installSync();});
@@ -193,7 +201,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #topBar .abtn i svg { width:19px; height:19px; display:block; }
   #topBar #btnSettings i { color:#e9eef7; }
   #topBar #btnCallIcon i { color:#f4b950; }
-  #topBar .abtn b { font-size:7px; font-weight:900; letter-spacing:0; color:#c3cede; }
+  #topBar .abtn b { font-size:10px; font-weight:900; letter-spacing:0; color:#c3cede; }   /* 10 px (October 30, 2026; was 7, unreadable for some members): icon 20 + gap 1 + 10 fits the 44 px cell */
   #topBar .abtn:active { background:rgba(255,255,255,.1); }
   /* (v21j: the bar is three cells now — rank, BOX, GET A CALL + SETTINGS — and only the SETTINGS word still folds below 420px.)
      AT PHONE WIDTH THE FIVE CELLS DID NOT ALL FIT WITH WORDS. 359px of bar, minus padding and gaps, is
@@ -561,6 +569,11 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #authMsg { margin-top:10px; font-size:12px; font-weight:700; color:#8fa2bd; line-height:1.4; }
   #authName { width:100%; margin-top:10px; padding:12px; border-radius:8px; border:1px solid #2a3444; background:#0d121b; color:#e8edf5; font-size:15px; display:none; }
   #authNameSave { background:#2b6df6; color:#fff; display:none; }
+  #authOtp { letter-spacing:6px; font-size:22px; text-align:center; font-weight:800; }   /* 🔢 the 6-digit sign-in code (November 3, 2026) */
+  #authVerify { background:#2fbf63; color:#fff; }
+  #authAssign { display:none; gap:8px; margin-top:10px; } #authAssign.on { display:flex; }   /* 🪪 assignment + platoon (November 3, 2026) */
+  #authAssign select { flex:1; min-width:0; padding:12px; border-radius:8px; border:1px solid #2a3444; background:#0d121b; color:#e8edf5; font-size:15px; }
+  #authAssign #authPlatoon { flex:0 0 32%; }
   #houseCard .hcLb { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:7px; min-height:46px; margin:0; padding:6px 8px;
     background:#121c2f; color:#e9eef7; border:1px solid #2e4366; border-radius:12px; font-weight:800; font-size:12.5px; letter-spacing:.6px; cursor:pointer; pointer-events:auto; white-space:nowrap; }
   #houseCard .hcLb svg { width:18px; height:18px; flex:0 0 auto; color:#9fc0ff; }
@@ -784,7 +797,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #hudCol > #radio.mini { flex:0 0 auto; width:44px; height:44px; min-height:0; padding:0; align-items:center; justify-content:center; border-radius:50%; }
   #radio.mini #radioTxt, #radio.mini .chev { display:none; }
   @keyframes blink { 50% { opacity:0; } }
-  #popup { top:24%; left:50%; transform:translateX(-50%); font-size:clamp(24px,6vw,42px); font-weight:900; white-space:nowrap;
+  #popup { top:24%; left:50%; transform:translateX(-50%); font-size:clamp(24px,6vw,42px); font-weight:900; white-space:normal; width:max-content; max-width:92vw; text-align:center; line-height:1.05;   /* wraps (October 30, 2026): nowrap ran NARROW STREET off both sides of a phone */
     color:#ffe14d; font-family:"Arial Black",sans-serif; letter-spacing:2px; opacity:0; z-index:15; text-shadow:0 0 16px rgba(255,160,0,.9), 0 4px 0 #7a3a00, 0 7px 10px rgba(0,0,0,.7); }
   #popup.pop { animation:popIn 1.4s ease forwards; }
   @keyframes popIn { 0%{opacity:0; transform:translateX(-50%) scale(.3) rotate(-4deg);} 12%{opacity:1; transform:translateX(-50%) scale(1.15) rotate(2deg);}
@@ -892,15 +905,19 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   /* 🧯 hydrants near the player's REAL location: a compact two-line button in the EMPTY TOP-LEFT of the home map (owner, October 14,
      2026: "move the hydrant button to the top in the empty spot") — under the title, left of the Northeast's arm, where no firehouse
      stands. In a browser that still shows the yellow INSTALL APP button it drops below that button instead of covering it. */
-  #btnHydNearMe, #btnBoxLookup { position:absolute; left:12px; top:calc(max(10px,env(safe-area-inset-top)) + 58px); z-index:3; min-height:44px; min-width:44px;
+  #btnHydNearMe, #btnBoxLookup, #btnAcctHome { position:absolute; left:12px; top:calc(max(10px,env(safe-area-inset-top)) + 58px); z-index:3; min-height:44px; min-width:44px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
     background:rgba(9,14,26,.9); color:#9cc4ff; border:1px solid rgba(79,141,255,.6); border-radius:11px;
     padding:7px 11px; font-size:11px; letter-spacing:.8px; cursor:pointer; }
-  #btnHydNearMe b, #btnBoxLookup b { font-weight:900; } #btnHydNearMe span, #btnBoxLookup span { font-weight:800; font-size:9.5px; letter-spacing:1.2px; color:#7fa9e6; }
+  #btnHydNearMe b, #btnBoxLookup b, #btnAcctHome b { font-weight:900; } #btnHydNearMe span, #btnBoxLookup span, #btnAcctHome span { font-weight:800; font-size:9.5px; letter-spacing:1.2px; color:#7fa9e6; }
   #homeHud:has(#btnInstall:not([hidden])) ~ #btnHydNearMe { top:calc(max(10px,env(safe-area-inset-top)) + 112px); }
   #btnBoxLookup { top:calc(max(10px,env(safe-area-inset-top)) + 111px); }   /* under HYDRANTS NEAR ME */
   #homeHud:has(#btnInstall:not([hidden])) ~ #btnBoxLookup { top:calc(max(10px,env(safe-area-inset-top)) + 165px); }
-  #btnHydNearMe, #btnBoxLookup { width:126px; padding-left:6px; padding-right:6px; }   /* one width for the pair, whatever the phone's font */
+  #btnHydNearMe, #btnBoxLookup, #btnAcctHome { width:126px; padding-left:6px; padding-right:6px; }   /* one width for the column, whatever the phone's font */
+  #btnAcctHome { top:calc(max(10px,env(safe-area-inset-top)) + 164px); color:#ffd23b; border-color:rgba(255,210,59,.55); }   /* 👤 the account, under LOOK UP (owner, November 3, 2026) */
+  #homeHud:has(#btnInstall:not([hidden])) ~ #btnAcctHome { top:calc(max(10px,env(safe-area-inset-top)) + 218px); }
+  #btnAcctHome.in { color:#9cc4ff; border-color:rgba(79,141,255,.6); }
+  #btnAcctHome b, #btnAcctHome span { max-width:114px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #hydSheet, #boxSheet { position:absolute; inset:0; z-index:9; display:none; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.55); }
   #hydSheet.show, #boxSheet.show { display:flex; }
   #hydSheet .card { width:min(480px,96vw); max-height:92vh; overflow:auto; text-align:left; background:#141a24; border:1px solid #2a3444; border-radius:16px 16px 0 0;
@@ -1239,7 +1256,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <div class="sxCard">
       <div class="sxRow sxStack"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V8l8-3.5L20 8v12.5"/><path d="M9.5 20.5v-4.5h5v4.5M8 10.5h2M14 10.5h2M8 13.5h2M14 13.5h2"/></svg><span class="sxL"><b>Due assignment</b><small id="sxDueSub">Calls that put you this due</small></span><div class="sxSeg" id="segDue" role="group" aria-label="Due assignment"><button type="button" data-v="0">All</button><button type="button" data-v="1">1st</button><button type="button" data-v="2">2nd</button><button type="button" data-v="3">3rd</button><button type="button" data-v="4">4th</button></div></div>
       <div class="sxRow sxStack"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.1" fill="currentColor"/></svg><span class="sxL"><b>Difficulty</b><small id="sxDiffSub"></small></span><div class="sxSeg" id="segDiff" role="group" aria-label="Difficulty"><button type="button" data-v="0">Training</button><button type="button" data-v="1">Standard</button><button type="button" data-v="2">Pro</button><button type="button" data-v="3">Expert</button></div></div>
-      <button class="sxRow sxTog" id="btnRivals" type="button" role="switch" aria-checked="false"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5.5H5a3 3 0 0 0 3.2 4.3M16 5.5h3a3 3 0 0 1-3.2 4.3M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/></svg><span class="sxL"><b>Rivals</b><small>Race the other companies on the box</small></span><span class="sxSw" aria-hidden="true"></span></button>
+      <button class="sxRow sxTog" id="btnRivals" type="button" role="switch" aria-checked="false"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5.5H5a3 3 0 0 0 3.2 4.3M16 5.5h3a3 3 0 0 1-3.2 4.3M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/></svg><span class="sxL"><b>Rivals</b><small>Race the other companies to the box</small></span><span class="sxSw" aria-hidden="true"></span></button>
       <button class="sxRow sxTog on" id="btnGuide" type="button" role="switch" aria-checked="true"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="18" r="2"/><circle cx="17.5" cy="6" r="2"/><path d="M8.5 18h6a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7h6"/></svg><span class="sxL"><b>Guide</b><small>The blue route line. Leaderboard runs need it off</small></span><span class="sxSw" aria-hidden="true"></span></button>
     </div>
     <div class="sxSec">EXPLORE</div>
@@ -1287,9 +1304,15 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <div class="ccHead">👤 ACCOUNT</div>
     <div id="authMsg"></div>
     <input id="authEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
-    <button class="aBtn" id="authSend">✉️ SEND MAGIC LINK</button>
+    <button class="aBtn" id="authSend">✉️ SEND SIGN-IN EMAIL</button>
+    <input id="authOtp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="6-digit code" hidden />
+    <button class="aBtn" id="authVerify" hidden>🔢 SIGN IN WITH CODE</button>
+    <div id="authMember" hidden></div>
+    <input id="authCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Invite code" hidden />
+    <button class="aBtn" id="authJoin" hidden>🔑 JOIN WITH INVITE CODE</button>
     <input id="authName" type="text" maxlength="24" placeholder="Leaderboard name" />
-    <button class="aBtn" id="authNameSave">SAVE NAME</button>
+    <div id="authAssign"><select id="authCo" aria-label="Your assignment"><option value="">Assignment…</option></select><select id="authPlatoon" aria-label="Your platoon"><option value="">Platoon</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
+    <button class="aBtn" id="authNameSave">SAVE PROFILE</button>
     <button class="aBtn" id="authCareer" style="background:#343c49;color:#fff;">🧑‍🚒 CAREER & BADGES</button>
     <button class="aBtn" id="authOut">SIGN OUT</button>
     <button class="aBtn" id="authClose">CLOSE</button>
@@ -1414,6 +1437,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <button id="btnListView">☰ LIST VIEW</button>
     <button id="btnHydNearMe" type="button" aria-label="Hydrants near me"><b><svg class="hydIco" aria-hidden="true"><use href="#hydIcoSym"/></svg> HYDRANTS</b><span>NEAR ME</span></button>
     <button id="btnBoxLookup" type="button" aria-label="Look up a box or an address"><b>🔔 LOOK UP</b><span>BOX · ADDRESS</span></button>
+    <button id="btnAcctHome" type="button" aria-label="Your account"><b>👤 SIGN IN</b><span>ACCOUNT</span></button>
     <div id="hydSheet" role="dialog" aria-modal="true" aria-labelledby="hydSheetTitle"><div class="card">
       <h2 id="hydSheetTitle"><svg class="hydIco" aria-hidden="true"><use href="#hydIcoSym"/></svg> HYDRANTS NEAR YOU</h2>
       <div id="hydSheetStatus"></div>
@@ -1536,13 +1560,29 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/landcover-packed.js"></script>
 <script src="data/btype.js"></script>
 <script src="data/rref.js"></script>
-<script src="data/pfdbox.js"></script>
-<script src="data/pfdrun.js"></script>
+<script>/* 🔐 THE DEPARTMENT DATA (November 3, 2026; notes/members-plan.md phase 2). data/pfdbox.js and data/pfdrun.js are not on the public
+   site any more: there the game fetches them in area pieces from the members' bucket once signed in (PFDT, in the game script). On a
+   local server (the tests, the phone A/B over adb) the authoring files are here, and this writes their two tags in where they stood, so
+   the game script finds PFDBOX and PFDRUN as before and every suite runs unchanged. The trade-off: a local run never exercises the
+   loader unless asked (?pfdt=1 leaves the files out — tests/members-data.browser.cjs), and a local server WITHOUT the files (a copy of
+   the public site) falls back to the loader quietly (data-opt: the BOOT WATCH does not count them). The tag text is built in pieces so
+   no checker mistakes it for a script tag of the page. */
+(function(){ if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||/[?&]pfdt=1(&|$)/.test(location.search)) return; window.PFDLOCAL=true;
+  var t=''; ['pfdbox','pfdrun'].forEach(function(f){ t+='<scr'+'ipt src="data/'+f+'.js" data-opt="1"></scr'+'ipt>'; }); document.write(t); })();</script>
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22u"></script>
+<script src="firehouse-models.js?v=v22v"></script>
 <script src="data/inst.js"></script>
+<script>
+/* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
+   A typeof test never throws, but it cannot be looped by name; reading the binding can, so each read is tried. See BOOT WATCH (head). */
+(function(){ var need=[['vendor/three.147.min.js',function(){ return THREE; }],['data/rb.js',function(){ return RB; }],['data/ab.js',function(){ return AB; }],
+    ['data/addr.js',function(){ return ADDR; }],['data/navgeo.js',function(){ return NAVGEO; }],['data/landcover-packed.js',function(){ return LANDCOVER; }],['data/lmks.js',function(){ return LMKS; }]];
+  var miss=[]; for(var i=0;i<need.length;i++){ try{ need[i][1](); }catch(e){ miss.push(need[i][0]); } }
+  if(!miss.length) return; window.__bootErr='missing '+miss.join(', '); var h=document.querySelector('#homeHud .tag');
+  if(h){ h.textContent='⚠️ COULD NOT LOAD '+miss.join(', ')+' — CHECK YOUR CONNECTION AND REOPEN'; h.style.color='#ffb3b3'; } })();
+</script>
 <script>
 /* ================================================================================
    PHILLY FIRE DISPATCH  —  v9 · Round B (real OpenStreetMap streets)
@@ -1573,7 +1613,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22u";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22v";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2564,7 +2604,25 @@ const HYDRANTS=[[3116,5869,1],[2713,6285,1],[2568,5932,1],[4547,6184,1],[2850,62
 /* 📦🧯 PFD BOX MAPS (data/pfdbox.js) — real box polygons + hydrants from the PFD GIS box-breakdown GeoPDFs (tools/pfd-boxbook).
    Hydrants are src 3. An official point within 8m of one is the same hydrant (dropped), and inside a mapped box the PFD
    layer is complete, so any OSM point left there is dropped too. A missing file degrades to the old data. */
-const PFD_BOXES=(function(){ if(typeof PFDBOX==='undefined') return [];
+/* 🔐 THE DEPARTMENT DATA IN AREA PIECES (November 3, 2026; notes/members-plan.md phase 2; owner: "all will be served in pieces, on
+   demand", members only, then sign-in only). The box areas, their running order and the box-book hydrants come from the PFD's own books
+   and lists, so they are no longer files on the public site: tools/pfd-tiles/bake_pfd_tiles.js cuts them into 1,000 m squares of the
+   world frame that sit in a PRIVATE Supabase Storage bucket `pfd`, readable by a signed-in account only (SUPABASE-SETUP.md Step 12).
+   PFDT fetches the squares the game needs, with the account's token: around the truck AND quarters out to PFDT.R (the dispatcher's call
+   band is 300-3,000 m from the truck, and every call needs the running order at ITS address), round a hydrant map's view, a looked-up
+   box. Three at a time, nearest first, a failure tried again on the building tiles' ladder (fpFailed / fpRetryDue: 2, 4, 8, 16, 30 s,
+   six tries); past PFDT.max the least recently used go, never one the truck or quarters needs. A square's boxes join PFD_BOXES (so
+   pfdBoxAt, runOrderAt, realBoxFor and the Lookup read them unchanged); its hydrants are snapped to the kerb as at load and kept in
+   PFDT.hg beside HYD_GRID (hydrantsNear reads both); the public points they stand for are hidden, never deleted (PFDT.hide: the two
+   rules of mergePfdHydrants, on the public points' own unsnapped positions). Signed out, nothing is fetched and anything fetched is
+   dropped: the game runs on the public data (the City's first-due zones, the nearest houses, the OSM / PWD hydrants).
+   On a local server (the tests, the phone A/B) the page writes data/pfdbox.js and data/pfdrun.js in itself (the inline script before
+   the game script), PFDBOX is defined and none of this runs: every suite sees the game as before. ?pfdt=1 leaves the local files out. */
+const PFDT={ on:typeof PFDBOX==='undefined', T:1000, R:3000, max:64, conc:3, gen:0, idx:null, idxState:'idle', zst:'idle', look:false,
+  tiles:new Map(), boxes:new Map(), queue:[], busy:0, keep:new Set(), last:null, want:null, ver:0, dirty:false, hg:new Map(), waits:[], wait0:0, waitT:0,
+  raw:typeof PFDBOX==='undefined'?Int32Array.from(HYDRANTS.flatMap(h=>[h[0],h[1]])):null, hide:typeof PFDBOX==='undefined'?new Uint8Array(HYDRANTS.length):null, rawT:null,
+  pub:PFD_ZONES.map(z=>[z.e,z.poly]) };   // raw: the public points before snapHydrants moves any; pub: the City's zones, put back at sign-out
+const PFD_BOXES=(function(){ if(typeof PFDBOX==='undefined') return [];   // 🔐 PFDT fills it square by square when the file is not here
   return PFDBOX.boxes.map(b=>{ const poly=b.ring.map(p=>{ const w=ll2world(p[0],p[1]); return [w.x,w.z]; });
     let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9; for(const p of poly){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<z0)z0=p[1]; if(p[1]>z1)z1=p[1]; }
     let A=0; for(let i=0,j=poly.length-1;i<poly.length;j=i++) A+=(poly[j][0]-poly[i][0])*(poly[j][1]+poly[i][1]);
@@ -2580,7 +2638,7 @@ function pfdBoxAt(x,z){ for(const b of PFD_BOXES) if(inBoxBB(b,x,z)&&ptInRing(x,
    45% (1st due already came from the box, 100%). Units the game has no house for (the airport's Engine 78) are
    skipped. Built once per box on first use; ground outside every box keeps the old way (computeResponders, dueRankAt). */
 function runOrderAt(x,z){ const b=pfdBoxAt(x,z); if(!b) return null;
-  if(b.run===undefined){ b.run=null; const L=typeof PFDRUN!=='undefined'&&PFDRUN.z&&PFDRUN.z[b.box];
+  if(b.run===undefined){ b.run=null; const L=b.runL||(typeof PFDRUN!=='undefined'&&PFDRUN.z&&PFDRUN.z[b.box]);   // runL: a PFDT square's copy
     if(L){ const out=[]; for(const n of L){ const s=stations.find(q=>q.num===n); if(s&&out.indexOf(s)<0) out.push(s); } if(out.length>=4) b.run=out; } }
   return b.run; }
 (function mergePfdHydrants(){ if(typeof PFDBOX==='undefined') return;
@@ -2605,10 +2663,11 @@ function runOrderAt(x,z){ const b=pfdBoxAt(x,z); if(!b) return null;
   // Main St at Little Cresson) the push lands in the other road and the passes bounce, so 12 citywide ended with their centre
   // IN a roadway and 11 more within 0.6 m of a kerb. Now ONE pass: the same push first; if that spot is not clear of every road
   // by 0.8 m, every nearby street's kerb on both sides AND rings out to 16 m — and the nearest clear spot of all of them wins.
-  const clear=(x,z)=>{ let w=1e9; for(const sg of segNear(x,z)){ const e=closestSeg(x,z,sg).d-segHalf(sg); if(e<w) w=e; } return w; };
-  for(const h of HYDRANTS){ let best=null,worst=1e18;
+  for(const h of HYDRANTS) snapHydrant(h); })();   // one at a time (snapHydrant): a PFDT square's hydrants go through it as they arrive
+function hydClear(x,z){ let w=1e9; for(const sg of segNear(x,z)){ const e=closestSeg(x,z,sg).d-segHalf(sg); if(e<w) w=e; } return w; }
+function snapHydrant(h){ const clear=hydClear; let best=null,worst=1e18;
     for(const sg of segNear(h[0],h[1])){ const c=closestSeg(h[0],h[1],sg); const e=c.d-segHalf(sg); if(e<worst){worst=e;best={c,sg};} }   // deepest violation, not nearest centreline
-    if(!best || worst>=0.8) continue;
+    if(!best || worst>=0.8) return;
     const out=(sg,c,dir)=>{ let nx=h[0]-c.cx, nz=h[1]-c.cz, nl=Math.hypot(nx,nz); if(nl<0.3){ nx=-(sg.bz-sg.az); nz=sg.bx-sg.ax; nl=Math.hypot(nx,nz)||1; } return [nx/nl*dir,nz/nl*dir]; };   // on the centreline: a side from the seg normal
     const cand=[], add=(x,z)=>{ x=Math.round(x); z=Math.round(z); const e=clear(x,z); if(e>=0.8&&e<=6) cand.push([x,z,Math.hypot(x-h[0],z-h[1])]); };
     { const [nx,nz]=out(best.sg,best.c,1), rh=segHalf(best.sg); add(best.c.cx+nx*(rh+1.7),best.c.cz+nz*(rh+1.7)); }
@@ -2616,13 +2675,127 @@ function runOrderAt(x,z){ const b=pfdBoxAt(x,z); if(!b) return null;
         for(const dir of [1,-1]) for(const off of [1.7,2.6]){ const [nx,nz]=out(sg,c,dir); add(c.cx+nx*(rh+off),c.cz+nz*(rh+off)); } }
       for(let r=2;r<=16;r++) for(let a=0;a<16;a++) add(h[0]+Math.cos(a*Math.PI/8)*r,h[1]+Math.sin(a*Math.PI/8)*r); }   // the rings compete with the kerbs: the smallest move wins
     if(cand.length){ cand.sort((p,q)=>p[2]-q[2]); h[0]=cand[0][0]; h[1]=cand[0][1]; } }
-})();
 const HYD_GRID=(function(){ const cell=220, g=new Map(); for(let i=0;i<HYDRANTS.length;i++){ const h=HYDRANTS[i]; const k=Math.floor(h[0]/cell)+":"+Math.floor(h[1]/cell); let a=g.get(k); if(!a){a=[];g.set(k,a);} a.push(i); } return {cell,g}; })();
 function addHydrant(x,z,src){ const i=HYDRANTS.length; HYDRANTS.push([Math.round(x),Math.round(z),src||2]);   // 🧯 runtime insert — a plain push never renders (HYD_GRID is baked once)
   const k=Math.floor(x/HYD_GRID.cell)+":"+Math.floor(z/HYD_GRID.cell);
   let a=HYD_GRID.g.get(k); if(!a){ a=[]; HYD_GRID.g.set(k,a); } a.push(i); return i; }
-function hydrantsNear(x,z,rad){ const cell=HYD_GRID.cell,g=HYD_GRID.g,out=[],r=Math.ceil(rad/cell),gx=Math.floor(x/cell),gz=Math.floor(z/cell),rr=rad*rad;
-  for(let a=gx-r;a<=gx+r;a++)for(let b=gz-r;b<=gz+r;b++){ const arr=g.get(a+":"+b); if(arr)for(const i of arr){ const h=HYDRANTS[i]; if((h[0]-x)*(h[0]-x)+(h[1]-z)*(h[1]-z)<=rr) out.push(h); } } return out; }
+function hydrantsNear(x,z,rad){ const cell=HYD_GRID.cell,g=HYD_GRID.g,out=[],r=Math.ceil(rad/cell),gx=Math.floor(x/cell),gz=Math.floor(z/cell),rr=rad*rad, hide=PFDT.hide, tg=PFDT.hg.size?PFDT.hg:null;
+  for(let a=gx-r;a<=gx+r;a++)for(let b=gz-r;b<=gz+r;b++){ const k=a+":"+b, arr=g.get(k); if(arr)for(const i of arr){ if(hide&&hide[i]) continue; const h=HYDRANTS[i]; if((h[0]-x)*(h[0]-x)+(h[1]-z)*(h[1]-z)<=rr) out.push(h); }
+    const t2=tg&&tg.get(k); if(t2) for(const h of t2) if((h[0]-x)*(h[0]-x)+(h[1]-z)*(h[1]-z)<=rr) out.push(h); } return out; }   // 🔐 t2: the book hydrants of the PFDT squares that are in
+/* 🔐 PFDT, the loader (see PFDT above). Signed in = a session and memberOK(); on a local server MEMBER.dev makes memberOK() true, so a
+   test signs in by giving AUTH a session. Every fetch goes through sbFetch (the bearer token, one refresh on a 401). */
+function pfdtActive(){ return PFDT.on&&!!AUTH.session&&memberOK(); }
+async function pfdtGet(rel){ const r=await sbFetch('/storage/v1/object/authenticated/pfd/'+rel); if(!r||!r.ok) throw new Error('pfd '+rel+': '+(r?r.status:'no answer')); return r.json(); }
+const pfdtDist=(tx,tz,x,z)=>{ const T=PFDT.T; return Math.hypot(Math.max(tx*T-x,0,x-(tx+1)*T),Math.max(tz*T-z,0,z-(tz+1)*T)); };   // a point to a square, 0 inside
+function pfdtKeys(x,z,R){ const P=PFDT, T=P.T, out=[]; if(!P.idx) return out;   // the squares that exist within R of a point, nearest first
+  for(let tx=Math.floor((x-R)/T);tx<=Math.floor((x+R)/T);tx++) for(let tz=Math.floor((z-R)/T);tz<=Math.floor((z+R)/T);tz++){ const k=tx+'_'+tz, d=pfdtDist(tx,tz,x,z); if(P.idx.tiles[k]&&d<=R) out.push([d,k]); }
+  return out.sort((a,b)=>a[0]-b[0]).map(q=>q[1]); }
+function pfdtIndex(){ const P=PFDT; if(P.idxState==='ready') return true;   // index.json: which squares exist, and each box's square range
+  if(P.idxState==='loading'||(P.idxState==='failed'&&!fpRetryDue('p:idx'))) return false;
+  P.idxState='loading'; const g=P.gen;
+  pfdtGet('index.json').then(j=>{ if(g!==P.gen) return; P.idx=j; P.T=j.tile||1000; P.rawT=null; P.idxState='ready'; FPRETRY.delete('p:idx'); P.last=null; pfdtArrived(null); })
+    .catch(()=>{ if(g===P.gen){ P.idxState='failed'; fpFailed('p:idx'); } });
+  return false; }
+function pfdtRawT(){ const P=PFDT; if(P.rawT) return P.rawT; const m=new Map(), T=P.T;   // square -> the public points within 8 m of it
+  for(let i=0;i<P.raw.length/2;i++){ const x=P.raw[i*2], z=P.raw[i*2+1];
+    for(let tx=Math.floor((x-8)/T);tx<=Math.floor((x+8)/T);tx++) for(let tz=Math.floor((z-8)/T);tz<=Math.floor((z+8)/T);tz++){ const k=tx+'_'+tz; let a=m.get(k); if(!a){ a=[]; m.set(k,a); } a.push(i); } }
+  return P.rawT=m; }
+// zones.json: the 60 first-due unions, swapped in for the City's rings exactly as pfdZonesFromBoxes does with the local file
+function pfdtZones(){ const P=PFDT; if(P.zst==='ready'||P.zst==='loading'||(P.zst==='failed'&&!fpRetryDue('p:zones'))) return; P.zst='loading'; const g=P.gen;
+  pfdtGet('zones.json').then(j=>{ if(g!==P.gen) return;
+    for(const zn of j.zones||[]){ const R=zn.r, poly=[]; for(let i=0;i+1<R.length;i+=2) poly.push([R[i]/10,R[i+1]/10]);
+      const z=PFD_ZONES.find(q=>q.e===zn.e); if(z) z.poly=poly; else PFD_ZONES.push({e:zn.e,bn:0,poly,pfdt:true}); PFD_ZONE_BY_E.set(zn.e,poly); }
+    P.zst='ready'; FPRETRY.delete('p:zones'); pfdtZonesChanged(); })
+  .catch(()=>{ if(g===P.gen){ P.zst='failed'; fpFailed('p:zones'); } }); }
+function pfdtZonesChanged(){ DUE.polyCache.clear(); knowUniverseReset(); CALLBAG.key=''; }   // everything that measured against the old rings measures again
+// queue the squares within R of each centre ([[x,z],...]): pin = what the truck and quarters need (never evicted); front = someone is looking
+function pfdtEnsure(C,R,o){ o=o||{}; const P=PFDT; if(!pfdtActive()||!pfdtIndex()) return; const keys=[], seen=new Set();
+  for(const [x,z] of C) for(const k of pfdtKeys(x,z,R)) if(!seen.has(k)){ seen.add(k); keys.push(k); }
+  if(o.pin) P.keep=seen; pfdtQueue(keys,o.front); }
+function pfdtQueue(keys,front){ const P=PFDT, now=performance.now(), add=[];
+  for(const k of keys){ const t=P.tiles.get(k); if(t){ t.used=now; if(t.state!=='failed'||!fpRetryDue('p:'+k)) continue; P.tiles.delete(k); } add.push(k); }   // a failed square, tried again when due
+  if(add.length){ const s=new Set(add); P.queue=P.queue.filter(k=>!s.has(k)); P.queue=front?add.concat(P.queue):P.queue.concat(add); }
+  pfdtPump();
+  if(P.tiles.size>P.max){ const old=[...P.tiles.values()].filter(t=>t.state!=='loading'&&!P.keep.has(t.k)&&t.used<now).sort((a,b)=>a.used-b.used);
+    for(let i=0;i<old.length&&P.tiles.size>P.max;i++) pfdtDrop(old[i]); } }
+function pfdtPump(){ const P=PFDT; while(P.busy<P.conc&&P.queue.length){ const k=P.queue.shift(); if(!P.tiles.has(k)) pfdtLoad(k); } }
+function pfdtLoad(k){ const P=PFDT, [tx,tz]=k.split('_').map(Number), t={k,tx,tz,state:'loading',used:performance.now(),boxes:[],hyd:[],hid:[]}; P.tiles.set(k,t); P.busy++;
+  pfdtGet('tiles/'+k+'.json').then(j=>{ if(P.tiles.get(k)!==t) return; try{ pfdtAdd(t,j); }catch(e){ pfdtUndo(t); throw e; } t.state='ready'; FPRETRY.delete('p:'+k); pfdtArrived(t); })
+    .catch(()=>{ if(P.tiles.get(k)===t){ t.state='failed'; fpFailed('p:'+k); } }).finally(()=>{ P.busy--; pfdtPump(); }); }
+function pfdtAdd(t,j){ const P=PFDT, C=HYD_GRID.cell;
+  for(const r of j.b||[]){ let b=P.boxes.get(r[0]);                         // [box, engine, ring (decimetres), running order]; a box in several squares is ONE object
+    if(b) b.refs++;
+    else { const R=r[2], poly=[]; let x0=1e9,z0=1e9,x1=-1e9,z1=-1e9, A=0;
+      for(let i=0;i+1<R.length;i+=2){ const x=R[i]/10, z=R[i+1]/10; poly.push([x,z]); if(x<x0)x0=x; if(x>x1)x1=x; if(z<z0)z0=z; if(z>z1)z1=z; }
+      for(let i=0,k=poly.length-1;i<poly.length;k=i++) A+=(poly[k][0]-poly[i][0])*(poly[k][1]+poly[i][1]);
+      b={ box:r[0], e:r[1], poly, bb:[x0,z0,x1,z1], area:Math.abs(A)/2, runL:r[3]&&r[3].length?r[3]:null, refs:1 }; P.boxes.set(b.box,b);
+      let lo=0,hi=PFD_BOXES.length; while(lo<hi){ const m=(lo+hi)>>1; if(PFD_BOXES[m].area<=b.area) lo=m+1; else hi=m; } PFD_BOXES.splice(lo,0,b); }   // PFD_BOXES stays smallest first: an island before its surround
+    t.boxes.push(b); }
+  const H=j.h||[], G=16, g=new Map();
+  for(let i=0;i+1<H.length;i+=2){ const p=[H[i],H[i+1],3]; t.hyd.push(p); const k=Math.floor(p[0]/G)+':'+Math.floor(p[1]/G); let a=g.get(k); if(!a){ a=[]; g.set(k,a); } a.push(p); }
+  const dup=(x,z)=>{ const gx=Math.floor(x/G), gz=Math.floor(z/G);
+    for(let a=gx-1;a<=gx+1;a++)for(let b=gz-1;b<=gz+1;b++){ const arr=g.get(a+':'+b); if(arr) for(const p of arr) if(Math.hypot(p[0]-x,p[1]-z)<8) return true; } return false; };
+  for(const i of pfdtRawT().get(t.k)||[]){ const h=HYDRANTS[i]; if(h[2]===2) continue; const x=P.raw[i*2], z=P.raw[i*2+1];   // mergePfdHydrants' rules: the same hydrant (8 m), or OSM inside a mapped box
+    let hit=dup(x,z); if(!hit&&h[2]===0) for(const b of t.boxes) if(inBoxBB(b,x,z)&&ptInRing(x,z,b.poly)){ hit=true; break; }
+    if(hit){ P.hide[i]++; t.hid.push(i); } }
+  for(const p of t.hyd){ snapHydrant(p); const k=Math.floor(p[0]/C)+':'+Math.floor(p[1]/C); let a=P.hg.get(k); if(!a){ a=[]; P.hg.set(k,a); } a.push(p); } }
+function pfdtUndo(t){ const P=PFDT;
+  for(const b of t.boxes){ if(--b.refs>0) continue; P.boxes.delete(b.box); const i=PFD_BOXES.indexOf(b); if(i>=0) PFD_BOXES.splice(i,1); }
+  if(t.hyd.length){ const S=new Set(t.hyd), C=HYD_GRID.cell, ks=new Set(t.hyd.map(h=>Math.floor(h[0]/C)+':'+Math.floor(h[1]/C)));
+    for(const k of ks){ const a=P.hg.get(k); if(!a) continue; const r=a.filter(h=>!S.has(h)); if(r.length) P.hg.set(k,r); else P.hg.delete(k); } }
+  for(const i of t.hid) P.hide[i]--; t.boxes=[]; t.hyd=[]; t.hid=[]; }
+function pfdtDrop(t){ pfdtUndo(t); PFDT.tiles.delete(t.k); t.state='dropped'; PFDT.ver++; }
+function pfdtArrived(t){ const P=PFDT; P.ver++;
+  if(t&&t.hyd.length&&FLATCITY.cx!==undefined&&pfdtDist(t.tx,t.tz,FLATCITY.cx,FLATCITY.cz)<=600) P.dirty=true;   // the 3D city draws the hydrants within 520 m of its centre
+  for(const S of [NEARME,BOXLOOK,COACHHYD]) if(S.active&&S.active()) hydMapDraw(S);
+  if(t&&NEARME.pos&&NEARME.last&&document.getElementById('hydSheet').classList.contains('show')&&pfdtDist(t.tx,t.tz,NEARME.last.x,NEARME.last.z)<=450) nearMeShow(NEARME.pos);   // the five nearest again, with this square's
+  pfdtWaits(); }
+// every square that exists within R of a point is in (failOk: or has failed and waits for its retry)
+function pfdtReady(x,z,R,failOk){ const P=PFDT; if(P.idxState!=='ready') return false;
+  for(const k of pfdtKeys(x,z,R)){ const t=P.tiles.get(k); if(!t||t.state==='loading'||(t.state==='failed'&&!failOk)) return false; } return true; }
+// a point's square is in (or nothing to wait for: signed out, no index, no square there). A scan takes the test once (pfdtHasFn)
+function pfdtHasFn(){ const P=PFDT; if(!pfdtActive()||P.idxState!=='ready') return null;
+  return (x,z)=>{ const k=Math.floor(x/P.T)+'_'+Math.floor(z/P.T); if(!P.idx.tiles[k]) return true; const t=P.tiles.get(k); return !!t&&t.state==='ready'; }; }
+function pfdtHas(x,z){ const f=pfdtHasFn(); return !f||f(x,z); }
+function pfdtWaits(){ const P=PFDT; if(!P.waits.length) return; const now=performance.now(), w=P.waits; P.waits=[]; for(const q of w){ if(q.test()||now>q.until) q.cb(); else P.waits.push(q); } }
+function pfdtAfter(test,cb,ms){ PFDT.waits.push({test,cb,until:performance.now()+(ms||10000)}); pfdtWaits(); }
+// a hydrant map's view: its squares first (at most 2.5 km round its middle); a drag of a few metres asks for nothing new
+function pfdtWant(x,z,r){ if(!pfdtActive()) return; r=Math.min(r,2500); const w=PFDT.want;
+  if(w&&PFDT.idxState==='ready'&&Math.hypot(w[0]-x,w[1]-z)<40&&Math.abs(w[2]-r)<40) return; if(!pfdtIndex()) return; PFDT.want=[x,z,r]; pfdtEnsure([[x,z]],r,{front:true}); }
+// a looked-up box: the squares its outline's bounding box covers (its ring and every hydrant in it); true = still waiting for one
+function pfdtBoxWait(key){ const P=PFDT; if(!pfdtActive()) return false; if(P.idxState!=='ready'){ pfdtIndex(); return P.idxState==='loading'||fpRetryDue('p:idx'); }
+  const r=P.idx.box&&P.idx.box[key]; if(!r) return false; const ks=[];
+  for(let tx=r[0];tx<=r[2];tx++) for(let tz=r[1];tz<=r[3];tz++){ const k=tx+'_'+tz; if(P.idx.tiles[k]) ks.push(k); }
+  pfdtQueue(ks,true); return ks.some(k=>{ const t=P.tiles.get(k); return !t||t.state==='loading'; }); }
+// the Lookup's two files, whole, as the globals the local scripts declare (window.PFDLOOK / PFDADDR; dropped at sign-out)
+function pfdtFile(rel,name,done){ if(!pfdtActive()) return done(false); const g=PFDT.gen;
+  pfdtGet(rel).then(j=>{ if(g!==PFDT.gen||!pfdtActive()) return done(false); window[name]=j; PFDT.look=true; done(true); }).catch(()=>done(false)); }
+function pfdtSignMsg(){ return PFDT.on&&!pfdtActive()?'Sign in first (⚙ Settings → Account) — box and address lookups are for signed-in members.':''; }
+// signed out: every square, the zones and the Lookup's files go; the City's zones come back
+function pfdtClear(){ const P=PFDT; P.gen++; for(const t of [...P.tiles.values()]) pfdtDrop(t);
+  P.tiles.clear(); P.queue.length=0; P.keep=new Set(); P.idx=null; P.idxState='idle'; P.last=null; P.want=null; P.dirty=false;
+  for(const k of [...FPRETRY.keys()]) if(k.startsWith('p:')) FPRETRY.delete(k);
+  if(P.zst!=='idle'){ for(let i=PFD_ZONES.length-1;i>=0;i--) if(PFD_ZONES[i].pfdt) PFD_ZONES.splice(i,1);
+    for(const [e,poly] of P.pub){ const z=PFD_ZONES.find(q=>q.e===e); if(z) z.poly=poly; }
+    PFD_ZONE_BY_E.clear(); for(const z of PFD_ZONES) PFD_ZONE_BY_E.set(z.e,z.poly); P.zst='idle'; pfdtZonesChanged(); }
+  if(P.look){ P.look=false; try{ delete window.PFDLOOK; delete window.PFDADDR; }catch(e){} BOXLOOK.addrIx=null; }
+  P.ver++; for(const q of P.waits.splice(0)) try{ q.cb(); }catch(e){} }   // a Lookup still waiting carries on, signed out
+// every frame (PRESENT): the index and the zones once signed in, the squares round the truck and quarters while a shift runs, one 3D
+// rebuild once the squares round the city's centre are in (their hydrants), and the Lookup's waits
+function pfdtTick(){ const P=PFDT; if(!P.on) return;
+  if(!pfdtActive()){ if(P.tiles.size||P.zst!=='idle'||P.idxState!=='idle'||P.look) pfdtClear(); return; }
+  pfdtIndex(); pfdtZones(); pfdtWaits();
+  if(P.dirty&&FLATCITY.built&&!FLATCITY.job&&FLATCITY.cx!==undefined&&pfdtReady(FLATCITY.cx,FLATCITY.cz,600,true)){ P.dirty=false; FLATCITY.requestRebuild(FLATCITY.cx,FLATCITY.cz); }
+  if(!state.running||P.idxState!=='ready') return;
+  const now=performance.now(), l=P.last;
+  if(!l||Math.hypot(truck.x-l[0],truck.z-l[1])>60||now-l[2]>1000){ P.last=[truck.x,truck.z,now]; const st=DRIVE.stationId&&stations.find(s=>s.id===DRIVE.stationId), C=[[truck.x,truck.z]];
+    if(st) C.push([st.x,st.z]); pfdtEnsure(C,P.R,{pin:true}); } }
+// the dispatcher waits for the call band's squares (never longer than 12 s: then the call comes from the squares that are in)
+function pfdtHold(){ const P=PFDT; if(!pfdtActive()||!state.running||P.idxState==='failed'){ P.wait0=0; return false; }
+  if(P.idxState==='ready'&&pfdtReady(truck.x,truck.z,P.R,true)){ P.wait0=0; return false; }
+  const now=performance.now(); if(!P.wait0) P.wait0=now; if(now-P.wait0>12000){ P.wait0=0; return false; }
+  pfdtTick(); if(!P.waitT) P.waitT=setTimeout(()=>{ P.waitT=0; if(state.running&&!state.target&&!state.over&&!homeEl.classList.contains('show')) newDispatch(); },350);
+  return true; }
 
 // 🚒 THE HYDRANT (owner's phone, October 13, 2026: "make the fire hydrant look better and not so buried in the ground so
 // they're a little bit more noticeable"). ONE merged model with vertex colours: a concrete footing reaching 0.6 m down, a
@@ -4313,7 +4486,9 @@ ctlApply();
 document.getElementById('btnSiren').addEventListener('click',toggleSiren);
 document.getElementById('btnRoute').addEventListener('click',toggleRoute);
 document.getElementById('btnNight').addEventListener('click',toggleNight);
-document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx.muted; document.getElementById('btnMute').textContent=sfx.muted?'🔇 MUTED':'🔊 SOUND'; if(AC){ if(sfx.muted){ sfx.eg.gain.value=0; sfx.sg.gain.value=0; } if(sfx.mg) sfx.mg.gain.value=sfx.muted?0:sfx.musicVol; } });
+document.getElementById('btnMute').addEventListener('click',()=>{ sfx.muted=!sfx.muted; document.getElementById('btnMute').textContent=sfx.muted?'🔇 MUTED':'🔊 SOUND'; if(!sfx.muted) sfx.init();   // 🔋 the context exists only once sound is wanted
+  if(AC){ if(sfx.muted){ sfx.eg.gain.value=0; sfx.sg.gain.value=0; } if(sfx.mg) sfx.mg.gain.value=sfx.muted?0:sfx.musicVol; sfxSleep(); } });
+function sfxSleep(){ if(!AC) return; try{ if(sfx.muted||document.hidden){ if(AC.state==='running') AC.suspend(); } else if(AC.state==='suspended') AC.resume(); }catch(e){} }   // 🔋 (October 30, 2026) a suspended context holds no audio thread; resumed on unmute / return
 function toggleSiren(){ state.siren=!state.siren; document.getElementById('btnSiren').classList.toggle('on',state.siren); }
 const TILTCAM={back:18,h:26,ahead:27};                                     // GPS-nav camera rig — ~30°: tilted enough to see well down the street (user asked; 43° was too top-down, 23° was all horizon)
 function updateTiltMap(dt){                                                    // Google-nav-style pitched camera over the live tile ground
@@ -4555,7 +4730,7 @@ function setDriveSpeed(v,quiet){ DRIVE.speed=Math.max(6,Math.min(70,v));        
 document.getElementById('btnZoomIn').addEventListener('click',e=>{ e.preventDefault(); setDriveSpeed(DRIVE.speed+6); });    // ＋ = faster
 document.getElementById('btnZoomOut').addEventListener('click',e=>{ e.preventDefault(); setDriveSpeed(DRIVE.speed-6); });   // － = slower  (zoom is now pinch)
 /* BOUNDARIES retired (v16d) — real PFD first-due zones cover the whole city; the hand-tracing trainer is gone. */
-document.getElementById('btnRivals').addEventListener('click',e=>{ e.preventDefault(); setRivals(!RIVALS.on);   // 🚑 rival engines on/off
+document.getElementById('btnRivals').addEventListener('click',e=>{ e.preventDefault(); if(rivalsLocked()){ popup('🚑 FINISH THIS BOX FIRST','red'); rivalsBtn(); return; } setRivals(!RIVALS.on); rivalsBtn();   // 🚑 rival engines on/off — never mid-box (October 30, 2026)
   if(RIVALS.on){ if(state.target&&state.running) spawnRivals(); popup('🚑 RIVAL ENGINES ON'); } else { clearRivals(); popup('RIVAL ENGINES OFF'); } });
 const DUE_LABELS=['🚒 DUE: ALL','🚒 DUE: 1ST','🚒 DUE: 2ND','🚒 DUE: 3RD','🚒 DUE: 4TH'];
 /* 🚒 THE single due setter — the Settings button and Career's NEXT TRAINING both go through here, so
@@ -4604,7 +4779,7 @@ function sxSync(){ const $=id=>document.getElementById(id), due=MAP.dueLevel|0, 
   const rm=$('sxRunMode'); if(rm){ rm.textContent=FREE.on?'Free drive':'Dispatch'; rm.classList.toggle('free',FREE.on); }
   for(const [id,v] of [['segDue',due],['segDiff',DIFF.level],['segCtl',CTL.mode]]){ const g=$(id); if(g) for(const b of g.children){ const on=b.dataset.v===String(v); b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false'); } }
   const ds=$('sxDiffSub'), bl=DIFF.blurb[DIFF.level]; if(ds) ds.textContent=bl.charAt(0).toUpperCase()+bl.slice(1);
-  freeLiveBtn();
+  freeLiveBtn(); rivalsBtn();
   for(const id of ['btnRivals','btnGuide','btnMiniMap','btnFreeLive']){ const b=$(id); if(b) b.setAttribute('aria-checked',b.classList.contains('on')?'true':'false'); }
   const dr=$('btnDrill'), dq=dr&&dr.querySelector('small'); if(dq) dq.textContent=DRILL.on?'Running: tap to stop':'Find the landmarks in your first-due';
   const ac=$('btnAccount'), aq=ac&&ac.querySelector('small'); if(aq) aq.textContent=AUTH.user?('Signed in'+(AUTH.user.email?' as '+AUTH.user.email:'')):'Sign in to sync your careers'; }
@@ -4654,7 +4829,7 @@ function updateHUD(dt){
     rc.style.display = state.running&&away?'block':'none'; rc.classList.toggle('off',!(state.running&&away)); }   // 3D camera control
   // ＋/－ speed buttons — show in every camera mode, not just the map
   if(radioShown.length<radioQueue.length){ radioT+=dt; while(radioT>0.018&&radioShown.length<radioQueue.length){ radioT-=0.018; radioShown=radioQueue.slice(0,radioShown.length+1); } rdText(radioShown); }
-  rdCollapse(dt); freeLiveBtn(); ctlArmed(); }
+  rdCollapse(dt); freeLiveBtn(); rivalsBtn(); ctlArmed(); }
 // On-screen dispatch marker: projects the target to the screen, sticks to the edge with an arrow when off-screen, always shows distance.
 const _wpV=new THREE.Vector3(), _wpF=new THREE.Vector3();
 const elWp=document.getElementById('wp'), elWpPin=elWp.querySelector('.pin'), elWpArr=elWp.querySelector('.arr'), elWpDist=elWp.querySelector('.dist');
@@ -5693,7 +5868,8 @@ function startLocalCity(cx,cz){ const R=LOCAL.R; fh3dSync(cx,cz);               
 // cut as the sidewalk slabs (a run ends where the kerb does), the same occupancy grid as the generic pass, and
 // every corner of the rotated footprint must clear every roadway (footprintClearsRoadAt).
 const BTYPED={on:true, rowUnit:5.0, rowDepth:11.5, twinUnit:7.4, twinDepth:10.5, detW:10.5, detDepth:10, maxRun:32, aptDepth:16, shopUnit:7.2, shopDepth:14, stripDepth:18, stripPark:14, tex:null, shopTex:null, stripTex:null, aptTex:null};
-function btypeOf(s){ if(!BTYPED.on||typeof BTYPE==='undefined'||s.ri===undefined) return '-'; const t=BTYPE.seg[s.ri]; return (t&&t[s.si])||'-'; }
+function btypeOf(s){ if(!BTYPED.on||typeof BTYPE==='undefined'||!BTYPE_OK||s.ri===undefined) return '-'; const t=BTYPE.seg[s.ri]; return (t&&t[s.si])||'-'; }
+const BTYPE_OK=typeof BTYPE!=='undefined'&&BTYPE.seg&&BTYPE.seg.length===RB.st.length;   // index-locked to RB.st like ROADW / NARROW / RREF, which check themselves; a stale table after a re-bake drew wrong building types silently (October 30, 2026)
 function blockFacePieces(J,s,EV,side,walk,sl){ const eA=J.ends.get(J.ek(s.ax,s.az)), eB=J.ends.get(J.ek(s.bx,s.bz));   // the block face on one side between the junction trims and every crossing / T-mouth window — the sidewalk slab's cut
   const T0=(eA&&eA.n>=3)?eA.hw+walk+0.6:0, T1=(eB&&eB.n>=3)?eB.hw+walk+0.6:0; if(sl-T0-T1<=2) return [];
   let a0=T0; const outs=[]; for(const ev of EV){ if(!(ev.both||ev.side===side)) continue; const w0=ev.t-(ev.hw+walk+0.6), w1=ev.t+(ev.hw+walk+0.6);
@@ -7920,7 +8096,7 @@ function renderDrillHUD(){
     '<span class="dTag">'+(d>950?(d/1609).toFixed(1)+' mi':d+' m')+'</span>'+
     '<span class="dTag">FOUND '+DRILL.done+'</span>';
 }
-const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, playerDue:0 };
+const RIVALS={ on:true, list:[], responders:[], order:[], playerPlaced:false, playerDue:0, playerHeld:false, raced:false };   // playerHeld / raced: October 30, 2026 (audit A6 / A7)
 const UNITS={ open:false };                                                                    // 🚒 v21j: the unit details under N UNITS, open or shut (remembered on this phone)
 try{ UNITS.open=localStorage.getItem('pfd_units')==='open'; }catch(e){}
 function unitsSet(open){ UNITS.open=!!open; try{ localStorage.setItem('pfd_units',UNITS.open?'open':'shut'); }catch(e){}
@@ -7967,6 +8143,10 @@ function freeCallBtn(){ for(const id of ['btnCall','btnCallIcon']){ const b=docu
    suppress a loss that was already going to be recorded; flipping to career mid-patrol would record a
    run that started with no rivals. So the question never arises: resolve the box first. */
 function freeLiveLocked(){ return !state.running||!!state.target||state.over; }
+function rivalsLocked(){ return state.running&&!!state.target&&!state.over&&!FREE.on; }   // 🚑 (October 30, 2026) the Rivals switch, like Free Drive, never flips under a live box
+function rivalsBtn(){ const b=document.getElementById('btnRivals'); if(!b) return; const lock=rivalsLocked(); if(b.disabled!==lock) b.disabled=lock;
+  const q=b.querySelector('small'), t=lock?'Finish the box you are on first':(RIVALS.on?'Race the other companies to the box':'Off: no race, runs do not count');
+  if(q&&q.textContent!==t) q.textContent=t; }
 function freeLiveBtn(){ const b=document.getElementById('btnFreeLive'); if(!b) return;
   const lock=freeLiveLocked();
   b.disabled=lock; b.classList.toggle('on',FREE.on); const ac=FREE.on?'true':'false'; if(b.getAttribute('aria-checked')!==ac) b.setAttribute('aria-checked',ac);
@@ -7975,10 +8155,10 @@ function freeLiveBtn(){ const b=document.getElementById('btnFreeLive'); if(!b) r
   b.title=lock?'Finish the box you are on first':(FREE.on?'Go back on the career board':'Ride without rivals'); }
 function freeLive(on){
   if(freeLiveLocked()){ popup('🧭 FINISH THIS BOX FIRST','red'); return false; }
-  if(!!on===FREE.on){ freeLiveBtn(); return false; }
+  if(!!on===FREE.on){ freeLiveBtn(); rivalsBtn(); return false; }
   FREE.on=!!on; FREE.arm=FREE.on;                                               // keep the picker in step with what is actually being ridden
   setRivals(!FREE.on); clearRivals();                                           // the picker path's own two calls, in the same order
-  freeSet(FREE.arm); freeCallBtn(); freeLiveBtn();
+  freeSet(FREE.arm); freeCallBtn(); freeLiveBtn(); rivalsBtn();
   if(FREE.on) radio('🧭 FREE DRIVE — in service, no rivals, nothing counts. ⚙ SETTINGS › 📟 GET A CALL for a box.');
   else { radio('🛒 BACK ON THE BOARD — rivals are running and this one goes on your record. Stand by…');
     try{ closeSettings(); }catch(err){}
@@ -8202,7 +8382,7 @@ function qualReadyOf(track){                                                   /
 function freshProfileV2(){ let seed=0; try{ if(typeof localStorage!=='undefined'){ const d=+localStorage.getItem('pfd_diff'); if(d>=0&&d<=3) seed=d|0; } }catch(e){}
   return { v:2, legacyLv:seed, engines:{}, knowledge:{}, settings:{ diff:seed, due:1 }, city:{badges:[],hydCount:0}, hyd:[] }; }
 function loadProfileV2(_migrate){                                              // _migrate = test hook only. Failure mode: v1 stays UNTOUCHED in localStorage, session runs no-save.
-  let p=null; try{ p=JSON.parse(localStorage.getItem('pfd_profile')); }catch(e){}
+  let p=null, raw=null; try{ raw=localStorage.getItem('pfd_profile'); p=JSON.parse(raw); }catch(e){}
   if(p&&p.v===PROFILE_V){ p.settings=p.settings||{};                        // 🚒 DUE is a real player preference; legacy/missing/invalid always normalizes to 1ST DUE
     if(!Number.isInteger(p.settings.due)||p.settings.due<0||p.settings.due>4) p.settings.due=1;
     return p; }
@@ -8220,10 +8400,17 @@ function loadProfileV2(_migrate){                                              /
       try{ console.error('[career] v1→v2 migration FAILED — original save left intact; this session will NOT persist', err); }catch(e){}
       if(typeof window!=='undefined') window.__migrateErr=String((err&&err.message)||err);
       const f=freshProfileV2(); f.__noSave=true; return f; } }
+  if(typeof raw==='string'&&raw.trim()&&raw.trim()!=='null'){   // a stored career that is neither v2 nor a recognizable legacy one: DAMAGED (October 30, 2026).
+    // It used to be replaced by the next save. Now the string is kept under a backup key (the first under pfd_profile_corrupt_backup, a
+    // later one with the time appended), the session starts fresh and may save, and the player is told once (window.__profileCorrupt).
+    try{ const k='pfd_profile_corrupt_backup'; localStorage.setItem(localStorage.getItem(k)?k+'_'+Date.now():k, raw); }catch(e){}
+    if(typeof window!=='undefined') window.__profileCorrupt=true; }
   return freshProfileV2(); }
 /* ===CAREER-CORE-END=== */
 const PROFILE=loadProfileV2();
-function saveProfile(){ if(PROFILE.__noSave) return; try{ localStorage.setItem('pfd_profile',JSON.stringify(PROFILE)); }catch(e){} }
+let SAVEWARN=false;   // the one-time "can't save" warning (October 30, 2026): private browsing, storage off or full used to lose every run silently
+function saveProfile(){ if(PROFILE.__noSave) return; try{ localStorage.setItem('pfd_profile',JSON.stringify(PROFILE)); }
+  catch(e){ if(!SAVEWARN){ SAVEWARN=true; try{ popup('⚠️ CAREER CAN\'T BE SAVED ON THIS PHONE — STORAGE IS OFF OR FULL','red'); }catch(_){} } } }
 /* ===CAREER-RUN-START=== (extracted by the node test harness with stubbed PROFILE/profEng/DRIVE) */
 function careerTrack(companyId,due){                                           // THE resolver: company + the ACTUAL assigned due (rv.due, from computeResponders — NEVER MAP.dueLevel) → track.
   const id=companyId||DRIVE.stationId; if(!id) return null;
@@ -8237,7 +8424,7 @@ function companyMastery(id){ return companyMasteryOf(PROFILE.engines[id]); }
 function profKnow(id){ id=id||DRIVE.stationId; if(!id) return null; PROFILE.knowledge=PROFILE.knowledge||{};   // per-company knowledge layer
   let k=PROFILE.knowledge[id]; if(!k) k=PROFILE.knowledge[id]={boxes:{},landmarks:[],hydrants:0,streets:null,routes:null};
   return k; }
-function heldDue(rv,ok){ return !!(ok&&rv&&rv.due>0&&rv.place>0&&rv.place<=rv.due); }        // THE held-due rule — score, board and career all call this one
+function heldDue(rv,ok){ return !!(ok&&rv&&!rv.seatHeld&&rv.due>0&&rv.place>0&&rv.place<=rv.due); }   // THE held-due rule — score, board and career all call this one; a HELD seat (rv.seatHeld, v21d: "not that due") never holds
 function cleanRun(rv,ok){ return !!(ok&&rv&&rv.optLen>1&&(rv.driven-rv.optLen)/rv.optLen<=0.05&&(rv.ww||0)<3&&(rv.stop||0)<6&&(rv.nar||0)<1); }   // the coach's "textbook" test — badge + career share it
 function qualEvaluate(rv,ok,rules){                                            // 🎖 the exam verdict — pure; every threshold from QUAL_RULES, held rule = THE heldDue()
   rules=rules||QUAL_RULES;
@@ -8328,12 +8515,14 @@ function qualPool(companyId,due,cap,rnd){                                      /
   const e=PROFILE.engines[companyId], track=e&&e.pos&&e.pos[k];
   if(!track) return {pool:[],stats:null,reason:'no-track'};
   const known=track.boxes||{};
-  if(!Object.keys(known).length) return {pool:[],stats:null,reason:'no-known-boxes'};                    // the exam tests material learned AT THIS POSITION — company-wide or other-position knowledge never substitutes
+  if(!Object.keys(known).length) return {pool:[],stats:null,reason:'no-known-boxes'};
+  if(pfdtActive()&&!pfdtReady(st.x,st.z,PFDT.R,true)){ pfdtEnsure([[st.x,st.z]],PFDT.R,{front:true}); return {pool:[],stats:null,reason:'loading'}; }   // 🔐 the box maps round quarters are on their way
+  const H=pfdtHasFn();                    // the exam tests material learned AT THIS POSITION — company-wide or other-position knowledge never substitutes
   const t0=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
   const stats={ total:ADDR.a.length, dist:0, resp:0, dueHits:0, knownHits:0, valid:0, ms:0 };
   const pool=[]; let seen=0;
   for(let i=0;i<ADDR.a.length;i++){ const a=ADDR.a[i]; if(!a) continue;
-    const dd=Math.hypot(a[2]-st.x,a[3]-st.z); if(dd<300||dd>3000) continue; stats.dist++;                // the normal dispatch band, measured from QUARTERS
+    const dd=Math.hypot(a[2]-st.x,a[3]-st.z); if(dd<300||dd>3000||(H&&!H(a[2],a[3]))) continue; stats.dist++;                // the normal dispatch band, measured from QUARTERS
     const resp=computeResponders(a[2],a[3]); stats.resp++;                                               // REAL responder order proves the due — MAP.dueLevel is never consulted
     if(!resp[due-1]||resp[due-1].id!==companyId||resp.held) continue; stats.dueHits++;          // a held seat is not that due
     const box=computeBox(resp[0],a[2],a[3]);                                                             // same derivation assignBox uses
@@ -8476,6 +8665,7 @@ function boxUniverse(companyId,scope){                                         /
   scope=scope||KNOW_DEF_SCOPE; const ck='box|'+companyId+'|'+scope;
   if(KNOW_UNI[ck]) return KNOW_UNI[ck];
   const st=stations.find(s=>s.id===companyId); if(!st) return null;
+  if(pfdtActive()&&!pfdtReady(st.x,st.z,PFDT.R,false)){ pfdtEnsure([[st.x,st.z]],PFDT.R,{front:true}); return null; }   // 🔐 never cache a universe measured without its box maps
   const due=knowDue(scope), seen=new Map();
   for(const a of ADDR.a){ if(!a) continue;
     const d=Math.hypot(a[2]-st.x,a[3]-st.z); if(d<300||d>3000) continue;
@@ -8991,13 +9181,44 @@ document.getElementById('duePanel').addEventListener('keydown',e=>{
   const b=document.getElementById('btnDiff'); if(b) b.textContent='🎯 '+DIFF.names[DIFF.level]; applyDifficultyGates();
   if(PROFILE.settings&&Number.isInteger(PROFILE.settings.due)){ MAP.dueLevel=PROFILE.settings.due;   // 🚒 restore the player's due preference (Career-guided or manual)
     const db=document.getElementById('btnDue'); if(db){ db.textContent=DUE_LABELS[MAP.dueLevel]; db.classList.toggle('on',MAP.dueLevel>0); } }
-  if(PROFILE.__noSave) setTimeout(()=>{ try{ popup('⚠️ Career save could not be upgraded — this session won\'t be saved','red'); }catch(e){} },3000); }
+  if(PROFILE.__noSave) setTimeout(()=>{ try{ popup('⚠️ Career save could not be upgraded — this session won\'t be saved','red'); }catch(e){} },3000);
+  else if(window.__profileCorrupt) setTimeout(()=>{ try{ popup('⚠️ YOUR CAREER FILE WAS DAMAGED — A COPY WAS KEPT, STARTING FRESH','red'); }catch(e){} },3000); }
 /* 👤 ACCOUNTS — Supabase magic-link auth (ACCOUNTS-PLAN.md phase 1). Raw REST via fetch, no library,
    so the single-file/offline rule holds: no session or no network → the game runs exactly as before on
    local pfd_profile. The anon key is public by design; RLS on the server is what protects data. */
 const SB={ url:'https://evreumemwzhvdmpkcwqs.supabase.co',
   key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2cmV1bWVtd3podmRtcGtjd3FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1Mzc1MDksImV4cCI6MjEwMzExMzUwOX0.6AF4JkQAyZ2meB7bAY7oO5zMTMYrRF12a-AP2iUNOSY' };
 const AUTH={ session:null, user:null, tier:'free', name:'' };
+/* 🔑 MEMBERS ONLY (October 30, 2026; owner: "We can start making accounts" — members only, the department data to follow in phase 2).
+   A member is a signed-in account that redeemed an INVITE CODE once (SUPABASE-SETUP.md Step 11: members + invite_codes tables, the
+   is_member() and redeem_invite() functions; the game never reads the tables). The picker (a firehouse tap, the list) asks first; a
+   non-member gets the account card with the code row. Remembered per account (pfd_member = the user id) so a launch without signal
+   still rides; the server's answer, when it comes, wins. MEMBER.dev: a local server (the tests, the phone A/B over adb) needs no
+   account — the gate is manners, the phase-2 data policy is the lock: this page holds nothing a non-member could not have anyway. */
+const MEMBER={ state:'unknown', dev:/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname), checking:false,
+  codes:false };   // 🔑 November 3, 2026 (owner: "one link", "if everyone has a sign in should be fine"): ANY signed-in account rides, no invite code.
+                   // The code machinery (Step 11, the card's code row, is_member / redeem_invite) stays, dormant: codes:true brings it back.
+function memberRemembered(){ try{ return !!AUTH.session&&!!localStorage.getItem('pfd_member'); }catch(e){ return false; } }
+function memberOK(){ if(MEMBER.dev) return true; if(MEMBER.codes) return MEMBER.state==='yes';
+  return !!AUTH.user||memberRemembered(); }   // signed in; or a stored session from an earlier signed-in launch (no signal: the server cannot answer yet)
+function memberRemember(yes){ try{ if(yes&&AUTH.user) localStorage.setItem('pfd_member',AUTH.user.id); else localStorage.removeItem('pfd_member'); }catch(e){} }
+async function memberCheck(){ if(!AUTH.user){ MEMBER.state='no'; authUpdateUI(); return false; }
+  if(!MEMBER.codes){ MEMBER.state='yes'; memberRemember(true); authUpdateUI(); return true; }   // sign-in only: the account IS the membership
+  try{ if(localStorage.getItem('pfd_member')===AUTH.user.id) MEMBER.state='yes'; }catch(e){}   // last known answer first (offline launches)
+  MEMBER.checking=true; authUpdateUI(); const r=await sbFetch('/rest/v1/rpc/is_member',{ method:'POST', body:'{}' }); MEMBER.checking=false;
+  if(r&&r.ok){ let yes=false; try{ yes=(await r.json())===true; }catch(e){} MEMBER.state=yes?'yes':'no'; memberRemember(yes); }
+  else if(MEMBER.state!=='yes') MEMBER.state='unknown';                                       // no answer (no signal, or Step 11 not run yet): keep what we knew
+  authUpdateUI(); return MEMBER.state==='yes'; }
+async function memberRedeem(code){ if(!AUTH.user) return 'signin'; const k=String(code||'').toUpperCase().replace(/[^A-Z0-9-]/g,''); if(k.length<4) return 'short';
+  const r=await sbFetch('/rest/v1/rpc/redeem_invite',{ method:'POST', body:JSON.stringify({ invite:k }) }); if(!r) return 'offline';
+  let yes=false; try{ yes=r.ok&&(await r.json())===true; }catch(e){}
+  if(yes){ MEMBER.state='yes'; memberRemember(true); authUpdateUI(); return 'ok'; } return r.ok?'bad':'offline'; }
+function memberPrompt(){ openAuthCard(); const c=document.getElementById('authCode'); if(c&&!c.hidden) setTimeout(()=>{ try{ c.focus(); }catch(e){} },50); }
+function homeMemberLine(){ const h=document.querySelector('#homeHud .tag'); if(!h||window.__bootErr) return;   // the BOOT WATCH's message outranks this line
+  const ok=memberOK(), t=ok?'TAP A FIREHOUSE TO RIDE OUT':(AUTH.user&&MEMBER.codes?'🔑 MEMBERS ONLY · TAP TO ENTER YOUR INVITE CODE':'👤 SIGN IN TO RIDE · TAP HERE');
+  if(h.textContent!==t) h.textContent=t; h.style.cursor=ok?'':'pointer'; h.style.color=ok?'':'#ffd23b'; h.setAttribute('role',ok?'':'button');
+  const ab=document.getElementById('btnAcctHome'); if(ab){ const tag=[AUTH.assign,AUTH.platoon].filter(Boolean).join('/'), b=ab.querySelector('b'), sp=ab.querySelector('span');   // 👤 SIGN IN, or who is signed in
+    const t1=AUTH.user?('👤 '+(AUTH.name||'ACCOUNT')):'👤 SIGN IN', t2=AUTH.user?(tag||'ACCOUNT'):'ACCOUNT'; if(b&&b.textContent!==t1) b.textContent=t1; if(sp&&sp.textContent!==t2) sp.textContent=t2; ab.classList.toggle('in',!!AUTH.user); } }
 /* 🧯 WHO MAY MARK HYDRANTS. The owner kept hitting the 🧯 button by accident while playing (phone, v19b), so
    marking is OFF for everyone until it is deliberately granted. Add a signed-in account's e-mail (or its profile
    id) to this list to give it back — nothing else needs changing, the whole feature is still here. An empty list
@@ -9025,10 +9246,24 @@ async function authFetchUser(){ if(!AUTH.session) return null;
       else { authStore(null); AUTH.user=null; return null; } }              // auth failed and refresh couldn't recover → sign out (self-heals a corrupt token)
     if(!r.ok) return null;                                                   // transient 5xx/network → keep the session, retry later
     AUTH.user=await r.json(); return AUTH.user; }catch(e){ return null; } }
+/* 🔢 SIGN IN WITH THE CODE (owner, November 3, 2026). The sign-in email carries a link AND a 6-digit code (the Magic Link email
+   template in Supabase shows {{ .Token }}: SUPABASE-SETUP.md Step 14). On an iPhone the home-screen app and Safari keep separate
+   storage, so a tapped link signs SAFARI in and leaves the app signed out; typing the code signs in right where the player is.
+   The email the code was sent to is kept (pfd_signin_email) so the app may be closed while the player reads their mail. */
+function authPending(){ try{ return localStorage.getItem('pfd_signin_email')||''; }catch(e){ return ''; } }
+function authPendingSet(em){ try{ if(em) localStorage.setItem('pfd_signin_email',em); else localStorage.removeItem('pfd_signin_email'); }catch(e){} }
+async function authVerifyCode(email,code){ const token=String(code||'').replace(/\D/g,''); if(!email) return 'noemail'; if(token.length<6) return 'short';
+  for(const type of ['email','magiclink']){   // 'email' is the code of a sign-in email; older projects answer only 'magiclink'
+    let r=null; try{ r=await fetch(SB.url+'/auth/v1/verify',{ method:'POST', headers:authHdr(false), body:JSON.stringify({ type, email, token }) }); }catch(e){ return 'offline'; }
+    if(r.ok){ let o=null; try{ o=await r.json(); }catch(e){} if(!o||!o.access_token) return 'bad';
+      authStore(o); authPendingSet(''); await authFetchUser(); if(!AUTH.user) return 'bad';
+      memberCheck(); authUpdateUI(); await authFetchProfile(); syncCareers(); return 'ok'; }
+    if(r.status>=500) return 'offline'; }
+  return 'bad'; }
 async function authSendLink(email){ const redirect=location.origin+location.pathname;   // Supabase must allowlist this in Auth → URL Configuration
-  const r=await fetch(SB.url+'/auth/v1/otp?redirect_to='+encodeURIComponent(redirect),{ method:'POST', headers:authHdr(false),
-    body:JSON.stringify({ email, create_user:true }) });
-  return r.ok; }
+  try{ const r=await fetch(SB.url+'/auth/v1/otp?redirect_to='+encodeURIComponent(redirect),{ method:'POST', headers:authHdr(false),
+      body:JSON.stringify({ email, create_user:true }) });
+    return r.ok; }catch(e){ return false; } }   // a network failure used to reject and leave the card on "Sending…" (October 30, 2026)
 async function sbFetch(path,opts){ opts=opts||{}; if(!AUTH.session) return null;               // authed PostgREST call, refreshes once on 401
   if(Date.now()>AUTH.session.expires_at-60000){ if(!await authRefresh()) return null; }
   const h=Object.assign({ 'apikey':SB.key, 'Authorization':'Bearer '+AUTH.session.access_token, 'Content-Type':'application/json' }, opts.headers||{});
@@ -9072,12 +9307,25 @@ async function syncCareers(){ if(!AUTH.user) return;                            
     if(r2&&!r2.ok) await sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' },
       body:JSON.stringify(upserts.map(u=>{ const c=Object.assign({},u); delete c.pos; return c; })) }); }   // pos column absent → keep legacy sync alive
   AUTH.synced=true; try{ refreshStationList(); }catch(e){} }
-async function authFetchProfile(){ if(!AUTH.user) return;                                        // pull tier + display name (own row, RLS)
-  const r=await sbFetch('/rest/v1/profile?select=display_name,tier&id=eq.'+AUTH.user.id);
-  if(r&&r.ok){ try{ const a=await r.json(); if(a&&a[0]){ AUTH.tier=a[0].tier||'free'; AUTH.name=a[0].display_name||''; } }catch(e){} } }
+async function authFetchProfile(){ if(!AUTH.user) return;                                        // pull tier + display name + assignment + platoon (own row, RLS)
+  let r=await sbFetch('/rest/v1/profile?select=display_name,tier,assignment,platoon&id=eq.'+AUTH.user.id);
+  if(r&&!r.ok) r=await sbFetch('/rest/v1/profile?select=display_name,tier&id=eq.'+AUTH.user.id);   // Step 13 not run yet: no assignment / platoon columns
+  if(r&&r.ok){ try{ const a=await r.json(); if(a&&a[0]){ AUTH.tier=a[0].tier||'free'; AUTH.name=a[0].display_name||''; AUTH.assign=a[0].assignment||''; AUTH.platoon=a[0].platoon||''; } }catch(e){} } homeMemberLine(); }
 async function setDisplayName(name){ if(!AUTH.user) return false;                                // via RPC (so the client can't touch tier)
   const r=await sbFetch('/rest/v1/rpc/set_display_name',{ method:'POST', body:JSON.stringify({ new_name:name }) });
   if(r&&r.ok){ AUTH.name=(name||'').trim(); return true; } return false; }
+/* 🪪 ASSIGNMENT + PLATOON (owner, November 3, 2026: "an area other than name that they can put in assignment and platoon ... engine or
+   ladder for assignment, platoon A,B,C,D"). Saved on the member's own profile row by set_profile (SUPABASE-SETUP.md Step 13, which
+   checks both: "E35" / "L25", A-D; shown together as E35/B); private — no leaderboard view shows them. Before Step 13 is run, only the name saves. */
+function assignOptions(){ const sel=document.getElementById('authCo'); if(!sel||sel.dataset.filled) return; sel.dataset.filled='1';
+  const eng=[...new Set(stations.map(s=>s.num).filter(n=>n>0))].sort((a,b)=>a-b), lad=[...new Set(stations.map(s=>s.ladder).filter(n=>n>0))].sort((a,b)=>a-b);
+  for(const [label,kind,nums] of [['Engines','E',eng],['Ladders','L',lad]]){   /* E35, L25 (owner: "E for engine L for ladder. I.e. E35/B") */ const g=document.createElement('optgroup'); g.label=label;
+    for(const n of nums){ const o=document.createElement('option'); o.value=kind+n; o.textContent=kind+n; g.appendChild(o); } sel.appendChild(g); } }
+async function setProfile(name,assign,platoon){ if(!AUTH.user) return 'no';
+  const r=await sbFetch('/rest/v1/rpc/set_profile',{ method:'POST', body:JSON.stringify({ new_name:name, new_assignment:assign||null, new_platoon:platoon||null }) });
+  if(r&&r.ok){ AUTH.name=(name||'').trim(); AUTH.assign=assign||''; AUTH.platoon=platoon||''; homeMemberLine(); return 'ok'; }
+  if(r&&(r.status===404||r.status===400)) return (await setDisplayName(name))?'nameOnly':'no';   // Step 13 not run yet: keep the old name save working
+  return 'no'; }
 async function reportLeaderboard(stationId){ if(!AUTH.user) return;                             // after a qualifying run: did you make/climb the board, or get passed?
   await new Promise(r=>setTimeout(r,700));                                                       // let the insert land
   const rows=await fetchLeaderboard(stationId); if(!rows.length) return;
@@ -9261,10 +9509,14 @@ function pushCareer(id){ if(!AUTH.user) return; const e=PROFILE.engines[id]; if(
       .then(r=>{ if(r&&!r.ok){ const c=Object.assign({},row); delete c.pos;
         sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([c]) }); } }); }catch(e){} }
 function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
-  authStore(null); AUTH.user=null; authUpdateUI(); }
+  authStore(null); AUTH.user=null; MEMBER.state='no'; memberRemember(false); authUpdateUI(); }   // 🔑 signed out = not a member on this phone
 function authUpdateUI(){ const ab=document.getElementById('btnAccount'); if(ab) ab.classList.toggle('on',!!AUTH.user);   // (v16d moved sign-in into the ACCOUNT card; the old #btnAuth is gone)
   const out=document.getElementById('authOut'), em=document.getElementById('authEmail'), snd=document.getElementById('authSend');
-  const on=!!AUTH.user; if(out) out.style.display=on?'block':'none'; if(em) em.style.display=on?'none':'block'; if(snd) snd.style.display=on?'none':'block'; }
+  { const show=!AUTH.user&&!!authPending(), oi=document.getElementById('authOtp'), vb=document.getElementById('authVerify'); if(oi) oi.hidden=!show; if(vb) vb.hidden=!show; }   // 🔢 the code box, once an email has gone out
+  const on=!!AUTH.user; if(out) out.style.display=on?'block':'none'; if(em) em.style.display=on?'none':'block'; if(snd) snd.style.display=on?'none':'block';
+  { const row=MEMBER.codes&&!MEMBER.dev&&on&&MEMBER.state!=='yes', mb=document.getElementById('authMember'), ci=document.getElementById('authCode'), jb=document.getElementById('authJoin');   // 🔑 the invite-code row: signed in, not yet a member
+    if(ci) ci.hidden=!row; if(jb) jb.hidden=!row; if(mb){ mb.hidden=!on||MEMBER.dev||!MEMBER.codes; mb.textContent=MEMBER.state==='yes'?'🔑 Member':(MEMBER.checking?'Checking your membership…':(MEMBER.state==='unknown'?'Could not reach the server — a member can still ride; enter a code when you have signal.':'Not a member yet — enter the invite code you were given.')); } }
+  homeMemberLine(); }
 async function authInit(){                                                    // parse a magic-link redirect, else restore a stored session
   let fromHash=false;
   if(location.hash&&location.hash.indexOf('access_token=')>=0){ const q=new URLSearchParams(location.hash.slice(1));
@@ -9272,16 +9524,19 @@ async function authInit(){                                                    //
       try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; } } }
   if(!AUTH.session){ try{ const st=JSON.parse(localStorage.getItem('pfd_auth')); if(st&&st.access_token) AUTH.session=st; }catch(e){} }
   if(AUTH.session){ await authFetchUser(); }
+  if(AUTH.user) memberCheck(); else MEMBER.state='no';                                        // 🔑 the member answer arrives on its own; the last known one stands meanwhile
   authUpdateUI();
   if(AUTH.user){ await authFetchProfile(); syncCareers(); const last=PROFILE.lastPlayed; if(last) checkBeaten(last); }                                      // careers follow you: pull from the account, merge, push back
   if(fromHash&&AUTH.user) popup('👤 Signed in as '+AUTH.user.email+' · careers synced','green'); }
 function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) return;
   document.getElementById('authMsg').textContent=AUTH.user
-    ? ('Signed in as '+AUTH.user.email+'. Your careers sync to this account across devices. Free play needs no account.')
-    : 'Sign in to save your careers across devices and join the leaderboard. Enter your email and we\'ll send a one-tap link — no password.';
+    ? ('Signed in as '+AUTH.user.email+'. '+(memberOK()?'Your careers sync to this account across devices.':'Enter your invite code below to become a member and ride.'))
+    : (memberOK()||!MEMBER.codes?'Sign in to ride. Enter your email and we\'ll send a one-tap link — no password. Your careers then sync across devices and you join the leaderboard.'
+                 :'Members only. Sign in with your email — a one-tap link, no password — then enter the invite code you were given.');
   { const ni=document.getElementById('authName'), nb=document.getElementById('authNameSave'), on=!!AUTH.user;
     if(ni){ ni.style.display=on?'block':'none'; ni.value=AUTH.name||''; } if(nb) nb.style.display=on?'block':'none';
-    if(on&&!AUTH.name){ document.getElementById('authMsg').textContent='⚠️ Set a leaderboard name so your times show as YOU, not "Firefighter".'; } }
+    { const ar=document.getElementById('authAssign'); if(ar){ ar.classList.toggle('on',on); if(on){ assignOptions(); document.getElementById('authCo').value=AUTH.assign||''; document.getElementById('authPlatoon').value=AUTH.platoon||''; } } }   // 🪪
+    if(on&&!AUTH.name&&memberOK()){ document.getElementById('authMsg').textContent='⚠️ Set a leaderboard name so your times show as YOU, not "Firefighter".'; } }   // 🔑 a non-member hears about the invite code first
   authUpdateUI(); el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 function profEng(id){ id=id||DRIVE.stationId; if(!id) return null; let e=PROFILE.engines[id];
   if(!e) e=PROFILE.engines[id]={ lv:0, lastLv:0, held:[0,0,0,0],                                        // lv/lastLv/held[] = FROZEN legacy mirrors (old UI + cloud compat until P6); new engines start ROOKIE on every position
@@ -9337,7 +9592,7 @@ function calcOVR(log){                                                     // ro
 function calcStreak(log){ let k=0;                                          // consecutive eligible runs with the due slot held, newest backward
   for(let i=(log||[]).length-1;i>=0;i--){ const r=log[i]; if(!(r.due>0)||r.guide) continue; if(r.held) k++; else break; }
   return k; }
-function profileRun(rv,ok){ if(FREE.on) return [];                                                      // 🧭 free drive is not Career: no log row, no badge, no rank, no board post, no account push
+function profileRun(rv,ok){ if(FREE.on||(typeof RIVALS!=='undefined'&&!RIVALS.raced)) return [];        // 🧭 free drive is not Career, nor a box dealt with rivals OFF (no race, nothing to lose): no log row, no badge, no rank, no board post, no account push
   const e=profEng(); if(!e) return [];                                        // one run record per box, success or fail
   const earned=[];
   const sc=rv?calcRunScore(rv,ok):null;
@@ -9461,11 +9716,18 @@ document.getElementById('cpScroll').addEventListener('scroll',e=>{ const sc=e.cu
   if(sc.classList.contains('down')!==d) sc.classList.toggle('down',d); if(sc.classList.contains('stuck')!==k) sc.classList.toggle('stuck',k); },{passive:true});
 document.getElementById('btnProfileClose').addEventListener('click',()=>{ const el=document.getElementById('profileCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authClose').addEventListener('click',()=>{ const el=document.getElementById('authCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
-document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
+document.getElementById('authJoin').addEventListener('click',async ()=>{ const m=document.getElementById('authMsg'); m.textContent='Checking the code…';   // 🔑 JOIN WITH INVITE CODE
+  const r=await memberRedeem(document.getElementById('authCode').value);
+  m.textContent=r==='ok'?'🔑 Welcome aboard — you are a member. Close this and tap a firehouse.':r==='bad'?'That code did not work. Check it with whoever gave it to you.':r==='short'?'Type the whole code.':r==='signin'?'Sign in first.':'Could not reach the server — check your connection and try again.';
+  if(r==='ok') popup('🔑 MEMBER','green'); });
+{ const h=document.querySelector('#homeHud .tag'); if(h) h.addEventListener('click',()=>{ if(!memberOK()) memberPrompt(); }); }
+document.getElementById('btnAcctHome').addEventListener('click',e=>{ e.preventDefault(); openAuthCard(); });   // 👤 the account from the home screen   // 🔑 the home screen's MEMBERS ONLY line opens the card
+document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; AUTH.assign=''; AUTH.platoon=''; { const ar=document.getElementById('authAssign'); if(ar) ar.classList.remove('on'); } document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
 document.getElementById('authNameSave').addEventListener('click',async ()=>{ const nm=(document.getElementById('authName').value||'').trim();
   if(nm.length<2){ document.getElementById('authMsg').textContent='Name needs 2+ characters.'; return; }
-  document.getElementById('authMsg').textContent='Saving…'; const ok=await setDisplayName(nm);
-  document.getElementById('authMsg').textContent=ok?('✅ You\'ll show as '+nm+' on the leaderboard.'):'Could not save the name — try again.'; });
+  const as=document.getElementById('authCo').value, pl=document.getElementById('authPlatoon').value;   // 🪪 optional: assignment + platoon
+  document.getElementById('authMsg').textContent='Saving…'; const r=await setProfile(nm,as,pl);
+  document.getElementById('authMsg').textContent=r==='ok'?('✅ Saved: '+nm+((as||pl)?' · '+(as||'')+(pl?'/'+pl:''):'')+'.'):r==='nameOnly'?('✅ You\'ll show as '+nm+' on the leaderboard. (Assignment and platoon save once the server is updated.)'):'Could not save — try again.'; });
 document.getElementById('hcLb').addEventListener('click',e=>{ e.preventDefault(); if(hcStation) openLeaderboard(hcStation.id); });
 document.getElementById('hcZone').addEventListener('click',e=>{ e.preventDefault(); if(!hcStation) return;   // 🗺️ this engine's first-due zone
   BOUNDARY_UI.engine=hcStation.id; const sel=document.getElementById('boundaryEngine'); if(sel&&[...sel.options].some(o=>o.value===hcStation.id)) sel.value=hcStation.id;
@@ -9473,8 +9735,13 @@ document.getElementById('hcZone').addEventListener('click',e=>{ e.preventDefault
 document.getElementById('lbClose').addEventListener('click',()=>{ const el=document.getElementById('lbCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
 document.getElementById('authSend').addEventListener('click',async ()=>{ const em=(document.getElementById('authEmail').value||'').trim();
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ document.getElementById('authMsg').textContent='Enter a valid email address.'; return; }
-  document.getElementById('authMsg').textContent='Sending…'; const ok=await authSendLink(em);
-  document.getElementById('authMsg').textContent=ok?('✉️ Link sent to '+em+'. Open it on this device to finish signing in.'):'Could not send — check your connection and try again.'; });
+  document.getElementById('authMsg').textContent='Sending…'; const ok=await authSendLink(em); if(ok) authPendingSet(em); authUpdateUI();
+  document.getElementById('authMsg').textContent=ok?('✉️ Sent to '+em+'. Type the 6-digit code from the email below — or tap the link in it.'):'Could not send — check your connection and try again.';
+  if(ok){ const oi=document.getElementById('authOtp'); if(oi) setTimeout(()=>{ try{ oi.focus(); }catch(e){} },50); } });
+document.getElementById('authVerify').addEventListener('click',async ()=>{ const m=document.getElementById('authMsg'); m.textContent='Checking the code…';   // 🔢
+  const r=await authVerifyCode(authPending(),document.getElementById('authOtp').value);
+  if(r==='ok'){ document.getElementById('authOtp').value=''; openAuthCard(); popup('👤 Signed in as '+AUTH.user.email+' · careers synced','green'); return; }
+  m.textContent=r==='short'?'Type all 6 digits.':r==='noemail'?'Send the sign-in email first.':r==='offline'?'Could not reach the server — check your connection and try again.':'That code did not work — it may have expired. Send a new email and use the newest code.'; });
 authInit();
 // 🧯 Player-marked hydrants (PROFILE.hyd) are NOT drawn any more (v20o, owner's request): the PFD box books put every
 // hydrant on the map citywide, so a hand-marked one only ever doubled a real one (two at Lawnton St & Pedley Rd).
@@ -9511,6 +9778,7 @@ const DUECHIP={ t:0, rank:0, owner:null, pend:0, pendN:0, flash:0 };
 function dueRankAt(x,z){
   const pid=DRIVE.stationId; if(!pid||typeof PFD_ZONES==='undefined') return null;
   const pn=+String(pid).replace(/\D/g,''); if(!pn) return null;
+  if(pfdtActive()&&(PFDT.idxState==='loading'||!pfdtHas(x,z))) return null;   // 🔐 the box map here is still on its way: no guess
   const owner=pfdZoneAt(x,z);
   if(owner===pn) return {rank:1, owner:pn};                                  // standing in your own first-due
   const run=runOrderAt(x,z);                                                 // in a box: where the PFD's running order puts you
@@ -9599,13 +9867,14 @@ function assignBox(){ if(!state.target) return; const t=state.target, cx=t.bx!==
   const fd=computeResponders(cx,cz)[0]; t.firstDue=fd.id; t.box=computeBox(fd,cx,cz); }
 function clearRivals(){ RIVALS.list=[]; RIVALS.responders=[]; RIVALS.order=[]; RIVALS.playerPlaced=false; RIVALS.playerPlace=0; renderRivalHUD();
   if(typeof RVM!=='undefined') for(const g of RVM.pool) g.visible=false; }   // no rivals => no trucks left hanging in the world
-function spawnRivals(){ clearRivals();
+function spawnRivals(){ clearRivals(); RIVALS.raced=RIVALS.on&&!!state.target;   // 🚑 the box's own rule, fixed when it is dealt: dealt with rivals off, it is not Career (profileRun)
   if(!RIVALS.on||!state.target) return; const tx=state.target.x, tz=state.target.z;
   RIVALS.fire={x:tx,z:tz}; RIVALS.playerD0=Math.max(1,Math.hypot(truck.x-tx,truck.z-tz));   // your starting distance to the fire (for your live % progress)
   const bx=state.target.bx!==undefined?state.target.bx:tx, bz=state.target.bz!==undefined?state.target.bz:tz;   // responder set from the building point (matches assignBox + the due filter); rivals still race to the road point
   const resp=computeResponders(bx,bz);
   RIVALS.responders=resp.map((s,i)=>({ id:s.id, num:engNum(s.id), isPlayer:s.id===DRIVE.stationId, firstDue:i===0 }));
   { const pi=RIVALS.responders.findIndex(r=>r.isPlayer); RIVALS.playerDue = pi<0?0:pi+1; }   // the slot you are expected to fill on this box
+  RIVALS.playerHeld=!!resp.held;   // 🪑 a HELD seat (the board shows you 4th, the PFD list has you 5th or further): no due to hold, nothing to lose — heldDue() and the BEATEN IN trigger both read it
   for(const st of resp){ if(st.id===DRIVE.stationId) continue;                                        // that responder is the human player
     const path=streamRoute({x:st.x,z:st.z}, routeNodes(st.x,st.z,tx,tz,callGoals(state.target))); if(!path||path.length<2) continue;
     const last=path[path.length-1]; if(Math.hypot(tx-last.x,tz-last.z)>1) path.push({x:tx,z:tz});
@@ -9672,7 +9941,7 @@ function updateRivals(dt){ if(!RIVALS.on||!state.target) return;
       /* ⛔ HOLD YOUR DUE POSITION. You must arrive in the slot the box assigned you: 1st-due means nobody
          beats you in; 2nd-due means at most one company does. The moment enough rivals are on scene to take
          your slot, the box is lost. */
-      if(!RIVALS.playerPlaced && RIVALS.playerDue && RIVALS.order.length>=RIVALS.playerDue){ missedDue(); return; } } }
+      if(!RIVALS.playerPlaced && RIVALS.playerDue && !RIVALS.playerHeld && RIVALS.order.length>=RIVALS.playerDue){ missedDue(); return; } } }   // a held seat cannot be beaten in: you are 5th+ on the list, the four ahead are expected
   renderRivalHUD();
 }
 function missedDue(){ if(state.over||FREE.on) return;                                            // 🧭 free drive has no rivals, so this cannot fire — but BEATEN IN must never open on a patrol
@@ -9767,7 +10036,7 @@ function coachCapture(){ const t=state.target; if(!t||COACH.trail.length<2) retu
   if(divStreet==='—')divStreet=''; if(optStreet==='—'||optStreet===divStreet)optStreet='';
   const arrStreet=t.narrow?1:(t.street&&canonStreet(streetName(truck.x,truck.z))===canonStreet(t.street))?1:0;   // a narrow-street box is answered FROM THE CORNER — that is the right street   // finished ON the box's street, or clipped the radius from a cross street?
   return { trail:COACH.trail.slice(), opt, driven, optLen, fx:ax, fz:az, hx:t.bx!=null?t.bx:t.x, hz:t.bz!=null?t.bz:t.z, ww:COACH.ww, stop:COACH.stop,
-           time:(COACH.arriveT||GT)-COACH.t0, place:RIVALS.playerPlace||0, due:RIVALS.playerDue||0,
+           time:(COACH.arriveT||GT)-COACH.t0, place:RIVALS.playerPlace||0, due:RIVALS.playerDue||0, seatHeld:!!RIVALS.playerHeld,
            uturns:COACH.uturns, arrStreet, nar:COACH.nar, narName:COACH.narName, narFt:COACH.narFt,
            guide:COACH.usedGuide?1:0, diff:DIFF.level,                          // captured run state — career + board read THESE, never re-infer
            qual:(QUAL.active&&DRIVE.stationId===QUAL.companyId)?{companyId:QUAL.companyId,due:QUAL.due}:undefined,   // 🎖 structured exam stamp — ONLY while the runtime owns this dispatch (stale/pending QUAL can never stamp)
@@ -9836,6 +10105,7 @@ function drawHydrantMap(cv,H,ax,az,list,opt){ const c=cv.getContext('2d');
     for(const q of list){ minX=Math.min(minX,q.h[0]-30); maxX=Math.max(maxX,q.h[0]+30); minZ=Math.min(minZ,q.h[1]-30); maxZ=Math.max(maxZ,q.h[1]+30); }
     scale=Math.min((W-20)/(maxX-minX),(H-20)/(maxZ-minZ)); ox=(W-(maxX-minX)*scale)/2; oy=(H-(maxZ-minZ)*scale)/2; }
   const T=(x,z)=>[ox+(x-minX)*scale,oy+(z-minZ)*scale], numbered=new Set(list.map(q=>q.h));
+  if(opt.all&&PFDT.on) pfdtWant((minX+maxX)/2,(minZ+maxZ)/2,Math.hypot(maxX-minX,maxZ-minZ)/2);   // 🔐 signed in: the book hydrants of this frame
   // every OTHER hydrant inside the frame (the near-me map, so zooming out shows more)
   const all=opt.all?hydrantsNear((minX+maxX)/2,(minZ+maxZ)/2,Math.hypot(maxX-minX,maxZ-minZ)/2).filter(h=>!numbered.has(h)&&h[0]>=minX&&h[0]<=maxX&&h[1]>=minZ&&h[1]<=maxZ&&(!opt.allIn||ptInRing(h[0],h[1],opt.allIn))):[];   // allIn: only those inside that ring (BOX LOOKUP)
   cv._map={minX,minZ,maxX,maxZ,scale,ox,oy,W,H,view:opt.mark==='you'?'nearme':opt.mark==='box'?'box':'hydrants',hyd:list.map(q=>[q.h[0],q.h[1]]),all:all.map(h=>[h[0],h[1]]),centre:[ax,az],sel:opt.sel||null};
@@ -9963,7 +10233,7 @@ function hydMapGestures(S){ const cv=S.cv, P=S.ptr;                             
       if(now-S.lastTap<320){ S.lastTap=0; if(S.unpick) S.unpick(S); hydMapZoom(S,2,p.x,p.y); } else { S.lastTap=now; (S.pick||hydMapPick)(S,p.x,p.y); } } };
   cv.addEventListener('pointerup',end); cv.addEventListener('pointercancel',end);
   cv.addEventListener('wheel',e=>{ if(!S.active()) return; e.preventDefault(); const [x,y]=at(e); hydMapZoom(S,e.deltaY<0?1.25:0.8,x,y); },{passive:false}); }
-function nearMeShow(pos){ const st=document.getElementById('hydSheetStatus'), L=document.getElementById('hydSheetList'), cv=document.getElementById('hydSheetMap');
+function nearMeShow(pos){ NEARME.pos=pos; const st=document.getElementById('hydSheetStatus'), L=document.getElementById('hydSheetList'), cv=document.getElementById('hydSheetMap');
   const w=ll2world(pos.coords.latitude,pos.coords.longitude), acc=pos.coords.accuracy||0, list=hydNearest(w.x,w.z,5); NEARME.last={x:w.x,z:w.z,acc,list,F:list.F};
   L.textContent='';
   if(!list.length){ st.textContent='No hydrant in the map data within 1,300 ft of you — this works inside Philadelphia.'; cv.style.display='none'; document.querySelector('#hydSheet .mapBtns').style.display='none'; return; }
@@ -10023,8 +10293,9 @@ function boxUnitShort(kind,v){ return kind==='S'?String(v):BOX_SHORT[kind]+v; }
 const LAZY_Q='?v='+encodeURIComponent(BUILD);
 function boxData(cb){ if(typeof PFDLOOK!=='undefined') return cb(true);                           // the whole order loads on first use
   BOXLOOK.wait.push(cb); if(BOXLOOK.loading) return; BOXLOOK.loading=true;
-  const s=document.createElement('script'), done=ok=>{ BOXLOOK.loading=false; const w=BOXLOOK.wait; BOXLOOK.wait=[]; for(const f of w) f(ok&&typeof PFDLOOK!=='undefined'); };
-  s.src='data/pfdlook.js'+LAZY_Q; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
+  const done=ok=>{ BOXLOOK.loading=false; const w=BOXLOOK.wait; BOXLOOK.wait=[]; for(const f of w) f(ok&&typeof PFDLOOK!=='undefined'); };
+  if(PFDT.on) return pfdtFile('look.json','PFDLOOK',done);                     // 🔐 the members' bucket (signed in), never the public site
+  const s=document.createElement('script'); s.src='data/pfdlook.js'+LAZY_Q; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
 function boxFull(key){ const s=typeof PFDLOOK!=='undefined'&&PFDLOOK.f[key]; if(!s) return null; const parts=s.split('.'), out={};
   ['E','L','B','M','S'].forEach((t,i)=>{ out[t]=Array.from(parts[i]||'',ch=>PFDLOOK.lg[t][PFDLOOK.a.indexOf(ch)]); }); return out; }
 /* THE REDESIGN (owner, October 15, 2026, with three mock-ups: "Redesign the existing Box & Address Lookup to match the attached
@@ -10148,15 +10419,18 @@ function boxShowInOrder(){ const S=BOXLOOK; if(!S.mine.n) return; boxCat(S.mine.
     y=row.getBoundingClientRect().top-body.getBoundingClientRect().top+body.scrollTop, room=body.clientHeight-under;
   body.scrollTop=Math.max(at,y-under-Math.max(0,(room-row.offsetHeight)/2)); boxScrollState();   // your row in the middle of what the tabs leave
   row.tabIndex=-1; try{ row.focus({preventScroll:true}); }catch(e){} }
-function boxLookup(raw,from){ const S=BOXLOOK, U=blEl('boxUnits'), Hd=blEl('boxHead'), res=blEl('boxResult');
+function boxLookup(raw,from){ const S=BOXLOOK, U=blEl('boxUnits'), Hd=blEl('boxHead'), res=blEl('boxResult'), myTok=S.lookTok=(S.lookTok|0)+1;   // myTok: a later search outranks a box still loading
   const digits=String(raw||'').replace(/\D/g,'').slice(0,4);
   U.textContent=''; Hd.textContent=''; blEl('boxSel').textContent=''; res.hidden=true;
   S.view=null; S.sel=null; S.ring=null; S.box=null; S.full=null; S.undo=null; S.scroll={};
   S.pin=from&&from.pin||null; S.dest=from&&from.dest||null; if(!from) blEl('boxAddr').textContent='';   // an address search keeps its line, its pin and its destination; anything else drops the old one
   if(!digits){ boxSay(from?'':'Type a box number — four digits; the first two are the first-due engine.','info'); boxScrollState(); return false; }
   const key=digits.padStart(4,'0');
-  if(typeof PFDLOOK==='undefined'){ boxSay('Loading the running orders…','load'); boxData(ok=>{ if(ok) boxLookup(key,from); else boxSay('Could not load the running orders — check your connection and try again.','err'); }); return false; }
+  if(typeof PFDLOOK==='undefined'){ boxSay('Loading the running orders…','load'); boxData(ok=>{ if(ok) boxLookup(key,from); else boxSay(pfdtSignMsg()||'Could not load the running orders — check your connection and try again.','err'); }); return false; }
   const full=boxFull(key); if(!full){ boxSay('No box '+key+' in the PFD list.','err'); return false; }
+  if(PFDT.on&&S.pfdtWaited!==key&&pfdtBoxWait(key)){ boxSay('Loading box '+key+'\u2019s map…','load');   // 🔐 its squares (the outline, its hydrants) from the members' bucket
+    pfdtAfter(()=>!pfdtBoxWait(key),()=>{ if(S.lookTok!==myTok) return; S.pfdtWaited=key; boxLookup(raw,from); },9000); return false; }
+  S.pfdtWaited=null;
   S.box=key; S.full=full; if(!from) try{ localStorage.setItem('pfd_boxlook',key); }catch(e){}
   const bx=PFD_BOXES.find(q=>q.box===key), n1=full.E[0];
   const bn=document.createElement('span'); bn.className='bn'; bn.textContent='BOX '+key; Hd.appendChild(bn);
@@ -10242,8 +10516,9 @@ hydMapGestures(BOXLOOK);
    takes the nearer run (within 20); further off, the sheet says the City has no such number and shows the street's range. */
 function addrData(cb){ const S=BOXLOOK; if(typeof PFDADDR!=='undefined') return cb(true);
   S.addrWait.push(cb); if(S.addrLoading) return; S.addrLoading=true;
-  const s=document.createElement('script'), done=ok=>{ S.addrLoading=false; const w=S.addrWait; S.addrWait=[]; for(const f of w) f(ok&&typeof PFDADDR!=='undefined'); };
-  s.src='data/pfdaddr.js'+LAZY_Q; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
+  const done=ok=>{ S.addrLoading=false; const w=S.addrWait; S.addrWait=[]; for(const f of w) f(ok&&typeof PFDADDR!=='undefined'); };
+  if(PFDT.on) return pfdtFile('addr.json','PFDADDR',done);                     // 🔐 the members' bucket (signed in), never the public site
+  const s=document.createElement('script'); s.src='data/pfdaddr.js'+LAZY_Q; s.onload=()=>done(true); s.onerror=()=>{ s.remove(); done(false); }; document.head.appendChild(s); }
 // The City's own form: a direction only FIRST, a street type only LAST — canonStreet shortens every TERRACE / COURT / PLACE
 // wherever it stands, and "Terrace Street" (the street NAMED Terrace) is TERRACE ST to the City, not TER ST.
 const ADDR_DES=/ (ST|AVE|RD|LN|DR|PL|BLVD|SQ|TER|WAY|CT|CIR|PIKE|WALK|PKWY|PLZ|MEWS|ALY|MALL|HTS|PATH|ROW)$/;
@@ -10279,7 +10554,7 @@ function addrLookup(raw){ const line=blEl('boxAddr'), sug=blEl('boxSug');
   const text=String(raw||'').trim(); try{ if(text) localStorage.setItem('pfd_addrlook',text); }catch(e){}
   boxLookup('',{keep:true}); line.textContent=''; sug.textContent='';
   if(!text){ boxSay('Type an address — a house number and the street, like 4208 Ridge Ave.','err'); return false; }
-  if(typeof PFDADDR==='undefined'){ boxSay('Loading the address list…','load'); addrData(ok=>{ if(ok) addrLookup(text); else boxSay('Could not load the address list — check your connection and try again.','err'); }); return false; }
+  if(typeof PFDADDR==='undefined'){ boxSay('Loading the address list…','load'); addrData(ok=>{ if(ok) addrLookup(text); else boxSay(pfdtSignMsg()||'Could not load the address list — check your connection and try again.','err'); }); return false; }
   const q=addrParse(text); if(!q){ boxSay('Start with the house number — like 4208 Ridge Ave.','err'); return false; }
   const cands=addrCandidates(q.street);
   if(!cands.length){ boxSay('No street called "'+q.street.trim()+'" in the City\'s property list.','err'); addrSuggest(text); return false; }
@@ -10770,7 +11045,7 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
     x.rotate(Math.atan2(ny,nx)+Math.PI/2); x.fillStyle='#d32f2f'; x.beginPath(); x.moveTo(0,-11); x.lineTo(5,2); x.lineTo(-5,2); x.closePath(); x.fill(); x.fillStyle='#555'; x.beginPath(); x.moveTo(0,11); x.lineTo(5,2); x.lineTo(-5,2); x.closePath(); x.fill(); x.restore(); }
   const ms=performance.now()-t0; M.ms=M.ms?M.ms*0.9+ms*0.1:ms; }
 mmToggleBtn();
-const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip,updateMiniMap,updateFireBays,gfxUpdate];                 // frame() renders the Tilt view
+const PRESENT=[updateIntro,updateRoute,updateAudio,updateHUD,updateDueChip,updateMiniMap,updateFireBays,gfxUpdate,pfdtTick];                 // frame() renders the Tilt view
 
 state.cam=3; LIVE3D.group.visible=true;   // start in the tilted live-tile map (\uD83E\uDDED button cycles TILT \u2192 CHASE \u2192 MAP)
 
@@ -10872,7 +11147,13 @@ function narrowCorner(edge,street){ const L=Math.hypot(edge.b.x-edge.a.x,edge.b.
     if(out.length){ const other=out.find(e=>e.name&&canonStreet(e.name)!==cn), nm=other?other.name:null; return {node:n,d:p,at:nm}; }
     for(const e of n.adj){ if(!e.nw||e.hw) continue; const nd=p+e.w; if(nd<(dist.has(e.to)?dist.get(e.to):Infinity)){ dist.set(e.to,nd); open.push(nd,e.to); } } }
   return null; }
-const CALLBAG={key:'',bag:[],fb:null,recent:[]};                           // 🎲 the shuffle bag (see below)
+const CALLBAG={key:'',bag:[],fb:null,recent:[],mem:''};                    // 🎲 the shuffle bag (see below); mem: whose recent list is loaded
+/* 🧠 CALLS REMEMBERED ACROSS SITTINGS (owner, November 3, 2026: members "are getting ... the same run address"). The last 150 calls
+   were remembered in memory only, so every launch started a fresh memory and a few calls a day brought the same addresses back. Now
+   they are kept on the phone per firehouse and due (pfd_callmem: {"e35:1":[address,...]}, 150 each, the 24 most recent keys). */
+function callMemLoad(k){ try{ const m=JSON.parse(localStorage.getItem('pfd_callmem')||'{}'); return Array.isArray(m[k])?m[k].slice(-150):[]; }catch(e){ return []; } }
+function callMemSave(k,list){ try{ const m=JSON.parse(localStorage.getItem('pfd_callmem')||'{}'); delete m[k]; m[k]=list.slice(-150); const ks=Object.keys(m); while(ks.length>24) delete m[ks.shift()];
+    localStorage.setItem('pfd_callmem',JSON.stringify(m)); }catch(e){} }
 function makeAddressDispatch(){ if(!ADDR||!ADDR.a||!ADDR.a.length)return null;
   const polys=[]; for(const st of stations){ const p=duePolygon(st.id); if(p) polys.push(p); }           // union of the traced first-due areas (the mapped play area)
   const inMapped=(x,z)=>{ if(!polys.length) return true; for(const p of polys) if(ptInRing(x,z,p)) return true; return false; };
@@ -10889,26 +11170,29 @@ function makeAddressDispatch(){ if(!ADDR||!ADDR.a||!ADDR.a.length)return null;
      are remembered (CALLBAG.recent) and skipped; when every eligible address is recent, the memory is cleared and a new round
      starts. So a pool of up to 150 still goes round in full before anything repeats (as in v21p), and a bigger one never repeats
      within 150 calls. The checks stop at 60, so a bag costs about what the old full scan did (6-11 ms here). */
-  const key=MAP.dueLevel+':'+Math.round(truck.x/150)+':'+Math.round(truck.z/150);
+  const key=MAP.dueLevel+':'+Math.round(truck.x/150)+':'+Math.round(truck.z/150), mk=(DRIVE.stationId||'-')+':'+MAP.dueLevel;
+  if(CALLBAG.mem!==mk){ CALLBAG.mem=mk; CALLBAG.recent=callMemLoad(mk); CALLBAG.key=''; }   // 🧠 this house and due's memory, from the phone
   if(CALLBAG.key!==key||!CALLBAG.bag.length){ let cand=[], fallback=null;
-    const ring=[]; for(const a of ADDR.a){ if(!a) continue; const d=Math.hypot(a[2]-truck.x,a[3]-truck.z); if(d>=300&&d<=3000) ring.push(a); }   // keep runs nearby (was up to 7500m)
+    const ring=[], far=[], H=pfdtHasFn(); for(const a of ADDR.a){ if(!a) continue; const d=Math.hypot(a[2]-truck.x,a[3]-truck.z); if(d<300||d>6000||(H&&!H(a[2],a[3]))) continue; (d<=3000?ring:far).push(a); }   // far: 3-6 km, used only when the near ring is too thin   // keep runs nearby (was up to 7500m); 🔐 H: only where the box map is in
     for(let i=ring.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0, t=ring[i]; ring[i]=ring[j]; ring[j]=t; }   // Fisher-Yates: the bag is a random draw
     let recent=new Set(CALLBAG.recent);
-    const fill=()=>{ for(const a of ring){ if(cand.length>=60) break; if(recent.has(a[0])) continue;
+    let nearOK=0;   // eligible addresses in the near ring, recent ones INCLUDED (counted to 20): is the ring thin, or only used up?
+    const fill=()=>{ for(const a of ring){ if(cand.length>=60) break; if(recent.has(a[0])){ if(nearOK<20&&addressAtDue(a[2],a[3],MAP.dueLevel)&&addressDispatchable(a)) nearOK++; continue; }
         if(!addressAtDue(a[2],a[3],MAP.dueLevel)) continue;                                                           // 🚒 must put YOU in the selected due slot — never a different one
         const v=addressDispatchable(a); if(!v) continue;
         const c={a,edge:v.edge,cross:v.cross};
-        if(inMapped(a[2],a[3])) cand.push(c); else if(!fallback) fallback=c; } };                                   // ✅ inside a real first-due polygon → box reflects the right engine; else one spare so a run always exists
-    fill(); if(!cand.length){ CALLBAG.recent=[]; recent=new Set(); fill(); }                                         // every eligible one is recent: a new round
+        nearOK++; if(inMapped(a[2],a[3])) cand.push(c); else if(!fallback) fallback=c; } };                                   // ✅ inside a real first-due polygon → box reflects the right engine; else one spare so a run always exists
+    fill(); if(nearOK<20&&far.length){ for(let i=far.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0, t=far[i]; far[i]=far[j]; far[j]=t; } ring.push(...far); fill(); }   // 📏 an edge-of-city house at 2nd-4th due (E22: 7 addresses within 3 km): reach to 6 km
+    if(!cand.length){ CALLBAG.recent=[]; recent=new Set(); fill(); }                                         // every eligible one is recent: a new round
     if(cand.length>1&&cand[cand.length-1].a[0]===lastAddress){ const t=cand[0]; cand[0]=cand[cand.length-1]; cand[cand.length-1]=t; }   // dealt from the end: never the call you just had
     CALLBAG.key=key; CALLBAG.bag=cand; CALLBAG.fb=fallback; }
   const pick=CALLBAG.bag.pop()||CALLBAG.fb;
   if(!pick) return null;
-  CALLBAG.recent.push(pick.a[0]); if(CALLBAG.recent.length>150) CALLBAG.recent.splice(0,CALLBAG.recent.length-150);                                                     // caller distinguishes "no calls at this due" from a general failure via dueCallsAvailable()
+  CALLBAG.recent.push(pick.a[0]); if(CALLBAG.recent.length>150) CALLBAG.recent.splice(0,CALLBAG.recent.length-150); callMemSave(CALLBAG.mem,CALLBAG.recent);                                                     // caller distinguishes "no calls at this due" from a general failure via dueCallsAvailable()
   return buildAddressTarget(pick.a,pick.edge,pick.cross); }
 function dueCallsAvailable(level){ if(!level) return true;                   // is even ONE valid call available at this due right now?
-  for(const a of ADDR.a){ if(!a) continue;
-    const d=Math.hypot(a[2]-truck.x,a[3]-truck.z); if(d<300||d>3000) continue;
+  const H=pfdtHasFn(); for(const a of ADDR.a){ if(!a) continue;
+    const d=Math.hypot(a[2]-truck.x,a[3]-truck.z); if(d<300||d>6000||(H&&!H(a[2],a[3]))) continue;   // 📏 the picker reaches 6 km when the near ring is thin
     if(!addressAtDue(a[2],a[3],level)) continue;
     if(addressDispatchable(a)) return true; }
   return false; }
@@ -10926,6 +11210,7 @@ function newDispatch(){ if(DRILL.on||BOXD.on||duedPaused()) return;
     const dim=BOXD.pendDim; BOXD.pendDim=null;
     const r=dim==='due'?duedStart(DRIVE.stationId):boxdStart(DRIVE.stationId); if(r.ok) return;
     if(dim==='due') popup(r.reason==='all-mastered'?'🎓 Every available running order is proven.':'🎓 Due Order is unavailable for this company.'); }                                               // if it can't start, fall through to a normal box
+  if(pfdtHold()) return;                                                       // 🔐 the box maps of the call band are on their way (a moment; never over 12 s)
   const tgt=makeAddressDispatch();
   if(!tgt&&MAP.dueLevel&&!dueCallsAvailable(MAP.dueLevel)){                  // strict: never quietly widen to another due
     const nm=['','1st','2nd','3rd','4th'][MAP.dueLevel];
@@ -10988,6 +11273,8 @@ const QUALUI={ companyId:null, due:0, busy:false, confirming:false };
 function qualUiMsg(reason,due){ const pos=POS_LABELS[(due||1)-1];
   if(reason==='no-eligible-box'||reason==='no-known-boxes')
     return '<span class="qcHead">Qualification temporarily unavailable</span><br>We don\'t have enough verified '+pos+' boxes for this company yet.<br><b>Your career progress is unchanged.</b>';
+  if(reason==='loading')
+    return '<span class="qcHead">Loading the box maps</span><br>This company\'s box maps are still coming in — try again in a moment.<br><b>Your career progress is unchanged.</b>';
   if(reason==='special-mode-active')
     return '<span class="qcHead">Finish your current drill first</span><br>Chief Qualification can\'t start while a drill or training mode is active.';
   if(reason==='qual-already-active') return 'A Chief Qualification is already in progress.';
@@ -11401,7 +11688,7 @@ const homeEl=document.getElementById('home');
       list.appendChild(head);
       for(const st of grp){ const b=document.createElement('button'); b.className='btn stbtn'; b.dataset.station=st.id;
         b.innerHTML='<span class="eBadge">'+st.num+'</span><span class="stTxt"><span class="stName">Engine '+st.num+(st.ladder?' · Ladder '+st.ladder:'')+(fhOwnLook(st)?'<span class="ownTag">✓ OWN LOOK</span>':'')+'</span><span class="sub2">'+st.address+'</span><span class="stCareer"></span></span>';
-        b.addEventListener('click',()=>startShift(st)); list.appendChild(b); }
+        b.addEventListener('click',()=>{ if(!memberOK()){ memberPrompt(); return; } startShift(st); }); list.appendChild(b); }   // 🔑 members only
     }
   }
 })();
@@ -11492,6 +11779,8 @@ function homeDots(){                                                          //
 }
 function drawHomeMap(now){
   const cv=document.getElementById('homeMap'); if(!cv||!HOMEMAP.ready) return;
+  { const el0=(now-HOMEMAP.t0)/1000, live=el0<1.6||HOMEMAP.fly||HOMEMAP.sel;   // 🔋 (October 30, 2026) the dots popped in by ~1.4 s; a flight or a selected dot animates
+    if(!live&&(HOMEMAP.idle=(HOMEMAP.idle||0)+1)%12){ HOMEMAP.raf=requestAnimationFrame(drawHomeMap); return; } }   // otherwise ~5 redraws a second (a star toggle shows within 200 ms)
   const dpr=Math.min(2,window.devicePixelRatio||1), W=cv.clientWidth, H=cv.clientHeight;
   if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
   const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0);
@@ -11576,7 +11865,8 @@ function showHouseCard(st){ hcStation=st;
   document.getElementById('houseCard').classList.add('up');
   document.getElementById('homeMapWrap').classList.add('picking');
 }
-function flyToStation(st){                                                    // camera dives into the house, then the shift starts
+function flyToStation(st){ if(!memberOK()){ memberPrompt(); return; }         // 🔑 members only (the data policy is the lock; this is the door)
+                                                                             // camera dives into the house, then the shift starts
   const d=(HOMEMAP.dots.length?HOMEMAP.dots:homeDots()).find(q=>q.st===st); if(!d) { closeHomeMap(); startShift(st); return; }
   hideHouseCard();
   HOMEMAP.fly={ t0:performance.now(), x:d.x, y:d.y, st, done:false };
@@ -11616,6 +11906,7 @@ function goHome(){ boxdClear('home'); qualClear('home'); FREE.on=false; freeCall
    return to the firehouse picker on the way back in. Brief app-switches (<60s) keep your run going. */
 let __awayAt=0;
 document.addEventListener('visibilitychange',()=>{
+  sfxSleep();   // 🔋 the sound engine sleeps while the tab is hidden
   if(document.hidden){ __awayAt=Date.now(); return; }
   if(__awayAt && state.running && (Date.now()-__awayAt)>60000){
     state.running=false; DRIVE.going=false; DRIVE.parked=false;
@@ -11633,7 +11924,8 @@ function startShift(st,opts){ closeHomeMap(); homeEl.classList.remove('show'); d
   if(!(BOXD.pending&&BOXD._own&&st&&st.id===BOXD.pendCompany)) boxdClear('shift-change');                  // a drill-initiated ride-out keeps its own pending
   if(!(QUAL.pending&&QUAL._own&&st&&st.id===QUAL.companyId)) qualClear('shift-change');                  // 🎖 any shift change abandons an exam — EXCEPT the qual-initiated startShift itself (_own)
   SPAWN.x=st.x; SPAWN.z=st.z; SPAWN.theta=st.theta; SPAWN._perp=st.perp;
-  sfx.init(); document.getElementById('btnSiren').classList.toggle('on',state.siren);
+  if(!sfx.muted) sfx.init();   // 🔋 (October 30, 2026) muted (the default) creates no AudioContext: six oscillators used to run for the whole session, silent
+  document.getElementById('btnSiren').classList.toggle('on',state.siren);
   state.cash=0; state.saves=0; state.combo=1; state.over=false; state.target=null; state.douse=0; setRivals(!FREE.on);   // 🧭 no rivals on a patrol — and with no rivals there is no missedDue, so no BEATEN IN
   clearRivals();   // the strip and the pooled rival trucks belong to the PREVIOUS shift's box. In Career the first dispatch clears them a moment later; a patrol has no first dispatch, so the old race stayed frozen on screen.
   truck.x=SPAWN.x; truck.z=SPAWN.z; truck.y=groundHeight(SPAWN.x,SPAWN.z); truck.vx=0; truck.vz=0; truck.vy=0; truck.theta=SPAWN.theta; truck.pitch=0; camTheta=SPAWN.theta;
@@ -11680,8 +11972,15 @@ updateBest();
 /* ============================ 11. MAIN LOOP (fixed timestep) ============================ */
 let GT=0, last=performance.now(), acc=0;
 const FPSM={t:0,winT:0,avg:0,min:999,shownMin:999};
+const IDLE={n:0};   // 🔋 HOME SCREEN IDLE: the frame counter the throttle in frame() keys on
 function frame(now){ const pd0=PERFDIAG.on?performance.now():0; requestAnimationFrame(frame); let dt=(now-last)/1000; last=now; if(dt>CONFIG.maxDt) dt=CONFIG.maxDt; GT=now/1000;
   if(GL.lost) return;                                         // 3D context gone: don't simulate behind a frozen canvas
+  /* 🔋 HOME SCREEN IDLE (October 30, 2026). The picker is an opaque overlay, yet every frame behind it simulated, updated the HUD and
+     rendered the whole East Falls city (~108 draw calls / ~240k triangles) for as long as a member browsed the list, Settings, the
+     Lookup or the Career card. The first frame still builds and renders the city in full (the shader warm-up a shift start relies
+     on); after that, while the home screen is up and no rebuild is running, only every 12th frame does any work (~5 a second: tile
+     prefetch, HUD, a render). Not while the diagnostics run (?perf=1), whose frame-gap record would read the idle as hitches. */
+  if(homeEl.classList.contains('show')&&FLATCITY.built&&!FLATCITY.job&&!FP3.dirty&&!PERFDIAG.on&&(++IDLE.n%12)) return;
   { const rn=performance.now(); if(FPSM.t){ const d=rn-FPSM.t; if(d>0&&d<1000){ const f=1000/d; FPSM.avg=FPSM.avg?FPSM.avg*0.92+f*0.08:f; if(f<FPSM.min)FPSM.min=f; } }
     FPSM.t=rn; if(rn-FPSM.winT>2000){ FPSM.shownMin=FPSM.min; FPSM.min=999; FPSM.winT=rn; } }   // owner perf review: rolling avg + worst frame of the last 2s, shown on the SAVES line
   { const pr=renderer.getPixelRatio(), tw=Math.round(innerWidth*pr), th=Math.round(innerHeight*pr);   // 3D views: keep the WebGL canvas full-screen (mobile address-bar/viewport changes can leave it short → a gap below the render)
@@ -11694,6 +11993,8 @@ function frame(now){ const pd0=PERFDIAG.on?performance.now():0; requestAnimation
   else { LIVE3D.group.visible=false; FLATCITY.group.visible=false; routeMeshFlat.visible=false; setProcVisible(true); updateTruckVisual(dt); updateBeacon(dt); updateStreetLabels(dt); updateCamera(dt); updateParkedStreetChoices(); renderer.render(scene,camera); }
   if(pd0) pdgFrame(pd0); } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
+homeMemberLine();   // 🔑 the home screen's line: MEMBERS ONLY until the account answers
+window.__booted=true;   // the BOOT WATCH in the head stands down: from here a script error is the game's own business
 requestAnimationFrame(frame);
 </script>
 </body>

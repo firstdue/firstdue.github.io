@@ -7,13 +7,14 @@ import { Script } from 'node:vm';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(resolve(root, 'index.html'), 'utf8');
-// The authoring folder intentionally keeps its PWA shell in the public checkout.
-const pwaRoot = existsSync(resolve(root, 'ship.js')) ? resolve(root, 'gh-pages-deploy') : root;
-const localAsset = (name) => {
+// The PWA shell (manifest, icons) is authored in the folder this test sits in (since October 30, 2026; it used to live only in
+// the public checkout). publish.cjs copies it with the release.
+const pwaRoot = root;
+const localAsset = (name, base = pwaRoot) => {
   assert.equal(typeof name, 'string');
   assert.ok(name.length && !/^(?:[a-z]+:|\/|\\)/i.test(name), 'asset must be relative');
-  const path = resolve(pwaRoot, name);
-  assert.ok(path.startsWith(pwaRoot + sep), 'asset must stay inside the PWA folder');
+  const path = resolve(base, name);
+  assert.ok(path.startsWith(base + sep), 'asset must stay inside its source folder');
   return path;
 };
 
@@ -39,7 +40,9 @@ test('every script compiles, and external scripts are local files loaded before 
     if (src) {
       sawExternal = true;
       assert.equal(source.trim(), '', 'a script with src must have no body');
-      new Script(readFileSync(localAsset(src.replace(/\?.*$/, '')), 'utf8'), { filename: src });   // firehouse-models.js?v=<BUILD>
+      // Check the actual authoring page's dependencies; the publish checkout deliberately
+      // stays unchanged during local-only previews. Never validate an old deployed script.
+      new Script(readFileSync(localAsset(src.replace(/\?.*$/, ''), root), 'utf8'), { filename: src });   // firehouse-models.js?v=<BUILD>
       continue;
     }
     const type = attributes.match(/\btype\s*=\s*["']([^"']+)["']/i)?.[1];
@@ -57,12 +60,23 @@ test('extracted data loads before the game script that reads it', () => {
     if (src && /^(?:data|vendor)\//.test(src)) assert.ok(i < gameScript, `${src} must precede the game script`);
   }
   // Each extracted global is declared exactly once, in its own file, and no longer in index.html.
-  for (const name of ['ADDR', 'RB', 'AB', 'LMKS', 'NAVGEO', 'LANDCOVER', 'PFDBOX', 'PFDRUN', 'CLEARANCE', 'NARROW', 'INST', 'ROADW']) {
+  for (const name of ['ADDR', 'RB', 'AB', 'LMKS', 'NAVGEO', 'LANDCOVER', 'BTYPE', 'RREF', 'PFDBOX', 'PFDRUN', 'CLEARANCE', 'NARROW', 'INST', 'ROADW']) {
     const file = name === 'LANDCOVER' && srcs.includes('data/landcover-packed.js') ? 'data/landcover-packed.js' : `data/${name.toLowerCase()}.js`;   // v20t: the packed land file
     if (!srcs.includes(file)) continue;
     assert.doesNotMatch(html, new RegExp(`^const ${name}\\s*=`, 'm'), `${name} should live in ${file}`);
-    assert.match(readFileSync(localAsset(file), 'utf8'), new RegExp(`^const ${name}\\s*=`));
+    // The authoring copy, as above: a new data file is not in the publish checkout until release.
+    assert.match(readFileSync(localAsset(file, root), 'utf8'), new RegExp(`^const ${name}\\s*=`));
   }
+});
+
+test('the department data is never a script tag of the page (members only, November 3, 2026)', () => {
+  // data/pfdbox.js, pfdrun.js, pfdlook.js and pfdaddr.js come from the PFD's books and lists. On the site they are fetched in area
+  // pieces from the private members' bucket once signed in (PFDT in the game script); a local server writes the first two in itself
+  // (the inline loader before the game script, which acts on localhost / 127.0.0.1 / [::1] only).
+  assert.doesNotMatch(html, /<script\b[^>]*\bsrc\s*=\s*["']?data\/pfd/i, 'no <script src="data/pfd..."> in index.html');
+  const loader = html.match(/<script>\/\* 🔐 THE DEPARTMENT DATA[\s\S]*?<\/script>/);
+  assert.ok(loader, 'the local loader is in index.html');
+  assert.match(loader[0], /if\(!\/\^\(localhost\|127\\\.0\\\.0\\\.1\|/, 'and it acts on a local server only');
 });
 
 test('the firehouse models load under the BUILD, before the game', () => {
@@ -70,7 +84,7 @@ test('the firehouse models load under the BUILD, before the game', () => {
   const tag = html.match(/<script src="firehouse-models\.js\?v=([^"]+)"><\/script>/), build = html.match(/const BUILD="([^"]+)"/);
   assert.ok(tag, 'index.html loads firehouse-models.js?v=<BUILD>');
   assert.equal(tag[1], build[1], 'the ?v of firehouse-models.js must be the BUILD (bump both at a release)');
-  const models = readFileSync(localAsset('firehouse-models.js'), 'utf8');
+  const models = readFileSync(localAsset('firehouse-models.js', root), 'utf8');
   assert.match(models, /^'use strict';/, 'the game script is strict, so are its models');
   assert.ok(models.split('\n').every(l => l.length < 8000), 'no giant lines in firehouse-models.js');
 });
@@ -89,12 +103,12 @@ test('PWA references exist and service worker compiles', () => {
   assert.ok(existsSync(localAsset('.nojekyll')), '.nojekyll must exist so Pages publishes data/ and vendor/');
   assert.match(html, /<link\b[^>]*rel=["']manifest["'][^>]*href=["']manifest.json["']/i);
   assert.match(html, /serviceWorker\.register\(["']sw\.js["']\)/);
-  new Script(readFileSync(localAsset('sw.js'), 'utf8'), { filename: 'sw.js' });
+  new Script(readFileSync(localAsset('sw.js', root), 'utf8'), { filename: 'sw.js' });
 });
 
 test('Local manifest references PNG icons with matching dimensions', () => {
   const manifest = JSON.parse(readFileSync(localAsset('manifest.json'), 'utf8'));
-  assert.equal(manifest.name, 'Local');
+  assert.equal(manifest.name, 'Know Your Local');   // the full name (owner, October 30, 2026); "Local" is its short form
   assert.equal(manifest.short_name, 'Local');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.start_url, './');

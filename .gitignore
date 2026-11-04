@@ -1,0 +1,29 @@
+# The public site. publish.cjs (in the authoring folder) copies a release here from an explicit list; these must never be here,
+# committed or not: the raw PFD box books, the City downloads, backups, reports, tests and notes (October 30, 2026).
+engine_boxes/
+*.gdb.zip
+opa-*.json
+*li-footprints*
+data/osm-*.json
+data/trunk-*.json
+data/motorway-*.json
+data/rail-*.json
+data/cartway*
+data/live-*.html
+*.bak
+*.geojson
+*.tiff
+*.pdf
+perf-reports/
+tests/
+notes/
+tools/
+artifact/
+node_modules/
+v??-pre-*.html
+.env
+# Members only (November 3, 2026, phase 2): the department data (the PFD box books and running order) lives in the private
+# Supabase bucket pfd (tools/pfd-tiles, SUPABASE-SETUP.md Step 12), never on the site. Ignoring does not untrack: the release
+# that takes it off the site runs   git rm data/pfdbox.js data/pfdrun.js data/pfdlook.js data/pfdaddr.js   here (publish.cjs says so).
+data/pfd*.js
+out/
