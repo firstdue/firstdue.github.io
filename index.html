@@ -1613,7 +1613,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23h"></script>
+<script src="firehouse-models.js?v=v23i"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1654,7 +1654,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23h";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23i";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9289,12 +9289,17 @@ const AUTH={ session:null, user:null, tier:'free', name:'' };
    still rides; the server's answer, when it comes, wins. MEMBER.dev: a local server (the tests, the phone A/B over adb) needs no
    account — the gate is manners, the phase-2 data policy is the lock: this page holds nothing a non-member could not have anyway. */
 const MEMBER={ state:'unknown', dev:/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname), checking:false,
-  codes:false, guest:true };   // 🔑 November 3, 2026 (owner: "one link", "if everyone has a sign in should be fine"): ANY signed-in account rides, no invite code.
+  codes:false, guest:true, hold:true };   // 🔑 November 3, 2026 (owner: "one link", "if everyone has a sign in should be fine"): ANY signed-in account rides, no invite code.
 /* 👤 GUEST RIDES (owner, November 5, 2026, while the sign-in emails are not arriving — the Gmail sender's mail is sent but never delivered:
    "Yes guest mode"). MEMBER.guest lets anyone ride signed out — the DOOR only: the department data (PFDT: the books' boxes, running order,
    hydrants, the address lookup) still comes only with a sign-in (pfdtActive reads memberOK, not this), so a guest rides the City's first-due
    zones and the nearest-house order, as signed out always did. A banner says so at the start of a guest shift. guest:false shuts it again. */
 function canRide(){ return memberOK()||!!MEMBER.guest; }
+/* ⏸ SIGN-IN ON HOLD (owner, November 5: "Can we put that in the game that sign ups are temporary on hold"). MEMBER.hold, signed out: the
+   account card shows why instead of the email box and SEND (so nobody makes another account whose email never comes), and the home line says
+   so. A phone already signed in is untouched. hold:false (with guest:false) when the new sender works. */
+try{ if(new URLSearchParams(location.search).get('signin')==='1') MEMBER.hold=false; }catch(e){}   // ?signin=1: the owner's way in while it is paused (to test the new sender)
+const HOLD_MSG='⏸ SIGN-IN IS PAUSED FOR NOW. Our sign-in emails are not reaching people, so new sign-ins are on hold while we fix it — sorry. You can still ride as a guest: close this and tap any firehouse. Already signed in on this phone? Nothing changes.';
                    // The code machinery (Step 11, the card's code row, is_member / redeem_invite) stays, dormant: codes:true brings it back.
 function memberRemembered(){ try{ return !!AUTH.session&&!!localStorage.getItem('pfd_member'); }catch(e){ return false; } }
 function memberOK(){ if(MEMBER.dev) return true; if(MEMBER.codes) return MEMBER.state==='yes';
@@ -9313,7 +9318,7 @@ async function memberRedeem(code){ if(!AUTH.user) return 'signin'; const k=Strin
   if(yes){ MEMBER.state='yes'; memberRemember(true); authUpdateUI(); return 'ok'; } return r.ok?'bad':'offline'; }
 function memberPrompt(){ openAuthCard(); const c=document.getElementById('authCode'); if(c&&!c.hidden) setTimeout(()=>{ try{ c.focus(); }catch(e){} },50); }
 function homeMemberLine(){ const h=document.querySelector('#homeHud .tag'); if(!h||window.__bootErr) return;   // the BOOT WATCH's message outranks this line
-  const ok=memberOK(), t=ok?'TAP A FIREHOUSE TO RIDE OUT':MEMBER.guest?'TAP A FIREHOUSE TO RIDE OUT · 👤 SIGN IN FOR THE BOX DATA':(AUTH.user&&MEMBER.codes?'🔑 MEMBERS ONLY · TAP TO ENTER YOUR INVITE CODE':'👤 SIGN IN TO RIDE · TAP HERE');
+  const ok=memberOK(), t=ok?'TAP A FIREHOUSE TO RIDE OUT':MEMBER.guest&&MEMBER.hold?'TAP A FIREHOUSE TO RIDE OUT AS A GUEST · ⏸ SIGN-IN PAUSED':MEMBER.guest?'TAP A FIREHOUSE TO RIDE OUT · 👤 SIGN IN FOR THE BOX DATA':(AUTH.user&&MEMBER.codes?'🔑 MEMBERS ONLY · TAP TO ENTER YOUR INVITE CODE':'👤 SIGN IN TO RIDE · TAP HERE');
   if(h.textContent!==t) h.textContent=t; h.style.cursor=ok?'':'pointer'; h.style.color=ok?'':'#ffd23b'; h.setAttribute('role',ok?'':'button');
   const ab=document.getElementById('btnAcctHome'); if(ab){ const tag=[AUTH.assign,AUTH.platoon].filter(Boolean).join('/'), b=ab.querySelector('b'), sp=ab.querySelector('span');   // 👤 SIGN IN, or who is signed in
     const t1=AUTH.user?('👤 '+(AUTH.name||'ACCOUNT')):'👤 SIGN IN', t2=AUTH.user?(tag||'ACCOUNT'):'ACCOUNT'; if(b&&b.textContent!==t1) b.textContent=t1; if(sp&&sp.textContent!==t2) sp.textContent=t2; ab.classList.toggle('in',!!AUTH.user); } }
@@ -9654,7 +9659,8 @@ function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'
 function authUpdateUI(){ const ab=document.getElementById('btnAccount'); if(ab) ab.classList.toggle('on',!!AUTH.user);   // (v16d moved sign-in into the ACCOUNT card; the old #btnAuth is gone)
   const out=document.getElementById('authOut'), em=document.getElementById('authEmail'), snd=document.getElementById('authSend');
   { const show=!AUTH.user&&!!authPending(), oi=document.getElementById('authOtp'), vb=document.getElementById('authVerify'); if(oi) oi.hidden=!show; if(vb) vb.hidden=!show; }   // 🔢 the code box, once an email has gone out
-  const on=!!AUTH.user; if(out) out.style.display=on?'block':'none'; if(em) em.style.display=on?'none':'block'; if(snd) snd.style.display=on?'none':'block';
+  const on=!!AUTH.user, hold=!on&&!!MEMBER.hold&&!MEMBER.dev; if(out) out.style.display=on?'block':'none'; if(em) em.style.display=on||hold?'none':'block'; if(snd) snd.style.display=on||hold?'none':'block';   // ⏸ on hold: no email box, no SEND
+  if(hold){ const oi=document.getElementById('authOtp'), vb=document.getElementById('authVerify'); if(oi) oi.hidden=true; if(vb) vb.hidden=true; }
   { const row=MEMBER.codes&&!MEMBER.dev&&on&&MEMBER.state!=='yes', mb=document.getElementById('authMember'), ci=document.getElementById('authCode'), jb=document.getElementById('authJoin');   // 🔑 the invite-code row: signed in, not yet a member
     if(ci) ci.hidden=!row; if(jb) jb.hidden=!row; if(mb){ mb.hidden=!on||MEMBER.dev||!MEMBER.codes; mb.textContent=MEMBER.state==='yes'?'🔑 Member':(MEMBER.checking?'Checking your membership…':(MEMBER.state==='unknown'?'Could not reach the server — a member can still ride; enter a code when you have signal.':'Not a member yet — enter the invite code you were given.')); } }
   homeMemberLine(); }
@@ -9672,7 +9678,7 @@ async function authInit(){                                                    //
 function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) return;
   document.getElementById('authMsg').textContent=AUTH.user
     ? ('Signed in as '+AUTH.user.email+'. '+(memberOK()?'Your careers sync to this account across devices.':'Enter your invite code below to become a member and ride.'))
-    : (memberOK()||!MEMBER.codes?'Sign in to ride. Enter your email and we\'ll send a one-tap link — no password. Your careers then sync across devices and you join the leaderboard.'
+    : (MEMBER.hold&&!MEMBER.dev?HOLD_MSG:memberOK()||!MEMBER.codes?'Sign in to ride. Enter your email and we\'ll send a one-tap link — no password. Your careers then sync across devices and you join the leaderboard.'
                  :'Members only. Sign in with your email — a one-tap link, no password — then enter the invite code you were given.');
   { const ni=document.getElementById('authName'), nb=document.getElementById('authNameSave'), on=!!AUTH.user;
     if(ni){ ni.style.display=on?'block':'none'; ni.value=AUTH.name||''; } if(nb) nb.style.display=on?'block':'none';
@@ -12298,7 +12304,7 @@ document.addEventListener('visibilitychange',()=>{
   }
   __awayAt=0;
 });
-function startShift(st,opts){ truckWreath(); patchCheck(true); if(!memberOK()&&MEMBER.guest) setTimeout(()=>{ try{ popup('👤 GUEST RIDE · BOX DATA WITH SIGN-IN',''); }catch(e){} },1400); closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
+function startShift(st,opts){ truckWreath(); patchCheck(true); if(!memberOK()&&MEMBER.guest) setTimeout(()=>{ try{ popup(MEMBER.hold?'👤 GUEST RIDE · SIGN-IN PAUSED':'👤 GUEST RIDE · BOX DATA WITH SIGN-IN',''); }catch(e){} },1400); closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
   /* 🧭 The shift's mode is decided ONCE, here: the picker's armed toggle, unless a caller says otherwise.
      A pending drill or qualification is Career by definition and overrides the arm on its own. */
   FREE.on = (opts&&opts.free!==undefined) ? !!opts.free : !!FREE.arm;
