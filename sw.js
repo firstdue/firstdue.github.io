@@ -5,13 +5,19 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v114';  // v22y: leaderboards show E35/B, the house each player rides and a staff stamp; real names only.
+// STAMPED FILES (audit B13, November 4, 2026): index.html loads every data / vendor / assets script as
+// <file>?h=<its contents' fingerprint> (stamp-data.cjs). That address never changes its contents, so it is
+// cache-first in DATA, a cache a release does NOT purge: an unchanged file is never downloaded again, and a
+// changed one is a new address, fetched at once (no launch on the old copy). Storing a new stamp of a file
+// drops that file's older stamps.
+const CACHE = 'local-shell-v115';  // v22z: data files stamped by their contents and kept across releases; the page fetched by address.
+const DATA = 'local-data-v1';   // stamped files, kept across releases (bump only to throw every one away)
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
   e.waitUntil((async function () {
     var keys = await caches.keys();
-    await Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+    await Promise.all(keys.filter(function (k) { return k !== CACHE && k !== DATA; }).map(function (k) { return caches.delete(k); }));
     await self.clients.claim();
   })());
 });
@@ -24,11 +30,29 @@ self.addEventListener('fetch', function (e) {
 
   var isDoc = req.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('/index.html');
 
+  if (!isDoc && url.searchParams.has('h')) {
+    // a stamped file: its address names its contents, so a cached copy is always the right one
+    e.respondWith((async function () {
+      var c = await caches.open(DATA);
+      var cached = await c.match(req);
+      if (cached) return cached;
+      var res = await fetch(req);
+      if (res && res.status === 200) {
+        await c.put(req, res.clone());
+        var old = (await c.keys()).filter(function (k) { var u = new URL(k.url); return u.pathname === url.pathname && u.search !== url.search; });
+        await Promise.all(old.map(function (k) { return c.delete(k); }));
+      }
+      return res;
+    })());
+    return;
+  }
   if (isDoc) {
     // network-first — always try for the freshest game, revalidating against the server
     e.respondWith((async function () {
       try {
-        var res = await fetch(req, { cache: 'no-cache' });
+        // by ADDRESS (November 4, 2026): Chrome ignores cache:'no-cache' on a forwarded navigation request and answered from its
+        // HTTP cache, so for 10 minutes after any launch (GitHub's max-age=600) a new release was served the OLD page (measured).
+        var res = await fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' });
         if (res && res.status === 200) { var c = await caches.open(CACHE); await c.put(req, res.clone()); }
         return res;
       } catch (_) {

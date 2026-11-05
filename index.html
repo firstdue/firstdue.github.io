@@ -1565,16 +1565,16 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   <button class="btnText" id="restartBtn">CHANGE STATION</button>
 </div></div>
 
-<script src="vendor/three.147.min.js"></script>
-<script src="assets/highway/GLTFLoader.147.js"></script>
-<script src="data/addr.js"></script>
-<script src="data/rb.js"></script>
-<script src="data/ab.js"></script>
-<script src="data/lmks.js"></script>
-<script src="data/navgeo.js"></script>
-<script src="data/landcover-packed.js"></script>
-<script src="data/btype.js"></script>
-<script src="data/rref.js"></script>
+<script src="vendor/three.147.min.js?h=f34446bf87"></script>
+<script src="assets/highway/GLTFLoader.147.js?h=b2edda9235"></script>
+<script src="data/addr.js?h=403774c841"></script>
+<script src="data/rb.js?h=43a21683aa"></script>
+<script src="data/ab.js?h=782bea0348"></script>
+<script src="data/lmks.js?h=7c49fc6d45"></script>
+<script src="data/navgeo.js?h=d726781cbc"></script>
+<script src="data/landcover-packed.js?h=21e44ce93a"></script>
+<script src="data/btype.js?h=29407681cb"></script>
+<script src="data/rref.js?h=cf9e15ddaf"></script>
 <script>/* 🔐 THE DEPARTMENT DATA (November 3, 2026; notes/members-plan.md phase 2). data/pfdbox.js and data/pfdrun.js are not on the public
    site any more: there the game fetches them in area pieces from the members' bucket once signed in (PFDT, in the game script). On a
    local server (the tests, the phone A/B over adb) the authoring files are here, and this writes their two tags in where they stood, so
@@ -1584,11 +1584,11 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
    no checker mistakes it for a script tag of the page. */
 (function(){ if(!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)||/[?&]pfdt=1(&|$)/.test(location.search)) return; window.PFDLOCAL=true;
   var t=''; ['pfdbox','pfdrun'].forEach(function(f){ t+='<scr'+'ipt src="data/'+f+'.js" data-opt="1"></scr'+'ipt>'; }); document.write(t); })();</script>
-<script src="data/clearance.js"></script>
-<script src="data/narrow.js"></script>
-<script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22y"></script>
-<script src="data/inst.js"></script>
+<script src="data/clearance.js?h=20ecfa67ca"></script>
+<script src="data/narrow.js?h=5e89daff3d"></script>
+<script src="data/roadw.js?h=879ed531cf"></script>
+<script src="firehouse-models.js?v=v22z"></script>
+<script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
    A typeof test never throws, but it cannot be looped by name; reading the binding can, so each read is tried. See BOOT WATCH (head). */
@@ -1628,7 +1628,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22y";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22z";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).

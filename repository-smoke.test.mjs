@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Script } from 'node:vm';
@@ -54,7 +55,7 @@ test('every script compiles, and external scripts are local files loaded before 
 
 test('extracted data loads before the game script that reads it', () => {
   const order = [...html.matchAll(/<script\b([^>]*)>/gi)].map(m => m[1]);
-  const srcs = order.map(a => a.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1] ?? null);
+  const srcs = order.map(a => a.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1]?.replace(/\?.*$/, '') ?? null);   // data/rb.js?h=<stamp>
   const gameScript = srcs.lastIndexOf(null);
   for (const [i, src] of srcs.entries()) {
     if (src && /^(?:data|vendor)\//.test(src)) assert.ok(i < gameScript, `${src} must precede the game script`);
@@ -66,6 +67,19 @@ test('extracted data loads before the game script that reads it', () => {
     assert.doesNotMatch(html, new RegExp(`^const ${name}\\s*=`, 'm'), `${name} should live in ${file}`);
     // The authoring copy, as above: a new data file is not in the publish checkout until release.
     assert.match(readFileSync(localAsset(file, root), 'utf8'), new RegExp(`^const ${name}\\s*=`));
+  }
+});
+
+// Audit B13 (November 4, 2026): every data / vendor / assets script carries ?h=<the first 10 hex of the sha256 of its contents,
+// carriage returns left out>, so a changed file is a new address (a phone fetches it at once) and an unchanged one is kept across
+// releases by sw.js (DATA). The authoring folder's stamp-data.cjs writes them; a stale stamp would serve the old file.
+test('every data, vendor and assets script carries its contents stamp', () => {
+  const tags = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(m => m[1]).filter(s => /^(?:data|vendor|assets)\//.test(s));
+  assert.ok(tags.length >= 10, 'expected the data scripts');
+  for (const t of tags) {
+    const file = t.replace(/\?.*$/, ''), h = (t.match(/[?&]h=([0-9a-f]+)/) || [])[1];
+    const want = createHash('sha256').update(readFileSync(localAsset(file, root)).toString('latin1').replace(/\r/g, ''), 'latin1').digest('hex').slice(0, 10);
+    assert.equal(h, want, `${file} is stamped ${h || '(none)'} but its contents are ${want}: run node stamp-data.cjs`);
   }
 });
 
