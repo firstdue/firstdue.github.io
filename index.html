@@ -1613,7 +1613,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23f"></script>
+<script src="firehouse-models.js?v=v23g"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1654,7 +1654,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23f";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23g";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9960,8 +9960,15 @@ function mailDist(a,b){ const m=a.length, n=b.length; if(Math.abs(m-n)>2) return
 function mailSuggest(em){ const at=em.lastIndexOf('@'); if(at<1) return null; const d=em.slice(at+1).toLowerCase(); if(MAIL_DOMAINS.includes(d)) return null;
   let best=null, bd=3; for(const m of MAIL_DOMAINS){ const k=mailDist(d,m); if(k<bd){ bd=k; best=m; } } return best?em.slice(0,at+1)+best:null; }
 const AUTHSUG={orig:'',sug:''};
-async function authSendTo(em){ const msg=document.getElementById('authMsg'); msg.textContent='Sending…'; const res=await authSendLink(em), ok=res.ok; if(ok) authPendingSet(em); authUpdateUI();
-  if(ok) msg.innerHTML='✉️ Code sent to<span class="authAddr">'+lbEsc(em)+'</span>Type the 6-digit code from the email below — or tap the link in it. Not there in a minute? Look in Spam / Junk (and Gmail\'s Promotions) for "Know Your Local".<button type="button" class="authFix" data-auth="fix">Wrong address? Fix it</button>';
+/* ⏱ ONE EMAIL A MINUTE (owner, November 5: the sender's Sent folder showed 13 sign-in emails to one member, and the Auth log refused
+   codes as "otp_expired"). Each new email REPLACES the last code, so a member who tapped SEND again while the first email was slow then
+   typed a code that no longer worked. After a send the button waits 60 s (counting down), and the card says to use the newest email. */
+const AUTHCOOL={until:0,t:null,em:''};   // the wait is for the SAME address: a corrected one goes at once
+function authCooldown(){ const b=document.getElementById('authSend'); if(!b) return; clearTimeout(AUTHCOOL.t); const same=((document.getElementById('authEmail')||{}).value||'').trim().toLowerCase()===AUTHCOOL.em, left=same?Math.ceil((AUTHCOOL.until-Date.now())/1000):0;
+  if(left>0){ b.disabled=true; b.textContent='✉️ SEND AGAIN IN '+left+' s'; AUTHCOOL.t=setTimeout(authCooldown,1000); } else { b.disabled=false; b.textContent='✉️ SEND SIGN-IN EMAIL'; if(Date.now()<AUTHCOOL.until) AUTHCOOL.t=setTimeout(authCooldown,1000); } }
+async function authSendTo(em){ const msg=document.getElementById('authMsg'); if(Date.now()<AUTHCOOL.until&&em.trim().toLowerCase()===AUTHCOOL.em) return; msg.textContent='Sending…'; const res=await authSendLink(em), ok=res.ok; if(ok) authPendingSet(em); authUpdateUI();
+  if(ok){ AUTHCOOL.until=Date.now()+60000; AUTHCOOL.em=em.trim().toLowerCase(); authCooldown(); }
+  if(ok) msg.innerHTML='✉️ Code sent to<span class="authAddr">'+lbEsc(em)+'</span>Type the 6-digit code from the email below — or tap the link in it. It can take a few minutes: look in Spam / Junk and Gmail\'s Promotions for "sign-in code". <b>Each new email replaces the last code — always use the newest one.</b><button type="button" class="authFix" data-auth="fix">Wrong address? Fix it</button>';
   else msg.textContent=authSendWhy(res);
   if(ok){ const oi=document.getElementById('authOtp'); if(oi) setTimeout(()=>{ try{ oi.focus(); }catch(e){} },50); } }
 document.getElementById('authSend').addEventListener('click',async ()=>{ const em=(document.getElementById('authEmail').value||'').trim(), msg=document.getElementById('authMsg');
@@ -9969,6 +9976,7 @@ document.getElementById('authSend').addEventListener('click',async ()=>{ const e
   const sug=mailSuggest(em); if(sug){ AUTHSUG.orig=em; AUTHSUG.sug=sug;
     msg.innerHTML='Did you mean<span class="authAddr">'+lbEsc(sug)+'</span><div class="authRow"><button type="button" class="yes" data-auth="sug">Yes, send to that</button><button type="button" data-auth="orig">No, mine is right</button></div>'; return; }
   authSendTo(em); });
+document.getElementById('authEmail').addEventListener('input',()=>authCooldown());   // ⏱ another address: no wait
 document.getElementById('authMsg').addEventListener('click',e=>{ const b=e.target.closest('[data-auth]'); if(!b) return; const k=b.dataset.auth, ei=document.getElementById('authEmail');
   if(k==='sug'){ ei.value=AUTHSUG.sug; authSendTo(AUTHSUG.sug); }
   else if(k==='orig') authSendTo(AUTHSUG.orig);
@@ -9976,7 +9984,7 @@ document.getElementById('authMsg').addEventListener('click',e=>{ const b=e.targe
 document.getElementById('authVerify').addEventListener('click',async ()=>{ const m=document.getElementById('authMsg'); m.textContent='Checking the code…';   // 🔢
   const r=await authVerifyCode(authPending(),document.getElementById('authOtp').value);
   if(r==='ok'){ document.getElementById('authOtp').value=''; openAuthCard(); popup('👤 Signed in as '+AUTH.user.email+' · careers synced','green'); return; }
-  m.textContent=r==='short'?'Type all 6 digits.':r==='noemail'?'Send the sign-in email first.':r==='offline'?'Could not reach the server — check your connection and try again.':'That code did not work — it may have expired. Send a new email and use the newest code.'; });
+  m.textContent=r==='short'?'Type all 6 digits.':r==='noemail'?'Send the sign-in email first.':r==='offline'?'Could not reach the server — check your connection and try again.':'That code did not work. If more than one email came, use the code from the NEWEST one — each new email replaces the last code.'; });
 authInit();
 // 🧯 Player-marked hydrants (PROFILE.hyd) are NOT drawn any more (v20o, owner's request): the PFD box books put every
 // hydrant on the map citywide, so a hand-marked one only ever doubled a real one (two at Lawnton St & Pedley Rd).
