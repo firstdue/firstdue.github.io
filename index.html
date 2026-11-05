@@ -1587,7 +1587,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v22z"></script>
+<script src="firehouse-models.js?v=v23a"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1628,7 +1628,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22z";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23a";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -11521,6 +11521,93 @@ function fhKit(){ const L=[], G=[], planes=[], DR=[], FL=[], OB=[], m4=new THREE
       for(const o of OB) g.add(o);
       g.userData=Object.assign({fhKit:true},U||{}); if(rig) g.userData.rig=rig; g.userData.flags=FL; return g; } }; }
 function fhDispose(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose(); const m=o.material; if(m&&m!==FHK.lam&&m!==FHK.glow&&m!==FHK.flag){ if(m.map&&!(m.map.userData&&m.map.userData.fhShared)) m.map.dispose(); m.dispose(); } }); }
+/* 🎄 CHRISTMAS ON THE FINISHED HOUSES (owner, November 5, 2026: "Christmas is coming up could we decorate the firehouse that are finished
+   their look"). From December 1 to January 6 (the phone's own date; ?xmas=1 / ?xmas=0 to look at it any day) every house with its own model
+   (fhOwnLook) wears a string of coloured lights along its roofline, a lit garland along the head of each bay and a wreath in each bay.
+   Each model is built differently, so nothing is placed by hand: fhXmasScan draws the model's own street-facing faces into a picture of
+   its front (a depth map, 0.25 m cells; the house's part only, never its engine), the roofline and the bay openings are read from it,
+   and the decorations are spliced INTO the model's two meshes ahead of its engine — no new draw call, fhRig's ranges move up with them. */
+const XMAS=(()=>{ let f=null; try{ const q=new URLSearchParams(location.search).get('xmas'); if(q==='1') f=true; else if(q==='0') f=false; }catch(e){}
+  const d=new Date(), m=d.getMonth(), day=d.getDate(); return {on:f!==null?f:((m===11&&day>=1)||(m===0&&day<=6))}; })();
+function fhXmasScan(geo,n){ const P=geo.attributes.position.array, Nn=geo.attributes.normal.array, S=0.25;
+  let x0=1e9,x1=-1e9,y1=-1e9; for(let i=0;i<n;i++){ const x=P[i*3], y=P[i*3+1]; if(x<x0) x0=x; if(x>x1) x1=x; if(y>y1) y1=y; }
+  if(!(x1>x0)||!(y1>2)) return null; const W=Math.ceil((x1-x0)/S)+1, H=Math.ceil(y1/S)+1; if(W*H>600000) return null;
+  const Z=new Float32Array(W*H).fill(-1e9);
+  for(let t=0;t+2<n;t+=3){ if(Nn[t*3+2]<0.85) continue;                                                   // only faces looking at the street
+    const ax=P[t*3],ay=P[t*3+1],az=P[t*3+2], bx=P[t*3+3],by=P[t*3+4],bz=P[t*3+5], cx=P[t*3+6],cy=P[t*3+7],cz=P[t*3+8];
+    const den=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy); if(Math.abs(den)<1e-9) continue;
+    const i0=Math.max(0,Math.ceil((Math.min(ax,bx,cx)-x0)/S-0.5)), i1=Math.min(W-1,Math.floor((Math.max(ax,bx,cx)-x0)/S-0.5));
+    const j0=Math.max(0,Math.ceil(Math.min(ay,by,cy)/S-0.5)), j1=Math.min(H-1,Math.floor(Math.max(ay,by,cy)/S-0.5));
+    for(let i=i0;i<=i1;i++){ const px=x0+(i+0.5)*S; for(let j=j0;j<=j1;j++){ const py=(j+0.5)*S;
+      const l1=((by-cy)*(px-cx)+(cx-bx)*(py-cy))/den, l2=((cy-ay)*(px-cx)+(ax-cx)*(py-cy))/den, l3=1-l1-l2; if(l1<-1e-6||l2<-1e-6||l3<-1e-6) continue;
+      const z=l1*az+l2*bz+l3*cz, k=i*H+j; if(z>Z[k]) Z[k]=z; } } }
+  return {Z,W,H,S,x0}; }
+const XMAS_BULBS=[0xff3b30,0x2ecc40,0xffd23b,0x3b8bff,0xfff6e0];
+function fhXmasDecor(geo,n){ const M=fhXmasScan(geo,n); if(!M) return null; const {Z,W,H,S,x0}=M, at=(i,j)=>Z[i*H+j];
+  const L={P:[],N:[],C:[]}, G={P:[],N:[],C:[]}, col=new THREE.Color();
+  const tri=(A,a,b,c,nx,ny,nz,hex)=>{ col.set(hex); for(const v of [a,b,c]){ A.P.push(v[0],v[1],v[2]); A.N.push(nx,ny,nz); A.C.push(col.r,col.g,col.b); } };
+  const quadZ=(A,xa,ya,xb,yb,z,hex)=>{ tri(A,[xa,ya,z],[xb,ya,z],[xb,yb,z],0,0,1,hex); tri(A,[xa,ya,z],[xb,yb,z],[xa,yb,z],0,0,1,hex); };     // facing the street
+  const quadY=(A,xa,za,xb,zb,y,hex)=>{ tri(A,[xa,y,za],[xa,y,zb],[xb,y,zb],0,1,0,hex); tri(A,[xa,y,za],[xb,y,zb],[xb,y,za],0,1,0,hex); };     // facing up (the TILT camera looks down)
+  const bulb=(x,y,z,k)=>{ const h=0.075, c=XMAS_BULBS[k%XMAS_BULBS.length]; quadZ(G,x-h,y-h,x+h,y+h,z,c); quadY(G,x-h,z-h*2,x+h,z,y+h,c); };
+  const ring=(cx,cy,z,R,r,hex,segs)=>{ for(let s=0;s<segs;s++){ const a0=s/segs*6.2832, a1=(s+1)/segs*6.2832, c0=Math.cos(a0), s0=Math.sin(a0), c1=Math.cos(a1), s1=Math.sin(a1);
+      tri(L,[cx+r*c0,cy+r*s0,z],[cx+R*c0,cy+R*s0,z],[cx+R*c1,cy+R*s1,z],0,0,1,hex); tri(L,[cx+r*c0,cy+r*s0,z],[cx+R*c1,cy+R*s1,z],[cx+r*c1,cy+r*s1,z],0,0,1,hex); } };
+  const wreath=(cx,cy,z,k)=>{ k=k||1; ring(cx,cy,z,0.52*k,0.27*k,0x1d5c2e,18); ring(cx,cy,z+0.012,0.47*k,0.33*k,0x2f7d3f,18);
+    for(let s=0;s<6;s++){ const a=0.5+s*1.05, x=cx+0.4*k*Math.cos(a), y=cy+0.4*k*Math.sin(a), b=0.04*k; quadZ(L,x-b,y-b,x+b,y+b,z+0.02,0xc8102e); }   // berries
+    const by=cy-0.42*k, bz=z+0.025, a=0.24*k, u=0.11*k, v=0.13*k; tri(L,[cx,by,bz],[cx-a,by+u,bz],[cx-a,by-v,bz],0,0,1,0xd0182a); tri(L,[cx,by,bz],[cx+a,by-v,bz],[cx+a,by+u,bz],0,0,1,0xd0182a);   // the bow
+    quadZ(L,cx-0.13*k,by-0.36*k,cx-0.03*k,by,bz,0xb3121f); quadZ(L,cx+0.03*k,by-0.36*k,cx+0.13*k,by,bz,0xb3121f); quadZ(L,cx-0.06*k,by-0.06*k,cx+0.06*k,by+0.06*k,bz+0.005,0xe02a3a); };
+  const box=(xa,xb,ya,yb,za,zb,hex)=>{ quadZ(L,xa,ya,xb,yb,zb,hex); quadY(L,xa,za,xb,zb,yb,hex);
+    tri(L,[xa,ya,za],[xb,ya,zb],[xa,ya,zb],0,-1,0,hex); tri(L,[xa,ya,za],[xb,ya,za],[xb,ya,zb],0,-1,0,hex); };
+  // the roofline: the highest street-facing cell within 1.2 m of the column's front; a 5-column median drops what is thinner than ~1.25 m (a flagpole, a lamp)
+  const top=new Int32Array(W).fill(-1), wall=new Float32Array(W).fill(-1e9);
+  for(let i=0;i<W;i++){ let f=-1e9; for(let j=0;j<H;j++) if(at(i,j)>f) f=at(i,j); if(f<-1e8) continue; for(let j=H-1;j>=0;j--) if(at(i,j)>=f-1.2){ top[i]=j; break; } }
+  const roof=new Int32Array(W).fill(-1); for(let i=2;i<W-2;i++){ const a=[top[i-2],top[i-1],top[i],top[i+1],top[i+2]].sort((p,q)=>p-q); roof[i]=a[2]; }
+  // the wall: the facade's own plane, the MEDIAN of the column from 3 m up (a cornice or a coping sticks out a metre at Engine 59)
+  for(let i=0;i<W;i++) if(roof[i]>=0){ const a=[]; for(let j=Math.round(3/S);j<=roof[i];j++) if(at(i,j)>-1e8) a.push(at(i,j)); if(a.length){ a.sort((p,q)=>p-q); wall[i]=a[a.length>>1]; } }
+  const out={bulbs:0,wreaths:0,openings:0};
+  for(let i=2;i<W-2;i+=2){ const r=roof[i]; if(r<0||(r+1)*S<2.6||wall[i]<-1e8) continue; let z=-1e9; for(let j=Math.max(0,r-1);j<=r;j++) z=Math.max(z,at(i,j)); if(z<-1e8) continue;
+    bulb(x0+(i+0.5)*S,(r+1)*S-0.12,z+0.07,out.bulbs++); }
+  // the bays: a run of columns at least 2.5 m wide whose 1.2-2.6 m band lies more than 0.5 m behind the wall (a truck parked just inside still
+  // counts), with at least 0.5 m of it more than 2 m deep (the bay beside a truck that nearly fills it — a window's reveal is not a bay)
+  const j0=Math.round(1.2/S), j1=Math.round(2.6/S), open=new Uint8Array(W), deep=new Uint8Array(W);
+  for(let i=0;i<W;i++){ if(roof[i]<0||(roof[i]+1)*S<3.4||wall[i]<-1e8) continue; let k=0, d=0;
+    for(let j=j0;j<=j1;j++){ const z=at(i,j); if(z<wall[i]-0.5) k++; if(z<wall[i]-2) d++; } open[i]=k>=(j1-j0+1)*0.75?1:0; deep[i]=d>=(j1-j0+1)*0.5?1:0; }
+  const spots=[], wallAt=(i,j)=>i>=0&&i<W&&j>=0&&j<H&&wall[i]>-1e8&&at(i,j)>=wall[i]-0.35;
+  for(let i=0;i<W;){ if(!open[i]){ i++; continue; } let e=i; while(e+1<W&&open[e+1]) e++; let nd=0; for(let k=i;k<=e;k++) nd+=deep[k];
+    const w=(e-i+1)*S; if(w>=2.5&&w<=16&&nd*S>=0.5){ const ic=(i+e)>>1, wz=wall[ic]; let head=-1; for(let j=j1;j<=roof[ic];j++) if(at(ic,j)>=wz-0.35){ head=j; break; }
+      if(head>0){ const hy=head*S, xa=x0+(i+0.5)*S, xb=x0+(e+0.5)*S, hz=at(ic,head);
+        box(xa,xb,hy-0.2,hy+0.02,hz-0.02,hz+0.1,0x245f30); for(let x=xa+0.2;x<xb-0.1;x+=0.55) bulb(x,hy-0.09,hz+0.17,out.bulbs++);   // the lit garland along the head
+        const jw=Math.max(j1,Math.round((hy-0.85)/S));                                                    // a wreath on the wall beside the bay, a little below its head
+        for(const [edge,dir] of [[i-1,-1],[e+1,1]]){ let k=edge, pw=0; while(wallAt(k,jw)&&pw<7){ k+=dir; pw++; } const pm=pw*S; if(pm<0.8) continue;
+          const use=Math.min(pm,1.6), kc=edge+dir*Math.floor(use/S/2), cx=x0+(kc+0.5)*S, rk=Math.min(1,(use/2-0.06)/0.52); spots.push({cx,cy:jw*S,z:at(kc,jw)+0.04,k:rk}); }
+        out.openings++; } }
+    i=e+1; }
+  spots.sort((p,q)=>p.cx-q.cx); for(let q=0;q<spots.length;q++){ if(q>0&&Math.abs(spots[q].cx-spots[q-1].cx)<1.0) continue; const s=spots[q]; wreath(s.cx,s.cy,s.z,s.k); out.wreaths++; }   // two bays share the pier between them
+  return {L,G,out}; }
+/* 🎄 THE WREATH ON YOUR OWN TRUCK'S GRILLE (owner, November 5: "a reef on the front grill"), the same season (XMAS.on). The 3D model's
+   grille face is at z -3.915 for y 1.1-1.5 (measured by a ray; the nose is -z) and its bumper juts to -4.25 below 1.04 m, so the wreath
+   hangs at y 1.45 just in front of the grille, its bow above the bumper. One vertex-coloured mesh, added to truckG when a shift starts. */
+function truckWreath(){ let m=truckG.getObjectByName('truck-wreath'); if(!XMAS.on){ if(m) m.visible=false; return; } if(m){ m.visible=true; return; }
+  const P=[], C=[], N=[], col=new THREE.Color(), tri=(a,b,c,hex)=>{ col.set(hex); for(const v of [a,b,c]){ P.push(v[0],v[1],v[2]); N.push(0,0,1); C.push(col.r,col.g,col.b); } };
+  const ring=(R,r,z,hex)=>{ for(let s2=0;s2<18;s2++){ const a0=s2/18*6.2832, a1=(s2+1)/18*6.2832; tri([r*Math.cos(a0),r*Math.sin(a0),z],[R*Math.cos(a0),R*Math.sin(a0),z],[R*Math.cos(a1),R*Math.sin(a1),z],hex); tri([r*Math.cos(a0),r*Math.sin(a0),z],[R*Math.cos(a1),R*Math.sin(a1),z],[r*Math.cos(a1),r*Math.sin(a1),z],hex); } };
+  const sq=(x,y,h,z,hex)=>{ tri([x-h,y-h,z],[x+h,y-h,z],[x+h,y+h,z],hex); tri([x-h,y-h,z],[x+h,y+h,z],[x-h,y+h,z],hex); };
+  ring(0.36,0.19,0,0x1d5c2e); ring(0.33,0.23,0.01,0x2f7d3f); for(let k=0;k<6;k++){ const a=0.5+k*1.05; sq(0.28*Math.cos(a),0.28*Math.sin(a),0.03,0.02,0xc8102e); }
+  const by=-0.29; tri([0,by,0.03],[-0.17,by+0.08,0.03],[-0.17,by-0.09,0.03],0xd0182a); tri([0,by,0.03],[0.17,by-0.09,0.03],[0.17,by+0.08,0.03],0xd0182a); sq(0,by,0.045,0.035,0xe02a3a);
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(P),3)); g.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(N),3)); g.setAttribute('color',new THREE.BufferAttribute(new Float32Array(C),3));
+  m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true})); m.name='truck-wreath'; m.rotation.y=Math.PI; m.position.set(0,1.45,-3.95); truckG.add(m); }
+function fhSplice(geo,k,A){ const n=A.P.length/3; if(!n) return 0; const tot=geo.attributes.position.count;
+  for(const [name,src] of [['position',A.P],['normal',A.N],['color',A.C]]){ const old=geo.attributes[name].array, o=new Float32Array((tot+n)*3);
+    o.set(old.subarray(0,k*3),0); o.set(src,k*3); o.set(old.subarray(k*3,tot*3),(k+n)*3); geo.setAttribute(name,new THREE.BufferAttribute(o,3)); }
+  geo.computeBoundingSphere(); return n; }
+function fhXmas(g){ if(!XMAS.on||!g||!g.userData||!g.userData.fhKit||g.userData.xmas) return; const rig=g.userData.rig, lams=[]; let tot=null;
+  g.traverse(o=>{ if(o.isMesh&&o.material===FHK.lam&&o.visible&&!(rig&&o===rig.door)) lams.push(o); });
+  for(const me of lams){ const isRig=!!rig&&rig.lam===me, nHouse=isRig?rig.l0:me.geometry.attributes.position.count, D=fhXmasDecor(me.geometry,nHouse); if(!D) continue;
+    const nl=fhSplice(me.geometry,nHouse,D.L); if(isRig){ rig.l0+=nl; rig.l1+=nl; }
+    let gl=me.parent.children.find(o=>o.isMesh&&o.material===FHK.glow)||null;
+    if(gl){ const isG=!!rig&&rig.glow===gl, k=isG?rig.g0:gl.geometry.attributes.position.count, ng=fhSplice(gl.geometry,k,D.G); if(isG){ rig.g0+=ng; rig.g1+=ng; } }
+    else if(D.G.P.length){ const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(D.G.P),3)); geo.setAttribute('normal',new THREE.BufferAttribute(new Float32Array(D.G.N),3));
+      geo.setAttribute('color',new THREE.BufferAttribute(new Float32Array(D.G.C),3)); geo.computeBoundingSphere(); me.parent.add(new THREE.Mesh(geo,FHK.glow)); }
+    tot=tot||{bulbs:0,wreaths:0,openings:0}; for(const k in D.out) tot[k]+=D.out[k]; }
+  g.userData.xmas=tot||{bulbs:0,wreaths:0,openings:0}; }
 /* 🚒 IN QUARTERS OR OUT ON THE BOX (owner, October 16). A house's own engine stands in its bay — 'home' — unless it is out on YOUR box
    (a rival dispatched from that house, RIVALS.list). Then its bay is empty, and its door is shut — 'out' — only if nothing else of the
    house is still in: a LADDER still in quarters keeps the doors up and the engine's side simply empty — 'open' (owner: "the engine is
@@ -11697,7 +11784,7 @@ function buildStationHouse(st){
   if(STHOUSE.group){ FLATCITY.group.remove(STHOUSE.group); fhDispose(STHOUSE.group); STHOUSE.group=null; }
   if(!st||!DRIVE.stPerp) return;
   const tpl=STATION_TEMPLATES[st.id]||createDefaultStation;
-  const g=tpl(st); if(!g) return; fhRig(g,'open');                          // its engine is the player: the bay stands empty, the door up
+  const g=tpl(st); if(!g) return; if(fhOwnLook(st)) fhXmas(g); fhRig(g,'open');   // 🎄 fhXmas: December 1 to January 6                          // its engine is the player: the bay stands empty, the door up
   const U=g.userData, n=DRIVE.stPerp, yaw=Math.atan2(-n.x,-n.z)+(U.yawFix||0);
   const lxx=Math.cos(yaw), lxz=-Math.sin(yaw);                              // world direction of local +X
   const dist=U.setback+U.D/2;                                               // kerb → building centre (stOff is the kerb’s own offset from the centreline — adding it here double-counted and pushed the house 7m too far back)
@@ -11736,7 +11823,7 @@ function fh3dSync(cx,cz){ if(FH3D.state==='idle'||FH3D.state==='failed') fh3dLoa
     const R=stationRoad(st), nx=R?R.nx:st.perp.x, nz=R?R.nz:st.perp.z, yaw=Math.atan2(-nx,-nz), lx=Math.cos(yaw), lz=-Math.sin(yaw);   // n: from its road toward the house
     let a0=1e9,a1=-1e9,d0=1e9,d1=-1e9; for(let i=0;i<m;i++){ const ex=o[i*2]-fx, ez=o[i*2+1]-fz, a=ex*lx+ez*lz, d=ex*nx+ez*nz; if(a<a0)a0=a; if(a>a1)a1=a; if(d<d0)d0=d; if(d>d1)d1=d; }
     let g; const tpl=STATION_TEMPLATES[st.id];
-    if(tpl) g=tpl(st);
+    if(tpl){ g=tpl(st); fhXmas(g); }   // 🎄 December 1 to January 6
     else { const bays=st.ladder?3:2, Cb=Object.assign({},STATION_CFG,{bays}), minW=bays*Cb.bayPitch+4.4, wid=a1-a0;   // the default, sized to the real outline
       Cb.D=Math.max(12,Math.min(26,d1-d0)); if(wid<minW+6){ Cb.wing=0; Cb.W=Math.max(minW,wid); } else { Cb.wing=Math.min(14,wid-minW); Cb.W=Math.max(minW,wid-Cb.wing); }
       g=buildFirehouse(st,Cb); }
@@ -12022,7 +12109,7 @@ document.addEventListener('visibilitychange',()=>{
   }
   __awayAt=0;
 });
-function startShift(st,opts){ closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
+function startShift(st,opts){ truckWreath(); closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
   /* 🧭 The shift's mode is decided ONCE, here: the picker's armed toggle, unless a caller says otherwise.
      A pending drill or qualification is Career by definition and overrides the arm on its own. */
   FREE.on = (opts&&opts.free!==undefined) ? !!opts.free : !!FREE.arm;
