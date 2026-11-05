@@ -1611,7 +1611,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23c"></script>
+<script src="firehouse-models.js?v=v23d"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1652,7 +1652,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23c";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23d";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -10957,6 +10957,14 @@ const MAPV_C={ ground:'#d3d9bd', park:'#9bc977', wood:'#7cb15c', cem:'#a7cd8a', 
   shingle:[['#a3a8ae','#73787e'],['#93806f','#685749'],['#7b8086','#53575d'],['#ab9884','#7a6857'],['#866f62','#5c4a40']],   // [sunny side, shaded side]
   membrane:'#e5e6e2', membranes:['#e5e6e2','#d4d6d7','#c1c5c8','#aeb2b6','#959a9f'],   // big real roofs: white to weathered grey
   inst:'#e4dac4', hatch:'rgba(62,66,72,.7)', hvac:'#9fa5ab', tree:'#5b9b3c', treeHi:'#79bd50', treeLo:'rgba(36,84,26,.24)', route:'rgba(40,120,255,.88)' };
+/* 🍂 MAP VIEW'S SEASONS (owner, November 5, 2026: "start on the top down view") — the 3D view's SEASON: the ground, the parks, the woods,
+   the cemeteries and the tree canopies change colour; spring, fall and winter mix three canopy colours, chosen by each tree's place (so a
+   tree keeps its colour as the map moves). Winter's smaller crowns come through by themselves (the canopy size is read from the 3D trees).
+   SUMMER IS THE OLD PALETTE EXACTLY: one canopy colour, painted as before. */
+MAPV_C.trees=[MAPV_C.tree];
+Object.assign(MAPV_C,({ spring:{ground:'#d4dcbc',park:'#a6d480',wood:'#88be64',cem:'#afd991',trees:['#6fb04a','#e9b6ca','#efeadf'],treeHi:'#9ad26f'},
+  fall:{ground:'#d9d7b9',park:'#b8bd6f',wood:'#9c9b55',cem:'#bcc282',trees:['#c8742f','#daa23c','#b2482b'],treeHi:'#eab85c',treeLo:'rgba(86,44,12,.24)'},
+  winter:{ground:'#d9d7cb',park:'#b9b99c',wood:'#9f9c86',cem:'#bfbfa8',trees:['#8a7d70','#7b6f63','#988b7e'],treeHi:'#aea295',treeLo:'rgba(52,42,32,.22)'} })[SEASON.name]||{});
 const mHash=n=>{ n=Math.sin(n*12.9898+78.233)*43758.5453; return n-Math.floor(n); };
 /* 🚒 THE TRUCK AT THE MAP'S SCALE (owner, October 16: "Can we have the truck get small when we zoom out on top-down view ... the truck
    look huge and it's hard to tell where one might turn"). It was always 34 x 82 px — 34 m long at the normal zoom, 83 m zoomed out,
@@ -11157,7 +11165,9 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
   const trees=[]; for(const p of FLATCITY.parts){ if(!p.isInstancedMesh||!(p.userData&&p.userData.shadeCast==='tree')) continue; const m=p.instanceMatrix.array;
     for(let i=0;i<p.count;i++){ const o=i*16, X=m[o+12], Z=m[o+14]; if(Math.abs(X-tx)>R||Math.abs(Z-tz)>R) continue; trees.push([X,Z,Math.max(2.6,Math.min(6.5,Math.hypot(m[o],m[o+1],m[o+2])*1.6))]); } }
   if(trees.length){ x.fillStyle=C.shadow; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X+2.2+r,Z+0.9); x.arc(X+2.2,Z+0.9,r,0,6.2832); } x.fill();
-    x.fillStyle=C.tree; x.beginPath(); for(const [X,Z,r] of trees) for(const [ox,oz,k] of [[-0.35,0.2,0.72],[0.38,0.22,0.68],[0,-0.32,0.7],[0,0,0.8]]){ x.moveTo(X+ox*r+k*r,Z+oz*r); x.arc(X+ox*r,Z+oz*r,k*r,0,6.2832); } x.fill();
+    const nb=C.trees.length; for(let bk=0;bk<nb;bk++){ x.fillStyle=C.trees[bk]; x.beginPath();   // 🍂 one batched fill per canopy colour (summer: one, as before)
+      for(const [X,Z,r] of trees){ if(nb>1&&((mHash(Math.round(X)*7.13+Math.round(Z)*3.71)*nb)|0)!==bk) continue;
+        for(const [ox,oz,k] of [[-0.35,0.2,0.72],[0.38,0.22,0.68],[0,-0.32,0.7],[0,0,0.8]]){ x.moveTo(X+ox*r+k*r,Z+oz*r); x.arc(X+ox*r,Z+oz*r,k*r,0,6.2832); } } x.fill(); }
     x.fillStyle=C.treeHi; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X-0.3*r+0.42*r,Z-0.32*r); x.arc(X-0.3*r,Z-0.32*r,0.42*r,0,6.2832); } x.fill();
     x.fillStyle=C.treeLo; x.beginPath(); for(const [X,Z,r] of trees){ x.moveTo(X+0.3*r+0.45*r,Z+0.35*r); x.arc(X+0.3*r,Z+0.35*r,0.45*r,0,6.2832); } x.fill(); }
   // buildings, as a satellite sees them: a sun shadow by height, then the roof. The City's real footprints where their tile is in (fpDraw,
