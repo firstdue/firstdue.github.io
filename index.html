@@ -1613,7 +1613,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23e"></script>
+<script src="firehouse-models.js?v=v23f"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1654,7 +1654,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23e";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23f";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9346,17 +9346,28 @@ async function authFetchUser(){ if(!AUTH.session) return null;
 function authPending(){ try{ return localStorage.getItem('pfd_signin_email')||''; }catch(e){ return ''; } }
 function authPendingSet(em){ try{ if(em) localStorage.setItem('pfd_signin_email',em); else localStorage.removeItem('pfd_signin_email'); }catch(e){} }
 async function authVerifyCode(email,code){ const token=String(code||'').replace(/\D/g,''); if(!email) return 'noemail'; if(token.length<6) return 'short';
-  for(const type of ['email','magiclink']){   // 'email' is the code of a sign-in email; older projects answer only 'magiclink'
+  for(const type of ['email','signup','magiclink']){   // 'email' is the code of a sign-in email; a first-time account's may answer only to 'signup', older projects only to 'magiclink'
     let r=null; try{ r=await fetch(SB.url+'/auth/v1/verify',{ method:'POST', headers:authHdr(false), body:JSON.stringify({ type, email, token }) }); }catch(e){ return 'offline'; }
     if(r.ok){ let o=null; try{ o=await r.json(); }catch(e){} if(!o||!o.access_token) return 'bad';
       authStore(o); authPendingSet(''); await authFetchUser(); if(!AUTH.user) return 'bad';
       memberCheck(); authUpdateUI(); await authFetchProfile(); syncCareers(); return 'ok'; }
     if(r.status>=500) return 'offline'; }
   return 'bad'; }
+/* ✉️ WHY A SIGN-IN EMAIL DID NOT GO (owner, November 5, 2026: "a lot of members sign up but not getting logged in" — the dashboard showed
+   every new account "Waiting for verification", one member trying three addresses). Every refusal read "Could not send — check your
+   connection", so a member blamed the phone and tried again. Now the send returns what the server said — {ok, status, code, msg} — and
+   the card says it plainly: too many emails this hour (429), the address refused (400/422), the game's mail service failing (5xx: tell
+   the admin), or truly no connection. The last answer is kept on window.__authSend for a look from the browser's console. */
 async function authSendLink(email){ const redirect=location.origin+location.pathname;   // Supabase must allowlist this in Auth → URL Configuration
   try{ const r=await fetch(SB.url+'/auth/v1/otp?redirect_to='+encodeURIComponent(redirect),{ method:'POST', headers:authHdr(false),
       body:JSON.stringify({ email, create_user:true }) });
-    return r.ok; }catch(e){ return false; } }   // a network failure used to reject and leave the card on "Sending…" (October 30, 2026)
+    let j=null; if(!r.ok){ try{ j=await r.json(); }catch(e){} }
+    const out={ ok:r.ok, status:r.status, code:j&&(j.error_code||j.code)||'', msg:j&&(j.msg||j.message||j.error_description||j.error)||'' }; window.__authSend=out; return out; }
+  catch(e){ const out={ ok:false, status:0, code:'offline', msg:'' }; window.__authSend=out; return out; } }   // a network failure used to reject and leave the card on "Sending…" (October 30, 2026)
+function authSendWhy(r){ if(!r||r.status===0) return 'Could not reach the server — check your connection and try again.';
+  if(r.status===429||/rate/i.test(r.code+' '+r.msg)) return 'Too many sign-in emails right now — wait a few minutes and try again. (If you already got an email, its code still works.)';
+  if(r.status===400||r.status===422) return 'That address was refused'+(r.msg?' ('+r.msg+')':'')+' — check it and try again.';
+  return 'The sign-in email could not be sent — the game\'s mail service had a problem'+(r.code?' ('+r.code+')':'')+'. Try again later, and please tell the game\'s admin.'; }
 async function sbFetch(path,opts){ opts=opts||{}; if(!AUTH.session) return null;               // authed PostgREST call, refreshes once on 401
   if(Date.now()>AUTH.session.expires_at-60000){ if(!await authRefresh()) return null; }
   const h=Object.assign({ 'apikey':SB.key, 'Authorization':'Bearer '+AUTH.session.access_token, 'Content-Type':'application/json' }, opts.headers||{});
@@ -9949,9 +9960,9 @@ function mailDist(a,b){ const m=a.length, n=b.length; if(Math.abs(m-n)>2) return
 function mailSuggest(em){ const at=em.lastIndexOf('@'); if(at<1) return null; const d=em.slice(at+1).toLowerCase(); if(MAIL_DOMAINS.includes(d)) return null;
   let best=null, bd=3; for(const m of MAIL_DOMAINS){ const k=mailDist(d,m); if(k<bd){ bd=k; best=m; } } return best?em.slice(0,at+1)+best:null; }
 const AUTHSUG={orig:'',sug:''};
-async function authSendTo(em){ const msg=document.getElementById('authMsg'); msg.textContent='Sending…'; const ok=await authSendLink(em); if(ok) authPendingSet(em); authUpdateUI();
-  if(ok) msg.innerHTML='✉️ Code sent to<span class="authAddr">'+lbEsc(em)+'</span>Type the 6-digit code from the email below — or tap the link in it.<button type="button" class="authFix" data-auth="fix">Wrong address? Fix it</button>';
-  else msg.textContent='Could not send — check your connection and try again.';
+async function authSendTo(em){ const msg=document.getElementById('authMsg'); msg.textContent='Sending…'; const res=await authSendLink(em), ok=res.ok; if(ok) authPendingSet(em); authUpdateUI();
+  if(ok) msg.innerHTML='✉️ Code sent to<span class="authAddr">'+lbEsc(em)+'</span>Type the 6-digit code from the email below — or tap the link in it. Not there in a minute? Look in Spam / Junk (and Gmail\'s Promotions) for "Know Your Local".<button type="button" class="authFix" data-auth="fix">Wrong address? Fix it</button>';
+  else msg.textContent=authSendWhy(res);
   if(ok){ const oi=document.getElementById('authOtp'); if(oi) setTimeout(()=>{ try{ oi.focus(); }catch(e){} },50); } }
 document.getElementById('authSend').addEventListener('click',async ()=>{ const em=(document.getElementById('authEmail').value||'').trim(), msg=document.getElementById('authMsg');
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ msg.textContent='Enter a valid email address.'; return; }
