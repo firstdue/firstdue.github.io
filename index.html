@@ -1315,6 +1315,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <div class="sxCard">
       <button class="sxRow sxNav" id="btnAccount" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.2" r="3.7"/><path d="M4.5 20.2c.8-3.9 3.9-5.7 7.5-5.7s6.7 1.8 7.5 5.7"/></svg><span class="sxL"><b>Account</b><small>Sign in to sync your careers</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
       <button class="sxRow sxNav" id="btnCareerSx" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M9.2 13.4 7.6 21l4.4-2.4 4.4 2.4-1.6-7.6"/></svg><span class="sxL"><b>Career &amp; badges</b><small>Your ranks, by firehouse and due</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
+      <button class="sxRow sxNav" id="btnLockerSx" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="3" width="12" height="18" rx="1.5"/><path d="M9 7h6M9 9.5h6M9 12h6"/><circle cx="15" cy="16" r="1"/></svg><span class="sxL"><b>Locker</b><small>Your patches</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
       <button class="sxRow sxNav" id="btnLbSx" type="button"><svg class="sxI" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 5.5H5a3 3 0 0 0 3.2 4.3M16 5.5h3a3 3 0 0 1-3.2 4.3M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z"/></svg><span class="sxL"><b>Leaderboard</b><small>Runs with the guide off and your due held</small></span><svg class="sxCh" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 6 6 6-6 6"/></svg></button>
     </div>
   </section>
@@ -1349,6 +1350,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <div id="authBoardNote" hidden>🏆 Your name, assignment and platoon show on the leaderboards. All three are needed to be listed.</div>
     <button class="aBtn" id="authNameSave">SAVE PROFILE</button>
     <button class="aBtn" id="authCareer" style="background:#343c49;color:#fff;">🧑‍🚒 CAREER & BADGES</button>
+    <button class="aBtn" id="authLocker" style="background:#343c49;color:#fff;">🔒 LOCKER · PATCHES</button>
     <button class="aBtn" id="authOut">SIGN OUT</button>
     <button class="aBtn" id="authClose">CLOSE</button>
   </div>
@@ -1372,7 +1374,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
       <div><div class="cpTitle">Career Path</div><div class="cpTag">Your journey · your legacy</div></div></div>
     <div class="cpSec">Your progress <span class="tag">This device</span></div>
     <div id="pcBody"></div>
-    <div class="cpSec">Locker <span class="tag">Patches</span></div>
+    <div class="cpSec" id="cpLocker">Locker <span class="tag">Patches</span></div>
     <div id="lockerBody"></div>
     <details class="cpFold" id="cpFoldRanks"><summary class="cpSec">Rank Ladder <span class="tag">Per engine</span><span class="cpChev" aria-hidden="true">›</span></summary>
     <div class="cpNote">Every firehouse is its own career — and <b>each due position</b> (1st, 2nd, 3rd, 4th) is its own track. Master your 1st due, expand into your 2nd, learn your 3rd and 4th. Difficulty (TRAINING → EXPERT) is your own choice in Settings — it never changes your rank, and your rank never locks it.</div>
@@ -1611,7 +1613,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23d"></script>
+<script src="firehouse-models.js?v=v23e"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1652,7 +1654,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23d";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23e";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4832,6 +4834,13 @@ function sxSync(){ const $=id=>document.getElementById(id), due=MAP.dueLevel|0, 
 document.getElementById('sxTabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if(!b) return; e.preventDefault(); sxTab(b.dataset.tab); });
 document.getElementById('btnBackGame').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); });
 document.getElementById('btnCareerSx').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openProfileCard(); });
+/* 🔒 THE LOCKER, ONE TAP AWAY (owner, November 5, on v23d: "Don't yet have locker in settings or when you click in your profile on the main
+   page" — it was in the Career card, under every house's progress). Settings → Account → Locker and the account card's LOCKER button open
+   the Career card scrolled to it. */
+function openLocker(){ openProfileCard(); const sc=document.getElementById('cpScroll'), h=document.getElementById('cpLocker'); if(!sc||!h) return;
+  requestAnimationFrame(()=>{ const st=sc.querySelector('.cpStick'), top=st?st.getBoundingClientRect().bottom:sc.getBoundingClientRect().top; sc.scrollTop+=h.getBoundingClientRect().top-top-10; }); }   // just under the sticky bar
+document.getElementById('btnLockerSx').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openLocker(); });
+document.getElementById('authLocker').addEventListener('click',e=>{ e.preventDefault(); const a=document.getElementById('authCard'); a.classList.remove('show'); a.setAttribute('aria-hidden','true'); openLocker(); });
 document.getElementById('btnLbSx').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openCityLeaderboard(); });
 document.getElementById('btnAccount').addEventListener('click',e=>{ e.preventDefault(); closeSettings(); openAuthCard(); });   // v21j: it lives in Settings now
 document.getElementById('authCareer').addEventListener('click',e=>{ e.preventDefault(); const a=document.getElementById('authCard'); a.classList.remove('show'); a.setAttribute('aria-hidden','true'); openProfileCard(); });
