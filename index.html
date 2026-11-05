@@ -583,10 +583,10 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #lbCard { position:absolute; inset:0; z-index:65; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.8); pointer-events:auto; }
   #lbCard.show { display:flex; }
   #lbCard .cc { width:min(560px,94vw); max-height:92vh; overflow:auto; overscroll-behavior:contain; background:linear-gradient(180deg,#131f31,#0f1a2b); border:1px solid #26364f; border-radius:20px; padding:14px 14px 12px; color:#e9eef7; }
-  .lbHero { display:flex; align-items:flex-start; gap:10px; margin:2px 2px 10px; }
+  .lbHero { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; margin:2px 2px 10px; }   /* wraps: the NOT RATED chip was cut off at 375 px (November 4, 2026) */
   .lbT { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; font-size:30px; line-height:.9; letter-spacing:.5px; color:#f4b950; }
   .lbSub { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:.14em; font-size:12px; color:#95a4bd; margin-top:4px; }
-  .lbMe { margin-left:auto; text-align:right; background:#182642; border:1px solid #26364f; border-radius:14px; padding:6px 12px; min-width:74px; }
+  .lbMe { margin-left:auto; text-align:right; background:#182642; border:1px solid #26364f; border-radius:14px; padding:6px 12px; min-width:74px; flex:0 0 auto; }
   .lbMeOvr { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:28px; line-height:1; color:#ffd27a; }
   .lbMeLbl { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.18em; font-size:10px; color:#95a4bd; }
   .lbMeRk { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.1em; font-size:11px; margin-top:2px; }
@@ -613,6 +613,11 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   .lbTr.up { color:#37c274; } .lbTr.dn { color:#e5484d; }
   .lbXtra { display:none; grid-column:1/-1; font-size:11px; color:#95a4bd; border-top:1px solid #26364f; padding-top:6px; margin-top:2px; }
   .lbRow2.xp .lbXtra { display:block; }
+  .lbTag { display:inline-block; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:11px; letter-spacing:.06em; line-height:15px; padding:0 5px; margin-right:6px; border-radius:4px; background:#ffd27a; color:#1d2430; vertical-align:1px; }   /* 🪪 E35/B on a board row (November 4, 2026) */
+  .lbBoxG .lbTag { margin:0 0 0 4px; }
+  .lbStamp { display:table; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:10px; letter-spacing:.18em; line-height:13px; padding:0 6px 0 5px; margin:0 0 2px; border:1.5px solid #ff5a5f; border-radius:3px; color:#ff7a7e; background:rgba(229,72,77,.10); transform:rotate(-2deg); transform-origin:left center; }   /* ★ staff stamp over the name (Step 15's staff list) */
+  .lbStampI { display:inline-block; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:10px; letter-spacing:.12em; line-height:13px; padding:0 4px; margin-left:4px; border:1.5px solid #ff5a5f; border-radius:3px; color:#ff7a7e; vertical-align:1px; }
+  #authBoardNote { font-size:12px; line-height:1.35; color:#95a4bd; margin-top:6px; }
   .lbPanel { background:#131f31; border:1px solid #26364f; border-radius:14px; padding:0 12px 11px; margin:12px 0 4px; overflow:hidden; }
   .lbHaz { height:6px; margin:0 -12px 9px; background:repeating-linear-gradient(-52deg,#f4b950 0 10px,#20293b 10px 20px); }
   .lbPanelT { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:.14em; font-size:14px; color:#e9eef7; margin-bottom:8px; }
@@ -1320,6 +1325,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <button class="aBtn" id="authJoin" hidden>🔑 JOIN WITH INVITE CODE</button>
     <input id="authName" type="text" maxlength="24" placeholder="Leaderboard name" />
     <div id="authAssign"><select id="authCo" aria-label="Your assignment"><option value="">Assignment…</option></select><select id="authPlatoon" aria-label="Your platoon"><option value="">Platoon</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
+    <div id="authBoardNote" hidden>🏆 Your name, assignment and platoon show on the leaderboards. All three are needed to be listed.</div>
     <button class="aBtn" id="authNameSave">SAVE PROFILE</button>
     <button class="aBtn" id="authCareer" style="background:#343c49;color:#fff;">🧑‍🚒 CAREER & BADGES</button>
     <button class="aBtn" id="authOut">SIGN OUT</button>
@@ -1581,7 +1587,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22x"></script>
+<script src="firehouse-models.js?v=v22y"></script>
 <script src="data/inst.js"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1622,7 +1628,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22x";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22y";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9351,7 +9357,7 @@ async function setDisplayName(name){ if(!AUTH.user) return false;               
   if(r&&r.ok){ AUTH.name=(name||'').trim(); return true; } return false; }
 /* 🪪 ASSIGNMENT + PLATOON (owner, November 3, 2026: "an area other than name that they can put in assignment and platoon ... engine or
    ladder for assignment, platoon A,B,C,D"). Saved on the member's own profile row by set_profile (SUPABASE-SETUP.md Step 13, which
-   checks both: "E35" / "L25", A-D; shown together as E35/B); private — no leaderboard view shows them. Before Step 13 is run, only the name saves. */
+   checks both: "E35" / "L25", A-D; shown together as E35/B); on the leaderboards since Step 15 (November 4), the ACCOUNT card says so. Before Step 13 is run, only the name saves. */
 function assignOptions(){ const sel=document.getElementById('authCo'); if(!sel||sel.dataset.filled) return; sel.dataset.filled='1';
   const eng=[...new Set(stations.map(s=>s.num).filter(n=>n>0))].sort((a,b)=>a-b), lad=[...new Set(stations.map(s=>s.ladder).filter(n=>n>0))].sort((a,b)=>a-b);
   for(const [label,kind,nums] of [['Engines','E',eng],['Ladders','L',lad]]){   /* E35, L25 (owner: "E for engine L for ladder. I.e. E35/B") */ const g=document.createElement('optgroup'); g.label=label;
@@ -9363,7 +9369,9 @@ async function setProfile(name,assign,platoon){ if(!AUTH.user) return 'no';
   return 'no'; }
 async function reportLeaderboard(stationId){ if(!AUTH.user) return;                             // after a qualifying run: did you make/climb the board, or get passed?
   await new Promise(r=>setTimeout(r,700));                                                       // let the insert land
-  const rows=await fetchLeaderboard(stationId); if(!rows.length) return;
+  const rows=await fetchLeaderboard(stationId);
+  if(!boardOK(AUTH.name,AUTH.assign,AUTH.platoon)&&lbNewViews(rows)){ if(!LB.told){ LB.told=true; popup('👤 '+boardWhy(),''); } return; }   // 🪪 not listed (Step 15): say how, once a session
+  if(!rows.length) return;
   const idx=rows.findIndex(r=>r.profile_id===AUTH.user.id); if(idx<0) return; const rank=idx+1;
   PROFILE.lbRank=PROFILE.lbRank||{}; const prev=PROFILE.lbRank[stationId];
   PROFILE.lbRank[stationId]={ rank, ahead: idx>0?rows[idx-1].name:null }; saveProfile();
@@ -9405,6 +9413,29 @@ const LB_RANKC=RANK_C;                                                        //
 const LB_TABS=[['overall','🏆 OVERALL'],['week','📅 THIS WEEK'],['box','📍 BOX RECORDS'],['engine','🏛 ENGINES'],['badges','🎖 BADGES']];
 function lbMmss(ms){ if(ms==null) return '—'; const q=Math.round(ms/1000); return Math.floor(q/60)+':'+String(q%60).padStart(2,'0'); }
 function lbEsc(s){ return String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+/* 🪪 WHO SHOWS ON THE BOARDS, AND AS WHAT (owner, November 4, 2026, on the TOP FIREFIGHTERS board: "people are making username so
+   generic ... "firefighter" "....." "13" ... Doesn't show what engine they are in"; all four fixes chosen). SUPABASE-SETUP Step 15's
+   board_ok lists only a player with a real name (2+ letters, not a stand-in word), an assignment AND a platoon; the views add
+   assignment / platoon (and top_house, the house most of their last 20 rated runs came from, on the citywide boards) AT THE END.
+   boardMissing mirrors board_ok to tell a signed-in player what is missing. lbNewViews: the rows carry `assignment` (or there are
+   none) — before Step 15 runs, nobody is told they are hidden, because nobody is. */
+const BOARD_STAND_IN=new Set(['firefighter','firefighters','fireman','firemen','ff','player','guest','user','test','tester','anonymous','anon','unknown','none','name','noname','nobody','me','you','admin','administrator','moderator','mod','staff','owner','official']);
+function boardMissing(nm,as,pl){ const l=String(nm||'').replace(/[^A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u017E]/g,'').toLowerCase(), m=[];
+  if(l.length<2||BOARD_STAND_IN.has(l)) m.push('a real name'); if(!/^[EL][0-9]{1,3}$/.test(as||'')) m.push('your assignment'); if(!/^[ABCD]$/.test(pl||'')) m.push('your platoon'); return m; }
+function boardOK(nm,as,pl){ return !boardMissing(nm,as,pl).length; }
+function boardWhy(){ const m=boardMissing(AUTH.name,AUTH.assign,AUTH.platoon); if(!m.length) return '';
+  return 'Add '+(m.length>1?m.slice(0,-1).join(', ')+' and '+m[m.length-1]:m[0])+' in 👤 ACCOUNT to appear on the leaderboards.'; }
+function lbNewViews(rows){ return !rows||!rows.length||rows[0].assignment!==undefined; }
+function lbNotListed(rows){ return AUTH.user&&lbNewViews(rows)&&!boardOK(AUTH.name,AUTH.assign,AUTH.platoon)?'<div class="lbRow me">👤 '+lbEsc(boardWhy())+'</div>':''; }
+function lbTagS(t){ return t?'<span class="lbTag">'+lbEsc(t)+'</span>':''; }
+/* ★ THE STAFF STAMP (owner, November 4, 2026: "something that shows my name as admin on the leaderboard. Something like a stamp above
+   my name"). Step 15's `staff` list, which only the owner can change in Supabase, comes through every view as staff_title (box records:
+   *_staff); nobody can name themselves into one (admin, moderator, staff, owner, official are stand-in words). */
+function lbStamp(t){ return t?'<span class="lbStamp">★ '+lbEsc(t)+'</span>':''; }
+function lbStampI(t){ return t?'<span class="lbStampI">★ '+lbEsc(t)+'</span>':''; }
+function lbTag(r){ return r&&r.assignment&&r.platoon?lbTagS(r.assignment+'/'+r.platoon):''; }
+function lbRides(r){ if(!r.top_house) return r.houses?r.houses+' house'+(r.houses===1?'':'s'):'';   // before Step 15: the old "3 houses"
+  const more=Math.max(0,(r.houses||1)-1); return 'rides E'+engNum(r.top_house)+(more?' + '+more+' more':''); }
 async function lbFetch(view,qs){ try{ const r=await fetch(SB.url+'/rest/v1/'+view+'?'+qs,{ headers:{ apikey:SB.key } });
   if(!r.ok) return null; return await r.json(); }catch(e){ return null; } }
 function lbTrend(cur,prev){ if(cur==null||prev==null) return '';
@@ -9431,8 +9462,8 @@ function lbOvrRows(ranked){                                                   //
   const row=(r,i)=>{ const lv=Math.max(0,Math.min(3,r.lv||0)), isMe=i===meIdx;
     return '<div class="lbRow2'+(isMe?' me':'')+'" data-x="1">'+
       '<div class="lbRk r'+((i+1)<=3?(i+1):'x')+'">'+(i+1)+'</div>'+
-      '<div class="lbNm"><b>'+lbEsc(isMe&&!r.name?'YOU':(r.name||'Firefighter'))+'</b>'+lbTrend(r.ovr,r.ovr_prev)+
-        '<div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+RANKS[lv]+(r.houses?' · '+r.houses+' house'+(r.houses===1?'':'s'):'')+'</div></div>'+
+      '<div class="lbNm">'+lbStamp(r.staff_title)+'<b>'+lbEsc(isMe&&!r.name?'YOU':(r.name||'Firefighter'))+'</b>'+lbTrend(r.ovr,r.ovr_prev)+
+        '<div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+lbTag(r)+RANKS[lv]+(lbRides(r)?' · '+lbRides(r):'')+'</div></div>'+
       '<div class="lbOv">'+(r.ovr==null?'—':r.ovr)+
         '<div class="lbSt">'+(r.due_pct!=null?r.due_pct+'% due · ':'')+lbMmss(r.avg_ms)+(r.streak?' · 🔥'+r.streak:'')+'</div></div>'+
       '<div class="lbXtra">'+(r.n||0)+' rated runs · due held '+(r.due_pct!=null?r.due_pct+'%':'—')+' · avg response '+lbMmss(r.avg_ms)+(r.streak?' · held-due streak 🔥'+r.streak:'')+(r.ovr_prev!=null?' · last window '+r.ovr_prev+' OVR':'')+'</div>'+
@@ -9453,20 +9484,21 @@ function lbBreakdownHTML(){                                                   //
 function lbChampionHTML(ranked){ const c=(ranked||[]).find(r=>(r.n||0)>=LB.champRuns); if(!c) return '';
   return '<div class="lbPanel"><div class="lbHaz"></div><div class="lbPanelT">HOUSE CHAMPION</div>'+
     '<div class="lbChamp"><div class="lbChampBadge">🏆</div><div><div class="lbChampT">ENGINE '+engNum(LB.station)+' CHAMPION</div>'+
-    '<b>'+lbEsc(c.name||'Firefighter')+'</b><div class="lbHint">'+c.ovr+' OVR · '+(c.due_pct||0)+'% DUE · '+c.n+' RATED RUNS</div></div></div></div>'; }
+    lbStamp(c.staff_title)+'<b>'+lbEsc(c.name||'Firefighter')+'</b> '+lbTag(c)+'<div class="lbHint">'+c.ovr+' OVR · '+(c.due_pct||0)+'% DUE · '+c.n+' RATED RUNS</div></div></div></div>'; }
 async function lbRenderOverall(el){ el.innerHTML='<div class="lbRow">Loading…</div>';
   const rows= LB.station? await lbFetch('leaderboard_ovr','station_id=eq.'+LB.station+'&order=ovr.desc.nullslast,due_pct.desc&limit=100')
                         : await lbFetch('leaderboard_ovr_city','order=ovr.desc.nullslast&limit=100');
   if(rows===null){                                                            // views missing (step 7 not run) → legacy fastest board
     const old=LB.station? await fetchLeaderboard(LB.station): await fetchCityLeaderboard();
     el.innerHTML='<div class="lbSecT">FASTEST<span class="lbHint">legacy board — OVR arrives with the next update</span></div>'+
-      ((old&&old.length)?old.map((r,i)=>'<div class="lbRow'+(AUTH.user&&r.profile_id===AUTH.user.id?' me':'')+'"><span>'+(i+1)+'. '+lbEsc(r.name||'Firefighter')+'</span><span>'+(r.best_ms!=null?lbMmss(r.best_ms):(r.held_runs||0)+' held')+'</span></div>').join(''):'<div class="lbRow">No times yet.</div>')+
+      ((old&&old.length)?old.map((r,i)=>'<div class="lbRow'+(AUTH.user&&r.profile_id===AUTH.user.id?' me':'')+'"><span>'+(i+1)+'. '+lbEsc(r.name||'Firefighter')+' '+lbTag(r)+lbStampI(r.staff_title)+'</span><span>'+(r.best_ms!=null?lbMmss(r.best_ms):(r.held_runs||0)+' held')+'</span></div>').join(''):'<div class="lbRow">No times yet.</div>')+
       lbBreakdownHTML();
     return; }
   const ranked=rows.filter(r=>(r.n||0)>=LB.minRuns);
   let h='<div class="lbSecT">🏆 TOP FIREFIGHTERS<span class="lbHint">career rating · last 20 runs · '+LB.minRuns+'+ to rank</span></div>'+lbOvrRows(ranked);
-  if(AUTH.user){ const meAll=rows.find(r=>r.profile_id===AUTH.user.id);
-    if(meAll&&(meAll.n||0)<LB.minRuns) h+='<div class="lbRow me"><span>YOU</span><span>'+meAll.n+'/'+LB.minRuns+' rated runs to rank</span></div>'; }
+  if(AUTH.user){ const meAll=rows.find(r=>r.profile_id===AUTH.user.id), nl=lbNotListed(rows);
+    if(nl) h+=nl;
+    else if(meAll&&(meAll.n||0)<LB.minRuns) h+='<div class="lbRow me"><span>YOU</span><span>'+meAll.n+'/'+LB.minRuns+' rated runs to rank</span></div>'; }
   else h+='<div class="lbRow">🔒 Sign in (👤 ACCOUNT) to get ON the board.</div>';
   h+=lbBreakdownHTML();
   if(LB.station) h+=lbChampionHTML(ranked);
@@ -9475,23 +9507,25 @@ async function lbRenderWeek(el){ el.innerHTML='<div class="lbRow">Loading…</di
   if(LB.station) rows=await lbFetch('leaderboard_week','station_id=eq.'+LB.station+'&order=avg_score.desc&limit=100');
   else{ const all=await lbFetch('leaderboard_week','order=avg_score.desc&limit=400');
     if(all){ const m={};                                                       // citywide week = merge each player's per-house rows
-      for(const r of all){ const k=r.profile_id, g=m[k]||(m[k]={profile_id:k,name:r.name,n:0,sum:0,held:0,best_score:0,best_ms:null});
+      for(const r of all){ const k=r.profile_id, g=m[k]||(m[k]={profile_id:k,name:r.name,assignment:r.assignment,platoon:r.platoon,staff_title:r.staff_title,n:0,sum:0,held:0,best_score:0,best_ms:null,houses:0,top:null,topN:0});
+        g.houses++; if('assignment' in r&&r.n>g.topN){ g.top=r.station_id; g.topN=r.n; }   /* 🪪 this week's most-ridden house */
         g.n+=r.n; g.sum+=(r.avg_score||0)*r.n; g.held+=Math.round((r.due_pct||0)*r.n/100);
         if((r.best_score||0)>g.best_score) g.best_score=r.best_score;
         if(r.best_ms!=null&&(g.best_ms==null||r.best_ms<g.best_ms)) g.best_ms=r.best_ms; }
-      rows=Object.values(m).map(g=>({profile_id:g.profile_id,name:g.name,n:g.n,avg_score:Math.round(g.sum/Math.max(1,g.n)),due_pct:Math.round(100*g.held/Math.max(1,g.n)),best_score:g.best_score,best_ms:g.best_ms})).sort((a,b)=>b.avg_score-a.avg_score); }
+      rows=Object.values(m).map(g=>({profile_id:g.profile_id,name:g.name,assignment:g.assignment,platoon:g.platoon,staff_title:g.staff_title,top_house:g.top,houses:g.houses,n:g.n,avg_score:Math.round(g.sum/Math.max(1,g.n)),due_pct:Math.round(100*g.held/Math.max(1,g.n)),best_score:g.best_score,best_ms:g.best_ms})).sort((a,b)=>b.avg_score-a.avg_score); }
     else rows=null; }
   if(rows===null){ el.innerHTML='<div class="lbRow">The weekly board arrives with the next database update.</div>'; return; }
   const ranked=rows.filter(r=>(r.n||0)>=2);
   const meIdx=AUTH.user?ranked.findIndex(r=>r.profile_id===AUTH.user.id):-1;
   const row=(r,i)=>'<div class="lbRow2'+(i===meIdx?' me':'')+'" data-x="1">'+
     '<div class="lbRk r'+((i+1)<=3?(i+1):'x')+'">'+(i+1)+'</div>'+
-    '<div class="lbNm"><b>'+lbEsc(r.name||'Firefighter')+'</b><div class="lbCr">'+r.n+' runs this week · '+(r.due_pct||0)+'% due</div></div>'+
+    '<div class="lbNm">'+lbStamp(r.staff_title)+'<b>'+lbEsc(r.name||'Firefighter')+'</b><div class="lbCr">'+lbTag(r)+r.n+' runs this week · '+(r.due_pct||0)+'% due'+(!LB.station&&r.top_house?' · '+lbRides(r):'')+'</div></div>'+
     '<div class="lbOv">'+r.avg_score+'<div class="lbSt">avg score · best '+(r.best_score||0)+(r.best_ms!=null?' · '+lbMmss(r.best_ms):'')+'</div></div>'+
     '<div class="lbXtra">avg run score '+r.avg_score+' over '+r.n+' runs · best single run '+(r.best_score||0)+(r.best_ms!=null?' · fastest '+lbMmss(r.best_ms):'')+'</div></div>';
   let h='<div class="lbSecT">📅 THIS WEEK<span class="lbHint">avg run score · resets Monday · 2+ runs</span></div>';
   h+= ranked.length? ranked.slice(0,10).map(row).join(''):'<div class="lbRow">No scored runs yet this week — a fresh board every Monday. Newest players compete on even footing here.</div>';
   if(meIdx>=10) h+='<div class="lbSecT">YOUR RANK</div>'+row(ranked[meIdx],meIdx);
+  h+=lbNotListed(rows);
   el.innerHTML=h; }
 async function lbRenderBox(el){ const eng=lbCtxEngine();
   if(!eng){ el.innerHTML='<div class="lbRow">Pick a firehouse to see its box records.</div>'; return; }
@@ -9503,9 +9537,9 @@ async function lbRenderBox(el){ const eng=lbCtxEngine();
   let h='<div class="lbSecT">📍 BOX RECORDS — ENGINE '+engNum(eng)+'<span class="lbHint">every ranked run writes one</span></div>';
   if(!rows.length) h+='<div class="lbRow">No box records out of this house yet — be first on one.</div>';
   for(const r of rows){ h+='<div class="lbBox"><div class="lbBoxT">BOX '+lbEsc(r.box)+'<span class="lbHint">'+r.runs+' run'+(r.runs===1?'':'s')+'</span></div><div class="lbBoxG">'+
-      (r.best_ms!=null?'<span>⚡ Fastest <b>'+lbMmss(r.best_ms)+'</b> '+lbEsc(r.fast_name)+'</span>':'')+
-      (r.best_score!=null?'<span>🏆 Score <b>'+r.best_score+'</b> '+lbEsc(r.score_name)+'</span>':'')+
-      (r.route_pct!=null?'<span>🧭 Route <b>'+r.route_pct+'%</b> '+lbEsc(r.route_name)+'</span>':'')+
+      (r.best_ms!=null?'<span>⚡ Fastest <b>'+lbMmss(r.best_ms)+'</b> '+lbEsc(r.fast_name)+lbTagS(r.fast_tag)+lbStampI(r.fast_staff)+'</span>':'')+
+      (r.best_score!=null?'<span>🏆 Score <b>'+r.best_score+'</b> '+lbEsc(r.score_name)+lbTagS(r.score_tag)+lbStampI(r.score_staff)+'</span>':'')+
+      (r.route_pct!=null?'<span>🧭 Route <b>'+r.route_pct+'%</b> '+lbEsc(r.route_name)+lbTagS(r.route_tag)+lbStampI(r.route_staff)+'</span>':'')+
       (mine[r.box]!=null?'<span>🚒 Your best <b>'+lbMmss(mine[r.box]*1000)+'</b></span>':'')+
       '</div></div>'; }
   el.innerHTML=h; }
@@ -9543,7 +9577,7 @@ function pushCareer(id){ if(!AUTH.user) return; const e=PROFILE.engines[id]; if(
     sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([row]) })
       .then(r=>{ if(r&&!r.ok){ const c=Object.assign({},row); delete c.pos;
         sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([c]) }); } }); }catch(e){} }
-function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }); }catch(e){} }
+function authSignOut(){ AUTH.synced=false; if(AUTH.session){ try{ fetch(SB.url+'/auth/v1/logout',{ method:'POST', headers:authHdr(true) }).catch(()=>{}); }catch(e){} }
   authStore(null); AUTH.user=null; MEMBER.state='no'; memberRemember(false); authUpdateUI(); }   // 🔑 signed out = not a member on this phone
 function authUpdateUI(){ const ab=document.getElementById('btnAccount'); if(ab) ab.classList.toggle('on',!!AUTH.user);   // (v16d moved sign-in into the ACCOUNT card; the old #btnAuth is gone)
   const out=document.getElementById('authOut'), em=document.getElementById('authEmail'), snd=document.getElementById('authSend');
@@ -9570,7 +9604,7 @@ function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) r
                  :'Members only. Sign in with your email — a one-tap link, no password — then enter the invite code you were given.');
   { const ni=document.getElementById('authName'), nb=document.getElementById('authNameSave'), on=!!AUTH.user;
     if(ni){ ni.style.display=on?'block':'none'; ni.value=AUTH.name||''; } if(nb) nb.style.display=on?'block':'none';
-    { const ar=document.getElementById('authAssign'); if(ar){ ar.classList.toggle('on',on); if(on){ assignOptions(); document.getElementById('authCo').value=AUTH.assign||''; document.getElementById('authPlatoon').value=AUTH.platoon||''; } } }   // 🪪
+    { const ar=document.getElementById('authAssign'); if(ar){ ar.classList.toggle('on',on); if(on){ assignOptions(); document.getElementById('authCo').value=AUTH.assign||''; document.getElementById('authPlatoon').value=AUTH.platoon||''; } } const bn=document.getElementById('authBoardNote'); if(bn) bn.hidden=!on; }   // 🪪
     if(on&&!AUTH.name&&memberOK()){ document.getElementById('authMsg').textContent='⚠️ Set a leaderboard name so your times show as YOU, not "Firefighter".'; } }   // 🔑 a non-member hears about the invite code first
   authUpdateUI(); el.classList.add('show'); el.setAttribute('aria-hidden','false'); }
 function profEng(id){ id=id||DRIVE.stationId; if(!id) return null; let e=PROFILE.engines[id];
@@ -9757,12 +9791,12 @@ document.getElementById('authJoin').addEventListener('click',async ()=>{ const m
   if(r==='ok') popup('🔑 MEMBER','green'); });
 { const h=document.querySelector('#homeHud .tag'); if(h) h.addEventListener('click',()=>{ if(!memberOK()) memberPrompt(); }); }
 document.getElementById('btnAcctHome').addEventListener('click',e=>{ e.preventDefault(); openAuthCard(); });   // 👤 the account from the home screen   // 🔑 the home screen's MEMBERS ONLY line opens the card
-document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; AUTH.assign=''; AUTH.platoon=''; { const ar=document.getElementById('authAssign'); if(ar) ar.classList.remove('on'); } document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
+document.getElementById('authOut').addEventListener('click',()=>{ authSignOut(); AUTH.tier='free'; AUTH.name=''; AUTH.assign=''; AUTH.platoon=''; { const ar=document.getElementById('authAssign'); if(ar) ar.classList.remove('on'); const bn=document.getElementById('authBoardNote'); if(bn) bn.hidden=true; } document.getElementById('authName').style.display='none'; document.getElementById('authNameSave').style.display='none'; document.getElementById('authMsg').textContent='Signed out.'; });
 document.getElementById('authNameSave').addEventListener('click',async ()=>{ const nm=(document.getElementById('authName').value||'').trim();
   if(nm.length<2){ document.getElementById('authMsg').textContent='Name needs 2+ characters.'; return; }
   const as=document.getElementById('authCo').value, pl=document.getElementById('authPlatoon').value;   // 🪪 optional: assignment + platoon
   document.getElementById('authMsg').textContent='Saving…'; const r=await setProfile(nm,as,pl);
-  document.getElementById('authMsg').textContent=r==='ok'?('✅ Saved: '+nm+((as||pl)?' · '+(as||'')+(pl?'/'+pl:''):'')+'.'):r==='nameOnly'?('✅ You\'ll show as '+nm+' on the leaderboard. (Assignment and platoon save once the server is updated.)'):'Could not save — try again.'; });
+  document.getElementById('authMsg').textContent=r==='ok'?('✅ Saved: '+nm+((as||pl)?' · '+(as||'')+(pl?'/'+pl:''):'')+'.'+(boardOK(nm,as,pl)?' You show on the leaderboards.':' '+boardWhy())):r==='nameOnly'?('✅ You\'ll show as '+nm+' on the leaderboard. (Assignment and platoon save once the server is updated.)'):'Could not save — try again.'; });
 document.getElementById('hcLb').addEventListener('click',e=>{ e.preventDefault(); if(hcStation) openLeaderboard(hcStation.id); });
 document.getElementById('hcZone').addEventListener('click',e=>{ e.preventDefault(); if(!hcStation) return;   // 🗺️ this engine's first-due zone
   BOUNDARY_UI.engine=hcStation.id; const sel=document.getElementById('boundaryEngine'); if(sel&&[...sel.options].some(o=>o.value===hcStation.id)) sel.value=hcStation.id;
