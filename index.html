@@ -570,6 +570,9 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #authOut { background:#7a2e2e; color:#fff; }
   #authClose { background:#343c49; color:#fff; }
   #authMsg { margin-top:10px; font-size:12px; font-weight:700; color:#8fa2bd; line-height:1.4; }
+  #authMsg .authAddr { display:block; margin:4px 0; font-size:17px; color:#fff; word-break:break-all; }   /* ✉️ the address, plainly (November 5, 2026) */
+  #authMsg .authRow { display:flex; gap:8px; margin-top:8px; } #authMsg .authRow button, #authMsg .authFix { flex:1; min-height:44px; border-radius:10px; border:1px solid #2a3444; background:#182642; color:#e8edf5; font:inherit; font-weight:800; font-size:13px; padding:6px 8px; }
+  #authMsg .authRow button.yes { background:#2d6cdf; border-color:#2d6cdf; } #authMsg .authFix { display:block; width:100%; margin-top:8px; }
   #authName { width:100%; margin-top:10px; padding:12px; border-radius:8px; border:1px solid #2a3444; background:#0d121b; color:#e8edf5; font-size:15px; display:none; }
   #authNameSave { background:#2b6df6; color:#fff; display:none; }
   #authOtp { letter-spacing:6px; font-size:22px; text-align:center; font-weight:800; }   /* 🔢 the 6-digit sign-in code (November 3, 2026) */
@@ -617,6 +620,24 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   .lbBoxG .lbTag { margin:0 0 0 4px; }
   .lbStamp { display:table; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:10px; letter-spacing:.18em; line-height:13px; padding:0 6px 0 5px; margin:0 0 2px; border:1.5px solid #ff5a5f; border-radius:3px; color:#ff7a7e; background:rgba(229,72,77,.10); transform:rotate(-2deg); transform-origin:left center; }   /* ★ staff stamp over the name (Step 15's staff list) */
   .lbStampI { display:inline-block; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:10px; letter-spacing:.12em; line-height:13px; padding:0 4px; margin-left:4px; border:1.5px solid #ff5a5f; border-radius:3px; color:#ff7a7e; vertical-align:1px; }
+  .lkNote { font-size:12px; color:#95a4bd; margin:2px 2px 8px; line-height:1.35; }   /* 🎖 the Locker */
+  .lkGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  .lkTile { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 8px 9px; border-radius:12px; border:1px solid #26364f; background:#182642; color:#e8edf5; text-align:center; }
+  .lkTile svg { filter:grayscale(1) brightness(.55); opacity:.7; }
+  .lkTile.got svg { filter:none; opacity:1; }
+  .lkTile b { font-size:11.5px; letter-spacing:.04em; line-height:1.15; } .lkTile span { font-size:11px; color:#95a4bd; line-height:1.25; }
+  #mbCard { position:absolute; inset:0; z-index:66; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.72); pointer-events:auto; }   /* 👤 the member card, over the boards */
+  #mbCard.show { display:flex; }
+  #mbCard .cc { width:min(520px,92vw); max-height:88vh; overflow:auto; overscroll-behavior:contain; background:linear-gradient(180deg,#131f31,#0f1a2b); border:1px solid #f4b950; border-radius:18px; padding:14px 14px 12px; color:#e9eef7; }
+  .mbTop { margin:2px 2px 10px; } .mbName { font-size:22px; font-weight:800; letter-spacing:.3px; line-height:1.15; word-break:break-word; }
+  .mbStats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-bottom:6px; }
+  .mbStats div { background:#182642; border:1px solid #26364f; border-radius:10px; padding:7px 4px; text-align:center; }
+  .mbStats b { display:block; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:20px; color:#ffd27a; line-height:1.05; }
+  .mbStats span { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.1em; font-size:9.5px; color:#95a4bd; }
+  .mbHouse { display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; background:#182642; border:1px solid #26364f; border-radius:10px; padding:7px 10px; margin:5px 0; font-size:12px; }
+  .mbHouse b { font-size:13px; } .mbHouse span { font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:11px; color:#95a4bd; }
+  #mbClose { width:100%; min-height:44px; margin-top:10px; border-radius:12px; border:0; background:#343c49; color:#fff; font:inherit; font-weight:800; letter-spacing:.08em; }
+  .lbRow2[data-pid] { cursor:pointer; }
   #authBoardNote { font-size:12px; line-height:1.35; color:#95a4bd; margin-top:6px; }
   .lbPanel { background:#131f31; border:1px solid #26364f; border-radius:14px; padding:0 12px 11px; margin:12px 0 4px; overflow:hidden; }
   .lbHaz { height:6px; margin:0 -12px 9px; background:repeating-linear-gradient(-52deg,#f4b950 0 10px,#20293b 10px 20px); }
@@ -1343,6 +1364,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <button id="lbClose">CLOSE</button>
   </div>
 </div>
+<div id="mbCard" aria-hidden="true"><div class="cc"><div id="mbBody"></div><button id="mbClose" type="button">CLOSE</button></div></div>
 <div id="profileCard" aria-hidden="true">
   <div class="cc" id="cpScroll">
     <div class="cpStick"><span class="cpStickT" aria-hidden="true">Career Path</span><button class="cpX" id="btnProfileX" type="button" aria-label="Close Career Path">×</button></div>
@@ -1350,6 +1372,8 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
       <div><div class="cpTitle">Career Path</div><div class="cpTag">Your journey · your legacy</div></div></div>
     <div class="cpSec">Your progress <span class="tag">This device</span></div>
     <div id="pcBody"></div>
+    <div class="cpSec">Locker <span class="tag">Patches</span></div>
+    <div id="lockerBody"></div>
     <details class="cpFold" id="cpFoldRanks"><summary class="cpSec">Rank Ladder <span class="tag">Per engine</span><span class="cpChev" aria-hidden="true">›</span></summary>
     <div class="cpNote">Every firehouse is its own career — and <b>each due position</b> (1st, 2nd, 3rd, 4th) is its own track. Master your 1st due, expand into your 2nd, learn your 3rd and 4th. Difficulty (TRAINING → EXPERT) is your own choice in Settings — it never changes your rank, and your rank never locks it.</div>
 
@@ -1587,7 +1611,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23a"></script>
+<script src="firehouse-models.js?v=v23b"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1628,7 +1652,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23a";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23b";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9349,9 +9373,10 @@ async function syncCareers(){ if(!AUTH.user) return;                            
       body:JSON.stringify(upserts.map(u=>{ const c=Object.assign({},u); delete c.pos; return c; })) }); }   // pos column absent → keep legacy sync alive
   AUTH.synced=true; try{ refreshStationList(); }catch(e){} }
 async function authFetchProfile(){ if(!AUTH.user) return;                                        // pull tier + display name + assignment + platoon (own row, RLS)
-  let r=await sbFetch('/rest/v1/profile?select=display_name,tier,assignment,platoon&id=eq.'+AUTH.user.id);
+  let r=await sbFetch('/rest/v1/profile?select=display_name,tier,assignment,platoon,patches&id=eq.'+AUTH.user.id);   // 🎖 Step 16: the patches
+  if(r&&!r.ok) r=await sbFetch('/rest/v1/profile?select=display_name,tier,assignment,platoon&id=eq.'+AUTH.user.id);        // Step 16 not run yet
   if(r&&!r.ok) r=await sbFetch('/rest/v1/profile?select=display_name,tier&id=eq.'+AUTH.user.id);   // Step 13 not run yet: no assignment / platoon columns
-  if(r&&r.ok){ try{ const a=await r.json(); if(a&&a[0]){ AUTH.tier=a[0].tier||'free'; AUTH.name=a[0].display_name||''; AUTH.assign=a[0].assignment||''; AUTH.platoon=a[0].platoon||''; } }catch(e){} } homeMemberLine(); }
+  if(r&&r.ok){ try{ const a=await r.json(); if(a&&a[0]){ AUTH.tier=a[0].tier||'free'; AUTH.name=a[0].display_name||''; AUTH.assign=a[0].assignment||''; AUTH.platoon=a[0].platoon||''; if('patches' in a[0]) patchMerge(a[0]); } }catch(e){} } homeMemberLine(); }
 async function setDisplayName(name){ if(!AUTH.user) return false;                                // via RPC (so the client can't touch tier)
   const r=await sbFetch('/rest/v1/rpc/set_display_name',{ method:'POST', body:JSON.stringify({ new_name:name }) });
   if(r&&r.ok){ AUTH.name=(name||'').trim(); return true; } return false; }
@@ -9460,7 +9485,7 @@ function lbOvrRows(ranked){                                                   //
   if(!ranked.length) return '<div class="lbRow">No ranked firefighters yet. '+(AUTH.user?'':'Sign in (👤 ACCOUNT) and ')+'hold your due with GUIDE off — '+LB.minRuns+'+ runs to rank.</div>';
   const meIdx=AUTH.user?ranked.findIndex(r=>r.profile_id===AUTH.user.id):-1;
   const row=(r,i)=>{ const lv=Math.max(0,Math.min(3,r.lv||0)), isMe=i===meIdx;
-    return '<div class="lbRow2'+(isMe?' me':'')+'" data-x="1">'+
+    mbRow(r); return '<div class="lbRow2'+(isMe?' me':'')+'" data-pid="'+lbEsc(r.profile_id||'')+'">'+
       '<div class="lbRk r'+((i+1)<=3?(i+1):'x')+'">'+(i+1)+'</div>'+
       '<div class="lbNm">'+lbStamp(r.staff_title)+'<b>'+lbEsc(isMe&&!r.name?'YOU':(r.name||'Firefighter'))+'</b>'+lbTrend(r.ovr,r.ovr_prev)+
         '<div class="lbCr" style="color:'+LB_RANKC[lv]+'">'+lbTag(r)+RANKS[lv]+(lbRides(r)?' · '+lbRides(r):'')+'</div></div>'+
@@ -9517,11 +9542,11 @@ async function lbRenderWeek(el){ el.innerHTML='<div class="lbRow">Loading…</di
   if(rows===null){ el.innerHTML='<div class="lbRow">The weekly board arrives with the next database update.</div>'; return; }
   const ranked=rows.filter(r=>(r.n||0)>=2);
   const meIdx=AUTH.user?ranked.findIndex(r=>r.profile_id===AUTH.user.id):-1;
-  const row=(r,i)=>'<div class="lbRow2'+(i===meIdx?' me':'')+'" data-x="1">'+
+  const row=(r,i)=>{ mbRow(r); return '<div class="lbRow2'+(i===meIdx?' me':'')+'" data-pid="'+lbEsc(r.profile_id||'')+'">'+
     '<div class="lbRk r'+((i+1)<=3?(i+1):'x')+'">'+(i+1)+'</div>'+
     '<div class="lbNm">'+lbStamp(r.staff_title)+'<b>'+lbEsc(r.name||'Firefighter')+'</b><div class="lbCr">'+lbTag(r)+r.n+' runs this week · '+(r.due_pct||0)+'% due'+(!LB.station&&r.top_house?' · '+lbRides(r):'')+'</div></div>'+
     '<div class="lbOv">'+r.avg_score+'<div class="lbSt">avg score · best '+(r.best_score||0)+(r.best_ms!=null?' · '+lbMmss(r.best_ms):'')+'</div></div>'+
-    '<div class="lbXtra">avg run score '+r.avg_score+' over '+r.n+' runs · best single run '+(r.best_score||0)+(r.best_ms!=null?' · fastest '+lbMmss(r.best_ms):'')+'</div></div>';
+    '<div class="lbXtra">avg run score '+r.avg_score+' over '+r.n+' runs · best single run '+(r.best_score||0)+(r.best_ms!=null?' · fastest '+lbMmss(r.best_ms):'')+'</div></div>'; };
   let h='<div class="lbSecT">📅 THIS WEEK<span class="lbHint">avg run score · resets Monday · 2+ runs</span></div>';
   h+= ranked.length? ranked.slice(0,10).map(row).join(''):'<div class="lbRow">No scored runs yet this week — a fresh board every Monday. Newest players compete on even footing here.</div>';
   if(meIdx>=10) h+='<div class="lbSecT">YOUR RANK</div>'+row(ranked[meIdx],meIdx);
@@ -9571,7 +9596,10 @@ function openLeaderboard(id){ openLB(id||DRIVE.stationId||PROFILE.lastPlayed||nu
 document.getElementById('lbTabs').addEventListener('click',e=>{ const b=e.target.closest('.lbTab'); if(b){ LB.tab=b.dataset.tab; renderLB(); } });
 document.getElementById('lbBody').addEventListener('click',e=>{ const g=e.target.closest('.lbEng');
   if(g){ LB.station=g.dataset.eng; LB.tab='overall'; renderLB(); return; }
+  const m=e.target.closest('.lbRow2[data-pid]'); if(m&&m.dataset.pid){ openMember(m.dataset.pid); return; }   // 👤 the member card
   const r=e.target.closest('.lbRow2[data-x]'); if(r) r.classList.toggle('xp'); });
+document.getElementById('mbClose').addEventListener('click',closeMember);
+document.getElementById('mbCard').addEventListener('click',e=>{ if(e.target.id==='mbCard') closeMember(); });
 function pushCareer(id){ if(!AUTH.user) return; const e=PROFILE.engines[id]; if(!e) return;      // fire-and-forget incremental push after a run
   try{ const row=careerRow(id,e);
     sbFetch('/rest/v1/career', { method:'POST', headers:{ 'Prefer':'resolution=merge-duplicates' }, body:JSON.stringify([row]) })
@@ -9661,6 +9689,86 @@ function calcOVR(log){                                                     // ro
 function calcStreak(log){ let k=0;                                          // consecutive eligible runs with the due slot held, newest backward
   for(let i=(log||[]).length-1;i>=0;i--){ const r=log[i]; if(!(r.due>0)||r.guide) continue; if(r.held) k++; else break; }
   return k; }
+/* 🎖 PATCHES AND THE LOCKER (owner, November 5, 2026: inside jokes — "Finally got my gear bag", RIP shorts, May the 4th — "would it be best
+   to have them as trophies instead of decals?"; "500 runs is fine"; then, instead of a patch on the truck and by the name: "Clicking on a
+   members username shows their locker and or their stats. Only that member can see their own truck now anyways"). Patches are the fun
+   side, kept apart from the Badges (skill). The earned ones hang in the LOCKER — your own in the Career card, anyone's on their MEMBER
+   CARD (tap a row on the leaderboards). Every patch is our own drawing (an SVG made here) — never a photo, no City or department marks,
+   no Star Wars marks. PROFILE.patches = {id: when first earned}; signed in, they go to the account (SUPABASE-SETUP Step 16, set_patches),
+   so a patch follows the player to another phone and shows on their member card. */
+const PATCHES=[
+  {id:'ripshorts', name:'RIP SHORTS', line:'Gone, but not forgotten.', how:'Ride out once.'},
+  {id:'gearbag', name:'FINALLY GOT MY GEAR BAG', line:'Only took years.', how:'500 runs.'},
+  {id:'may4', name:'MAY THE 4TH', line:"International Firefighters' Day.", how:'Ride on May 4.'},
+  {id:'xmas', name:'HOLIDAY SHIFT', line:'Working the holidays.', how:'Ride between December 1 and January 6.'}];
+const PATCH_BY=Object.fromEntries(PATCHES.map(p=>[p.id,p]));
+const PATCH_GEAR_RUNS=500;
+function patchSVG(id,px){ const T=(t,y,fs)=>'<text x="50" y="'+y+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="'+fs+'" fill="#fff" letter-spacing="0.5">'+t+'</text>';
+  const ring=(bg,edge)=>'<circle cx="50" cy="50" r="47" fill="'+bg+'" stroke="'+edge+'" stroke-width="5"/><circle cx="50" cy="50" r="41.5" fill="none" stroke="'+edge+'" stroke-width="1.2" stroke-dasharray="2.4 2.2" opacity=".85"/>';
+  let b='';
+  if(id==='ripshorts') b=ring('#2b2f36','#c9ced6')+T('RIP',27,13)+'<ellipse cx="50" cy="35" rx="13" ry="3.6" fill="none" stroke="#ffd23b" stroke-width="2.6"/>'+
+    '<path d="M33 41 H67 L71 69 H55 L50 54 L45 69 H29 Z" fill="#23407a"/><rect x="33" y="41" width="34" height="5" fill="#dfe4ea"/><path d="M30 63 H46 M54 63 H70" stroke="#e7e36a" stroke-width="2.4"/>'+T('SHORTS',86,11);
+  else if(id==='gearbag') b=ring('#1e3a5f','#ffd23b')+T('FINALLY',29,11)+'<path d="M39 47 Q50 33 61 47" fill="none" stroke="#151515" stroke-width="4.2" stroke-linecap="round"/>'+
+    '<rect x="23" y="45" width="54" height="25" rx="10" fill="#262626"/><rect x="23" y="54.5" width="54" height="5" fill="#d8e05a"/><circle cx="28" cy="57.5" r="3.2" fill="#3a3a3a"/><circle cx="72" cy="57.5" r="3.2" fill="#3a3a3a"/>'+T('GEAR BAG',86,10.5);
+  else if(id==='may4') b=ring('#0f1630','#e5484d')+T('MAY THE 4TH',24,9.6)+'<rect x="46.5" y="28" width="7" height="30" rx="3.5" fill="#5cc8ff"/><rect x="48.8" y="29" width="2.4" height="28" rx="1.2" fill="#effcff"/>'+
+    '<rect x="43" y="57" width="14" height="11" rx="2" fill="#9aa3ad"/><rect x="45" y="68" width="10" height="5" fill="#6d7680"/><rect x="38.5" y="59" width="4.5" height="9" rx="1.5" fill="#c8231b"/>'+
+    '<path d="M36 79 L50 74 L50 84 Z" fill="#d3263a"/><path d="M64 79 L50 74 L50 84 Z" fill="#2f6fd0"/>';
+  else if(id==='xmas') b=ring('#14532d','#e5484d')+T('HOLIDAY',28,11)+'<circle cx="50" cy="52" r="15" fill="none" stroke="#2f7d3f" stroke-width="8"/><circle cx="50" cy="52" r="15" fill="none" stroke="#1d5c2e" stroke-width="3" stroke-dasharray="3 4"/>'+
+    [[38,44],[61,45],[64,58],[39,61],[50,38]].map(p=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="2.3" fill="#e0182e"/>').join('')+'<path d="M50 66 L41 62 L41 71 Z M50 66 L59 62 L59 71 Z" fill="#d0182a"/>'+T('SHIFT',88,11);
+  else return '';
+  return '<svg viewBox="0 0 100 100" width="'+(px||64)+'" height="'+(px||64)+'" aria-hidden="true">'+b+'</svg>'; }
+const XMAS_REAL=()=>{ const d=new Date(), m=d.getMonth(), day=d.getDate(); return (m===11&&day>=1)||(m===0&&day<=6); };   // earning reads the real date, never the ?xmas test switch
+function patchRuns(){ let n=0; for(const id in PROFILE.engines) n+=PROFILE.engines[id].runs|0; return n; }
+function patchGive(id){ PROFILE.patches=PROFILE.patches||{}; if(PROFILE.patches[id]||!PATCH_BY[id]) return false; PROFILE.patches[id]=Date.now(); return true; }
+function patchCheck(shift){ const got=[]; const d=new Date();
+  if(shift&&patchGive('ripshorts')) got.push('ripshorts');
+  if(shift&&d.getMonth()===4&&d.getDate()===4&&patchGive('may4')) got.push('may4');
+  if(shift&&XMAS_REAL()&&patchGive('xmas')) got.push('xmas');
+  if(patchRuns()>=PATCH_GEAR_RUNS&&patchGive('gearbag')) got.push('gearbag');
+  if(!got.length) return got; saveProfile(); patchPush();
+  const p=PATCH_BY[got[got.length-1]]; setTimeout(()=>{ try{ popup('🎖 NEW PATCH: '+p.name+' — in your 🔒 LOCKER (Career)','green'); }catch(e){} },shift?2600:300);
+  return got; }
+async function patchPush(){ if(!AUTH.user) return; try{ await sbFetch('/rest/v1/rpc/set_patches',{ method:'POST', body:JSON.stringify({ earned:Object.keys(PROFILE.patches||{}).filter(k=>PATCH_BY[k]) }) }); }catch(e){} }   // before Step 16: a 404, ignored
+function patchMerge(row){ if(!row) return; let ch=false; PROFILE.patches=PROFILE.patches||{};   // the account's patches join this phone's (never taken away)
+  for(const k of (row.patches||[])) if(PATCH_BY[k]&&!PROFILE.patches[k]){ PROFILE.patches[k]=Date.now(); ch=true; }
+  if(ch) saveProfile(); if(Object.keys(PROFILE.patches).some(k=>PATCH_BY[k]&&!(row.patches||[]).includes(k))) patchPush(); }
+// a Locker: the four patches, the earned ones in colour (has: a list or an object of ids); runs (your own) shows the gear bag's count
+function lockerHTML(has,runs){ const H=new Set(Array.isArray(has)?has:Object.keys(has||{}));
+  return '<div class="lkGrid">'+PATCHES.map(p=>{ const got=H.has(p.id), prog=p.id==='gearbag'&&!got&&runs!=null?' ('+Math.min(runs,PATCH_GEAR_RUNS)+'/'+PATCH_GEAR_RUNS+')':'';
+    return '<div class="lkTile'+(got?' got':'')+'">'+patchSVG(p.id,64)+'<b>'+p.name+'</b><span>'+(got?p.line:'🔒 '+p.how+prog)+'</span></div>'; }).join('')+'</div>'; }
+function lockerRender(){ const el=document.getElementById('lockerBody'); if(!el) return; const n=Object.keys(PROFILE.patches||{}).length;
+  el.innerHTML='<div class="lkNote">'+(n?'Your patches. Members see your Locker when they tap your name on the leaderboards.':'Patches are earned by riding — your first comes with your first ride. Members see your Locker when they tap your name on the leaderboards.')+'</div>'+lockerHTML(PROFILE.patches,patchRuns()); }
+/* 👤 THE MEMBER CARD (owner, November 5: "Clicking on a members username shows their locker and or their stats"). Tap a row on the
+   OVERALL or THIS WEEK board: the member's name, stamp, E35/B tag and the house they ride, the numbers the row carries, then — from
+   SUPABASE-SETUP Step 16's member_card view (listed players only, the boards' own rule) — their runs, held dues, each house they have
+   ridden with its rank, and their Locker. Your own card reads this phone. Before Step 16 is run: the row's numbers and a line. Every
+   string from the server goes through lbEsc; patch names only ever draw a patch the game knows. */
+const MB={rows:new Map()};
+function mbRow(r){ if(r&&r.profile_id) MB.rows.set(r.profile_id,Object.assign({},MB.rows.get(r.profile_id)||{},r)); }
+function mbHouseLine(id,lv,runs,saves){ const st=lbStation(id), nm=st?(st.companies&&st.companies.length?st.companies.join(' · '):('ENGINE '+engNum(id))):('ENGINE '+engNum(id)), L=Math.max(0,Math.min(3,lv|0));
+  return '<div class="mbHouse"><b>'+lbEsc(nm)+'</b><span style="color:'+LB_RANKC[L]+'">'+RANKS[L]+'</span><span>'+(runs|0)+' run'+((runs|0)===1?'':'s')+(saves!=null?' · '+(saves|0)+' save'+((saves|0)===1?'':'s'):'')+'</span></div>'; }
+function mbRender(r,card,state){ const el=document.getElementById('mbBody'); if(!el) return; const me=AUTH.user&&r.profile_id===AUTH.user.id;
+  const L=Math.max(0,Math.min(3,r.lv|0)), tag=lbTag(r), rides=r.top_house?lbRides(r):'';
+  let h='<div class="mbTop">'+lbStamp(r.staff_title||(card&&card.staff_title))+'<div class="mbName">'+lbEsc(r.name||(card&&card.name)||'Firefighter')+'</div>'+
+    '<div class="lbCr" style="color:'+LB_RANKC[L]+'">'+tag+RANKS[L]+(rides?' · '+rides:'')+'</div></div>';
+  const st=[]; if(r.ovr!=null) st.push(['OVR',r.ovr]); if(r.due_pct!=null) st.push(['DUE HELD',r.due_pct+'%']); if(r.avg_ms!=null) st.push(['AVG RESPONSE',lbMmss(r.avg_ms)]);
+  if(r.streak) st.push(['STREAK','🔥'+r.streak]); if(r.n!=null&&r.ovr!=null) st.push(['RATED RUNS',r.n]); if(r.avg_score!=null) st.push(['WEEK AVG',r.avg_score]);
+  if(card){ st.push(['RUNS',card.runs|0]); st.push(['HELD DUE',card.held_runs|0]); }
+  if(st.length) h+='<div class="mbStats">'+st.map(s=>'<div><b>'+lbEsc(s[1])+'</b><span>'+s[0]+'</span></div>').join('')+'</div>';
+  const houses=me?Object.keys(PROFILE.engines).filter(id=>PROFILE.engines[id].runs>0).map(id=>({station:id,level:careerMaxRank(PROFILE.engines[id]),runs:PROFILE.engines[id].runs,saves:PROFILE.engines[id].saves})).sort((a,b)=>b.runs-a.runs)
+    :(card&&Array.isArray(card.houses)?card.houses:null);
+  const known=houses?houses.filter(x=>x&&lbStation(String(x.station||''))):[];   // only houses the game has
+  if(known.length) h+='<div class="lbSecT">🏛 HOUSES</div>'+known.slice(0,12).map(x=>mbHouseLine(String(x.station),x.level,x.runs,x.saves)).join('');
+  h+='<div class="lbSecT">🔒 LOCKER</div>';
+  if(me) h+=lockerHTML(PROFILE.patches,patchRuns());
+  else if(card) h+=lockerHTML(Array.isArray(card.patches)?card.patches:[],null);
+  else h+='<div class="lbRow">'+(state==='loading'?'Loading…':'Their houses and Locker show once the server is updated.')+'</div>';
+  el.innerHTML=h; }
+async function openMember(pid){ const el=document.getElementById('mbCard'); if(!el||!pid) return; const r=MB.rows.get(pid)||{profile_id:pid}; const me=AUTH.user&&pid===AUTH.user.id;
+  el.classList.add('show'); el.setAttribute('aria-hidden','false'); mbRender(r,null,me?'mine':'loading'); if(me) return;
+  const rows=await lbFetch('member_card','profile_id=eq.'+encodeURIComponent(pid)+'&limit=1');
+  if(!el.classList.contains('show')) return; mbRender(r,rows&&rows[0]?rows[0]:null,rows===null?'none':'gone'); }
+function closeMember(){ const el=document.getElementById('mbCard'); if(el){ el.classList.remove('show'); el.setAttribute('aria-hidden','true'); } }
 function profileRun(rv,ok){ if(FREE.on||(typeof RIVALS!=='undefined'&&!RIVALS.raced)) return [];        // 🧭 free drive is not Career, nor a box dealt with rivals OFF (no race, nothing to lose): no log row, no badge, no rank, no board post, no account push
   const e=profEng(); if(!e) return [];                                        // one run record per box, success or fail
   const earned=[];
@@ -9700,7 +9808,7 @@ function profileRun(rv,ok){ if(FREE.on||(typeof RIVALS!=='undefined'&&!RIVALS.ra
     const elig=rv&&rv.guide===0&&rv.due>0;                                                              // ranked run: guide off (captured in the run result) + a due slot actually assigned (losses count too)
     if(elig){ pushRun(rv,ok,sc,calcStreak(e.log)); if(ok) reportLeaderboard(DRIVE.stationId); }
     else if(ok&&rv&&COACH.usedGuide&&(rv.due>0&&rv.place>0&&rv.place<=rv.due)) popup('📘 Guide was on — great run, but it won\'t post to the board','');
-  } return earned; }
+  } patchCheck(false); return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
   /* ⚠️ NO-MANUFACTURE RULE: opening Career must never create a career record. `cur` is the company the
      player is on, record or not; an absent record renders as a FRESH company. Only a completed response
@@ -9763,7 +9871,7 @@ function openProfileCard(){ const el=document.getElementById('profileCard'); if(
   if(!rows.length) rows.push('<div class="pcRow">No runs yet — ride out and hold your due slot. Every firehouse tracks a separate career for 1st, 2nd, 3rd and 4th due.</div>');
   const cb=PROFILE.city.badges.filter(badgeShown).map(b=>BADGE_NAMES[b]||b).join(', ');   // v21o: HYDRANT SCOUT retired (owner) — marking is scouts-only and the badge was out of reach
   if(cb) rows.push('<div class="pcRow"><b>CITYWIDE</b><div class="pcBadges">🎖 '+cb+'</div></div>');
-  document.getElementById('pcBody').innerHTML=rows.join('');
+  document.getElementById('pcBody').innerHTML=rows.join(''); lockerRender();
   /* (v16l removed the hydrant export UI — pins auto-upload to Supabase. v21o retired the HYDRANT SCOUT badge, owner's call.) */
   el.classList.add('show'); el.setAttribute('aria-hidden','false');
   const sc=document.getElementById('cpScroll'); if(sc){ sc.scrollTop=0; sc.classList.remove('down','stuck'); } }
@@ -9802,11 +9910,30 @@ document.getElementById('hcZone').addEventListener('click',e=>{ e.preventDefault
   BOUNDARY_UI.engine=hcStation.id; const sel=document.getElementById('boundaryEngine'); if(sel&&[...sel.options].some(o=>o.value===hcStation.id)) sel.value=hcStation.id;
   drawBoundaryOverview(); boundaryOverlay.classList.add('show'); boundaryOverlay.setAttribute('aria-hidden','false'); });
 document.getElementById('lbClose').addEventListener('click',()=>{ const el=document.getElementById('lbCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); });
-document.getElementById('authSend').addEventListener('click',async ()=>{ const em=(document.getElementById('authEmail').value||'').trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ document.getElementById('authMsg').textContent='Enter a valid email address.'; return; }
-  document.getElementById('authMsg').textContent='Sending…'; const ok=await authSendLink(em); if(ok) authPendingSet(em); authUpdateUI();
-  document.getElementById('authMsg').textContent=ok?('✉️ Sent to '+em+'. Type the 6-digit code from the email below — or tap the link in it.'):'Could not send — check your connection and try again.';
-  if(ok){ const oi=document.getElementById('authOtp'); if(oi) setTimeout(()=>{ try{ oi.focus(); }catch(e){} },50); } });
+/* ✉️ THE ADDRESS, CHECKED (owner, November 5, 2026: sign-ups with a typo — cam.palmen215@ for cam.palmer215@ — each one a bounced email
+   and an account that can never sign in). Before sending, a near miss of a common email domain (gmial.com, gmail.con, yaho.com …, at most
+   2 letters off) asks "Did you mean …?" first. After sending, the address stands in big letters with "Wrong address? Fix it". A typo in
+   the name part cannot be caught by anyone; showing it plainly is how it gets noticed. */
+const MAIL_DOMAINS=['gmail.com','googlemail.com','yahoo.com','ymail.com','hotmail.com','outlook.com','live.com','msn.com','icloud.com','me.com','mac.com','aol.com','aim.com',
+  'comcast.net','verizon.net','att.net','sbcglobal.net','mail.com','gmx.com','protonmail.com','proton.me'];
+function mailDist(a,b){ const m=a.length, n=b.length; if(Math.abs(m-n)>2) return 9; let p=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){ const q=[i]; for(let j=1;j<=n;j++) q[j]=Math.min(p[j]+1,q[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1)); p=q; } return p[n]; }
+function mailSuggest(em){ const at=em.lastIndexOf('@'); if(at<1) return null; const d=em.slice(at+1).toLowerCase(); if(MAIL_DOMAINS.includes(d)) return null;
+  let best=null, bd=3; for(const m of MAIL_DOMAINS){ const k=mailDist(d,m); if(k<bd){ bd=k; best=m; } } return best?em.slice(0,at+1)+best:null; }
+const AUTHSUG={orig:'',sug:''};
+async function authSendTo(em){ const msg=document.getElementById('authMsg'); msg.textContent='Sending…'; const ok=await authSendLink(em); if(ok) authPendingSet(em); authUpdateUI();
+  if(ok) msg.innerHTML='✉️ Code sent to<span class="authAddr">'+lbEsc(em)+'</span>Type the 6-digit code from the email below — or tap the link in it.<button type="button" class="authFix" data-auth="fix">Wrong address? Fix it</button>';
+  else msg.textContent='Could not send — check your connection and try again.';
+  if(ok){ const oi=document.getElementById('authOtp'); if(oi) setTimeout(()=>{ try{ oi.focus(); }catch(e){} },50); } }
+document.getElementById('authSend').addEventListener('click',async ()=>{ const em=(document.getElementById('authEmail').value||'').trim(), msg=document.getElementById('authMsg');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ msg.textContent='Enter a valid email address.'; return; }
+  const sug=mailSuggest(em); if(sug){ AUTHSUG.orig=em; AUTHSUG.sug=sug;
+    msg.innerHTML='Did you mean<span class="authAddr">'+lbEsc(sug)+'</span><div class="authRow"><button type="button" class="yes" data-auth="sug">Yes, send to that</button><button type="button" data-auth="orig">No, mine is right</button></div>'; return; }
+  authSendTo(em); });
+document.getElementById('authMsg').addEventListener('click',e=>{ const b=e.target.closest('[data-auth]'); if(!b) return; const k=b.dataset.auth, ei=document.getElementById('authEmail');
+  if(k==='sug'){ ei.value=AUTHSUG.sug; authSendTo(AUTHSUG.sug); }
+  else if(k==='orig') authSendTo(AUTHSUG.orig);
+  else if(k==='fix'){ authPendingSet(''); const oi=document.getElementById('authOtp'); if(oi) oi.value=''; authUpdateUI(); document.getElementById('authMsg').textContent='Type the right address and tap SEND SIGN-IN EMAIL again.'; try{ ei.focus(); ei.select(); }catch(x){} } });
 document.getElementById('authVerify').addEventListener('click',async ()=>{ const m=document.getElementById('authMsg'); m.textContent='Checking the code…';   // 🔢
   const r=await authVerifyCode(authPending(),document.getElementById('authOtp').value);
   if(r==='ok'){ document.getElementById('authOtp').value=''; openAuthCard(); popup('👤 Signed in as '+AUTH.user.email+' · careers synced','green'); return; }
@@ -12109,7 +12236,7 @@ document.addEventListener('visibilitychange',()=>{
   }
   __awayAt=0;
 });
-function startShift(st,opts){ truckWreath(); closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
+function startShift(st,opts){ truckWreath(); patchCheck(true); closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
   /* 🧭 The shift's mode is decided ONCE, here: the picker's armed toggle, unless a caller says otherwise.
      A pending drill or qualification is Career by definition and overrides the arm on its own. */
   FREE.on = (opts&&opts.free!==undefined) ? !!opts.free : !!FREE.arm;
