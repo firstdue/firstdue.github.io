@@ -1611,7 +1611,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23b"></script>
+<script src="firehouse-models.js?v=v23c"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1652,7 +1652,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23b";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23c";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -6033,6 +6033,25 @@ function tiledMaterial(tex){ const mat=facadeLambert(tex);                    //
 // terrain mesh (−60 cm). Cemeteries and rail electrification are the NEXT phase (they need a re-fetch).
 const PARKS={on:true, lift:{park:0.06,wood:0.08,open:0.10,cemetery:0.07}, colors:{park:0x59a343,wood:0x45803c,open:0x68b342,cemetery:0x559744}, fenceMax:400, fenceR:0.6, treeMax:70, subdiv:32, subdivFar:48, farR:0.5, openR:0.7,
   cemSubdiv:40, cemSubdivFar:64, wallMax:300, stoneMax:1000, stoneFarMax:4000, stoneNear:90, stoneR:0.35, stoneR2:260, stoneFull:55, stoneRow:3.4, stoneGap:2.4, mastGap:55, mastR:0.6};   // stoneR: headstones only within 0.35·R, so the cap fills real rows near the truck instead of a sprinkle across the block
+/* 🍂 THE SEASONS (owner, November 5, 2026: "Can we have the scenery change as well with the seasons as far as trees not so green etc").
+   By the phone's date — spring March 15 to May 31, summer June 1 to September 30, fall October 1 to November 30, winter December 1 to
+   March 14 — the leaves, the lawns, the parks and the ground between the buildings change colour; in winter the broadleaf crowns are
+   bare (grey-brown and smaller) and the evergreens stay green. Only colours (and winter's crown size) change: the same trees, the same
+   triangles, the same draw calls. SUMMER IS EXACTLY THE OLD PALETTE. ?season=spring|summer|fall|winter shows one on any day. */
+const SEASON=(()=>{ let q=null; try{ q=new URLSearchParams(location.search).get('season'); }catch(e){}
+  const d=new Date(), m=d.getMonth()+1, day=d.getDate(), md=m*100+day;
+  const name=['spring','summer','fall','winter'].includes(q)?q:md>=315&&md<=531?'spring':md>=601&&md<=930?'summer':md>=1001&&md<=1130?'fall':'winter';
+  const P={
+    summer:{ leafI:[0x658c57,0x7a9d62,0x88aa6a,0x5f885c,0x94ac70,0x4e7a48,0x9fb565,0x6b9479], leaf:[0x9ccb8b,0x8fc07f,0xa9d69a,0x97c688,0xb0dba1], con:[0x3f6a4a,0x48745a,0x3a5f45,0x52805e],
+      crown:1, terrain:0x9eb78a, median:0x6eb643, padI:0x93a574, pad:0xcfe6bb, parks:{park:0x59a343,wood:0x45803c,open:0x68b342,cemetery:0x559744} },
+    spring:{ leafI:[0x86c162,0x9fd27a,0x7bb85c,0xf0c3d4,0xf4efe6,0x92cb6c,0xe6a3c0,0x74b158], leaf:[0xa9dc8f,0xbbe6a0,0xf4d3df,0xa2d888,0xf6f2ea], con:[0x41704c,0x4b7a5c,0x3d6448,0x56865f],
+      crown:1, terrain:0xa0bd86, median:0x74be47, padI:0x98ae74, pad:0xd2eabd, parks:{park:0x63b04a,wood:0x4f8c42,open:0x72bd48,cemetery:0x5ea24a} },
+    fall:{ leafI:[0xc8742f,0xd99a3a,0xb84f2a,0xe0b84a,0x9a5a2e,0x7d8f52,0xcf8a3c,0xa8452e], leaf:[0xe3a564,0xedc070,0xd98060,0xc9b07a,0xb9c48a], con:[0x3b6346,0x446e55,0x375a42,0x4e7a59],
+      crown:0.94, terrain:0xa8ad86, median:0x8ea950, padI:0x9c9a6c, pad:0xd6d6b2, parks:{park:0x86993f,wood:0x6e6f36,open:0x95a24b,cemetery:0x7f9343} },
+    winter:{ leafI:[0x6f6256,0x7a6c5e,0x645849,0x82746a,0x6a5f55,0x756a60,0x5f554b,0x7d7062], leaf:[0x9a8f84,0xa69b8f,0x8f857a,0xb0a598,0x968b80], con:[0x33553d,0x3b5f48,0x30503a,0x426a4e],
+      crown:0.78, terrain:0xa39f8b, median:0x8f8d70, padI:0x8a8170, pad:0xc9c3b4, parks:{park:0x8a8a62,wood:0x6c6650,open:0x989472,cemetery:0x878864} } };
+  return Object.assign({name},P[name]); })();
+Object.assign(PARKS.colors,SEASON.parks);
 // treeMax 70: each tree is ~300 triangles (three canopy lobes), and Fairmount beside the interchange sits at the 330k budget.
 // Distance level of detail (owner's rule for the interchange: trim, never raise the budget): triangles whose centre is
 // beyond farR·R subdivide at subdivFar instead of subdiv; 'open' polygons (pitches, grass patches) wholly beyond
@@ -7858,7 +7877,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     for(let x=x0;x<J.cx+r;x+=step)for(let z=z0;z<J.cz+r;z+=stepZ){                                     //    linear DEM samples with zero cut depth, so they meet the coarse neighbours without a crack
       if(cutCell(x,z)){const N=8,sx=step/N,sz=stepZ/N;for(let i=0;i<N;i++)for(let j=0;j<N;j++)cell(x+sx*i,z+sz*j,sx,sz);} else cell(x,z,step,stepZ); }
     const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.computeVertexNormals();
-    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:0x9eb78a}));paveTerrain(m,J);if(GFX.high)m.material.userData.gfxFlat=true;shadeReceive(m.material);FLATCITY.group.add(m);FLATCITY.parts.push(m);   // DEM terrain = the filler ground TILT actually renders (NOT a ramp embankment)
+    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:SEASON.terrain}));paveTerrain(m,J);if(GFX.high)m.material.userData.gfxFlat=true;shadeReceive(m.material);FLATCITY.group.add(m);FLATCITY.parts.push(m);   // DEM terrain = the filler ground TILT actually renders (NOT a ramp embankment)
   }
   // Restore missing multipart rivers; island holes are retained.
   for(const w of NAVGEO.water)for(const ring of w.outer){const bb=ring.bounds;if(J.cx+LOCAL.R<bb[0]||J.cx-LOCAL.R>bb[2]||J.cz+LOCAL.R<bb[1]||J.cz-LOCAL.R>bb[3])continue;
@@ -7897,7 +7916,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     if(wp.length){ const sw=new THREE.InstancedMesh(topBox(),shadeReceive(gfxSurface(new THREE.MeshLambertMaterial({color:0xf3f0e8}),'concrete')),wp.length);   // kerb slabs sit proud of the darker roadway
       wp.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.11,p.z); dummy.scale.set(p.w,0.22,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); sw.setMatrixAt(i,dummy.matrix); });
       sw.instanceMatrix.needsUpdate=true; FLATCITY.group.add(sw); FLATCITY.parts.push(sw); }
-    if(mp2.length){ const gm=new THREE.InstancedMesh(topBox(),shadeReceive(new THREE.MeshLambertMaterial({color:0x6eb643})),mp2.length);   // 🌿 grass median between divided-road carriageways
+    if(mp2.length){ const gm=new THREE.InstancedMesh(topBox(),shadeReceive(new THREE.MeshLambertMaterial({color:SEASON.median})),mp2.length);   // 🌿 grass median between divided-road carriageways
       mp2.forEach((p,i)=>{ dummy.position.set(p.x,p.y+0.10,p.z); dummy.scale.set(p.w+1.6,0.20,p.len); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.updateMatrix(); gm.setMatrixAt(i,dummy.matrix); });
       gm.instanceMatrix.needsUpdate=true; FLATCITY.group.add(gm); FLATCITY.parts.push(gm); } }
   // 🧰 v2 KIT MODULES (v19o): RailTerminal and GoreAttenuator are fixed real-world objects, so they are
@@ -7913,7 +7932,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
       m.name=name; m.userData.highwayKit=kind;
       list.forEach((p,i)=>{dummy.position.set(p.x,p.y,p.z);dummy.rotation.set(p.pitch||0,p.ang,0,'YXZ');dummy.scale.set(1,1,1);dummy.updateMatrix();m.setMatrixAt(i,dummy.matrix);});
       m.instanceMatrix.needsUpdate=true; FLATCITY.group.add(m); FLATCITY.parts.push(m); }
-  if(J.hws) for(const [list,color,name,wbeam] of [[J.hws.med,0xcac4b6,'hwy-median'],[J.hws.grass,0x6eb643,'hwy-median-grass'],[J.hws.guard.concat(vGuard),0xc3c7cc,'hwy-guard',true],[J.hws.post.concat(vPost),0x6f7477,'hwy-post'],[J.hws.wall,0xb4aea1,'hwy-wall']]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail (W-beam tiles, v19f) / end posts / retaining wall
+  if(J.hws) for(const [list,color,name,wbeam] of [[J.hws.med,0xcac4b6,'hwy-median'],[J.hws.grass,SEASON.median,'hwy-median-grass'],[J.hws.guard.concat(vGuard),0xc3c7cc,'hwy-guard',true],[J.hws.post.concat(vPost),0x6f7477,'hwy-post'],[J.hws.wall,0xb4aea1,'hwy-wall']]){ if(!list.length) continue;   // 🏗️ freeway structure: median barrier / grass median / guardrail (W-beam tiles, v19f) / end posts / retaining wall
     if(wbeam&&highwayKitMesh(list,color,name,'RailPanel',J,dummy))continue;
     const hb=new THREE.InstancedMesh(wbeam?hwyWBeamGeo():new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color,side:wbeam?THREE.DoubleSide:THREE.FrontSide}),list.length); hb.name=name;
     list.forEach((p,i)=>{ dummy.position.set(p.x,p.y,p.z); dummy.rotation.set(p.pitch,p.ang,0,'YXZ'); dummy.scale.set(p.w,p.h,p.l); dummy.updateMatrix(); hb.setMatrixAt(i,dummy.matrix); });
@@ -8008,12 +8027,12 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         for(const b of l2){ const dx=t2.x-b.x,dz=t2.z-b.z,c=Math.cos(b.ang||0),s=Math.sin(b.ang||0),margin=J.immersive?t2.s*2.2+0.8:2;
           if(Math.abs(dx*c-dz*s)<b.w/2+margin&&Math.abs(dx*s+dz*c)<b.d/2+margin){ hit=true; break; } } }
       if(hit) T.splice(i,1); } }
-  if(T.length){ const leafPal=J.immersive?[0x658c57,0x7a9d62,0x88aa6a,0x5f885c,0x94ac70,0x4e7a48,0x9fb565,0x6b9479]:[0x9ccb8b,0x8fc07f,0xa9d69a,0x97c688,0xb0dba1];
+  if(T.length){ const leafPal=J.immersive?SEASON.leafI:SEASON.leaf, CR=SEASON.crown;   // 🍂 the season's leaves (summer = the old palette)
     // 🌲 TREE VARIETY (v20r, street-look phase 4). Woods and park trees are a mix: about one in four is a conifer — two
     // stacked 7-sided cones (28 triangles against the round tree's 240), so variety here LOWERS the triangle count. Street
     // trees stay broadleaf (Philadelphia's street trees are planes, oaks, maples, lindens) in three habits chosen by
     // position — round, columnar, spreading — everywhere, where before only Engine 35's detail streets had the latter two.
-    const conPal=[0x3f6a4a,0x48745a,0x3a5f45,0x52805e], conifer=t=>J.immersive&&t.forest&&hash2(t.x+41,t.z-23)<0.26, nCon=T.reduce((n,t)=>n+(conifer(t)?1:0),0);
+    const conPal=SEASON.con, conifer=t=>J.immersive&&t.forest&&hash2(t.x+41,t.z-23)<0.26, nCon=T.reduce((n,t)=>n+(conifer(t)?1:0),0);
     // 🌳 CANOPY LOD (October 2026, interchange triangle headroom): a tree more than TREE_LOD.R from the rebuild centre is at
     // least 140 m from the truck (the 380 m rebuild threshold — the RAMP_DETAIL rule), so its blobs use the 20-triangle
     // icosahedron instead of the 80. Same instances, matrices and colours in the same order; only the facet count changes.
@@ -8024,7 +8043,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
     const canoFar=nFar?new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),canoMat,nFar*per):null; let iN=0,iF=0,iC=0;
     const con=nCon?new THREE.InstancedMesh(dropCap(new THREE.ConeGeometry(1,1,7),'bottom'),canoMat,nCon*2):null;   // unit cone, base at -0.5
     const trunk=new THREE.InstancedMesh(J.immersive?dropCap(new THREE.CylinderGeometry(0.5,0.7,1,6),'bottom'):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?0x75624d:0x9b7d5d}),T.length);
-    const pad=new THREE.InstancedMesh(J.immersive?dropCap(new THREE.CylinderGeometry(1,1,1,10),'bottom'):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?0x93a574:0xcfe6bb}),T.length);
+    const pad=new THREE.InstancedMesh(J.immersive?dropCap(new THREE.CylinderGeometry(1,1,1,10),'bottom'):new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:J.immersive?SEASON.padI:SEASON.pad}),T.length);
     T.forEach((t,i)=>{ const s=t.s*2.2, cf=conifer(t), th=cf?s*0.45:s*1.15;
       const seed=J.immersive?Math.floor(hash2(t.x,t.z)*10000):i;
       if(cf){ const gy=navGroundY(t.x,t.z), a=seed*1.7;
@@ -8036,9 +8055,9 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
         const a=seed*1.7+k*2.094,offset=k?s*0.36:0;
         dummy.position.set(t.x+Math.cos(a)*offset,navGroundY(t.x,t.z)+th+s*(k?0.65:1.05),t.z+Math.sin(a)*offset);
         const narrow=seed%4===0,wide=seed%4===1;   // columnar and spreading habits, citywide (were Engine 35's detail streets only)
-        dummy.scale.set(s*(k?0.68:0.76)*(narrow?0.82:wide?1.04:1),s*(k?0.8:0.95)*(narrow?1.3:wide?0.9:1),s*(k?0.68:0.76)*(narrow?0.82:1));dummy.rotation.set(0,a,0);dummy.updateMatrix();
+        dummy.scale.set(CR*s*(k?0.68:0.76)*(narrow?0.82:wide?1.04:1),CR*s*(k?0.8:0.95)*(narrow?1.3:wide?0.9:1),CR*s*(k?0.68:0.76)*(narrow?0.82:1));dummy.rotation.set(0,a,0);dummy.updateMatrix();
         cm.setMatrixAt(ci*3+k,dummy.matrix);cm.setColorAt(ci*3+k,col.setHex(leafPal[(seed+k)%leafPal.length]));
-      }}else{dummy.position.set(t.x,th+s*0.62,t.z); dummy.scale.set(s,s*0.98,s); dummy.rotation.set(0,seed*1.7,0); dummy.updateMatrix(); cm.setMatrixAt(ci,dummy.matrix); cm.setColorAt(ci,col.setHex(leafPal[seed%leafPal.length]));}
+      }}else{dummy.position.set(t.x,th+s*0.62,t.z); dummy.scale.set(CR*s,CR*s*0.98,CR*s); dummy.rotation.set(0,seed*1.7,0); dummy.updateMatrix(); cm.setMatrixAt(ci,dummy.matrix); cm.setColorAt(ci,col.setHex(leafPal[seed%leafPal.length]));}
       dummy.position.set(t.x,navGroundY(t.x,t.z)+th/2,t.z); dummy.scale.set(s*0.18,th,s*0.18); dummy.rotation.set(0,0,0); dummy.updateMatrix(); trunk.setMatrixAt(i,dummy.matrix);
       dummy.position.set(t.x,navGroundY(t.x,t.z)+(J.immersive?0.09:0.045),t.z);
       const bed=J.immersive?Math.min(s*0.8,Math.max(0.4,nearRoadEdge(t.x,t.z)-0.3)):s;
