@@ -1581,7 +1581,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22w"></script>
+<script src="firehouse-models.js?v=v22x"></script>
 <script src="data/inst.js"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1622,7 +1622,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22w";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22x";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -3237,8 +3237,15 @@ document.getElementById('wrap').appendChild(renderer.domElement);
 // keeps running against a canvas nobody is drawing, so the truck drives on behind a frozen screen and
 // the first frame after restore arrives with a huge dt. Skip the tick instead, and restart the clock.
 const GL={lost:false};
-renderer.domElement.addEventListener('webglcontextlost',()=>{ GL.lost=true; });
-renderer.domElement.addEventListener('webglcontextrestored',()=>{ GL.lost=false; last=performance.now(); });
+renderer.domElement.addEventListener('webglcontextlost',()=>{ GL.lost=true;
+  setTimeout(()=>{ if(!GL.lost) return; let b=document.getElementById('glLostBanner');   // 🔁 still lost after 3 s: say so, instead of a frozen picture
+    if(!b){ b=document.createElement('button'); b.id='glLostBanner'; b.type='button'; b.textContent='⚠️ GRAPHICS RESET · TAP TO RELOAD';
+      b.style.cssText='position:fixed;left:50%;top:40%;transform:translateX(-50%);z-index:200;padding:16px 20px;border-radius:12px;border:2px solid #ffd23b;background:#141a24;color:#ffd23b;font-weight:900;font-size:15px;letter-spacing:1px;pointer-events:auto';
+      b.addEventListener('click',()=>location.reload()); document.body.appendChild(b); }
+    b.hidden=false; },3000); });
+renderer.domElement.addEventListener('webglcontextrestored',()=>{ GL.lost=false; last=performance.now();
+  try{ facadeRestore(); }catch(e){} if(typeof SHADE!=='undefined'&&SHADE.rt) SHADE.dirty=true;   // 🔁 the walls' pictures repainted; the painted ground shadows redrawn (their off-screen picture is lost too)
+  const b=document.getElementById('glLostBanner'); if(b) b.hidden=true; });
 const scene=new THREE.Scene(); scene.background=new THREE.Color(0xc2ddf0);   // fog + fallback = the sky dome's HORIZON band (below), so distant geometry fades into the skyline colour
 scene.fog=new THREE.Fog(0xc2ddf0,CONFIG.render.fogNear,CONFIG.render.fogFar);
 const camera=new THREE.PerspectiveCamera(CONFIG.render.fov,innerWidth/innerHeight,0.5,2400);
@@ -5635,11 +5642,22 @@ const STREET_DETAIL={companyId:'e35',enabled:true,facades:[]};
 const FW=l=>[Math.round(l*255),0,0], FT=l=>[Math.round(l*255),255,0], FG=l=>[Math.round(l*255),0,255];   // wall, trim, glass/door
 // NOT a closure inside facadeTex: an arrow there shares its scope with the painter and kept every pixel buffer alive.
 function facadeFree(t){ t.image={width:t.image.width,height:t.image.height,data:null}; t.onUpdate=null; }
-function facadeTex(w,h,paint,wrapT){ const d=new Uint8Array(w*h*4);
+/* 🔁 WALLS AFTER A GRAPHICS RESET (audit A2, November 4, 2026). A facade's pixels are freed once they are on the GPU (above), so
+   when a phone's graphics reset (WebGL context lost and restored: a long time in the background, a GPU hiccup) three.js
+   re-uploaded nothing and every wall came back blank for the rest of the shift. Each facade keeps its PAINT recipe instead of its
+   pixels (a few closures, no heap to speak of); on a restore facadeRestore() repaints every facade and every facade array in
+   place — the same texture objects, so every material keeps working — and the next frame uploads them. */
+const FACADE_ALL=[];
+function facadePixels(w,h,paint){ const d=new Uint8Array(w*h*4);
   const R=(x,y,ww,hh,c)=>{ const x0=Math.max(0,Math.round(x)), y0=Math.max(0,Math.round(y)), x1=Math.min(w,Math.round(x+ww)), y1=Math.min(h,Math.round(y+hh));
     for(let yy=y0;yy<y1;yy++){ const row=(h-1-yy)*w; for(let xx=x0;xx<x1;xx++){ const k=(row+xx)*4; d[k]=c[0]; d[k+1]=c[1]; d[k+2]=c[2]; d[k+3]=255; } } };   // canvas rows top-down; the texture's v runs bottom-up
-  paint(R);
-  const t=new THREE.DataTexture(d,w,h,THREE.RGBAFormat); t.wrapS=THREE.RepeatWrapping; t.wrapT=wrapT||THREE.ClampToEdgeWrapping;
+  paint(R); return d; }
+function facadeRepaint(t){ const w=t.image.width, h=t.image.height; t.image={width:w,height:h,data:facadePixels(w,h,t.userData.facadePaint)}; t.onUpdate=facadeFree; t.needsUpdate=true; }
+function facadeRestore(){ const inArr=new Set();
+  for(const A of FACADE_ARR.sets.values()){ for(const m of A.members) inArr.add(m); A.repaint(); }
+  for(const t of FACADE_ALL) if(!inArr.has(t)) facadeRepaint(t); }
+function facadeTex(w,h,paint,wrapT){ const d=facadePixels(w,h,paint);
+  const t=new THREE.DataTexture(d,w,h,THREE.RGBAFormat); t.userData.facadePaint=paint; FACADE_ALL.push(t); t.wrapS=THREE.RepeatWrapping; t.wrapT=wrapT||THREE.ClampToEdgeWrapping;
   t.magFilter=THREE.LinearFilter; t.minFilter=THREE.LinearMipmapLinearFilter; t.generateMipmaps=true;
   t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy()); t.needsUpdate=true;
   t.onUpdate=facadeFree;   // once on the GPU the bytes are never read again (1.6 MB of heap at the interchange, measured)
@@ -5716,9 +5734,12 @@ function facadeArray(set){ let A=FACADE_ARR.sets.get(set); if(A) return A;
   members.forEach((t,i)=>{ if(t.image.width!==w||t.image.height!==h||!t.image.data||t.rotation!==0||same.some(k=>t[k]!==t0[k])) throw new Error('facade array '+set+': layer '+i+' does not match');
     data.set(t.image.data,i*w*h*4); });
   const tex=new THREE.DataArrayTexture(data,w,h,n); for(const k of same) tex[k]=t0[k]; tex.needsUpdate=true;
-  tex.onUpdate=()=>{ tex.image={width:w,height:h,depth:n,data:null}; tex.onUpdate=null; };   // once on the GPU the bytes are never read again
+  const free=()=>{ tex.image={width:w,height:h,depth:n,data:null}; tex.onUpdate=null; };
+  tex.onUpdate=free;   // once on the GPU the bytes are never read again
   for(const t of members) facadeFree(t);
-  A={tex,members}; FACADE_ARR.sets.set(set,A); return A; }
+  const repaint=()=>{ const dd=new Uint8Array(w*h*4*n); members.forEach((t,i)=>dd.set(facadePixels(w,h,t.userData.facadePaint),i*w*h*4));   // 🔁 after a graphics reset
+    tex.image={width:w,height:h,depth:n,data:dd}; tex.onUpdate=free; tex.needsUpdate=true; };
+  A={tex,members,repaint}; FACADE_ARR.sets.set(set,A); return A; }
 function facadeArrayOf(tex){ if(!tex||!facadeArraysOn()) return null;
   for(const set in FACADE_SETS){ const i=facadeArray(set).members.indexOf(tex); if(i>=0) return {set,layer:i,uv:[tex.repeat.x,tex.repeat.y,tex.offset.x,tex.offset.y]}; } return null; }
 // A white Lambert carrying a facade: its own 2D map, or (WebGL2, and a texture in a FACADE_SETS group) a layer of the array.
