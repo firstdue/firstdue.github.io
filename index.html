@@ -21,7 +21,9 @@
 <meta name="twitter:image" content="https://firstdue.github.io/og-card.png">
 <!-- PWA / Add to Home Screen ("Local"). Icon + manifest files live beside index.html on the host (Netlify); they 404 harmlessly on the single-file artifact. -->
 <link rel="manifest" href="manifest.json">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'"><noscript><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet"></noscript>
+<!-- The fonts stylesheet loads as media="print" and switches itself to "all" (audit B14, November 3, 2026): cross-origin CSS in the head
+     blocked the FIRST PAINT until Google answered; the text falls back to Arial Narrow meanwhile (display=swap). tests/first-paint.browser.cjs -->
 <meta name="theme-color" content="#1a1e24">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -37,7 +39,7 @@
 addEventListener('error',function(e){ if(window.__booted) return; var isScript=(typeof ErrorEvent!=='undefined'&&e instanceof ErrorEvent)||(e.target&&e.target.tagName==='SCRIPT'); if(!isScript) return;
   if(e.target&&e.target.getAttribute&&e.target.getAttribute('data-opt')) return;   // a local server without data/pfd*.js: the game fetches them instead (PFDT)
   var h=document.querySelector('#homeHud .tag'); if(!h||window.__bootErr) return; window.__bootErr=String((e&&e.message)||(e.target&&e.target.src)||'error');
-  h.textContent='⚠️ COULD NOT LOAD THE GAME — CHECK YOUR CONNECTION AND REOPEN'; h.style.color='#ffb3b3'; },true);
+  var L=document.getElementById('homeLoading'); if(L) L.remove(); h.textContent='⚠️ COULD NOT LOAD THE GAME — CHECK YOUR CONNECTION AND REOPEN'; h.style.color='#ffb3b3'; },true);
 /* 📲 INSTALL APP (v20j). Chromium fires beforeinstallprompt once, possibly before the big data scripts finish, so it is
    caught HERE and parked on window; the home-screen button replays it. iOS Safari never fires it (Apple allows no prompt). */
 addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__installEvt=e;if(window.__installSync)window.__installSync();});
@@ -88,6 +90,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #boxTag { flex:1 1 auto; min-width:0; display:flex; align-items:center; justify-content:center; overflow:hidden; white-space:nowrap;
     color:#7f8ea5; font-weight:900; font-size:12px; letter-spacing:.08em; }
   #boxTag.live { color:#ffd23b; font-size:17px; letter-spacing:.04em; }
+  #boxTag .apx { font-size:8px; letter-spacing:.06em; color:#d9c27a; font-weight:800; margin-left:5px; }   /* a GENERATED box number says so (audit B20) */
   /* 🚨 DUE-ORDER CHIP — how due YOUR engine is at the spot you're standing on right now */
   #dueChip { position:absolute; z-index:15; top:calc(var(--safeTop) + 32px); left:max(10px,env(safe-area-inset-left));   /* clears the 2-line SAVES/BEST + version block (v16m stacked the version onto its own line) */
     display:none; align-items:center; gap:6px; padding:4px 10px 4px 7px; border-radius:999px;
@@ -884,6 +887,11 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #installSheet .url { font-size:12px; color:#9fc6e8; margin-bottom:12px; word-break:break-all; }
   #installSheet button { width:100%; min-height:44px; border:0; border-radius:11px; background:#333a55; color:#fff; font-weight:900; letter-spacing:1px; }
   #homeHud .tag { color:#9fc6e8; font-size:clamp(10px,2.6vw,12.5px); font-weight:800; letter-spacing:2px; margin-top:5px; }
+  /* ⏳ LOADING THE CITY… (audit B14, November 3, 2026): a first launch downloads ~13 MB of data before the map, the list or any home button
+     works; this static line says so over the blank map and the game script removes it when it reports in (window.__booted). */
+  #homeLoading { position:absolute; left:0; right:0; top:46%; z-index:2; text-align:center; pointer-events:none; color:#ffe14d; font-weight:900;
+    font-size:clamp(12px,3.4vw,15px); letter-spacing:2.5px; text-shadow:0 1px 6px rgba(0,0,0,.8); animation:homeLoadPulse 1.1s ease-in-out infinite alternate; }
+  @keyframes homeLoadPulse { from { opacity:.45; } to { opacity:1; } }
   #homeLegend { position:absolute; left:12px; bottom:calc(12px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:5px;
     background:rgba(9,14,26,.82); border:1px solid rgba(255,255,255,.13); border-radius:11px; padding:8px 10px; pointer-events:none; }
   #homeLegend div { display:flex; align-items:center; gap:7px; color:#cfe0f2; font-size:10.5px; font-weight:800; letter-spacing:.6px; }
@@ -1421,6 +1429,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <div id="home" class="overlay show">
   <div id="homeMapWrap">
     <canvas id="homeMap"></canvas>
+    <div id="homeLoading" role="status">LOADING THE CITY…</div>
     <div id="homeHud">
       <h1>🚒 PHILLY FIRE DISPATCH</h1>
       <div class="tag">TAP A FIREHOUSE TO RIDE OUT</div>
@@ -1572,7 +1581,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js"></script>
 <script src="data/narrow.js"></script>
 <script src="data/roadw.js"></script>
-<script src="firehouse-models.js?v=v22v"></script>
+<script src="firehouse-models.js?v=v22w"></script>
 <script src="data/inst.js"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1581,7 +1590,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     ['data/addr.js',function(){ return ADDR; }],['data/navgeo.js',function(){ return NAVGEO; }],['data/landcover-packed.js',function(){ return LANDCOVER; }],['data/lmks.js',function(){ return LMKS; }]];
   var miss=[]; for(var i=0;i<need.length;i++){ try{ need[i][1](); }catch(e){ miss.push(need[i][0]); } }
   if(!miss.length) return; window.__bootErr='missing '+miss.join(', '); var h=document.querySelector('#homeHud .tag');
-  if(h){ h.textContent='⚠️ COULD NOT LOAD '+miss.join(', ')+' — CHECK YOUR CONNECTION AND REOPEN'; h.style.color='#ffb3b3'; } })();
+  var L=document.getElementById('homeLoading'); if(L) L.remove(); if(h){ h.textContent='⚠️ COULD NOT LOAD '+miss.join(', ')+' — CHECK YOUR CONNECTION AND REOPEN'; h.style.color='#ffb3b3'; } })();
 </script>
 <script>
 /* ================================================================================
@@ -1613,7 +1622,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v22v";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v22w";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4805,7 +4814,12 @@ function updateHUD(dt){
   elVerTag.textContent=BUILD+(FPSM.avg?(' · '+(FPSM.avg|0)+' FPS'):'');   // v## · FPS — the BUILD tag is the owner's cache check and LEADS, so if this line ever has to truncate it loses a frame rate, never the tag
   elStreetText.textContent=curStreet; elStreetBlock.textContent=blockLine(curBlock); elZone.textContent=zoneName(rp[0],rp[1]);
   { const bt=document.getElementById('boxTag'); if(bt){ const live=!!(state.target&&state.target.box);   // 🔔 v21j: the middle of the bar — BOX 3519 on a run, the company otherwise
-      const t=live?('BOX '+state.target.box):(DRIVE.stationId?('ENGINE '+engNum(DRIVE.stationId)):''); if(bt.textContent!==t) bt.textContent=t; bt.classList.toggle('live',live); } }
+      const t=live?('BOX '+state.target.box):(DRIVE.stationId?('ENGINE '+engNum(DRIVE.stationId)):''); bt.classList.toggle('live',live);
+      /* ⚠️ A box number the game MADE UP (no PFD box holds the call: Engine 78's airport, ground outside every book) is not an official
+         number and says so: "BOX 7843 APPROX." (house rule; audit B20). assignBox marks it (t.boxGen). */
+      const apx=live&&!!state.target.boxGen, k=t+(apx?'~':'');
+      if(bt.dataset.k!==k){ bt.dataset.k=k; bt.textContent=t; bt.title=apx?'Not a PFD box number: the game works it out from the distance to the firehouse':'';
+        if(apx){ const s=document.createElement('small'); s.className='apx'; s.textContent='APPROX.'; bt.appendChild(s); } } } }
   { const qc=document.getElementById('qualChip'); if(qc){ qc.classList.toggle('show',!!QUAL.active);   // 🎖 exam chip — visible ONLY while the runtime owns the dispatch
       if(QUAL.active){ const tx=document.getElementById('qualChipTxt'); if(tx) tx.textContent='E'+engNum(QUAL.companyId)+' · '+POS_LABELS[QUAL.due-1]+' · PRO RULES'; } } }
   { const sa=document.getElementById('satAttr'); if(sa){ const show=state.running;   // v20u: shown for the whole shift (the OpenStreetMap road and land data is on screen all the time; the CARTO credit stays by the owner's word), no longer only after a tile has loaded
@@ -7661,7 +7675,7 @@ FLATCITY.commit=function(J){ const dummy=new THREE.Object3D(), col=new THREE.Col
   for(const o of FLATCITY.parts){ FLATCITY.group.remove(o); if(o.userData.keep){ o.dispose(); continue; } o.geometry.dispose(); FLATCITY.oldMats.push(o.material); }   // keep: shared kit (hydrants) — free only the instance buffer
   for(const m of staleMats){ if(PROGKEEP.on&&progKeep(m)) continue; m.dispose(); }   // 🧪 PROGKEEP (dev flag, off): keep one retired material per program
   FLATCITY.parts=[];
-  const B=J.B, T=J.T, S=J.S; FLATCITY.mmB=B;   // v20m: the minimap draws these footprints
+  const B=J.B, T=J.T, S=J.S; FLATCITY.mmB=B; FLATCITY.gen=(FLATCITY.gen|0)+1;   /* a commit refills FLATCITY.parts IN PLACE: Map view redraws on this count (audit B16) */   // v20m: the minimap draws these footprints
   if(NAVGEO.active){const deck=[],rails=[],piers=[],truss=[],para=[],bwalk=[],roadGirder=[];
     const stByName=new Map();for(const s of J.list)if(s.name&&!stByName.has(s.name))stByName.set(s.name,s);   // first match, exactly what the per-bridge find() did — 818 finds × the segment list was ~10ms
     for(const b of NAVGEO.bridges){if(!b.bridge)continue;const street=b.name?stByName.get(b.name):hwySegForSpan(b,J);if(!street)continue;const hw=segHalf(street);let along=0;
@@ -8965,7 +8979,7 @@ function trainMyLocal(companyId,dim){
   companyId=companyId||DRIVE.stationId;
   if(!dim) return duedChoose(companyId);
   if(dim==='boxes') dim='intersections'; // old internal call sites route to the new drill
-  if(dim==='due') return {ok:false,reason:'unverified-assignments'};
+  if(dim==='due') return {ok:false,reason:'not-offered'};   // the Due Order drill is off the chooser (withdrawn v17i); re-opening it on the PFD running order (v21d) is the owner's call
   if(dim!=='intersections'&&dim!=='due') return {ok:false,reason:'unknown-drill'};
   if(DUED.on||BOXD.on||BOXD.pending) return {ok:false,reason:'already-running'};
   const closeCard=()=>{ const pc=document.getElementById('profileCard'); if(pc){ pc.classList.remove('show'); pc.setAttribute('aria-hidden','true'); } };
@@ -9064,7 +9078,7 @@ function duedChoose(companyId){
     '<button class="ddChoice" data-dd="intersections" '+(intersections.length?'':'disabled')+'>INTERSECTION RECALL<small>See two street names. Drive to their intersection without a destination pin.</small></button>'+
     '<p>'+intersections.length+' reachable mapped intersections in your first-due, within 3 km of your firehouse.</p>'+
     '<p>Two recalls without help prove an intersection. A hint gives location context; SHOW ME reveals the destination and counts as practice.</p>'+
-    '<p>Due Order is on hold until actual company assignments are verified. Previous box-number scores do not count toward intersection knowledge.</p>');
+    '<p>Previous box-number scores do not count toward intersection knowledge.</p>');
   return {ok:true,mode:'choose'}; }
 function duedStart(companyId,scope){
   if(DUED.on||BOXD.on) return {ok:false,reason:'already-running'};
@@ -9774,7 +9788,7 @@ function stDist(st,x,z){ return Math.hypot(st.x-x,st.z-z); }
    2nd/3rd/4th in on someone else's turf. Ranking mirrors computeResponders so the chip agrees with the
    RESPONDING board: the zone owner is 1st, then the box's PFD running order (runOrderAt); outside every box, everyone else
    falls in by distance from their own house.   */
-const DUECHIP={ t:0, rank:0, owner:null, pend:0, pendN:0, flash:0 };
+const DUECHIP={ t:0, rank:0, owner:null, approx:false, pend:0, pendN:0, flash:0 };
 function dueRankAt(x,z){
   const pid=DRIVE.stationId; if(!pid||typeof PFD_ZONES==='undefined') return null;
   const pn=+String(pid).replace(/\D/g,''); if(!pn) return null;
@@ -9788,7 +9802,7 @@ function dueRankAt(x,z){
   const byDist=stations.slice().sort((a,b)=>stDist(a,x,z)-stDist(b,x,z));
   for(const q of byDist) if(order.indexOf(q)<0) order.push(q);
   const i=order.findIndex(q=>q.num===pn);
-  return { rank:i<0?99:i+1, owner:owner };
+  return { rank:i<0?99:i+1, owner:owner, approx:true };                    // no PFD running order here: the order by distance is the game's guess (audit B20)
 }
 const DUE_STYLE=[null,{t:'1ST IN',c:'#3ddc84'},{t:'2ND IN',c:'#ffd23b'},{t:'3RD IN',c:'#ff9f2e'},{t:'4TH IN',c:'#ff6b4a'}];
 function updateDueChip(dt){
@@ -9797,9 +9811,9 @@ function updateDueChip(dt){
   DUECHIP.t-=dt; if(DUECHIP.flash>0) DUECHIP.flash-=dt;
   if(DUECHIP.t<=0){ DUECHIP.t=0.35;                                          // 60 zone tests + a sort — plenty at ~3x/second
     const r=dueRankAt(truck.x,truck.z), nr=r?r.rank:0;
-    if(nr===DUECHIP.rank){ DUECHIP.pendN=0; if(r) DUECHIP.owner=r.owner; }
+    if(nr===DUECHIP.rank){ DUECHIP.pendN=0; if(r){ DUECHIP.owner=r.owner; DUECHIP.approx=!!r.approx; } }
     else if(nr===DUECHIP.pend){                                              // hysteresis: a new reading must hold 3x (~1.05s) before the chip changes.
-      if(++DUECHIP.pendN>=3){ DUECHIP.rank=nr; if(r) DUECHIP.owner=r.owner;  // driving ALONG a zone edge otherwise flickers 2-1-2-1
+      if(++DUECHIP.pendN>=3){ DUECHIP.rank=nr; if(r){ DUECHIP.owner=r.owner; DUECHIP.approx=!!r.approx; }  // driving ALONG a zone edge otherwise flickers 2-1-2-1
         DUECHIP.pendN=0; DUECHIP.flash=0.9; } }
     else { DUECHIP.pend=nr; DUECHIP.pendN=1; }
   }
@@ -9811,11 +9825,11 @@ function updateDueChip(dt){
      A long rank (OUT OF AREA) or an area name goes to #areaChip under the bar instead, whole. */
   const long=!DUE_STYLE[DUECHIP.rank];                      // OUT OF AREA is wider than the middle of the bar; 1ST..4TH IN are not
   el.classList.toggle('wide',long);                         // so the pill keeps the rank whenever the rank alone fits
-  el.querySelector('.dueTxt').textContent=st.t;
+  el.querySelector('.dueTxt').textContent=(DUECHIP.approx?'\u2248':'')+st.t;   // ≈2ND IN: by distance, not the PFD's order (audit B20)
   const ac=document.getElementById('areaChip');
-  if(ac){ const show=long||!!whoTxt;                        // ...and the chip carries the WHOLE status whenever there is more to say than the rank
+  if(ac){ const show=long||!!whoTxt||!!DUECHIP.approx;                        // ...and the chip carries the WHOLE status whenever there is more to say than the rank
     ac.classList.toggle('on',show); if(show){ ac.style.color=st.c;
-      ac.querySelector('.dueTxt').textContent=st.t; ac.querySelector('.dueWho').textContent=whoTxt; } }
+      ac.querySelector('.dueTxt').textContent=st.t; ac.querySelector('.dueWho').textContent=[whoTxt,DUECHIP.approx?'APPROX.':''].filter(Boolean).join(' \u00b7 '); } }
   el.classList.add('on');
   { const pop=DUECHIP.flash>0, sc=pop?('scale('+(1+Math.sin(Math.min(1,DUECHIP.flash/0.9)*Math.PI)*0.13).toFixed(3)+')'):'scale(1)';   // brief pop so a change is noticed mid-drive
     const sh=pop?('0 3px 12px rgba(0,0,0,.55), 0 0 '+(16*DUECHIP.flash/0.9).toFixed(0)+'px currentColor'):'0 3px 12px rgba(0,0,0,.55)';
@@ -9864,7 +9878,8 @@ function computeBox(firstDue,x,z){ const eng=engNum(firstDue.id).padStart(2,'0')
   const sub=Math.max(1,Math.min(99,Math.round(scale*98)+1));
   return eng+String(sub).padStart(2,'0'); }
 function assignBox(){ if(!state.target) return; const t=state.target, cx=t.bx!==undefined?t.bx:t.x, cz=t.bz!==undefined?t.bz:t.z;   // classify by the BUILDING point (same point the dispatch filter uses) so you're reliably first-due for your own calls
-  const fd=computeResponders(cx,cz)[0]; t.firstDue=fd.id; t.box=computeBox(fd,cx,cz); }
+  const fd=computeResponders(cx,cz)[0]; t.firstDue=fd.id; t.box=computeBox(fd,cx,cz);
+  t.boxGen=!realBoxFor(+engNum(fd.id),cx,cz); }   // the number was made up, not a PFD box: the bar says APPROX. (audit B20)
 function clearRivals(){ RIVALS.list=[]; RIVALS.responders=[]; RIVALS.order=[]; RIVALS.playerPlaced=false; RIVALS.playerPlace=0; renderRivalHUD();
   if(typeof RVM!=='undefined') for(const g of RVM.pool) g.visible=false; }   // no rivals => no trucks left hanging in the world
 function spawnRivals(){ clearRivals(); RIVALS.raced=RIVALS.on&&!!state.target;   // 🚑 the box's own rule, fixed when it is dealt: dealt with rivals off, it is not Career (profileRun)
@@ -10620,6 +10635,18 @@ const SIM=[updateDrive,updateDispatchZone,updateRivals,updateDrill,updateBoxDril
    (the dispatch line, the units row — whichever way it shows — a drill banner) and rides up beside things that do not (the
    area chip, the qualification chip). The full-width warnings (turn banner, WRONG WAY, NARROW STREET) go below ALL of it — the #hudCol flow AND the
    minimap — whether or not the minimap is on; WRONG WAY was never seated before and sat on the map. */
+/* Audit B17 (November 3, 2026): seated every 120 ms, a still screen included (up to ~5 forced layouts each time). The seats depend only
+   on the SIZES of what is seated (the #hudCol flow, its pieces, the warnings, the minimap) and on the window, so a ResizeObserver over
+   all of them and a window resize mark it dirty, and updateMiniMap seats only then or when the minimap comes or goes. A browser
+   without ResizeObserver seats every tick, as before. tests/hud-seat.browser.cjs */
+const HUDSEAT={dirty:true, sig:null, ro:null, els:null};
+function hudSeatWatch(){ if(HUDSEAT.ro!==null) return; HUDSEAT.ro=false; if(typeof ResizeObserver==='undefined') return;
+  HUDSEAT.ro=new ResizeObserver(()=>{ HUDSEAT.dirty=true; }); addEventListener('resize',()=>{ HUDSEAT.dirty=true; });
+  for(const id of ['hudCol','radio','unitsRow','areaChip','qualChip','drillHUD','boxdHUD','turnBanner','wrongWay','narrowSt','miniMap']){ const e=document.getElementById(id); if(e) HUDSEAT.ro.observe(e); } }
+/* ...and a change made in the SAME frame as a seating tick is caught at once, before the observer reports it after the frame's layout:
+   the pieces' classes, inline display and text length — read without a layout (not the units row's text: the row is 44 px whatever it says). */
+function hudSeatSig(show){ const E=HUDSEAT.els||(HUDSEAT.els=['radio','unitsRow','rivals','areaChip','qualChip','drillHUD','boxdHUD','turnBanner','wrongWay','narrowSt'].map(i=>document.getElementById(i)).filter(Boolean));
+  let s=(show?'1':'0')+document.body.className+innerWidth+'x'+innerHeight; for(const e of E) s+='|'+e.className+':'+e.style.display+':'+(e.id==='rivals'||e.id==='unitsRow'?'':e.textContent.length); return s; }
 function hudSeat(mm,show){ const tb=document.getElementById('turnBanner'), ww=document.getElementById('wrongWay'), ns=document.getElementById('narrowSt');
   let floor=0; const col=document.getElementById('hudCol'); if(col){ const r=col.getBoundingClientRect(); if(r.height>1) floor=r.bottom+6; }
   if(show){ mm.style.top=''; const er=mm.getBoundingClientRect(); let top=null;
@@ -10644,7 +10671,7 @@ function updateMiniMap(dt){ const el=MINIMAP.el||(MINIMAP.el=document.getElement
   const show=MINIMAP.on&&state.running&&!homeEl.classList.contains('show')&&!MAPV.active;
   el.classList.toggle('on',show);
   MINIMAP.t-=dt; if(MINIMAP.t>0) return; MINIMAP.t=0.12;
-  hudSeat(el,show); if(!show) return;
+  hudSeatWatch(); { const sig=hudSeatSig(show); if(HUDSEAT.dirty||!HUDSEAT.ro||sig!==HUDSEAT.sig){ HUDSEAT.dirty=false; HUDSEAT.sig=sig; hudSeat(el,show); } } if(!show) return;
   const cv=MINIMAP.cv||(MINIMAP.cv=el.querySelector('canvas')); const dpr=Math.min(2,devicePixelRatio||1), W=Math.round(108*dpr);
   if(cv.width!==W){ cv.width=cv.height=W; }
   const x=cv.getContext('2d'), c=W/2, rad=c-3*dpr, s=(rad-9*dpr)/MINIMAP.R, tx=truck.x, tz=truck.z;
@@ -10738,13 +10765,13 @@ function mapvTruckWH(M){ const asp=M.spr?M.spr.height/M.spr.width:2.42, th=Math.
 function mapvSprite(){ if(MAPV.sprState!=='idle') return; MAPV.sprState='loading'; const im=new Image();
   im.onload=()=>{ MAPV.spr=im; MAPV.sprState='ready'; }; im.onerror=()=>{ MAPV.sprState='failed'; }; im.src='assets/truck/pumper-top-v1.png'; }
 // heading-up pose: world (x,z) -> screen px with the truck at (W/2, 0.62 H) and its heading eased toward straight up
-function mapvPose(dt){ const th=truck.theta; if(MAPV.ang==null) MAPV.ang=th; const dd=Math.atan2(Math.sin(th-MAPV.ang),Math.cos(th-MAPV.ang)); MAPV.ang+=dd*Math.min(1,dt*5);
+function mapvPose(dt){ const th=truck.theta; if(MAPV.ang==null) MAPV.ang=th; const dd=Math.atan2(Math.sin(th-MAPV.ang),Math.cos(th-MAPV.ang)); if(Math.abs(dd)<1e-5) MAPV.ang=th; else MAPV.ang+=dd*Math.min(1,dt*5);   /* the ease ENDS (audit B16: a parked map's last paint is its true pose) */
   const W=innerWidth, H=innerHeight, s=1/(MAPV.mpp=0.42*(MAP.tiltZoom||1)), fx=-Math.sin(MAPV.ang), fz=-Math.cos(MAPV.ang), cx=truckG.position.x, cz=truckG.position.z;
   MAPV.ax=W/2; MAPV.ay=H*0.62; MAPV.a=-fz*s; MAPV.b=-fx*s; MAPV.cc=fx*s; MAPV.d=-fz*s; MAPV.e=MAPV.ax-(MAPV.a*cx+MAPV.cc*cz); MAPV.f=MAPV.ay-(MAPV.b*cx+MAPV.d*cz); MAPV.cx=cx; MAPV.cz=cz; }
 function viewProj(v){ if(!MAPV.active) return v.project(camera);                    // in Map view a world point lands where the map draws it (NDC, like project())
   const sx=MAPV.a*v.x+MAPV.cc*v.z+MAPV.e, sy=MAPV.b*v.x+MAPV.d*v.z+MAPV.f; v.x=sx/(innerWidth||1)*2-1; v.y=1-sy/(innerHeight||1)*2; v.z=0; return v; }
 function mapvFrame(dt){ const on=MAPV.on&&state.running&&!homeEl.classList.contains('show');
-  if(on!==MAPV.active){ MAPV.active=on; const cv=MAPV.cv||(MAPV.cv=document.getElementById('mapView')); if(cv) cv.classList.toggle('on',on); if(!on) MAPV.ang=null; }
+  if(on!==MAPV.active){ MAPV.active=on; const cv=MAPV.cv||(MAPV.cv=document.getElementById('mapView')); if(cv) cv.classList.toggle('on',on); if(!on) MAPV.ang=null; MAPVK.pv=null; }
   if(!on) return false; mapvSprite(); mapvPose(dt); return true; }
 function mapvTruckVector(x,tw,th){ x.fillStyle='#1d1f23'; for(const f of [-0.3,0.02,0.3]){ x.fillRect(-tw*0.56,f*th-th*0.07,tw*0.14,th*0.14); x.fillRect(tw*0.42,f*th-th*0.07,tw*0.14,th*0.14); }   // until the art loads
   x.fillStyle='#c8231b'; x.fillRect(-tw/2,-th/2,tw,th); x.fillStyle='#f4f3ee'; x.fillRect(-tw*0.45,-th*0.48,tw*0.9,th*0.27); x.fillStyle='#1c2330'; x.fillRect(-tw*0.39,-th*0.47,tw*0.78,th*0.07);
@@ -10872,7 +10899,31 @@ function mapvTurnAt(cx,cy){ if(!MAPV.active||typeof LBL==='undefined') return nu
     for(let i=1;i<pts.length;i++){ const a=pts[i-1],b=pts[i],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1, t0=Math.max(0,(skip-along)/L);
       if(t0<1){ const t=Math.max(t0,Math.min(1,((cx-a[0])*dx+(cy-a[1])*dy)/(L*L))), d=Math.hypot(a[0]+dx*t-cx,a[1]+dy*t-cy); if(d<bd){ bd=d; best=sp; } } along+=L; } }
   return best; }
+/* ⏸ MAP VIEW DRAWS ONLY WHEN THE PICTURE CHANGED (audit B16, November 3, 2026). mapvDraw paints the whole screen and rebuilds every batch;
+   it ran every frame, a parked truck included. Nothing in it moves by itself, so it draws when what it draws FROM changed: at once for
+   the map's pose and zoom, the truck, the route, the call, the armed turn, the building tiles and a city rebuild; at most 30 times a
+   second when only the rest changed (the other engines, the streets offered, hydrants, the HUD the labels keep clear of). fpEnsure —
+   the tile loader — still runs every frame. Every value mapvDraw reads belongs in one of the two keys. tests/mapview-redraw.browser.cjs */
+const MAPVK={pv:null, pose:null, rest:null, refs:null, t:-1e9, n:0, skip:0};
+document.addEventListener('visibilitychange',()=>{ MAPVK.pv=null; });                   // back from the background, and a canvas the phone dropped and gave back, paint afresh
+{ const cv=document.getElementById('mapView'); if(cv) cv.addEventListener('contextrestored',()=>{ MAPVK.pv=null; }); }
+const MAPV_TOL=[0,0,0,2e-6,2e-6,2e-6,2e-6,0.002,0.002,1e-6];                          // per number below: under ~0.002 px anywhere on the screen (text glyphs snap at sub-pixel steps)
+function mapvDue(now){ const M=MAPV, K=MAPVK, r1=v=>Math.round(v*10), T=state.target;
+  const pv=[innerWidth,innerHeight,devicePixelRatio,M.a,M.b,M.cc,M.d,M.e,M.f,truck.theta];   // the map's pose and zoom, the truck's heading: moved more than MAPV_TOL since the last paint
+  const pose=(state.route?1:0)+(MAP.guide?'g':'')+'|'+(T?r1(T.x)+','+r1(T.z):'-')+'|'+lastAddress+'|'+FP.idxState+','+(FP.fh?FP.fh.length:0)+'|'+(M.spr?1:0)+(DRIVE.parked?'P':'')+(DRIVE.stationId||'');
+  const pd=DRIVE.pending, refs=[routePts,routePts?routePts.length:0,FLATCITY.gen,FLATCITY.mmB,FLATCITY.mmInst,pd,pd&&pd.at,pd&&pd.next,DRIVE.fromN,DRIVE.toN];
+  let tiles=''; for(const [k,t] of FP.tiles) tiles+=k+t.state[0];                       // the building tiles, each loading / ready / failed
+  let rest=PFDT.ver+','+HYDRANTS.length+'|'+hudSeatSig(true);
+  for(const r of RIVALS.list||[]) rest+='|'+Math.round(r.x*4)+','+Math.round(r.z*4)+','+r.seg+(r.arrived?'a':'');
+  if(typeof LBL!=='undefined') for(const sp of LBL.pool){ const q=sp.visible&&sp._pick; if(q&&q.at&&sp._name) rest+='|'+sp._name+(sp._block||'')+','+r1(sp.position.x)+','+r1(sp.position.z)+','+r1(q.at.x)+','+r1(q.at.z); }
+  const at=!K.pv||pv.some((v,i)=>Math.abs(v-K.pv[i])>MAPV_TOL[i])||pose!==K.pose||tiles!==K.tiles||refs.some((v,i)=>v!==K.refs[i]);
+  if(!at&&(rest===K.rest||now-K.t<33)) return false;                                  // nothing changed, or only the rest and it drew <33 ms ago
+  K.pv=pv; K.pose=pose; K.tiles=tiles; K.rest=rest; K.refs=refs; K.t=now; K.n++; return true; }
+/* measureText by font + text: the labels are the same few words frame after frame (audit B16). */
+const MVTW=new Map();
+function mvTextW(x,t){ const k=x.font+'\u0001'+t; let w=MVTW.get(k); if(w===undefined){ w=x.measureText(t).width; if(MVTW.size>4000) MVTW.clear(); MVTW.set(k,w); } return w; }
 function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.cv=document.getElementById('mapView')), dpr=Math.min(2,devicePixelRatio||1), W=innerWidth, H=innerHeight;
+  if(!mapvDue(t0)){ fpEnsure(M.cx,M.cz,Math.hypot(W,H)*M.mpp*0.62*1.15); MAPVK.skip++; return; }   // the picture on the canvas is still the true one
   if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
   const x=cv.getContext('2d'), mpp=M.mpp, tx=M.cx, tz=M.cz, R=Math.hypot(W,H)*mpp*0.62, T=(px,pz)=>[M.a*px+M.cc*pz+M.e,M.b*px+M.d*pz+M.f];
   const world=()=>x.setTransform(M.a*dpr,M.b*dpr,M.cc*dpr,M.d*dpr,M.e*dpr,M.f*dpr), screen=()=>x.setTransform(dpr,0,0,dpr,0,0);
@@ -10981,7 +11032,7 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
   M.fhLab=[]; M.fhAt=[]; x.textAlign='center'; x.textBaseline='middle';
   for(const f of (FP.drawn&&FP.fhVis)||[]){ if(f.nolab) continue; const [cx0,cy0]=T(f.lx,f.lz); if(cx0<-80||cx0>W+80||cy0<-80||cy0>H+80) continue;   // (a second building: roof only)
     const [qx,qy]=T(f.lx+f.ux,f.lz+f.uz); let an=Math.atan2(qy-cy0,qx-cx0); if(an>Math.PI/2) an-=Math.PI; if(an<-Math.PI/2) an+=Math.PI;
-    x.font='900 10px -apple-system,"Helvetica Neue",Arial,sans-serif'; const w10=x.measureText(f.label).width||1, Lp=f.len/mpp, Wp=f.wid/mpp;
+    x.font='900 10px -apple-system,"Helvetica Neue",Arial,sans-serif'; const w10=mvTextW(x,f.label)||1, Lp=f.len/mpp, Wp=f.wid/mpp;
     const fs=Math.max(10,Math.min(20,10*Lp*0.82/w10,Wp*0.72));
     const ac=Math.abs(Math.cos(an)), as=Math.abs(Math.sin(an)), font=z=>'900 '+z.toFixed(1)+'px -apple-system,"Helvetica Neue",Arial,sans-serif';
     const ok=(ax2,ay2,hx2,hy2)=>!(ax2-hx2<4||ax2+hx2>W-4||ay2-hy2<topY||ay2+hy2>H-140)&&!taken.some(q=>Math.abs(ax2-q[0])<hx2+q[2]&&Math.abs(ay2-q[1])<hy2+q[3]);
@@ -10989,10 +11040,10 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
        bottom controls can cut the other, and 30 of 336 views (screen height x zoom, Engine 39) found no spot among five, so the label
        went beside the roof. Now: spots every 8% along the roof — never past its ends — at four sizes, before any spot beside it. */
     let px=null, py=null, fz=fs, tw=0, hx=0, hy=0;
-    for(const sc of [1,0.84,0.7,0.58]){ if(px!==null) break; const z=Math.max(9,fs*sc); x.font=font(z); const w=x.measureText(f.label).width, h1=ac*w/2+as*z/2, h2=as*w/2+ac*z/2, half=w*mpp/2;
+    for(const sc of [1,0.84,0.7,0.58]){ if(px!==null) break; const z=Math.max(9,fs*sc); x.font=font(z); const w=mvTextW(x,f.label), h1=ac*w/2+as*z/2, h2=as*w/2+ac*z/2, half=w*mpp/2;
       for(const k of [0,0.08,-0.08,0.16,-0.16,0.24,-0.24,0.32,-0.32,0.4,-0.4]){ if(Math.abs(k)*f.len+half>f.len/2+0.5) continue;
         const [ax2,ay2]=T(f.lx+f.ux*f.len*k,f.lz+f.uz*f.len*k); if(ok(ax2,ay2,h1,h2)){ px=ax2; py=ay2; fz=z; tw=w; hx=h1; hy=h2; break; } } }
-    if(px===null){ fz=fs; x.font=font(fz); tw=x.measureText(f.label).width; hx=ac*tw/2+as*fz/2; hy=as*tw/2+ac*fz/2; px=cx0; py=cy0;   // no spot on the roof at any size: just beside it, then a ring around it
+    if(px===null){ fz=fs; x.font=font(fz); tw=mvTextW(x,f.label); hx=ac*tw/2+as*fz/2; hy=as*tw/2+ac*fz/2; px=cx0; py=cy0;   // no spot on the roof at any size: just beside it, then a ring around it
       const cand=[]; { const vx=-(qy-cy0), vy=qx-cx0, vl=Math.hypot(vx,vy)||1, off=f.wid/2/mpp+hy+6; for(const sg of [1,-1]) cand.push([cx0+vx/vl*off*sg,cy0+vy/vl*off*sg]);
         for(const r of [52,78]) for(let a=0;a<8;a++) cand.push([cx0+Math.cos(a*Math.PI/4)*r,cy0+Math.sin(a*Math.PI/4)*r]); }
       for(const [ax2,ay2] of cand) if(ok(ax2,ay2,hx,hy)){ px=ax2; py=ay2; break; } }
@@ -11003,7 +11054,7 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
   const offered=new Set(); x.font='800 14px -apple-system,"Helvetica Neue",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
   if(typeof LBL!=='undefined') for(const sp of LBL.pool){ const p=sp.visible&&sp._pick; if(!p||!p.at||!sp._name) continue;
     const t=sp._block==='RAMP'?'Ramp · '+abbrevStreet(sp._name):abbrevStreet(sp._name); if(offered.has(t)) continue;
-    const dx=sp.position.x-p.at.x, dz=sp.position.z-p.at.z, dl=Math.hypot(dx,dz)||1, tw=x.measureText(t).width, [ax0,ay0]=T(p.at.x,p.at.z), [bx0,by0]=T(p.at.x+dx/dl,p.at.z+dz/dl);
+    const dx=sp.position.x-p.at.x, dz=sp.position.z-p.at.z, dl=Math.hypot(dx,dz)||1, tw=mvTextW(x,t), [ax0,ay0]=T(p.at.x,p.at.z), [bx0,by0]=T(p.at.x+dx/dl,p.at.z+dz/dl);
     let an=Math.atan2(by0-ay0,bx0-ax0); const ux=Math.cos(an), uy=Math.sin(an); if(an>Math.PI/2) an-=Math.PI; if(an<-Math.PI/2) an+=Math.PI; const ac=Math.abs(Math.cos(an)), as=Math.abs(Math.sin(an));
     let done=false; for(const gap of [18,46]){ if(done) break; for(const off of [0,17,-17]){ const cx=ax0+ux*(tw/2+gap)-uy*off, cy=ay0+uy*(tw/2+gap)+ux*off;   // on the street, or beside it when the route runs along it
       if(cy>H-150||nearRoute(cx,cy,12)||nearRoute(cx-ux*tw/2,cy-uy*tw/2,12)||nearRoute(cx+ux*tw/2,cy+uy*tw/2,12)||!free(cx,cy,ac*tw/2+as*8,as*tw/2+ac*8)) continue; done=true;
@@ -11013,23 +11064,23 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
     for(const g of segs){ if(!g.name||g.hw) continue; const [p0x,p0y]=T(g.ax,g.az), [p1x,p1y]=T(g.bx,g.bz), mx=(p0x+p1x)/2, my=(p0y+p1y)/2; if(onRoute(mx,my)||offered.has(abbrevStreet(g.name))) continue;
       if(mx<20||mx>W-20||my<70||my>H-150||(Math.abs(mx-M.ax)<95&&Math.abs(my-M.ay)<85)) continue; const L=Math.hypot(p1x-p0x,p1y-p0y); if(L<40) continue; const dd=Math.hypot(mx-W/2,my-H*0.45), o=names.get(g.name); if(!o||dd<o.dd) names.set(g.name,{dd,mx,my,ang:Math.atan2(p1y-p0y,p1x-p0x),L}); }
     x.font='800 14px -apple-system,"Helvetica Neue",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle';
-    for(const [nm,q] of [...names].sort((p,r)=>p[1].dd-r[1].dd)){ let an=q.ang; if(an>Math.PI/2) an-=Math.PI; if(an<-Math.PI/2) an+=Math.PI; const t=abbrevStreet(nm), tw=x.measureText(t).width; if(tw>q.L*1.6) continue;
+    for(const [nm,q] of [...names].sort((p,r)=>p[1].dd-r[1].dd)){ let an=q.ang; if(an>Math.PI/2) an-=Math.PI; if(an<-Math.PI/2) an+=Math.PI; const t=abbrevStreet(nm), tw=mvTextW(x,t); if(tw>q.L*1.6) continue;
       const ac=Math.abs(Math.cos(an)), as=Math.abs(Math.sin(an)); if(!free(q.mx,q.my,ac*tw/2+as*8,as*tw/2+ac*8)) continue;
       x.save(); x.translate(q.mx,q.my); x.rotate(an); x.lineWidth=3.5; x.strokeStyle='rgba(25,28,32,.7)'; x.strokeText(t,0,0); x.fillStyle='#fff'; x.fillText(t,0,0); x.restore(); } }
   if(typeof LMKS!=='undefined'){ x.font='800 12px -apple-system,Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; let n=0;
-    for(const L of LMKS){ if(Math.abs(L[2]-tx)>R||Math.abs(L[3]-tz)>R) continue; const [px,py]=T(L[2],L[3]); if(px<40||px>W-40||py<90||py>H-170||(Math.abs(px-M.ax)<95&&Math.abs(py-M.ay)<85)||!free(px,py,x.measureText(L[0]).width/2,8)) continue;
+    for(const L of LMKS){ if(Math.abs(L[2]-tx)>R||Math.abs(L[3]-tz)>R) continue; const [px,py]=T(L[2],L[3]); if(px<40||px>W-40||py<90||py>H-170||(Math.abs(px-M.ax)<95&&Math.abs(py-M.ay)<85)||!free(px,py,mvTextW(x,L[0])/2,8)) continue;
       x.lineWidth=3; x.strokeStyle='rgba(255,255,255,.92)'; x.strokeText(L[0],px,py); x.fillStyle='#2b2f36'; x.fillText(L[0],px,py); if(++n>=6) break; } }
   // the call: a flame pin and its house number
   if(state.target){ const [px,py]=T(state.target.x,state.target.z); if(px>-40&&px<W+40&&py>-40&&py<H+40){
     x.fillStyle='rgba(255,70,40,.25)'; x.beginPath(); x.arc(px,py,22,0,6.2832); x.fill();
     x.fillStyle='#e53424'; x.strokeStyle='#fff'; x.lineWidth=2.5; x.beginPath(); x.moveTo(px,py); x.bezierCurveTo(px-11,py-14,px-11,py-30,px,py-30); x.bezierCurveTo(px+11,py-30,px+11,py-14,px,py); x.closePath(); x.stroke(); x.fill();
     x.font='15px sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('🔥',px,py-19);
-    const hn=String(lastAddress||'').match(/^\d+/); if(hn){ x.font='900 12px -apple-system,Arial'; const w=x.measureText(hn[0]).width+12; x.fillStyle='#fff'; x.beginPath(); x.roundRect?x.roundRect(px-w/2,py+6,w,18,9):x.rect(px-w/2,py+6,w,18); x.fill(); x.fillStyle='#c62828'; x.fillText(hn[0],px,py+15.5); } } }
+    const hn=String(lastAddress||'').match(/^\d+/); if(hn){ x.font='900 12px -apple-system,Arial'; const w=mvTextW(x,hn[0])+12; x.fillStyle='#fff'; x.beginPath(); x.roundRect?x.roundRect(px-w/2,py+6,w,18,9):x.rect(px-w/2,py+6,w,18); x.fill(); x.fillStyle='#c62828'; x.fillText(hn[0],px,py+15.5); } } }
   // the other engines: small orange trucks, each pointing its way, with its number
   for(const r of RIVALS.list||[]){ const [px,py]=T(r.x,r.z); if(px<-20||px>W+20||py<-20||py>H+20) continue; const p0=r.path&&r.path[r.seg], p1=r.path&&r.path[r.seg+1];
     x.save(); x.translate(px,py); if(p0&&p1){ const hx=p1.x-p0.x, hz=p1.z-p0.z; x.rotate(Math.atan2(M.b*hx+M.d*hz,M.a*hx+M.cc*hz)+Math.PI/2); }
     x.fillStyle=r.arrived?'#7a8191':'#f08a1c'; x.fillRect(-6,-14,12,28); x.fillStyle='#1f3157'; x.fillRect(-5,-13,10,7); x.strokeStyle='#fff'; x.lineWidth=1.4; x.strokeRect(-6,-14,12,28); x.restore();
-    x.font='900 11px -apple-system,Arial'; const w=x.measureText(String(r.num)).width+10; x.fillStyle='#1f3157'; x.fillRect(px-w/2,py-29,w,16); x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(r.num),px,py-20.5); }
+    x.font='900 11px -apple-system,Arial'; const w=mvTextW(x,String(r.num))+10; x.fillStyle='#1f3157'; x.fillRect(px-w/2,py-29,w,16); x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(r.num),px,py-20.5); }
   // the truck: nose up, the company number on the cab, a heading arrow, the E-number tag
   { const [px,py]=T(truckG.position.x,truckG.position.z), fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta), rot=Math.atan2(M.b*fx+M.d*fz,M.a*fx+M.cc*fz)+Math.PI/2;
     const [tw,th]=mapvTruckWH(M), num=engNum(DRIVE.stationId||'');                       // at the map's scale (it was always 34 x 82 px)
@@ -11038,7 +11089,7 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
     if(M.spr) x.drawImage(M.spr,-tw/2,-th/2,tw,th); else mapvTruckVector(x,tw,th); x.shadowColor='transparent';
     if(num&&tw>=15){ x.fillStyle='#d32f2f'; x.font='900 '+Math.round(tw*0.36)+'px "Arial Black",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(num),0,-th/2+th*0.27+1); }
     x.beginPath(); x.moveTo(0,-th/2-20); x.lineTo(12,-th/2-5); x.lineTo(0,-th/2-10); x.lineTo(-12,-th/2-5); x.closePath(); x.fillStyle='#2f7bff'; x.strokeStyle='#fff'; x.lineWidth=2.5; x.lineJoin='round'; x.stroke(); x.fill(); x.restore();
-    if(num){ x.font='900 15px -apple-system,Arial'; const tag='E'+num, w=x.measureText(tag).width+18, lx=M.tagL?px-tw/2-10-w:px+tw/2+10; x.fillStyle='#d32f2f'; x.beginPath(); x.roundRect?x.roundRect(lx,py-19,w,26,13):x.rect(lx,py-19,w,26); x.fill();
+    if(num){ x.font='900 15px -apple-system,Arial'; const tag='E'+num, w=mvTextW(x,tag)+18, lx=M.tagL?px-tw/2-10-w:px+tw/2+10; x.fillStyle='#d32f2f'; x.beginPath(); x.roundRect?x.roundRect(lx,py-19,w,26,13):x.rect(lx,py-19,w,26); x.fill();
       x.lineWidth=2.5; x.strokeStyle='#fff'; x.stroke(); x.fillStyle='#fff'; x.textAlign='left'; x.textBaseline='middle'; x.fillText(tag,lx+9,py-5.5); } }
   // north, where the round minimap sits in the 3D view
   { const nx=-M.cc, ny=-M.d; x.save(); x.translate(W-30,198); x.fillStyle='rgba(255,255,255,.92)'; x.beginPath(); x.arc(0,0,15,0,6.2832); x.fill(); x.strokeStyle='rgba(0,0,0,.2)'; x.lineWidth=1; x.stroke();
@@ -11994,6 +12045,7 @@ function frame(now){ const pd0=PERFDIAG.on?performance.now():0; requestAnimation
   if(pd0) pdgFrame(pd0); } // chase: sync truck, labels + clamped parked choices
 /* ============================ 12. BOOT ============================ */
 homeMemberLine();   // 🔑 the home screen's line: MEMBERS ONLY until the account answers
+{ const l=document.getElementById('homeLoading'); if(l) l.remove(); }   // LOADING THE CITY… goes once the game reports in (audit B14)
 window.__booted=true;   // the BOOT WATCH in the head stands down: from here a script error is the game's own business
 requestAnimationFrame(frame);
 </script>

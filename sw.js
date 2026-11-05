@@ -5,7 +5,7 @@
 // launch does not re-download ~9MB of unchanged data, then refreshed in the background for the next
 // launch. Icons/manifest are cache-first (fast). Cross-origin requests (CARTO / Esri map tiles) pass
 // straight to the network, uncached. Bump CACHE to force old caches to purge on the next launch.
-const CACHE = 'local-shell-v111';  // v22v: members (sign in to ride, 6-digit code), the PFD data for signed-in players only, assignment + platoon, the audit fixes.
+const CACHE = 'local-shell-v112';  // v22w: audit group B (loading line, Map view paints on change, APPROX. marks, cleanup).
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
 self.addEventListener('activate', function (e) {
