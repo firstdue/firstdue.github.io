@@ -1615,7 +1615,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23j"></script>
+<script src="firehouse-models.js?v=v23k"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1656,7 +1656,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23j";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23k";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9297,7 +9297,7 @@ const AUTH={ session:null, user:null, tier:'free', name:'' };
    still rides; the server's answer, when it comes, wins. MEMBER.dev: a local server (the tests, the phone A/B over adb) needs no
    account — the gate is manners, the phase-2 data policy is the lock: this page holds nothing a non-member could not have anyway. */
 const MEMBER={ state:'unknown', dev:/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname), checking:false,
-  codes:false, guest:true, hold:true };   // 🔑 November 3, 2026 (owner: "one link", "if everyone has a sign in should be fine"): ANY signed-in account rides, no invite code.
+  codes:false, guest:true, hold:false };   // 🔑 November 3, 2026 (owner: "one link", "if everyone has a sign in should be fine"): ANY signed-in account rides, no invite code.
 /* 👤 GUEST RIDES (owner, November 5, 2026, while the sign-in emails are not arriving — the Gmail sender's mail is sent but never delivered:
    "Yes guest mode"). MEMBER.guest lets anyone ride signed out — the DOOR only: the department data (PFDT: the books' boxes, running order,
    hydrants, the address lookup) still comes only with a sign-in (pfdtActive reads memberOK, not this), so a guest rides the City's first-due
@@ -9305,7 +9305,9 @@ const MEMBER={ state:'unknown', dev:/^(localhost|127\.0\.0\.1|\[::1\])$/.test(lo
 function canRide(){ return memberOK()||!!MEMBER.guest; }
 /* ⏸ SIGN-IN ON HOLD (owner, November 5: "Can we put that in the game that sign ups are temporary on hold"). MEMBER.hold, signed out: the
    account card shows why instead of the email box and SEND (so nobody makes another account whose email never comes), and the home line says
-   so. A phone already signed in is untouched. hold:false (with guest:false) when the new sender works. */
+   so. A phone already signed in is untouched. ENDED November 6, 2026: the new sender (Brevo, noreply@phillyfirstdue.com) delivers; hold:false
+   and guests STAY (the relaunch plan, notes/email-sender.md: signing in is the upgrade, so sign-ins come over days, not in one rush).
+   hold:true brings the notice back if the emails ever stop again. */
 try{ if(new URLSearchParams(location.search).get('signin')==='1') MEMBER.hold=false; }catch(e){}   // ?signin=1: the owner's way in while it is paused (to test the new sender)
 /* 🔑 THE SIGN-IN NUDGE (owner, November 5: keep guests after the fix — "plan it that way" — so sign-ins come over weeks, not as one rush
    on the day: each guest is asked at a DIFFERENT moment). After a guest's 5th, 15th and 30th Career run, then every 25th, a popup says what
@@ -9692,7 +9694,7 @@ async function authInit(){                                                    //
 function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) return;
   document.getElementById('authMsg').textContent=AUTH.user
     ? ('Signed in as '+AUTH.user.email+'. '+(memberOK()?'Your careers sync to this account across devices.':'Enter your invite code below to become a member and ride.'))
-    : (MEMBER.hold&&!MEMBER.dev?HOLD_MSG:memberOK()||!MEMBER.codes?'Sign in to ride. Enter your email and we\'ll send a one-tap link — no password. Your careers then sync across devices and you join the leaderboard.'
+    : (MEMBER.hold&&!MEMBER.dev?HOLD_MSG:memberOK()||!MEMBER.codes?(MEMBER.guest&&!memberOK()?'Sign in for the PFD\'s box data (the real box numbers and running orders, the box and address lookup, the box-book hydrants). Enter your email and we\'ll email you a 6-digit code — no password. Your guest progress carries over, your careers sync across devices and you join the leaderboard.':'Sign in to ride. Enter your email and we\'ll email you a 6-digit code — no password. Your careers then sync across devices and you join the leaderboard.')
                  :'Members only. Sign in with your email — a one-tap link, no password — then enter the invite code you were given.');
   { const ni=document.getElementById('authName'), nb=document.getElementById('authNameSave'), on=!!AUTH.user;
     if(ni){ ni.style.display=on?'block':'none'; ni.value=AUTH.name||''; } if(nb) nb.style.display=on?'block':'none';
