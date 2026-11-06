@@ -622,6 +622,13 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   .lbStampI { display:inline-block; font-family:"Barlow Condensed","Arial Narrow",sans-serif; font-weight:800; font-size:10px; letter-spacing:.12em; line-height:13px; padding:0 4px; margin-left:4px; border:1.5px solid #ff5a5f; border-radius:3px; color:#ff7a7e; vertical-align:1px; }
   .lkNote { font-size:12px; color:#95a4bd; margin:2px 2px 8px; line-height:1.35; }   /* 🎖 the Locker */
   .lkGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+  #xferBox { margin:12px 0 4px; padding:12px; border:1px solid #2a3444; border-radius:12px; background:#111824; }   /* 📋 put in a transfer (November 6, 2026) */
+  #xferBox .xfH { font-weight:900; font-size:14px; letter-spacing:.5px; color:#e8edf5; }
+  #xferBox .xfT { margin-top:6px; font-size:12px; font-weight:700; color:#95a4bd; line-height:1.4; word-break:break-word; } #xferBox .xfT b { color:#fff; }
+  #xferBox input { width:100%; margin-top:8px; padding:12px; border-radius:8px; border:1px solid #2a3444; background:#0d121b; color:#e8edf5; font-size:15px; box-sizing:border-box; }
+  #xferCode { letter-spacing:6px; font-size:22px !important; text-align:center; font-weight:800; } #xferCode::placeholder { letter-spacing:1px; font-size:15px; font-weight:700; }
+  #xferBox .xfBtn { width:100%; min-height:44px; margin-top:8px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#2b6df6; color:#fff; font-size:14px; } #xferBox .xfBtn.ok { background:#2fbf63; }
+  #xferBox .xfBtn:disabled { opacity:.55; }
   .lkTile { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 8px 9px; border-radius:12px; border:1px solid #26364f; background:#182642; color:#e8edf5; text-align:center; }
   .lkTile svg { filter:grayscale(1) brightness(.55); opacity:.7; }
   .lkTile.got svg { filter:none; opacity:1; }
@@ -1377,6 +1384,14 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <div id="pcBody"></div>
     <div class="cpSec" id="cpLocker">Locker <span class="tag">Patches</span></div>
     <div id="lockerBody"></div>
+    <div id="xferBox"><div class="xfH">📋 PUT IN A TRANSFER</div>
+      <div id="xferOut" class="xfT"></div>
+      <div id="xferIn"><div class="xfT">Move your account to another email — your careers, rank, Locker and leaderboard spot come with you. Now: <b id="xferNow"></b></div>
+        <input id="xferEmail" type="email" inputmode="email" autocomplete="email" placeholder="your new email" />
+        <button type="button" class="xfBtn" id="xferSend">SUBMIT TRANSFER</button>
+        <input id="xferCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" hidden />
+        <button type="button" class="xfBtn ok" id="xferOk" hidden>CONFIRM TRANSFER</button>
+        <div id="xferMsg" class="xfT"></div></div></div>
     <details class="cpFold" id="cpFoldRanks"><summary class="cpSec">Rank Ladder <span class="tag">Per engine</span><span class="cpChev" aria-hidden="true">›</span></summary>
     <div class="cpNote">Every firehouse is its own career — and <b>each due position</b> (1st, 2nd, 3rd, 4th) is its own track. Master your 1st due, expand into your 2nd, learn your 3rd and 4th. Difficulty (TRAINING → EXPERT) is your own choice in Settings — it never changes your rank, and your rank never locks it.</div>
 
@@ -1615,7 +1630,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23k"></script>
+<script src="firehouse-models.js?v=v23l"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1656,7 +1671,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23k";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23l";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9802,8 +9817,57 @@ function patchMerge(row){ if(!row) return; let ch=false; PROFILE.patches=PROFILE
 function lockerHTML(has,runs){ const H=new Set(Array.isArray(has)?has:Object.keys(has||{}));
   return '<div class="lkGrid">'+PATCHES.map(p=>{ const got=H.has(p.id), prog=p.id==='gearbag'&&!got&&runs!=null?' ('+Math.min(runs,PATCH_GEAR_RUNS)+'/'+PATCH_GEAR_RUNS+')':'';
     return '<div class="lkTile'+(got?' got':'')+'">'+patchSVG(p.id,64)+'<b>'+p.name+'</b><span>'+(got?p.line:'🔒 '+p.how+prog)+'</span></div>'; }).join('')+'</div>'; }
-function lockerRender(){ const el=document.getElementById('lockerBody'); if(!el) return; const n=Object.keys(PROFILE.patches||{}).length;
+function lockerRender(){ xferUI(); const el=document.getElementById('lockerBody'); if(!el) return; const n=Object.keys(PROFILE.patches||{}).length;
   el.innerHTML='<div class="lkNote">'+(n?'Your patches. Members see your Locker when they tap your name on the leaderboards.':'Patches are earned by riding — your first comes with your first ride. Members see your Locker when they tap your name on the leaderboards.')+'</div>'+lockerHTML(PROFILE.patches,patchRuns()); }
+/* 📋 PUT IN A TRANSFER (owner, November 6, 2026: city email stopped delivering the codes — "A part of their locker they have a button
+   'put in a transfer' current email go to new email"). A member still signed in on this phone moves the account to another email:
+   PUT /auth/v1/user {email}, Supabase emails a confirmation (with "Secure email change" OFF, to the NEW address only — the old one may be
+   a city inbox that never receives), and the 6-digit code from it (POST /verify, type email_change) or the link in it completes the move.
+   The account's id never changes, so careers, rank, Locker, profile and leaderboard rows all stay. The new address gets the same checks as
+   sign-in (a near-miss domain asks once; a .gov address is refused — that is what is being left). Signed out: a line says to sign in, or
+   to message the admin (SUPABASE-SETUP "Move a member to another email"). The address being moved to is kept (pfd_xfer). */
+const XFER={sugFor:'',checked:0};
+function xferTo(){ try{ return localStorage.getItem('pfd_xfer')||''; }catch(e){ return ''; } }
+function xferToSet(em){ try{ if(em) localStorage.setItem('pfd_xfer',em); else localStorage.removeItem('pfd_xfer'); }catch(e){} }
+function xferUI(){ const box=document.getElementById('xferBox'); if(!box) return; const on=!!(AUTH.user&&AUTH.session), to=xferTo();
+  const out=document.getElementById('xferOut'), inn=document.getElementById('xferIn');
+  out.hidden=on; inn.hidden=!on;
+  if(!on){ out.textContent='Moving your account to another email (a transfer) needs you signed in on this phone. Signed out and your old email gets no code? Message the game’s admin to move it for you.'; return; }
+  document.getElementById('xferNow').textContent=AUTH.user.email||'';
+  if(to&&AUTH.user.email&&AUTH.user.email.toLowerCase()===to.toLowerCase()){ xferToSet(''); document.getElementById('xferMsg').textContent='✅ Transfer complete: your account is now '+AUTH.user.email+'. Sign in with it from now on.'; return xferUI(); }   // the move went through (the link, or another phone)
+  const c=document.getElementById('xferCode'), ok=document.getElementById('xferOk'); c.hidden=!to; ok.hidden=!to;
+  if(to&&Date.now()-XFER.checked>5000){ XFER.checked=Date.now(); authFetchUser().then(u=>{ if(u&&String(u.email||'').toLowerCase()===to.toLowerCase()){ xferUI(); authUpdateUI(); popup('📋 TRANSFER COMPLETE · '+u.email,'green'); } }).catch(()=>{}); }   // the link in the email may have done it
+  if(to&&!document.getElementById('xferMsg').textContent) document.getElementById('xferMsg').textContent='Transfer waiting: type the 6-digit code from the email Know Your Local sent to '+to+' (or tap the link in it).'; }
+async function xferSend(){ const em=(document.getElementById('xferEmail').value||'').trim(), msg=document.getElementById('xferMsg');
+  if(!AUTH.user) return xferUI();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ msg.textContent='Enter the new email address.'; return; }
+  if(em.toLowerCase()===String(AUTH.user.email||'').toLowerCase()){ msg.textContent='That is already your email.'; return; }
+  if(mailWork(em)){ msg.textContent='🏛 City and government email blocks the codes — pick a personal email (Gmail, iCloud, Yahoo …).'; return; }
+  const sug=mailSuggest(em); if(sug&&XFER.sugFor!==em){ XFER.sugFor=em; msg.textContent='Did you mean '+sug+' ? Fix it, or tap SUBMIT TRANSFER again to use what you typed.'; return; }
+  const b=document.getElementById('xferSend'); b.disabled=true; msg.textContent='Sending the transfer…';
+  const r=await sbFetch('/auth/v1/user?redirect_to='+encodeURIComponent(location.origin+location.pathname),{ method:'PUT', body:JSON.stringify({ email:em }) });
+  b.disabled=false;
+  if(!r){ msg.textContent='Could not reach the server — check your connection and try again.'; return; }
+  if(!r.ok){ let j=null; try{ j=await r.json(); }catch(e){} const code=j&&(j.error_code||j.code)||'', t=j&&(j.msg||j.message||j.error_description||'')||'';
+    msg.textContent=r.status===422&&/exist|already/i.test(code+' '+t)?'That email already has an account here. Pick another, or sign out and sign in with it.'
+      :r.status===429||/rate|security purposes/i.test(code+' '+t)?'Too many transfer emails right now — wait a minute and try again.'
+      :'The transfer could not be sent'+(t?' ('+t+')':'')+'. Try again later, and please tell the game’s admin.'; return; }
+  xferToSet(em); XFER.sugFor=''; document.getElementById('xferEmail').value='';
+  msg.textContent='Transfer sent to '+em+'. Type the 6-digit code from that email (from Know Your Local) below — or tap the link in it. Until then your account stays on '+(AUTH.user.email||'your old email')+'.';
+  xferUI(); const c=document.getElementById('xferCode'); c.value=''; try{ c.focus(); }catch(e){} }
+async function xferConfirm(){ const to=xferTo(), token=String((document.getElementById('xferCode').value||'')).replace(/\D/g,''), msg=document.getElementById('xferMsg');
+  if(!to) return xferUI(); if(token.length<6){ msg.textContent='Type all 6 digits.'; return; }
+  msg.textContent='Checking the code…'; let r=null;
+  try{ r=await fetch(SB.url+'/auth/v1/verify',{ method:'POST', headers:authHdr(true), body:JSON.stringify({ type:'email_change', email:to, token }) }); }catch(e){}
+  if(!r){ msg.textContent='Could not reach the server — check your connection and try again.'; return; }
+  if(r.ok){ let o=null; try{ o=await r.json(); }catch(e){} if(o&&o.access_token) authStore(o); }
+  await authFetchUser();
+  if(AUTH.user&&String(AUTH.user.email||'').toLowerCase()===to.toLowerCase()){ xferToSet(''); document.getElementById('xferCode').value=''; msg.textContent='✅ Transfer complete: your account is now '+AUTH.user.email+'. Sign in with it from now on.';
+    authUpdateUI(); xferUI(); popup('📋 TRANSFER COMPLETE · '+AUTH.user.email,'green'); return; }
+  msg.textContent='That code did not work. If more than one transfer email came, use the code from the NEWEST one.'; }
+document.getElementById('xferSend').addEventListener('click',e=>{ e.preventDefault(); xferSend(); });
+document.getElementById('xferOk').addEventListener('click',e=>{ e.preventDefault(); xferConfirm(); });
+document.getElementById('xferEmail').addEventListener('input',()=>{ XFER.sugFor=''; });
 /* 👤 THE MEMBER CARD (owner, November 5: "Clicking on a members username shows their locker and or their stats"). Tap a row on the
    OVERALL or THIS WEEK board: the member's name, stamp, E35/B tag and the house they ride, the numbers the row carries, then — from
    SUPABASE-SETUP Step 16's member_card view (listed players only, the boards' own rule) — their runs, held dues, each house they have
@@ -9987,6 +10051,10 @@ function mailDist(a,b){ const m=a.length, n=b.length; if(Math.abs(m-n)>2) return
 function mailSuggest(em){ const at=em.lastIndexOf('@'); if(at<1) return null; const d=em.slice(at+1).toLowerCase(); if(MAIL_DOMAINS.includes(d)) return null;
   let best=null, bd=3; for(const m of MAIL_DOMAINS){ const k=mailDist(d,m); if(k<bd){ bd=k; best=m; } } return best?em.slice(0,at+1)+best:null; }
 const AUTHSUG={orig:'',sug:''};
+/* 🏛 CITY / GOVERNMENT EMAIL (owner, November 6: members on their city email still "waiting for verification"; his own phila.gov address
+   got no code while his Gmail got it at once). Government mail systems screen outside automated mail and hold or drop the code, which no
+   sender can fix from our side. Before sending to a .gov address the card says so and offers a personal email (or Send anyway). */
+function mailWork(em){ const at=em.lastIndexOf('@'); return at>0&&/(^|\.)gov$/i.test(em.slice(at+1)); }
 /* ⏱ ONE EMAIL A MINUTE (owner, November 5: the sender's Sent folder showed 13 sign-in emails to one member, and the Auth log refused
    codes as "otp_expired"). Each new email REPLACES the last code, so a member who tapped SEND again while the first email was slow then
    typed a code that no longer worked. After a send the button waits 60 s (counting down), and the card says to use the newest email. */
@@ -10002,11 +10070,14 @@ document.getElementById('authSend').addEventListener('click',async ()=>{ const e
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ msg.textContent='Enter a valid email address.'; return; }
   const sug=mailSuggest(em); if(sug){ AUTHSUG.orig=em; AUTHSUG.sug=sug;
     msg.innerHTML='Did you mean<span class="authAddr">'+lbEsc(sug)+'</span><div class="authRow"><button type="button" class="yes" data-auth="sug">Yes, send to that</button><button type="button" data-auth="orig">No, mine is right</button></div>'; return; }
+  if(mailWork(em)){ AUTHSUG.orig=em;
+    msg.innerHTML='🏛 City and government email usually blocks the sign-in code — it is held or dropped before it reaches you. <b>New here?</b> Use a personal email (Gmail, iCloud, Yahoo …). <b>Already signed up with this email?</b> If a phone is still signed in, open its Locker → PUT IN A TRANSFER to move your account (careers and all) to a personal email; signed out everywhere, message the game’s admin.<div class="authRow"><button type="button" class="yes" data-auth="other">Use a personal email</button><button type="button" data-auth="orig">Send anyway</button></div>'; return; }
   authSendTo(em); });
 document.getElementById('authEmail').addEventListener('input',()=>authCooldown());   // ⏱ another address: no wait
 document.getElementById('authMsg').addEventListener('click',e=>{ const b=e.target.closest('[data-auth]'); if(!b) return; const k=b.dataset.auth, ei=document.getElementById('authEmail');
   if(k==='sug'){ ei.value=AUTHSUG.sug; authSendTo(AUTHSUG.sug); }
   else if(k==='orig') authSendTo(AUTHSUG.orig);
+  else if(k==='other'){ ei.value=''; document.getElementById('authMsg').textContent='Type your personal email and tap SEND SIGN-IN EMAIL.'; try{ ei.focus(); }catch(x){} }
   else if(k==='fix'){ authPendingSet(''); const oi=document.getElementById('authOtp'); if(oi) oi.value=''; authUpdateUI(); document.getElementById('authMsg').textContent='Type the right address and tap SEND SIGN-IN EMAIL again.'; try{ ei.focus(); ei.select(); }catch(x){} } });
 document.getElementById('authVerify').addEventListener('click',async ()=>{ const m=document.getElementById('authMsg'); m.textContent='Checking the code…';   // 🔢
   const r=await authVerifyCode(authPending(),document.getElementById('authOtp').value);
