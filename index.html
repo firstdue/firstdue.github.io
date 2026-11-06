@@ -976,6 +976,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #coachHydSel { margin-top:6px; font-size:12.5px; font-weight:800; color:#ffd27a; }
   #hydSel { margin-top:6px; font-size:12.5px; font-weight:800; color:#ffd27a; min-height:18px; }   /* a line kept for it, so a tap does not shrink the map */
   #hydSheetList { margin-top:8px; font-size:13px; font-weight:700; line-height:1.7; color:#dbe8ff; }
+  #hydGuest { margin:6px 0 8px; padding:8px 10px; border-radius:10px; border:1px solid #6b5a1e; background:#2a2410; color:#ffe08a; font-size:12.5px; font-weight:700; line-height:1.4; }   /* 👤 the guest note */
   #hydSheetList .n { display:inline-block; width:20px; height:20px; border-radius:10px; background:#2f7bff; color:#fff; text-align:center; font-size:11px; line-height:20px; margin-right:8px; }
   #hydSheet .fine { margin-top:8px; font-size:10.5px; color:#8a97a8; }
   #hydSheet .row { display:flex; gap:8px; margin-top:10px; }
@@ -1481,11 +1482,12 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
     <button id="btnAcctHome" type="button" aria-label="Your account"><b>👤 SIGN IN</b><span>ACCOUNT</span></button>
     <div id="hydSheet" role="dialog" aria-modal="true" aria-labelledby="hydSheetTitle"><div class="card">
       <h2 id="hydSheetTitle"><svg class="hydIco" aria-hidden="true"><use href="#hydIcoSym"/></svg> HYDRANTS NEAR YOU</h2>
+      <div id="hydGuest" hidden></div>
       <div id="hydSheetStatus"></div>
       <div class="mapWrap"><canvas id="hydSheetMap"></canvas><div class="mapBtns"><button id="hydZoomIn" type="button" aria-label="Zoom in">＋</button><button id="hydZoomOut" type="button" aria-label="Zoom out">－</button><button id="hydRecenter" type="button" aria-label="Back to me">◎</button></div></div>
       <div id="hydSel"></div>
       <div id="hydSheetList"></div>
-      <div class="fine">From the PFD box books and OpenStreetMap — check a hydrant before you rely on it. Your location stays on your phone.</div>
+      <div class="fine" id="hydSheetFine">From the PFD box books and OpenStreetMap — check a hydrant before you rely on it. Your location stays on your phone.</div>
       <div class="row"><button id="hydSheetClose" type="button">CLOSE</button></div>
     </div></div>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -1613,7 +1615,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23i"></script>
+<script src="firehouse-models.js?v=v23j"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1654,7 +1656,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23i";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23j";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -2811,7 +2813,13 @@ function pfdtBoxWait(key){ const P=PFDT; if(!pfdtActive()) return false; if(P.id
 // the Lookup's two files, whole, as the globals the local scripts declare (window.PFDLOOK / PFDADDR; dropped at sign-out)
 function pfdtFile(rel,name,done){ if(!pfdtActive()) return done(false); const g=PFDT.gen;
   pfdtGet(rel).then(j=>{ if(g!==PFDT.gen||!pfdtActive()) return done(false); window[name]=j; PFDT.look=true; done(true); }).catch(()=>done(false)); }
-function pfdtSignMsg(){ return PFDT.on&&!pfdtActive()?'Sign in first (⚙ Settings → Account) — box and address lookups are for signed-in members.':''; }
+/* 👤 WHAT A GUEST IS TOLD (owner, November 5: "When on hydrants near me and look up box + address tell members to sign in first and where
+   the information is from on hydrant location. Didn't want to confuse / frustrate anybody"). guestData(): the PFD's own data is not on
+   this phone — signed out on the site (a local server writes it in, MEMBER.dev). signWay(): how to get it, which while sign-in is on hold
+   says so instead of sending them to a sign-in that is paused. */
+function guestData(){ return PFDT.on&&!pfdtActive()&&typeof PFDBOX==='undefined'; }   // the PFD's data is not on this phone (signed out on the site; a local page with ?pfdt=1)
+function signWay(){ return MEMBER.hold&&!MEMBER.dev?'Sign-in is paused right now while we fix the sign-in emails — it will be back soon.':'Sign in first: 👤 ACCOUNT on the home screen.'; }
+function pfdtSignMsg(){ return guestData()?'👤 Box and address lookups use the PFD\'s running orders and box maps, so they are for signed-in members. '+signWay():''; }
 // signed out: every square, the zones and the Lookup's files go; the City's zones come back
 function pfdtClear(){ const P=PFDT; P.gen++; for(const t of [...P.tiles.values()]) pfdtDrop(t);
   P.tiles.clear(); P.queue.length=0; P.keep=new Set(); P.idx=null; P.idxState='idle'; P.last=null; P.want=null; P.dirty=false;
@@ -9299,6 +9307,12 @@ function canRide(){ return memberOK()||!!MEMBER.guest; }
    account card shows why instead of the email box and SEND (so nobody makes another account whose email never comes), and the home line says
    so. A phone already signed in is untouched. hold:false (with guest:false) when the new sender works. */
 try{ if(new URLSearchParams(location.search).get('signin')==='1') MEMBER.hold=false; }catch(e){}   // ?signin=1: the owner's way in while it is paused (to test the new sender)
+/* 🔑 THE SIGN-IN NUDGE (owner, November 5: keep guests after the fix — "plan it that way" — so sign-ins come over weeks, not as one rush
+   on the day: each guest is asked at a DIFFERENT moment). After a guest's 5th, 15th and 30th Career run, then every 25th, a popup says what
+   signing in adds. Silent while sign-in is on hold (MEMBER.hold), for a signed-in player, and with guests off. PROFILE.gRuns counts them. */
+function guestNudge(){ if(memberOK()||!MEMBER.guest||MEMBER.hold) return false; const n=PROFILE.gRuns=(PROFILE.gRuns|0)+1; saveProfile();
+  if(!(n===5||n===15||n===30||(n>30&&n%25===0))) return false;
+  setTimeout(()=>{ try{ popup('🔑 SIGN IN FOR THE REAL BOX DATA · PROGRESS CARRIES OVER',''); }catch(e){} },2800); return true; }
 const HOLD_MSG='⏸ SIGN-IN IS PAUSED FOR NOW. Our sign-in emails are not reaching people, so new sign-ins are on hold while we fix it — sorry. You can still ride as a guest: close this and tap any firehouse. Already signed in on this phone? Nothing changes.';
                    // The code machinery (Step 11, the card's code row, is_member / redeem_invite) stays, dormant: codes:true brings it back.
 function memberRemembered(){ try{ return !!AUTH.session&&!!localStorage.getItem('pfd_member'); }catch(e){ return false; } }
@@ -9858,7 +9872,7 @@ function profileRun(rv,ok){ if(FREE.on||(typeof RIVALS!=='undefined'&&!RIVALS.ra
     const elig=rv&&rv.guide===0&&rv.due>0;                                                              // ranked run: guide off (captured in the run result) + a due slot actually assigned (losses count too)
     if(elig){ pushRun(rv,ok,sc,calcStreak(e.log)); if(ok) reportLeaderboard(DRIVE.stationId); }
     else if(ok&&rv&&COACH.usedGuide&&(rv.due>0&&rv.place>0&&rv.place<=rv.due)) popup('📘 Guide was on — great run, but it won\'t post to the board','');
-  } patchCheck(false); return earned; }
+  } patchCheck(false); guestNudge(); return earned; }
 function openProfileCard(){ const el=document.getElementById('profileCard'); if(!el) return;
   /* ⚠️ NO-MANUFACTURE RULE: opening Career must never create a career record. `cur` is the company the
      player is on, record or not; an absent record renders as a FRESH company. Only a completed response
@@ -10427,7 +10441,7 @@ function coachHydUI(){ const b=document.getElementById('btnCoachHyd'), L=documen
   if(!list.length){ const d=document.createElement('div'); d.textContent='No hydrant in the map data within 1,300 ft of the address.'; L.appendChild(d); return; }
   list.forEach((q,i)=>{ const d=document.createElement('div'), n=document.createElement('span'); n.className='n'; n.textContent=String(i+1); d.appendChild(n);
     const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(hydFt(q)+(where?' · '+where:''))); L.appendChild(d); });
-  { const f=document.createElement('div'); f.className='byStreet'; f.textContent='Feet along the streets from the address, the way you would lay hose.'; L.appendChild(f); } }
+  { const f=document.createElement('div'); f.className='byStreet'; f.textContent='Feet along the streets from the address, the way you would lay hose.'+(guestData()?' Guest view: only OpenStreetMap hydrants (about 1,300 citywide, so few near most addresses) — the PFD box-book hydrants come with a sign-in.':' Hydrants: the PFD box books (Water Department locations).'); L.appendChild(f); } }
 document.getElementById('btnCoachHyd').addEventListener('click',e=>{ e.preventDefault(); COACHHYD.on=!COACHHYD.on; coachHydUI(); });
 COACHHYD.cv=document.getElementById('coachCanvas'); COACHHYD.render=()=>coachHydRender(); COACHHYD.active=()=>COACHHYD.on&&!!COACHHYD.view; COACHHYD.home=()=>[COACHHYD.ax,COACHHYD.az];
 document.getElementById('coachZoomIn').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(COACHHYD,1.6); });
@@ -10448,11 +10462,11 @@ hydMapGestures(COACHHYD);
 const NEARME={watch:null,last:null,view:null,follow:true,sel:null,ptr:new Map(),pinch:null,raf:0,lastTap:0,H:300,MIN:0.15,MAX:12};
 function nearMeCompass(dx,dz){ const b=(Math.atan2(dx,-dz)*180/Math.PI+360)%360; return ['N','NE','E','SE','S','SW','W','NW'][Math.round(b/45)%8]; }   // world +z is south
 function nearMeSize(){ const r=document.getElementById('hydSheetMap').parentElement.getBoundingClientRect(), h=Math.round(r.height); if(h>80) NEARME.H=h; }   // the map's box, whatever the screen
-function nearMeRender(pass){ const L=NEARME.last, cv=document.getElementById('hydSheetMap'); if(!L||!L.list.length||!NEARME.view) return; nearMeSize();
+function nearMeRender(pass){ const L=NEARME.last, cv=document.getElementById('hydSheetMap'); if(!L||!(L.list.length||guestData())||!NEARME.view) return; nearMeSize();
   const SR=NEARME.sel?hydStreetTo(L.F,NEARME.sel):null;                              // the tapped one, by street too
   drawHydrantMap(cv,NEARME.H,L.x,L.z,L.list,{mark:'you',acc:L.acc,view:NEARME.view,all:true,sel:NEARME.sel,selPath:SR&&SR.path});
   const M=cv._map, n=M.hyd.filter(h=>h[0]>=M.minX&&h[0]<=M.maxX&&h[1]>=M.minZ&&h[1]<=M.maxZ).length+M.all.length;
-  document.getElementById('hydSheetStatus').textContent='Your position'+(L.acc>0?', within ±'+Math.round(L.acc*3.2808).toLocaleString('en-US')+' ft':'')+(L.acc>100?' — a rough fix; it sharpens outdoors':'')+
+  document.getElementById('hydSheetStatus').textContent=!L.list.length?'No OpenStreetMap hydrant within 1,300 ft of you — the guest view has few. Zoom out to find the nearest ('+n+' in view now); the PFD box-book hydrants come with a sign-in.':'Your position'+(L.acc>0?', within ±'+Math.round(L.acc*3.2808).toLocaleString('en-US')+' ft':'')+(L.acc>100?' — a rough fix; it sharpens outdoors':'')+
     ' · '+n+' hydrant'+(n===1?'':'s')+' in view · pinch to zoom, drag to move';
   document.getElementById('hydRecenter').classList.toggle('off',!NEARME.follow);
   const sl=document.getElementById('hydSel');
@@ -10491,12 +10505,12 @@ function hydMapGestures(S){ const cv=S.cv, P=S.ptr;                             
 function nearMeShow(pos){ NEARME.pos=pos; const st=document.getElementById('hydSheetStatus'), L=document.getElementById('hydSheetList'), cv=document.getElementById('hydSheetMap');
   const w=ll2world(pos.coords.latitude,pos.coords.longitude), acc=pos.coords.accuracy||0, list=hydNearest(w.x,w.z,5); NEARME.last={x:w.x,z:w.z,acc,list,F:list.F};
   L.textContent='';
-  if(!list.length){ st.textContent='No hydrant in the map data within 1,300 ft of you — this works inside Philadelphia.'; cv.style.display='none'; document.querySelector('#hydSheet .mapBtns').style.display='none'; return; }
+  if(!list.length&&!guestData()){ st.textContent='No hydrant in the map data within 1,300 ft of you — this works inside Philadelphia.'; cv.style.display='none'; document.querySelector('#hydSheet .mapBtns').style.display='none'; return; }
   cv.style.display='block'; document.querySelector('#hydSheet .mapBtns').style.display='';
   list.forEach((q,i)=>{ const d=document.createElement('div'), n=document.createElement('span'); n.className='n'; n.textContent=String(i+1); d.appendChild(n);   // the rows FIRST: they set how tall the map can be
     const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(hydFt(q)+' '+nearMeCompass(q.h[0]-w.x,q.h[1]-w.z)+(where?' · '+where:''))); L.appendChild(d); });
-  { const f=document.createElement('div'); f.className='byStreet'; f.textContent='Feet along the streets, the way you would walk it or lay hose. The direction is where to look.'; L.appendChild(f); }
-  if(!NEARME.view){ nearMeSize(); NEARME.view=hydMapFit(NEARME,w.x,w.z,list); }       // the first fix: centred on you, the nearest five in the frame
+  if(list.length){ const f=document.createElement('div'); f.className='byStreet'; f.textContent='Feet along the streets, the way you would walk it or lay hose. The direction is where to look.'; L.appendChild(f); }
+  if(!NEARME.view){ nearMeSize(); NEARME.view=hydMapFit(NEARME,w.x,w.z,list); if(!list.length) NEARME.view.mpp=Math.min(NEARME.MAX,420/(Math.min(cv.clientWidth||320,NEARME.H)/2-14)); }   // 👤 a guest with none near: ~1,300 ft round       // the first fix: centred on you, the nearest five in the frame
   else if(NEARME.follow){ NEARME.view.cx=w.x; NEARME.view.cz=w.z; }
   nearMeRender(); }
 function nearMeError(err){ const st=document.getElementById('hydSheetStatus');
@@ -10504,7 +10518,11 @@ function nearMeError(err){ const st=document.getElementById('hydSheetStatus');
   document.getElementById('hydSheetMap').style.display='none'; document.querySelector('#hydSheet .mapBtns').style.display='none'; document.getElementById('hydSheetList').textContent='';
   st.textContent=err&&err.code===1?'Location is off for this site — allow it in your browser settings to see the hydrants near you.':
     'Could not find where you are'+(err&&err.code===3?' in time':'')+' — try again with location on, ideally outdoors.'; }
-function nearMeOpen(){ document.getElementById('hydSheet').classList.add('show'); NEARME.last=null; NEARME.view=null; NEARME.follow=true; NEARME.sel=null; document.getElementById('hydSel').textContent='';
+function hydWords(){ const g=guestData(), n=document.getElementById('hydGuest'), f=document.getElementById('hydSheetFine');   // 👤 where these hydrants come from
+  if(n){ n.hidden=!g; n.textContent=g?'👤 GUEST VIEW — only the hydrants mapped in OpenStreetMap: about 1,300 across the whole city, so many blocks show none, and they are not always exact. The PFD box books\' 26,000 (the Philadelphia Water Department\'s locations) show when you sign in. '+signWay():''; }
+  if(f) f.textContent=g?'Hydrants: OpenStreetMap (mapped by volunteers) — check one before you rely on it. Your location stays on your phone.'
+    :'Hydrants: the PFD box books (Water Dept. locations) and OpenStreetMap — check one before you rely on it. Your location stays on your phone.'; }
+function nearMeOpen(){ hydWords(); document.getElementById('hydSheet').classList.add('show'); NEARME.last=null; NEARME.view=null; NEARME.follow=true; NEARME.sel=null; document.getElementById('hydSel').textContent='';
   document.getElementById('hydSheetStatus').textContent='Finding where you are…'; document.getElementById('hydSheetList').textContent=''; document.getElementById('hydSheetMap').style.display='none';
   document.querySelector('#hydSheet .mapBtns').style.display='none';                // nothing to zoom until the first fix
   if(!navigator.geolocation){ nearMeError({code:2}); return; }
@@ -10720,7 +10738,7 @@ function boxLookup(raw,from){ const S=BOXLOOK, U=blEl('boxUnits'), Hd=blEl('boxH
   return true; }
 function boxOpen(){ blEl('boxSheet').classList.add('show');
   let m='box'; try{ m=localStorage.getItem('pfd_lookmode')==='addr'?'addr':'box'; }catch(e){}
-  boxSetMode(m,true); blEl('boxBody').scrollTop=0; boxScrollState();
+  boxSetMode(m,true); blEl('boxBody').scrollTop=0; boxScrollState(); if(guestData()) boxSay(pfdtSignMsg(),'info');   // 👤 said before they type
   try{ document.querySelector('#boxSheet .card').focus({preventScroll:true}); }catch(e){} }   // the focus moves into the dialog (no keyboard: it is the panel, not a field)
 function boxClose(){ blEl('boxSheet').classList.remove('show'); BOXLOOK.ptr.clear(); BOXLOOK.pinch=null; const a=document.activeElement; if(a&&blEl('boxSheet').contains(a)) try{ a.blur(); }catch(e){} }
 boxMineLoad();
