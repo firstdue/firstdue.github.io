@@ -518,6 +518,41 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   /* 🧑‍🚒 career layer */
   .ccBadge { color:#ffd27a; font-weight:900; }
   .stCareer { display:block; color:#7fe0a0; font-size:10px; font-weight:900; margin-top:1px; }
+  /* 🎖 THE REWARD REVEAL (November 7, 2026) — over every card, never while driving (revealSafe) */
+  #rewardCard { position:absolute; inset:0; z-index:80; display:none; align-items:center; justify-content:center; background:rgba(4,7,12,.82); pointer-events:auto; }
+  #rewardCard.show { display:flex; }
+  #rewardCard .rwBox { position:relative; width:min(360px,90vw); max-height:92vh; overflow:auto; box-sizing:border-box; padding:18px 18px 14px; border-radius:18px; text-align:center;
+    background:radial-gradient(120% 80% at 50% 38%,#1c2b47 0%,#101a2b 55%,#0b1220 100%); border:2px solid #e3b23c; box-shadow:0 0 0 1px #6b5a1e inset,0 18px 50px rgba(0,0,0,.6); animation:rwIn .32s ease-out both; }
+  #rewardCard .rwKick { font:800 14px "Barlow Condensed","Arial Narrow",sans-serif; letter-spacing:4px; color:#e3b23c; }
+  #rewardCard .rwTitle { margin-top:2px; font:800 34px/1.02 "Barlow Condensed","Arial Narrow",sans-serif; letter-spacing:.5px; color:#fff6e3; text-transform:uppercase; }
+  #rewardCard .rwArt { position:relative; margin:12px auto 8px; width:210px; height:210px; display:flex; align-items:center; justify-content:center; }
+  #rewardCard .rwArt::before { content:''; position:absolute; inset:-30px; border-radius:50%; background:repeating-conic-gradient(rgba(227,178,60,.20) 0 6deg,transparent 6deg 18deg);
+    -webkit-mask:radial-gradient(circle,#000 30%,transparent 70%); mask:radial-gradient(circle,#000 30%,transparent 70%); animation:rwSpin 18s linear infinite; }
+  #rewardCard .rwArt .rwP { position:relative; animation:rwZoom .9s cubic-bezier(.2,.9,.25,1.2) .15s both; filter:drop-shadow(0 8px 14px rgba(0,0,0,.55)); }
+  #rewardCard .rwArt .rwP::after { content:''; position:absolute; inset:0; border-radius:50%; background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);
+    background-size:250% 100%; background-position:120% 0; animation:rwShine 1s ease-out 1s both; pointer-events:none; }
+  #rewardCard .rwLine { font:700 15px/1.35 -apple-system,"Helvetica Neue",Arial,sans-serif; color:#d6deea; }
+  #rewardCard .rwAlso { display:none; margin-top:10px; padding:8px; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid #2a3444; }
+  #rewardCard .rwAlso.on { display:block; } #rewardCard .rwAlso b { display:block; font:800 12px "Barlow Condensed","Arial Narrow",sans-serif; letter-spacing:3px; color:#e3b23c; margin-bottom:4px; }
+  #rewardCard .rwAlso span { display:inline-flex; align-items:center; gap:6px; margin:2px 6px; font:700 13px -apple-system,"Helvetica Neue",Arial,sans-serif; color:#e8edf5; }
+  #rewardCard .rwBtn { display:block; width:100%; min-height:48px; margin-top:10px; border-radius:12px; border:1px solid #2a3444; background:transparent; color:#e8edf5;
+    font:800 17px "Barlow Condensed","Arial Narrow",sans-serif; letter-spacing:2px; }
+  #rewardCard .rwBtn.gold { margin-top:14px; border:none; background:linear-gradient(#f1c453,#d9a22c); color:#1a1305; }
+  #rewardCard .rwFoot { margin-top:10px; font:800 11px "Barlow Condensed","Arial Narrow",sans-serif; letter-spacing:3px; color:#7f8ca3; }
+  #rewardCard .rwMemo { position:relative; width:220px; padding:16px 14px 12px; text-align:left; background:#f4efe1; color:#1d1d1d; border-radius:3px;
+    box-shadow:0 10px 24px rgba(0,0,0,.5); font:14px/1.35 "Courier New",Courier,monospace; transform:rotate(-2deg); animation:rwDrop .6s cubic-bezier(.2,.9,.25,1.15) .1s both; }
+  #rewardCard .rwMemo .pin { position:absolute; top:-7px; left:50%; width:16px; height:16px; margin-left:-8px; border-radius:50%; background:radial-gradient(circle at 35% 35%,#ff8a7a,#c0261b 60%,#7a120c); box-shadow:0 2px 3px rgba(0,0,0,.4); }
+  #rewardCard .rwMemo .mH { font:900 20px "Courier New",Courier,monospace; letter-spacing:6px; text-align:center; margin-bottom:6px; }
+  #rewardCard .rwMemo .mR { font-size:12px; } #rewardCard .rwMemo hr { border:none; border-top:1px dashed #8a8270; margin:6px 0; }
+  #rewardCard .rwMemo p { margin:6px 0; font-weight:700; } #rewardCard .rwMemo .mS { font-size:12px; text-align:left; padding-right:70px; }
+  #rewardCard .rwArt.memo { height:auto; margin-bottom:30px; } #rewardCard .rwMemo .rwStamp { position:absolute; right:-16px; bottom:-30px; transform:rotate(12deg); animation:rwStamp .35s ease-in .75s both; }
+  @keyframes rwIn { from{ transform:scale(.92); opacity:0; } to{ transform:none; opacity:1; } }
+  @keyframes rwZoom { 0%{ transform:scale(.15) rotate(-30deg); opacity:0; } 60%{ transform:scale(1.12) rotate(5deg); opacity:1; } 100%{ transform:none; opacity:1; } }
+  @keyframes rwShine { to{ background-position:-120% 0; } }
+  @keyframes rwSpin { to{ transform:rotate(360deg); } }
+  @keyframes rwDrop { 0%{ transform:translateY(-80px) rotate(-12deg); opacity:0; } 100%{ transform:rotate(-2deg); opacity:1; } }
+  @keyframes rwStamp { 0%{ transform:scale(2.2) rotate(12deg); opacity:0; } 100%{ transform:rotate(12deg); opacity:1; } }
+  @media (prefers-reduced-motion: reduce){ #rewardCard .rwBox, #rewardCard .rwArt::before, #rewardCard .rwArt .rwP, #rewardCard .rwArt .rwP::after, #rewardCard .rwMemo, #rewardCard .rwMemo .rwStamp { animation:none !important; } }
   #profileCard { position:absolute; inset:0; z-index:63; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.74); pointer-events:auto; }
   #profileCard.show { display:flex; }
   #profileCard .cc { width:min(560px,94vw); max-height:88vh; overflow:auto; background:#141a24; border:1px solid #2a3444; border-radius:14px; padding:14px; overscroll-behavior:contain; }
@@ -1375,6 +1410,11 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   </div>
 </div>
 <div id="mbCard" aria-hidden="true"><div class="cc"><div id="mbBody"></div><button id="mbClose" type="button">CLOSE</button></div></div>
+<div id="rewardCard" aria-hidden="true"><div class="rwBox" role="dialog" aria-modal="true" aria-labelledby="rwTitle">
+  <div class="rwKick" id="rwKick">NEW PATCH</div><div class="rwTitle" id="rwTitle"></div>
+  <div class="rwArt" id="rwArt"></div><div class="rwLine" id="rwLine"></div><div class="rwAlso" id="rwAlso"></div>
+  <button type="button" class="rwBtn gold" id="rwLocker">VIEW IN LOCKER</button><button type="button" class="rwBtn" id="rwGo">CONTINUE</button>
+  <div class="rwFoot" id="rwFoot"></div></div></div>
 <div id="profileCard" aria-hidden="true">
   <div class="cc" id="cpScroll">
     <div class="cpStick"><span class="cpStickT" aria-hidden="true">Career Path</span><button class="cpX" id="btnProfileX" type="button" aria-label="Close Career Path">×</button></div>
@@ -1630,7 +1670,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23l"></script>
+<script src="firehouse-models.js?v=v23m"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1671,7 +1711,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23l";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23m";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4339,11 +4379,123 @@ function pumperLoad(){
       const skin=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true});              // one material: the whole bodywork is four draw calls, not ~70
       for(const o of meshes){ for(const m of (Array.isArray(o.material)?o.material:[o.material])) if(m) m.dispose(); o.material=skin; }
       for(const a of axles) a.rotation.order='YXZ';
-      PUMPER.root=root; PUMPER.axles=axles; truckG.add(root); pumperShow(true); PUMPER.status='ready';
+      PUMPER.root=root; PUMPER.axles=axles; truckG.add(root); pumperShow(true); PUMPER.status='ready'; if(MEDIC.root&&MEDIC.root.visible) medicShow(true);   // 🚑 the medic test address keeps the medic
     }catch(e){ drop(root); fail(e); }
   },undefined,e=>{ clearTimeout(timer); fail(e); }); }catch(e){ clearTimeout(timer); fail(e); }
 }
 // PUMPER_MODEL_END
+// MEDIC_MODEL_BEGIN — 🚑 the PFD medic unit (November 7, 2026; owner: "as soon as possible we get a medic unit rendered in the game";
+// release 1 of the firehouse-career plan, notes/ideas-nov6-plan.md). A PROTOTYPE behind a test address only — `?vehicle=medic` —
+// with no rules yet (the medic detail comes later). The body is tools/blender-medic.py's GLB (assets/truck/medic-v1.glb: one
+// material, vertex colours, ~2,600 triangles, built from the owner's reference sheets — art direction only, never shipped). The
+// game paints the lettering itself on ONE canvas sheet and ONE mesh (MEDIC n on the doors, PHILADELPHIA FIRE DEPARTMENT /
+// EMERGENCY MEDICAL SERVICES / MEDIC n on the box, the Star of Life, "n · ★ · EMS" on the roof for the overhead camera, the rear
+// doors, AMBULANCE on the hood, DIAL 911, the plate) — so every house's medic carries its own number — and the flashing lights
+// as two merged meshes that take turns while the siren runs (updateTruckVisual). The sheet is OPAQUE (no see-through pixels),
+// because iPhone Safari's canvas-read noise painted confetti on transparent ones (v20k). medicShow(on) hides the pumper — the
+// GLB and the procedural truck, their lights and decals — and keeps the ground shadow and the headlights; the wheels rebind to
+// the medic's two axles exactly as the pumper's do. A missing / bad GLB leaves the engine on screen (MEDIC.status 'failed').
+const MEDIC={ on:(()=>{ try{ return new URLSearchParams(location.search).get('vehicle')==='medic'; }catch(e){ return false; } })(),
+  url:'assets/truck/medic-v1.glb', status:'idle', error:null, timeout:12000, root:null, axles:null, n:null, cv:null, tex:null, matA:null, matB:null };
+/* 🚑 WHICH HOUSE RUNS WHICH MEDIC (owner, November 7, 2026: "Use Find a fire station | City of Philadelphia ... to help with medic unit
+   placement"). The City's table (phila.gov/services/safety-emergency-preparedness/find-a-fire-station/, page updated July 7, 2025):
+   engine company -> the medic unit(s) in its house. 56 houses run 63 medics; seven run two (E2: 31 & 51, E7: 2 & 57, E8: 44 & 63, E16:
+   26 & 59, E25: 8 & 58, E47: 40 & 53, E72: 24 & 62); E10, E12, E14, E33 and E64 run none. A medic's number is NOT its engine's (E35's
+   house runs Medic 16). medicNumFor(st): the house's first medic; a house with none borrows the nearest house's. */
+const MEDIC_AT={43:[7],8:[44,63],11:[21],20:[1],1:[35],22:[20],46:[49],62:[6],58:[54],70:[42],38:[47],71:[12],56:[48],52:[32],36:[17],18:[38],9:[10],
+  19:[28],37:[61],35:[16],6:[46],7:[2,57],25:[8,58],28:[45],50:[22],55:[39],59:[4],2:[31,51],13:[50],27:[13],29:[15],34:[36],45:[25],51:[18],61:[29],
+  63:[56],72:[24,62],73:[33],39:[5],66:[52],3:[27],24:[14],47:[40,53],49:[11],53:[43],60:[37],40:[19],69:[55],68:[3],78:[30],5:[60],16:[26,59],
+  41:[23],44:[34],54:[41],57:[9]};
+function medicNumFor(st){ if(!st) return ''; const own=MEDIC_AT[+engNum(st.id)]; if(own) return String(own[0]);
+  let best=null, bd=1e18; for(const o of stations){ const m=MEDIC_AT[+engNum(o.id)]; if(!m||o===st) continue; const d=(o.x-st.x)**2+(o.z-st.z)**2; if(d<bd){ bd=d; best=m[0]; } }
+  return best==null?'':String(best); }
+const MEDIC_REG={ side:[0,0,1024,460], star:[0,468,240,240], door:[248,468,384,248], roof:[640,468,256,384],
+  rear:[0,716,248,88], plate:[0,812,128,32], hood:[128,812,384,56], dial:[0,876,128,90], hoodn:[136,876,96,64] };
+function medicStar(c,cx,cy,r){ c.save(); c.translate(cx,cy);                                           // the Star of Life: three blue bars, a white rod and snake
+  for(let k=0;k<3;k++){ c.save(); c.rotate(k*Math.PI/3); c.fillStyle='#fff'; c.fillRect(-r*.33,-r*1.04,r*.66,r*2.08); c.fillStyle='#2346b8'; c.fillRect(-r*.27,-r*.98,r*.54,r*1.96); c.restore(); }
+  c.strokeStyle='#fff'; c.lineWidth=Math.max(2,r*.09); c.beginPath(); c.moveTo(0,-r*.78); c.lineTo(0,r*.78); c.stroke();
+  c.lineWidth=Math.max(1.5,r*.06); c.beginPath(); c.moveTo(0,r*.62);
+  for(let i=0;i<=24;i++){ const t=i/24, y=r*.62-t*r*1.3; c.lineTo(Math.sin(t*Math.PI*3)*r*.17,y); } c.stroke(); c.restore(); }
+function medicText(c,txt,x,y,px,fill,stroke,maxW){ c.font='900 '+px+'px "Arial Black","Arial",sans-serif'; let w=c.measureText(txt).width;
+  if(maxW&&w>maxW){ px=Math.floor(px*maxW/w); c.font='900 '+px+'px "Arial Black","Arial",sans-serif'; }
+  if(stroke){ c.lineJoin='round'; c.lineWidth=Math.max(2,px*.16); c.strokeStyle=stroke; c.strokeText(txt,x,y); } c.fillStyle=fill; c.fillText(txt,x,y); }
+function medicPaint(n){ n=String(n==null?'':n).trim()||'—'; if(MEDIC.n===n&&MEDIC.cv) return; MEDIC.n=n;
+  if(!MEDIC.cv){ MEDIC.cv=document.createElement('canvas'); MEDIC.cv.width=1024; MEDIC.cv.height=1024;
+    MEDIC.tex=new THREE.CanvasTexture(MEDIC.cv); MEDIC.tex.anisotropy=4; MEDIC.tex.minFilter=THREE.LinearFilter; MEDIC.tex.generateMipmaps=false; }
+  const c=MEDIC.cv.getContext('2d'), G='#f1bd2b', K='#3a2a08', RED='#d0342b', WH='#f4f4f1', reg=k=>MEDIC_REG[k];
+  c.fillStyle=RED; c.fillRect(0,0,1024,1024); c.textAlign='center'; c.textBaseline='middle';
+  { const [x,y,w,h]=reg('side'); c.fillStyle=WH; c.fillRect(x,y,w,h);                                   // the box side, both sides
+    medicText(c,'PHILADELPHIA',x+w/2,y+70,88,G,K,w-80); medicText(c,'FIRE DEPARTMENT',x+w/2,y+175,88,G,K,w-60);
+    medicText(c,'EMERGENCY MEDICAL SERVICES',x+w/2,y+272,58,G,K,w-40); medicText(c,'MEDIC '+n,x+w/2,y+380,104,G,K,w-200); }
+  { const [x,y,w,h]=reg('star'); c.fillStyle=WH; c.fillRect(x,y,w,h); medicStar(c,x+w/2,y+h/2,w*.44); }
+  { const [x,y,w,h]=reg('door'); c.fillStyle=RED; c.fillRect(x,y,w,h);                                   // the cab doors
+    medicText(c,'MEDIC '+n,x+w/2,y+52,70,G,K,w-30); maltese(c,x+w/2,y+160,72,'#f2c236','#6f5210');
+    c.fillStyle='#7a1c14'; c.font='900 30px "Arial Black","Arial",sans-serif'; c.fillText('PFD',x+w/2,y+162); }
+  { const [x,y,w,h]=reg('roof'); c.fillStyle='#f8f8f6'; c.fillRect(x,y,w,h);                             // the roof, tops toward the nose
+    medicText(c,'EMS',x+w/2,y+70,92,G,K,w-30); medicStar(c,x+w/2,y+h/2,58); medicText(c,n,x+w/2,y+h-80,128,G,K,w-30); }
+  { const [x,y,w,h]=reg('rear'); c.fillStyle=RED; c.fillRect(x,y,w,h);
+    medicText(c,'PHILADELPHIA',x+w/2,y+18,26,G,K,w-14); medicText(c,'FIRE DEPT.',x+w/2,y+45,24,G,K,w-60); medicText(c,'MEDIC '+n,x+w/2,y+71,26,G,K,w-60); }
+  { const [x,y,w,h]=reg('plate'); c.fillStyle='#16181c'; c.fillRect(x,y,w,h); medicText(c,n,x+w/2,y+h/2+1,26,G,null,w-10); }
+  { const [x,y,w,h]=reg('hood'); c.fillStyle=RED; c.fillRect(x,y,w,h); medicText(c,'AMBULANCE',x+w/2,y+h/2+2,44,'#2b5bd6','#fff',w-70);
+    medicStar(c,x+18,y+h/2,14); medicStar(c,x+w-18,y+h/2,14); }
+  { const [x,y,w,h]=reg('dial'); c.fillStyle=RED; c.fillRect(x,y,w,h); medicText(c,'DIAL',x+w/2,y+26,30,'#fff',null,w-10); medicText(c,'911',x+w/2,y+64,40,'#fff',null,w-10); }
+  { const [x,y,w,h]=reg('hoodn'); c.fillStyle=RED; c.fillRect(x,y,w,h); medicText(c,n,x+w/2,y+h/2+2,48,G,K,w-8); }
+  MEDIC.tex.needsUpdate=true; }
+// one quad of the decal sheet: centre c, right / up unit vectors, size w x h (model units), atlas region k
+function medicQuad(Q,k,c,r,u,w,h){ const [rx,ry,rw,rh]=MEDIC_REG[k], b=Q.pos.length/3;
+  for(const [a,t] of [[-1,1],[1,1],[-1,-1],[1,-1]]){ Q.pos.push(c[0]+r[0]*a*w/2+u[0]*t*h/2, c[1]+r[1]*a*w/2+u[1]*t*h/2, c[2]+r[2]*a*w/2+u[2]*t*h/2);
+    Q.uv.push((rx+(a+1)/2*rw)/1024, 1-(ry+(1-(t+1)/2)*rh)/1024); }
+  Q.idx.push(b,b+2,b+1,b+2,b+3,b+1); }
+function medicDecals(){ const Q={pos:[],uv:[],idx:[]}, PX=[1,0,0], NX=[-1,0,0], PZ=[0,0,1], NZ=[0,0,-1], UP=[0,1,0], BX=1.16+.022;
+  for(const sx of [1,-1]){ const X=sx*BX, rt=sx>0?NZ:PZ;                                                   // +X reads rear->front (right = -Z), -X the other way
+    medicQuad(Q,'side',[X,2.16,1.0],rt,UP,2.0,.90); medicQuad(Q,'star',[X,2.22,2.30],rt,UP,.50,.50);
+    medicQuad(Q,'door',[sx*(.98+.014),1.12,-1.30],rt,UP,.52,.34); medicQuad(Q,'dial',[X,1.04,2.24],rt,UP,.38,.27);
+    medicQuad(Q,'hoodn',[sx*(.98+.014),1.25,-2.62],rt,UP,.30,.20); }
+  medicQuad(Q,'roof',[0,2.985+.02,.88],PX,NZ,1.70,2.55);                                                   // flat on the roof, letter tops toward the nose
+  medicQuad(Q,'rear',[0,1.27,2.62+.035],PX,UP,1.10,.39);
+  medicQuad(Q,'star',[-.98,2.30,2.62+.006],PX,UP,.28,.28); medicQuad(Q,'star',[.98,2.30,2.62+.006],PX,UP,.28,.28);
+  medicQuad(Q,'plate',[0,.55,-3.312-.004],NX,UP,.52,.13);
+  medicQuad(Q,'hood',[0,1.53,-2.82],NX,PZ,.95,.14);                                                         // on the hood, readable from in front
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(Q.pos,3)); g.setAttribute('uv',new THREE.Float32BufferAttribute(Q.uv,2)); g.setIndex(Q.idx);
+  g.computeVertexNormals(); const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({map:MEDIC.tex})); m.name='medic-decals'; return m; }   // LIT like the body, or the panels glow white on the shaded side
+// the flashing lights: phase A and phase B take turns (red / white), each ONE merged vertex-coloured mesh
+function medicLightMesh(list,name){ const pos=[],col=[],idx=[], C=new THREE.Color(), bx=new THREE.BoxGeometry(1,1,1), bp=bx.attributes.position, bi=bx.index.array;
+  for(const [w,h,d,x,y,z,hex] of list){ const b=pos.length/3; C.setHex(hex);
+    for(let i=0;i<bp.count;i++){ pos.push(bp.getX(i)*w+x,bp.getY(i)*h+y,bp.getZ(i)*d+z); col.push(C.r,C.g,C.b); }
+    for(const i of bi) idx.push(b+i); }
+  bx.dispose(); const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setAttribute('color',new THREE.Float32BufferAttribute(col,3)); g.setIndex(idx);
+  const mat=new THREE.MeshBasicMaterial({vertexColors:true}); const m=new THREE.Mesh(g,mat); m.name=name; return m; }
+function medicLights(){ const RD=0xff2a2a, WT=0xfff6e8, A=[], B=[], ZF=-.90, ZR=2.64;
+  for(let i=0;i<6;i++){ const x=-.85+i*.34; (i%2?A:B).push([.30,.15,.22,x,3.05,ZF+.02,i%2?RD:WT]); }        // front lightbar on the box, above the cab
+  for(let i=0;i<6;i++){ const x=-.85+i*.34; (i%2?B:A).push([.30,.12,.12,x,3.04,ZR+.06,i%2?WT:RD]); }        // rear lightbar
+  for(const sx of [-1,1]){ (sx<0?A:B).push([.04,.18,.26,sx*1.19,2.78,-.47,RD]); (sx<0?B:A).push([.04,.18,.26,sx*1.19,2.78,2.30,RD]);   // box side corner lights
+    (sx<0?A:B).push([.22,.20,.04,sx*.98,2.78,ZF-.01,RD]); (sx<0?B:A).push([.22,.20,.04,sx*.98,2.78,ZR+.03,RD]);                       // box front / rear corner lights
+    (sx<0?A:B).push([.18,.10,.04,sx*.36,1.04,-3.205,RD]);                                                                             // grille lights
+    A.push([.18,.12,.03,sx*.98,1.44,ZR+.045,0xc81616]); B.push([.18,.12,.03,sx*.98,1.30,ZR+.045,0xf09a1a]); }                         // tail stacks
+  return [medicLightMesh(A,'medic-lights-a'),medicLightMesh(B,'medic-lights-b')]; }
+function medicFlash(){ if(!MEDIC.root||!MEDIC.root.visible) return; const ph=state.siren?Math.floor(GT*6)%2:-1;
+  MEDIC.matA.color.setScalar(ph===0?1:ph<0?.45:.18); MEDIC.matB.color.setScalar(ph===1?1:ph<0?.45:.18); }
+function medicShow(on){ if(!MEDIC.root) return false; MEDIC.root.visible=!!on;
+  for(const ch of truckG.children){ if(ch===MEDIC.root||!ch.isMesh&&ch!==(PUMPER.root||null)) continue;           // lights, targets and the headlight group stay
+    if(ch.isMesh&&ch.geometry&&ch.geometry.type==='CircleGeometry') continue;                                      // the ground shadow stays
+    if(on){ ch.userData.medicWas=ch.visible; ch.visible=false; } else if('medicWas' in ch.userData){ ch.visible=ch.userData.medicWas; delete ch.userData.medicWas; } }
+  wheels.length=0; for(const w of (on?MEDIC.axles:(PUMPER.root&&PUMPER.root.visible!==false&&PUMPER.status==='ready'?PUMPER.axles:PUMPER.procWheels))) wheels.push(w);
+  return true; }
+function medicLoad(n){ if(!MEDIC.on) return; medicPaint(n); if(MEDIC.status!=='idle') return;
+  if(typeof THREE.GLTFLoader!=='function'){ MEDIC.status='failed'; MEDIC.error='Local GLTF loader unavailable'; return; }
+  MEDIC.status='loading'; const fail=e=>{ if(MEDIC.status!=='loading') return; MEDIC.status='failed'; MEDIC.error=String((e&&e.message)||e||'GLB load failed'); };
+  const timer=setTimeout(()=>fail('medic GLB timed out; the engine stays'),MEDIC.timeout);
+  try{ new THREE.GLTFLoader().load(MEDIC.url,gltf=>{ clearTimeout(timer); const root=gltf.scene;
+    try{ if(MEDIC.status!=='loading') return;
+      const axles=['Axle_Front','Axle_Rear'].map(k=>root.getObjectByName(k)); if(!root.getObjectByName('Body')||axles.some(a=>!a)) throw new Error('Medic GLB is missing Body or an axle');
+      const skin=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true});
+      root.traverse(o=>{ if(!o.isMesh) return; if(!o.geometry.attributes.color) throw new Error('Medic mesh without vertex colours: '+o.name);
+        for(const m of (Array.isArray(o.material)?o.material:[o.material])) if(m) m.dispose(); o.material=skin; });
+      for(const a of axles) a.rotation.order='YXZ';
+      const [la,lb]=medicLights(); MEDIC.matA=la.material; MEDIC.matB=lb.material; root.add(medicDecals(),la,lb);
+      root.name='medic'; MEDIC.root=root; MEDIC.axles=axles; truckG.add(root); medicShow(true); MEDIC.status='ready';
+    }catch(e){ fail(e); } },undefined,e=>{ clearTimeout(timer); fail(e); }); }catch(e){ clearTimeout(timer); fail(e); } }
+// MEDIC_MODEL_END
 // GPS route line (blue, follows real streets; visible in BOTH camera views)
 const routeMesh=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2b7cff,transparent:true,opacity:0.92,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
 routeMesh.frustumCulled=false; routeMesh.visible=false; routeMesh.renderOrder=2; scene.add(routeMesh);
@@ -4698,7 +4850,7 @@ function updateTruckVisual(dt){ shake=Math.max(0,shake-dt*CONFIG.shakeDecay);
   truckG.position.set(truck.x,truck.y+0.24,truck.z);
   truckG.rotation.set(0,truck.theta,0); if(FLAGS.elevation) truckG.rotateX(-truck.pitch); truckG.rotateZ(steerVal*0.05*Math.min(1,Math.hypot(truck.vx,truck.vz)/20));
   const spin=Math.hypot(truck.vx,truck.vz)*0.35; for(const w of wheels) w.rotation.x+=spin*0.2;
-  lightbar.material.color.setHex(state.siren?(Math.floor(GT*6)%2?0xff2d4d:0x2d6cff):0x881122); }
+  lightbar.material.color.setHex(state.siren?(Math.floor(GT*6)%2?0xff2d4d:0x2d6cff):0x881122); medicFlash(); }
 function updateBeacon(dt){ if(state.target){ beaconG.visible=true;   // beacon renders in chase AND top-down
     ring.scale.setScalar(1+0.25*Math.sin(GT*4)); beam.material.opacity=0.3+0.14*Math.sin(GT*5);
     const oa=orbGeo.attributes.position.array; for(let i=0;i<ORB_N;i++){ const a=GT*1.8+i/ORB_N*6.283, r=8.6+Math.sin(GT*3+i)*0.8; oa[i*3]=Math.cos(a)*r; oa[i*3+1]=1.2+((GT*14+i*4)%12); oa[i*3+2]=Math.sin(a)*r; } orbGeo.attributes.position.needsUpdate=true;
@@ -9329,8 +9481,8 @@ try{ if(new URLSearchParams(location.search).get('signin')==='1') MEMBER.hold=fa
    signing in adds. Silent while sign-in is on hold (MEMBER.hold), for a signed-in player, and with guests off. PROFILE.gRuns counts them. */
 function guestNudge(){ if(memberOK()||!MEMBER.guest||MEMBER.hold) return false; const n=PROFILE.gRuns=(PROFILE.gRuns|0)+1; saveProfile();
   if(!(n===5||n===15||n===30||(n>30&&n%25===0))) return false;
-  setTimeout(()=>{ try{ popup('🔑 SIGN IN FOR THE REAL BOX DATA · PROGRESS CARRIES OVER',''); }catch(e){} },2800); return true; }
-const HOLD_MSG='⏸ SIGN-IN IS PAUSED FOR NOW. Our sign-in emails are not reaching people, so new sign-ins are on hold while we fix it — sorry. You can still ride as a guest: close this and tap any firehouse. Already signed in on this phone? Nothing changes.';
+  setTimeout(()=>{ try{ popup('🔑 SIGN IN TO JOIN THE CREW · PROGRESS CARRIES OVER',''); }catch(e){} },2800); return true; }
+const HOLD_MSG='⏸ SIGN-IN IS PAUSED FOR NOW. Our sign-in emails are not reaching people, so new sign-ins are on hold while we fix it — sorry. You can still ride as a Cadet: close this and tap any firehouse. Already signed in on this phone? Nothing changes.';
                    // The code machinery (Step 11, the card's code row, is_member / redeem_invite) stays, dormant: codes:true brings it back.
 function memberRemembered(){ try{ return !!AUTH.session&&!!localStorage.getItem('pfd_member'); }catch(e){ return false; } }
 function memberOK(){ if(MEMBER.dev) return true; if(MEMBER.codes) return MEMBER.state==='yes';
@@ -9349,7 +9501,7 @@ async function memberRedeem(code){ if(!AUTH.user) return 'signin'; const k=Strin
   if(yes){ MEMBER.state='yes'; memberRemember(true); authUpdateUI(); return 'ok'; } return r.ok?'bad':'offline'; }
 function memberPrompt(){ openAuthCard(); const c=document.getElementById('authCode'); if(c&&!c.hidden) setTimeout(()=>{ try{ c.focus(); }catch(e){} },50); }
 function homeMemberLine(){ const h=document.querySelector('#homeHud .tag'); if(!h||window.__bootErr) return;   // the BOOT WATCH's message outranks this line
-  const ok=memberOK(), t=ok?'TAP A FIREHOUSE TO RIDE OUT':MEMBER.guest&&MEMBER.hold?'TAP A FIREHOUSE TO RIDE OUT AS A GUEST · ⏸ SIGN-IN PAUSED':MEMBER.guest?'TAP A FIREHOUSE TO RIDE OUT · 👤 SIGN IN FOR THE BOX DATA':(AUTH.user&&MEMBER.codes?'🔑 MEMBERS ONLY · TAP TO ENTER YOUR INVITE CODE':'👤 SIGN IN TO RIDE · TAP HERE');
+  const ok=memberOK(), t=ok?'TAP A FIREHOUSE TO RIDE OUT':MEMBER.guest&&MEMBER.hold?'TAP A FIREHOUSE TO RIDE AS A CADET · ⏸ SIGN-IN PAUSED':MEMBER.guest?'TAP A FIREHOUSE TO RIDE AS A CADET · 👤 SIGN IN TO JOIN THE CREW':(AUTH.user&&MEMBER.codes?'🔑 MEMBERS ONLY · TAP TO ENTER YOUR INVITE CODE':'👤 SIGN IN TO RIDE · TAP HERE');
   if(h.textContent!==t) h.textContent=t; h.style.cursor=ok?'':'pointer'; h.style.color=ok?'':'#ffd23b'; h.setAttribute('role',ok?'':'button');
   const ab=document.getElementById('btnAcctHome'); if(ab){ const tag=[AUTH.assign,AUTH.platoon].filter(Boolean).join('/'), b=ab.querySelector('b'), sp=ab.querySelector('span');   // 👤 SIGN IN, or who is signed in
     const t1=AUTH.user?('👤 '+(AUTH.name||'ACCOUNT')):'👤 SIGN IN', t2=AUTH.user?(tag||'ACCOUNT'):'ACCOUNT'; if(b&&b.textContent!==t1) b.textContent=t1; if(sp&&sp.textContent!==t2) sp.textContent=t2; ab.classList.toggle('in',!!AUTH.user); } }
@@ -9709,7 +9861,7 @@ async function authInit(){                                                    //
 function openAuthCard(){ const el=document.getElementById('authCard'); if(!el) return;
   document.getElementById('authMsg').textContent=AUTH.user
     ? ('Signed in as '+AUTH.user.email+'. '+(memberOK()?'Your careers sync to this account across devices.':'Enter your invite code below to become a member and ride.'))
-    : (MEMBER.hold&&!MEMBER.dev?HOLD_MSG:memberOK()||!MEMBER.codes?(MEMBER.guest&&!memberOK()?'Sign in for the PFD\'s box data (the real box numbers and running orders, the box and address lookup, the box-book hydrants). Enter your email and we\'ll email you a 6-digit code — no password. Your guest progress carries over, your careers sync across devices and you join the leaderboard.':'Sign in to ride. Enter your email and we\'ll email you a 6-digit code — no password. Your careers then sync across devices and you join the leaderboard.')
+    : (MEMBER.hold&&!MEMBER.dev?HOLD_MSG:memberOK()||!MEMBER.codes?(MEMBER.guest&&!memberOK()?'🎓 You ride as a Cadet. Sign in to join the crew: the PFD\'s box data (the real box numbers and running orders, the box and address lookup, the box-book hydrants). Enter your email and we\'ll email you a 6-digit code — no password. Your Cadet progress carries over, your careers sync across devices and you join the leaderboard.':'Sign in to ride. Enter your email and we\'ll email you a 6-digit code — no password. Your careers then sync across devices and you join the leaderboard.')
                  :'Members only. Sign in with your email — a one-tap link, no password — then enter the invite code you were given.');
   { const ni=document.getElementById('authName'), nb=document.getElementById('authNameSave'), on=!!AUTH.user;
     if(ni){ ni.style.display=on?'block':'none'; ni.value=AUTH.name||''; } if(nb) nb.style.display=on?'block':'none';
@@ -9784,6 +9936,41 @@ const PATCHES=[
   {id:'xmas', name:'HOLIDAY SHIFT', line:'Working the holidays.', how:'Ride between December 1 and January 6.'}];
 const PATCH_BY=Object.fromEntries(PATCHES.map(p=>[p.id,p]));
 const PATCH_GEAR_RUNS=500;
+/* 🎖 THE REWARD REVEAL (owner + ChatGPT + Claude, November 7, 2026: "a video of the new thing pops up like congratulations with it
+   zooming in and they click ok or add to locker"). A reward is SAVED the moment it is earned (patchGive); the celebration is QUEUED
+   (REVEAL.q, kept on the phone as pfd_reveal so a closed app shows it next time) and shown only on a safe screen — never while driving:
+   the home screen, the end-of-run card, the game-over card, or parked at quarters with no call. The first reward gets the big reveal;
+   anything else earned with it rides on one "ALSO EARNED" strip (no stack of full cards). VIEW IN LOCKER / CONTINUE. The game draws the
+   art itself (patchSVG; bricks next) — the ChatGPT mockup is the visual target only. RIP SHORTS is a memo pinned up: "shorts are no longer
+   authorized year-round" (the second memo — shorts back, medic unit and OT only — comes with the medic rotation's end, later). */
+const REVEAL={ q:[], on:false, t0:0 };
+try{ const a=JSON.parse(localStorage.getItem('pfd_reveal')||'[]'); if(Array.isArray(a)) REVEAL.q=a.filter(id=>PATCH_BY[id]); }catch(e){}
+function revealSave(){ try{ localStorage.setItem('pfd_reveal',JSON.stringify(REVEAL.q)); }catch(e){} }
+function revealAdd(ids){ for(const id of ids) if(PATCH_BY[id]&&!REVEAL.q.includes(id)) REVEAL.q.push(id); revealSave(); revealPump(); }
+function revealSafe(){ if(!window.__booted) return false; if(REVEAL.t0&&performance.now()-REVEAL.t0<4000) return false;   // a shift is starting (startShift checks patches before it is running)
+  const coach=document.getElementById('coachCard'); if(coach&&coach.classList.contains('show')) return true;   // the end-of-run card
+  if(!state.running||state.over) return true;                                                                 // home, game over
+  return !state.target&&!!DRIVE.parked; }                                   // parked at quarters, no call (a patrol), not the shift's first seconds
+function revealPump(){ if(REVEAL.on||!REVEAL.q.length||!revealSafe()) return; revealShow(REVEAL.q.slice()); REVEAL.q=[]; revealSave(); }
+function revealShow(ids){ const p=PATCH_BY[ids[0]], el=document.getElementById('rewardCard'); if(!p||!el) return; REVEAL.on=true;
+  const memo=p.id==='ripshorts';
+  document.getElementById('rwKick').textContent=memo?'A MEMO CAME DOWN':'NEW PATCH';
+  document.getElementById('rwTitle').textContent=p.name;
+  document.getElementById('rwArt').classList.toggle('memo',memo); document.getElementById('rwArt').innerHTML=memo
+    ?'<div class="rwMemo"><i class="pin"></i><div class="mH">MEMO</div><div class="mR"><b>TO:</b> All Members</div><div class="mR"><b>RE:</b> Shorts</div><hr><p>Effective immediately, shorts are no longer authorized year-round.</p><div class="mS">— The Front Office</div><div class="rwStamp">'+patchSVG(p.id,86)+'</div></div>'
+    :'<div class="rwP">'+patchSVG(p.id,190)+'</div>';
+  document.getElementById('rwLine').textContent=memo?'Gone, but not forgotten. The RIP SHORTS patch is in your Locker.':p.line;
+  const also=document.getElementById('rwAlso'), rest=ids.slice(1).map(id=>PATCH_BY[id]).filter(Boolean);
+  also.classList.toggle('on',rest.length>0); also.innerHTML=rest.length?'<b>ALSO EARNED</b>'+rest.map(q=>'<span>'+patchSVG(q.id,28)+q.name+'</span>').join(''):'';
+  const n=Object.keys(PROFILE.patches||{}).filter(k=>PATCH_BY[k]).length;
+  document.getElementById('rwFoot').textContent='LOCKER · '+n+' OF '+PATCHES.length+' PATCHES';
+  el.classList.add('show'); el.setAttribute('aria-hidden','false');
+  try{ if(navigator.vibrate) navigator.vibrate([40,40,70]); }catch(e){}
+  try{ document.getElementById('rwGo').focus({preventScroll:true}); }catch(e){} }
+function revealClose(){ const el=document.getElementById('rewardCard'); el.classList.remove('show'); el.setAttribute('aria-hidden','true'); REVEAL.on=false; setTimeout(revealPump,400); }
+document.getElementById('rwGo').addEventListener('click',e=>{ e.preventDefault(); revealClose(); });
+document.getElementById('rwLocker').addEventListener('click',e=>{ e.preventDefault(); revealClose(); openLocker(); });
+setInterval(revealPump,700);
 function patchSVG(id,px){ const T=(t,y,fs)=>'<text x="50" y="'+y+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="'+fs+'" fill="#fff" letter-spacing="0.5">'+t+'</text>';
   const ring=(bg,edge)=>'<circle cx="50" cy="50" r="47" fill="'+bg+'" stroke="'+edge+'" stroke-width="5"/><circle cx="50" cy="50" r="41.5" fill="none" stroke="'+edge+'" stroke-width="1.2" stroke-dasharray="2.4 2.2" opacity=".85"/>';
   let b='';
@@ -9807,7 +9994,7 @@ function patchCheck(shift){ const got=[]; const d=new Date();
   if(shift&&XMAS_REAL()&&patchGive('xmas')) got.push('xmas');
   if(patchRuns()>=PATCH_GEAR_RUNS&&patchGive('gearbag')) got.push('gearbag');
   if(!got.length) return got; saveProfile(); patchPush();
-  const p=PATCH_BY[got[got.length-1]]; setTimeout(()=>{ try{ popup('🎖 NEW PATCH: '+p.name+' — in your 🔒 LOCKER (Career)','green'); }catch(e){} },shift?2600:300);
+  revealAdd(got);   // 🎖 saved above; celebrated on a safe screen (revealSafe)
   return got; }
 async function patchPush(){ if(!AUTH.user) return; try{ await sbFetch('/rest/v1/rpc/set_patches',{ method:'POST', body:JSON.stringify({ earned:Object.keys(PROFILE.patches||{}).filter(k=>PATCH_BY[k]) }) }); }catch(e){} }   // before Step 16: a 404, ignored
 function patchMerge(row){ if(!row) return; let ch=false; PROFILE.patches=PROFILE.patches||{};   // the account's patches join this phone's (never taken away)
@@ -10514,7 +10701,7 @@ function coachHydUI(){ const b=document.getElementById('btnCoachHyd'), L=documen
   if(!list.length){ const d=document.createElement('div'); d.textContent='No hydrant in the map data within 1,300 ft of the address.'; L.appendChild(d); return; }
   list.forEach((q,i)=>{ const d=document.createElement('div'), n=document.createElement('span'); n.className='n'; n.textContent=String(i+1); d.appendChild(n);
     const where=hydStreetLabel(q.h); d.appendChild(document.createTextNode(hydFt(q)+(where?' · '+where:''))); L.appendChild(d); });
-  { const f=document.createElement('div'); f.className='byStreet'; f.textContent='Feet along the streets from the address, the way you would lay hose.'+(guestData()?' Guest view: only OpenStreetMap hydrants (about 1,300 citywide, so few near most addresses) — the PFD box-book hydrants come with a sign-in.':' Hydrants: the PFD box books (Water Department locations).'); L.appendChild(f); } }
+  { const f=document.createElement('div'); f.className='byStreet'; f.textContent='Feet along the streets from the address, the way you would lay hose.'+(guestData()?' Cadet view: only OpenStreetMap hydrants (about 1,300 citywide, so few near most addresses) — the PFD box-book hydrants come with a sign-in.':' Hydrants: the PFD box books (Water Department locations).'); L.appendChild(f); } }
 document.getElementById('btnCoachHyd').addEventListener('click',e=>{ e.preventDefault(); COACHHYD.on=!COACHHYD.on; coachHydUI(); });
 COACHHYD.cv=document.getElementById('coachCanvas'); COACHHYD.render=()=>coachHydRender(); COACHHYD.active=()=>COACHHYD.on&&!!COACHHYD.view; COACHHYD.home=()=>[COACHHYD.ax,COACHHYD.az];
 document.getElementById('coachZoomIn').addEventListener('click',e=>{ e.preventDefault(); hydMapZoom(COACHHYD,1.6); });
@@ -10539,7 +10726,7 @@ function nearMeRender(pass){ const L=NEARME.last, cv=document.getElementById('hy
   const SR=NEARME.sel?hydStreetTo(L.F,NEARME.sel):null;                              // the tapped one, by street too
   drawHydrantMap(cv,NEARME.H,L.x,L.z,L.list,{mark:'you',acc:L.acc,view:NEARME.view,all:true,sel:NEARME.sel,selPath:SR&&SR.path});
   const M=cv._map, n=M.hyd.filter(h=>h[0]>=M.minX&&h[0]<=M.maxX&&h[1]>=M.minZ&&h[1]<=M.maxZ).length+M.all.length;
-  document.getElementById('hydSheetStatus').textContent=!L.list.length?'No OpenStreetMap hydrant within 1,300 ft of you — the guest view has few. Zoom out to find the nearest ('+n+' in view now); the PFD box-book hydrants come with a sign-in.':'Your position'+(L.acc>0?', within ±'+Math.round(L.acc*3.2808).toLocaleString('en-US')+' ft':'')+(L.acc>100?' — a rough fix; it sharpens outdoors':'')+
+  document.getElementById('hydSheetStatus').textContent=!L.list.length?'No OpenStreetMap hydrant within 1,300 ft of you — the Cadet view has few. Zoom out to find the nearest ('+n+' in view now); the PFD box-book hydrants come with a sign-in.':'Your position'+(L.acc>0?', within ±'+Math.round(L.acc*3.2808).toLocaleString('en-US')+' ft':'')+(L.acc>100?' — a rough fix; it sharpens outdoors':'')+
     ' · '+n+' hydrant'+(n===1?'':'s')+' in view · pinch to zoom, drag to move';
   document.getElementById('hydRecenter').classList.toggle('off',!NEARME.follow);
   const sl=document.getElementById('hydSel');
@@ -10592,7 +10779,7 @@ function nearMeError(err){ const st=document.getElementById('hydSheetStatus');
   st.textContent=err&&err.code===1?'Location is off for this site — allow it in your browser settings to see the hydrants near you.':
     'Could not find where you are'+(err&&err.code===3?' in time':'')+' — try again with location on, ideally outdoors.'; }
 function hydWords(){ const g=guestData(), n=document.getElementById('hydGuest'), f=document.getElementById('hydSheetFine');   // 👤 where these hydrants come from
-  if(n){ n.hidden=!g; n.textContent=g?'👤 GUEST VIEW — only the hydrants mapped in OpenStreetMap: about 1,300 across the whole city, so many blocks show none, and they are not always exact. The PFD box books\' 26,000 (the Philadelphia Water Department\'s locations) show when you sign in. '+signWay():''; }
+  if(n){ n.hidden=!g; n.textContent=g?'🎓 CADET VIEW — only the hydrants mapped in OpenStreetMap: about 1,300 across the whole city, so many blocks show none, and they are not always exact. The PFD box books\' 26,000 (the Philadelphia Water Department\'s locations) show when you sign in. '+signWay():''; }
   if(f) f.textContent=g?'Hydrants: OpenStreetMap (mapped by volunteers) — check one before you rely on it. Your location stays on your phone.'
     :'Hydrants: the PFD box books (Water Dept. locations) and OpenStreetMap — check one before you rely on it. Your location stays on your phone.'; }
 function nearMeOpen(){ hydWords(); document.getElementById('hydSheet').classList.add('show'); NEARME.last=null; NEARME.view=null; NEARME.follow=true; NEARME.sel=null; document.getElementById('hydSel').textContent='';
@@ -12395,7 +12582,7 @@ document.addEventListener('visibilitychange',()=>{
   }
   __awayAt=0;
 });
-function startShift(st,opts){ truckWreath(); patchCheck(true); if(!memberOK()&&MEMBER.guest) setTimeout(()=>{ try{ popup(MEMBER.hold?'👤 GUEST RIDE · SIGN-IN PAUSED':'👤 GUEST RIDE · BOX DATA WITH SIGN-IN',''); }catch(e){} },1400); closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
+function startShift(st,opts){ truckWreath(); REVEAL.t0=performance.now(); patchCheck(true); if(!memberOK()&&MEMBER.guest) setTimeout(()=>{ try{ popup(MEMBER.hold?'🎓 CADET RIDE · SIGN-IN PAUSED':'🎓 CADET RIDE · SIGN IN TO JOIN THE CREW',''); }catch(e){} },1400); closeHomeMap(); homeEl.classList.remove('show'); document.getElementById('over').classList.remove('show'); coachHide();
   /* 🧭 The shift's mode is decided ONCE, here: the picker's armed toggle, unless a caller says otherwise.
      A pending drill or qualification is Career by definition and overrides the arm on its own. */
   FREE.on = (opts&&opts.free!==undefined) ? !!opts.free : !!FREE.arm;
@@ -12421,7 +12608,7 @@ function startShift(st,opts){ truckWreath(); patchCheck(true); if(!memberOK()&&M
   if(FLATCITY.built) FLATCITY.rebuild(truck.x,truck.z);
   startIntro(st);           // parked at the firehouse curb, nose to the street, bay doors up — LEFT/RIGHT pulls out at once (v20i: no cinematic)
   pumperLoad();                                                              // one-time async model fetch; the procedural truck stays on screen until it lands
-  setTruckEngine(engNum(st.id));
+  setTruckEngine(engNum(st.id)); medicLoad(medicNumFor(st));   // 🚑 ?vehicle=medic only — the house's own medic (MEDIC_AT)
   state.running=true; state.timeLeft=CONFIG.timer.start;
   freeCallBtn();
   if(FREE.on){ radio('🧭 FREE DRIVE — '+st.companies[0]+' in service. No rivals, no box until you tap GET A CALL in ⚙ SETTINGS. Career untouched.'); return; }

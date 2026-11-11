@@ -10,7 +10,7 @@
 // cache-first in DATA, a cache a release does NOT purge: an unchanged file is never downloaded again, and a
 // changed one is a new address, fetched at once (no launch on the old copy). Storing a new stamp of a file
 // drops that file's older stamps.
-const CACHE = 'local-shell-v127';  // v23l: Locker PUT IN A TRANSFER (move an account to another email); city email asks first.
+const CACHE = 'local-shell-v128';  // v23m: the reward reveal (RIP SHORTS memo), Cadet wording, the medic prototype (?vehicle=medic).
 const DATA = 'local-data-v1';   // stamped files, kept across releases (bump only to throw every one away)
 
 self.addEventListener('install', function (e) { self.skipWaiting(); });
