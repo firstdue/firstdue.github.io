@@ -1670,7 +1670,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23m"></script>
+<script src="firehouse-models.js?v=v23n"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1711,7 +1711,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23m";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23n";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -4384,24 +4384,13 @@ function pumperLoad(){
   },undefined,e=>{ clearTimeout(timer); fail(e); }); }catch(e){ clearTimeout(timer); fail(e); }
 }
 // PUMPER_MODEL_END
-// MEDIC_MODEL_BEGIN — 🚑 the PFD medic unit (November 7, 2026; owner: "as soon as possible we get a medic unit rendered in the game";
-// release 1 of the firehouse-career plan, notes/ideas-nov6-plan.md). A PROTOTYPE behind a test address only — `?vehicle=medic` —
-// with no rules yet (the medic detail comes later). The body is tools/blender-medic.py's GLB (assets/truck/medic-v1.glb: one
-// material, vertex colours, ~2,600 triangles, built from the owner's reference sheets — art direction only, never shipped). The
-// game paints the lettering itself on ONE canvas sheet and ONE mesh (MEDIC n on the doors, PHILADELPHIA FIRE DEPARTMENT /
-// EMERGENCY MEDICAL SERVICES / MEDIC n on the box, the Star of Life, "n · ★ · EMS" on the roof for the overhead camera, the rear
-// doors, AMBULANCE on the hood, DIAL 911, the plate) — so every house's medic carries its own number — and the flashing lights
-// as two merged meshes that take turns while the siren runs (updateTruckVisual). The sheet is OPAQUE (no see-through pixels),
-// because iPhone Safari's canvas-read noise painted confetti on transparent ones (v20k). medicShow(on) hides the pumper — the
-// GLB and the procedural truck, their lights and decals — and keeps the ground shadow and the headlights; the wheels rebind to
-// the medic's two axles exactly as the pumper's do. A missing / bad GLB leaves the engine on screen (MEDIC.status 'failed').
+// MEDIC_MODEL_BEGIN — 🚑 the PFD medic unit (Nov 7, 2026), `?vehicle=medic` only for now. tools/blender-medic.py -> assets/truck/medic-v1.glb;
+// the game paints the lettering on ONE opaque canvas + ONE lit mesh (opaque: iPhone canvas noise, v20k), two light meshes flash with
+// the siren, medicShow hides the pumper (keeps shadow + headlights) and rebinds the wheels. A bad GLB keeps the engine. CLAUDE.md.
 const MEDIC={ on:(()=>{ try{ return new URLSearchParams(location.search).get('vehicle')==='medic'; }catch(e){ return false; } })(),
   url:'assets/truck/medic-v1.glb', status:'idle', error:null, timeout:12000, root:null, axles:null, n:null, cv:null, tex:null, matA:null, matB:null };
-/* 🚑 WHICH HOUSE RUNS WHICH MEDIC (owner, November 7, 2026: "Use Find a fire station | City of Philadelphia ... to help with medic unit
-   placement"). The City's table (phila.gov/services/safety-emergency-preparedness/find-a-fire-station/, page updated July 7, 2025):
-   engine company -> the medic unit(s) in its house. 56 houses run 63 medics; seven run two (E2: 31 & 51, E7: 2 & 57, E8: 44 & 63, E16:
-   26 & 59, E25: 8 & 58, E47: 40 & 53, E72: 24 & 62); E10, E12, E14, E33 and E64 run none. A medic's number is NOT its engine's (E35's
-   house runs Medic 16). medicNumFor(st): the house's first medic; a house with none borrows the nearest house's. */
+/* 🚑 WHICH HOUSE RUNS WHICH MEDIC: the City's Find a fire station table (phila.gov, updated July 7, 2025), engine -> medic(s); 56 houses,
+   63 medics, E10/E12/E14/E33/E64 none (medicNumFor borrows the nearest). A medic's number is not its engine's: E35's house runs Medic 16. */
 const MEDIC_AT={43:[7],8:[44,63],11:[21],20:[1],1:[35],22:[20],46:[49],62:[6],58:[54],70:[42],38:[47],71:[12],56:[48],52:[32],36:[17],18:[38],9:[10],
   19:[28],37:[61],35:[16],6:[46],7:[2,57],25:[8,58],28:[45],50:[22],55:[39],59:[4],2:[31,51],13:[50],27:[13],29:[15],34:[36],45:[25],51:[18],61:[29],
   63:[56],72:[24,62],73:[33],39:[5],66:[52],3:[27],24:[14],47:[40,53],49:[11],53:[43],60:[37],40:[19],69:[55],68:[3],78:[30],5:[60],16:[26,59],
@@ -4495,6 +4484,33 @@ function medicLoad(n){ if(!MEDIC.on) return; medicPaint(n); if(MEDIC.status!=='i
       const [la,lb]=medicLights(); MEDIC.matA=la.material; MEDIC.matB=lb.material; root.add(medicDecals(),la,lb);
       root.name='medic'; MEDIC.root=root; MEDIC.axles=axles; truckG.add(root); medicShow(true); MEDIC.status='ready';
     }catch(e){ fail(e); } },undefined,e=>{ clearTimeout(timer); fail(e); }); }catch(e){ clearTimeout(timer); fail(e); } }
+/* 🚑 THE MEDIC IN MAP VIEW (owner, Nov 11: "Can you make a top down view one", "Make it bigger"): a nose-up plan of the model painted per
+   number (medicTop: hood AMBULANCE, cab roof, box roof EMS · ★ · n), drawn 1.12x the pumper's length; medicTopLights flashes the lightbars. */
+const MEDIC_TOP={ n:null, cv:null, L:6.17, W:2.63, z0:-3.31 };
+function medicTop(){ const T=MEDIC_TOP, n=MEDIC.n||''; if(T.cv&&T.n===n) return T.cv; T.n=n;
+  const k=80, cw=Math.round(T.W*k), ch=Math.round(T.L*k), cv=T.cv||(T.cv=document.createElement('canvas')); cv.width=cw; cv.height=ch;
+  const c=cv.getContext('2d'), X=x=>cw/2+x*k, Z=z=>(z-T.z0)*k, box=(x0,z0,x1,z1,col)=>{ c.fillStyle=col; c.fillRect(X(x0),Z(z0),(x1-x0)*k,(z1-z0)*k); };
+  c.clearRect(0,0,cw,ch); c.textAlign='center'; c.textBaseline='middle';
+  box(-1.06,-3.31,1.06,-3.14,'#c9cdd2');                                                    // bumper
+  box(-.98,-3.16,.98,-1.94,'#d0342b'); box(-.98,-3.16,-.90,-1.94,'#a8261e'); box(.90,-3.16,.98,-1.94,'#a8261e');   // hood, darker flanks
+  box(-.62,-3.16,.62,-3.08,'#2a2d33');                                                      // grille edge
+  c.save(); c.translate(X(0),Z(-2.62)); medicText(c,'AMBULANCE',0,0,Math.round(.26*k),'#2b5bd6','#fff',1.30*k); c.restore();
+  box(-.92,-1.94,.92,-1.62,'#1b2130'); box(-.80,-1.90,.80,-1.80,'#2c3446');                  // windshield, a glint
+  box(-.98,-1.62,.98,-.92,'#d0342b'); box(-.94,-1.62,.94,-.94,'#f4f4f1');                   // cab roof, white, red edges
+  for(const x of [-.48,-.24,0,.24,.48]) box(x-.05,-1.50,x+.05,-1.42,'#f09a1a');              // amber markers
+  for(const s of [-1,1]){ box(s*.98,-1.68,s*1.22,-1.62,'#2a2d33'); box(s>0?1.20:-1.30,-1.74,s>0?1.30:-1.20,-1.58,'#14161a'); }   // mirrors on arms
+  box(-1.18,-.88,1.18,2.64,'#c9ccd0'); box(-1.14,-.84,1.14,2.60,'#f7f7f4');                 // the box: drip rail, roof
+  box(-1.14,-.84,-1.04,2.60,'#e6e7e8'); box(1.04,-.84,1.14,2.60,'#e6e7e8');                  // roof edges
+  c.save(); c.textAlign='center'; c.textBaseline='middle';
+  medicText(c,'EMS',X(0),Z(.05),Math.round(.62*k),'#f1bd2b','#3a2a08',1.9*k);
+  medicStar(c,X(0),Z(.92),.40*k);
+  medicText(c,String(n||'—'),X(0),Z(1.88),Math.round(.84*k),'#f1bd2b','#3a2a08',1.9*k); c.restore();
+  box(-1.10,2.62,1.10,2.86,'#b3b8be'); for(let i=0;i<6;i++) box(-1.10,2.62+i*.04,1.10,2.64+i*.04,i%2?'#c4c8cd':'#a9aeb4');   // rear step, diamond plate
+  return cv; }
+function medicTopLights(x,tw,th){ const T=MEDIC_TOP, sx=tw/T.W, sz=th/T.L, ph=state.siren?Math.floor(GT*6)%2:-1;
+  const seg=(z0,z1,flip)=>{ for(let i=0;i<6;i++){ const x0=-.85+i*.34-.15, red=(i%2===1)!==flip, lit=ph<0?false:(red?ph===0:ph===1);
+    x.fillStyle=red?(lit?'#ff3030':'#8a1a1a'):(lit?'#fffbe8':'#9a968c'); x.fillRect(x0*sx,(z0-T.z0)*sz-th/2,.30*sx,(z1-z0)*sz); } };
+  seg(-.92,-.78,false); seg(2.58,2.70,true); }
 // MEDIC_MODEL_END
 // GPS route line (blue, follows real streets; visible in BOTH camera views)
 const routeMesh=new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({color:0x2b7cff,transparent:true,opacity:0.92,side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4}));
@@ -9936,13 +9952,8 @@ const PATCHES=[
   {id:'xmas', name:'HOLIDAY SHIFT', line:'Working the holidays.', how:'Ride between December 1 and January 6.'}];
 const PATCH_BY=Object.fromEntries(PATCHES.map(p=>[p.id,p]));
 const PATCH_GEAR_RUNS=500;
-/* 🎖 THE REWARD REVEAL (owner + ChatGPT + Claude, November 7, 2026: "a video of the new thing pops up like congratulations with it
-   zooming in and they click ok or add to locker"). A reward is SAVED the moment it is earned (patchGive); the celebration is QUEUED
-   (REVEAL.q, kept on the phone as pfd_reveal so a closed app shows it next time) and shown only on a safe screen — never while driving:
-   the home screen, the end-of-run card, the game-over card, or parked at quarters with no call. The first reward gets the big reveal;
-   anything else earned with it rides on one "ALSO EARNED" strip (no stack of full cards). VIEW IN LOCKER / CONTINUE. The game draws the
-   art itself (patchSVG; bricks next) — the ChatGPT mockup is the visual target only. RIP SHORTS is a memo pinned up: "shorts are no longer
-   authorized year-round" (the second memo — shorts back, medic unit and OT only — comes with the medic rotation's end, later). */
+/* 🎖 THE REWARD REVEAL (Nov 7, 2026; notes/ideas-nov6-plan.md). Saved at once (patchGive), celebrated later: REVEAL.q (pfd_reveal) waits for
+   a safe screen (revealSafe — never while driving); one big card, the rest on ALSO EARNED; VIEW IN LOCKER / CONTINUE. RIP SHORTS is a memo. */
 const REVEAL={ q:[], on:false, t0:0 };
 try{ const a=JSON.parse(localStorage.getItem('pfd_reveal')||'[]'); if(Array.isArray(a)) REVEAL.q=a.filter(id=>PATCH_BY[id]); }catch(e){}
 function revealSave(){ try{ localStorage.setItem('pfd_reveal',JSON.stringify(REVEAL.q)); }catch(e){} }
@@ -10006,13 +10017,9 @@ function lockerHTML(has,runs){ const H=new Set(Array.isArray(has)?has:Object.key
     return '<div class="lkTile'+(got?' got':'')+'">'+patchSVG(p.id,64)+'<b>'+p.name+'</b><span>'+(got?p.line:'🔒 '+p.how+prog)+'</span></div>'; }).join('')+'</div>'; }
 function lockerRender(){ xferUI(); const el=document.getElementById('lockerBody'); if(!el) return; const n=Object.keys(PROFILE.patches||{}).length;
   el.innerHTML='<div class="lkNote">'+(n?'Your patches. Members see your Locker when they tap your name on the leaderboards.':'Patches are earned by riding — your first comes with your first ride. Members see your Locker when they tap your name on the leaderboards.')+'</div>'+lockerHTML(PROFILE.patches,patchRuns()); }
-/* 📋 PUT IN A TRANSFER (owner, November 6, 2026: city email stopped delivering the codes — "A part of their locker they have a button
-   'put in a transfer' current email go to new email"). A member still signed in on this phone moves the account to another email:
-   PUT /auth/v1/user {email}, Supabase emails a confirmation (with "Secure email change" OFF, to the NEW address only — the old one may be
-   a city inbox that never receives), and the 6-digit code from it (POST /verify, type email_change) or the link in it completes the move.
-   The account's id never changes, so careers, rank, Locker, profile and leaderboard rows all stay. The new address gets the same checks as
-   sign-in (a near-miss domain asks once; a .gov address is refused — that is what is being left). Signed out: a line says to sign in, or
-   to message the admin (SUPABASE-SETUP "Move a member to another email"). The address being moved to is kept (pfd_xfer). */
+/* 📋 PUT IN A TRANSFER (owner, Nov 6, 2026): a signed-in member moves the account to another email — PUT /auth/v1/user, then the code
+   (POST /verify type email_change) or the email's link. Same id, so everything stays. Needs Supabase "Secure email change" OFF and the
+   Change Email Address template with {{ .Token }} (SUPABASE-SETUP Step 17; 17c is the admin's SQL for a member signed out everywhere). */
 const XFER={sugFor:'',checked:0};
 function xferTo(){ try{ return localStorage.getItem('pfd_xfer')||''; }catch(e){ return ''; } }
 function xferToSet(em){ try{ if(em) localStorage.setItem('pfd_xfer',em); else localStorage.removeItem('pfd_xfer'); }catch(e){} }
@@ -10238,9 +10245,7 @@ function mailDist(a,b){ const m=a.length, n=b.length; if(Math.abs(m-n)>2) return
 function mailSuggest(em){ const at=em.lastIndexOf('@'); if(at<1) return null; const d=em.slice(at+1).toLowerCase(); if(MAIL_DOMAINS.includes(d)) return null;
   let best=null, bd=3; for(const m of MAIL_DOMAINS){ const k=mailDist(d,m); if(k<bd){ bd=k; best=m; } } return best?em.slice(0,at+1)+best:null; }
 const AUTHSUG={orig:'',sug:''};
-/* 🏛 CITY / GOVERNMENT EMAIL (owner, November 6: members on their city email still "waiting for verification"; his own phila.gov address
-   got no code while his Gmail got it at once). Government mail systems screen outside automated mail and hold or drop the code, which no
-   sender can fix from our side. Before sending to a .gov address the card says so and offers a personal email (or Send anyway). */
+/* 🏛 CITY / GOVERNMENT EMAIL (owner, Nov 6): city mail holds or drops the code; before sending to a .gov address the card says so. */
 function mailWork(em){ const at=em.lastIndexOf('@'); return at>0&&/(^|\.)gov$/i.test(em.slice(at+1)); }
 /* ⏱ ONE EMAIL A MINUTE (owner, November 5: the sender's Sent folder showed 13 sign-in emails to one member, and the Auth log refused
    codes as "otp_expired"). Each new email REPLACES the last code, so a member who tapped SEND again while the first email was slow then
@@ -11611,13 +11616,14 @@ function mapvDraw(){ const t0=performance.now(), M=MAPV, C=MAPV_C, cv=M.cv||(M.c
     x.font='900 11px -apple-system,Arial'; const w=mvTextW(x,String(r.num))+10; x.fillStyle='#1f3157'; x.fillRect(px-w/2,py-29,w,16); x.fillStyle='#fff'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(r.num),px,py-20.5); }
   // the truck: nose up, the company number on the cab, a heading arrow, the E-number tag
   { const [px,py]=T(truckG.position.x,truckG.position.z), fx=-Math.sin(truck.theta), fz=-Math.cos(truck.theta), rot=Math.atan2(M.b*fx+M.d*fz,M.a*fx+M.cc*fz)+Math.PI/2;
-    const [tw,th]=mapvTruckWH(M), num=engNum(DRIVE.stationId||'');                       // at the map's scale (it was always 34 x 82 px)
+    const med=!!(MEDIC.root&&MEDIC.root.visible), wh=mapvTruckWH(M), th=med?wh[1]*1.12:wh[1], tw=med?th*MEDIC_TOP.W/MEDIC_TOP.L:wh[0], num=engNum(DRIVE.stationId||'');   // at the map's scale; 🚑 the medic a touch LONGER than the pumper (owner, November 11: "Make it bigger") so its roof EMS · ★ · n reads
     x.save(); x.translate(px,py);                                                        // (its glow is drawn under the turn arrow, above)
     x.rotate(rot); x.shadowColor='rgba(0,0,0,.35)'; x.shadowBlur=6; x.shadowOffsetX=2; x.shadowOffsetY=3;
-    if(M.spr) x.drawImage(M.spr,-tw/2,-th/2,tw,th); else mapvTruckVector(x,tw,th); x.shadowColor='transparent';
-    if(num&&tw>=15){ x.fillStyle='#d32f2f'; x.font='900 '+Math.round(tw*0.36)+'px "Arial Black",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(num),0,-th/2+th*0.27+1); }
+    if(med){ x.drawImage(medicTop(),-tw/2,-th/2,tw,th); x.shadowColor='transparent'; medicTopLights(x,tw,th); }
+    else if(M.spr) x.drawImage(M.spr,-tw/2,-th/2,tw,th); else mapvTruckVector(x,tw,th); x.shadowColor='transparent';
+    if(!med&&num&&tw>=15){ x.fillStyle='#d32f2f'; x.font='900 '+Math.round(tw*0.36)+'px "Arial Black",Arial,sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(String(num),0,-th/2+th*0.27+1); }
     x.beginPath(); x.moveTo(0,-th/2-20); x.lineTo(12,-th/2-5); x.lineTo(0,-th/2-10); x.lineTo(-12,-th/2-5); x.closePath(); x.fillStyle='#2f7bff'; x.strokeStyle='#fff'; x.lineWidth=2.5; x.lineJoin='round'; x.stroke(); x.fill(); x.restore();
-    if(num){ x.font='900 15px -apple-system,Arial'; const tag='E'+num, w=mvTextW(x,tag)+18, lx=M.tagL?px-tw/2-10-w:px+tw/2+10; x.fillStyle='#d32f2f'; x.beginPath(); x.roundRect?x.roundRect(lx,py-19,w,26,13):x.rect(lx,py-19,w,26); x.fill();
+    if(num){ x.font='900 15px -apple-system,Arial'; const tag=med?'M'+(MEDIC.n||num):'E'+num, w=mvTextW(x,tag)+18, lx=M.tagL?px-tw/2-10-w:px+tw/2+10; x.fillStyle='#d32f2f'; x.beginPath(); x.roundRect?x.roundRect(lx,py-19,w,26,13):x.rect(lx,py-19,w,26); x.fill();
       x.lineWidth=2.5; x.strokeStyle='#fff'; x.stroke(); x.fillStyle='#fff'; x.textAlign='left'; x.textBaseline='middle'; x.fillText(tag,lx+9,py-5.5); } }
   // north, where the round minimap sits in the 3D view
   { const nx=-M.cc, ny=-M.d; x.save(); x.translate(W-30,198); x.fillStyle='rgba(255,255,255,.92)'; x.beginPath(); x.arc(0,0,15,0,6.2832); x.fill(); x.strokeStyle='rgba(0,0,0,.2)'; x.lineWidth=1; x.stroke();
