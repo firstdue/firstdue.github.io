@@ -6,6 +6,8 @@ data/*.js -diff linguist-generated
 vendor/*.js -diff linguist-generated
 assets/highway/*.glb binary -diff
 assets/truck/*.glb binary -diff
+assets/patches/*.webp binary
+art/*.png binary
 tools/*.blend binary -diff
 assets/highway/GLTFLoader.147.js -diff linguist-vendored
 data/fp/*.bin binary

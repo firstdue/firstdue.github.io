@@ -665,8 +665,8 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
   #xferBox .xfBtn { width:100%; min-height:44px; margin-top:8px; border:none; border-radius:10px; padding:12px; font-weight:900; background:#2b6df6; color:#fff; font-size:14px; } #xferBox .xfBtn.ok { background:#2fbf63; }
   #xferBox .xfBtn:disabled { opacity:.55; }
   .lkTile { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 8px 9px; border-radius:12px; border:1px solid #26364f; background:#182642; color:#e8edf5; text-align:center; }
-  .lkTile svg { filter:grayscale(1) brightness(.55); opacity:.7; }
-  .lkTile.got svg { filter:none; opacity:1; }
+  .lkTile img { filter:grayscale(1) brightness(.55); opacity:.7; }
+  .lkTile.got img { filter:none; opacity:1; } .patchImg { display:block; flex:none; -webkit-user-select:none; user-select:none; }
   .lkTile b { font-size:11.5px; letter-spacing:.04em; line-height:1.15; } .lkTile span { font-size:11px; color:#95a4bd; line-height:1.25; }
   #mbCard { position:absolute; inset:0; z-index:66; display:none; align-items:center; justify-content:center; background:rgba(5,8,14,.72); pointer-events:auto; }   /* 👤 the member card, over the boards */
   #mbCard.show { display:flex; }
@@ -1670,7 +1670,7 @@ addEventListener('appinstalled',function(){window.__installEvt=null;window.__ins
 <script src="data/clearance.js?h=20ecfa67ca"></script>
 <script src="data/narrow.js?h=5e89daff3d"></script>
 <script src="data/roadw.js?h=879ed531cf"></script>
-<script src="firehouse-models.js?v=v23n"></script>
+<script src="firehouse-models.js?v=v23o"></script>
 <script src="data/inst.js?h=1b26918158"></script>
 <script>
 /* The data check (October 30, 2026): each table the game cannot start without, by file, so the message can name what did not arrive.
@@ -1711,7 +1711,7 @@ const CONFIG = {
 };
 if(TOUCH){ CONFIG.render.fogFar=CONFIG.render.fogFarMobile; CONFIG.render.prCap=CONFIG.render.prCapMobile; CONFIG.traffic.count=CONFIG.traffic.countMobile; }
 const PSCALE=TOUCH?CONFIG.particles.scaleMobile:1;
-const BUILD="v23n";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
+const BUILD="v23o";   // shown in the top bar's status pill, leading the FPS reading — so a bug report can say which build it came from (cache check)
 const FLAGS={ roadLock:!location.search.includes('freeroam'), elevation:!location.search.includes('flat'), night:true, fire:true, pedestrians:true, police:false, minimap:true, music:true, streetLabels:!location.search.includes('nosigns') };   // cross-street callouts fade in near intersections (current street excluded — bottom pill shows that); ?nosigns to hide
 // East Falls / Manayunk are Fall-Line terrain: low, flat Schuylkill pool rising to the Roxborough ridge.
 // Elevation model = distance-from-river ramp (river ~13ft → ridge ~370ft), steepest low (the Manayunk Wall).
@@ -9942,37 +9942,38 @@ function calcStreak(log){ let k=0;                                          // c
    to have them as trophies instead of decals?"; "500 runs is fine"; then, instead of a patch on the truck and by the name: "Clicking on a
    members username shows their locker and or their stats. Only that member can see their own truck now anyways"). Patches are the fun
    side, kept apart from the Badges (skill). The earned ones hang in the LOCKER — your own in the Career card, anyone's on their MEMBER
-   CARD (tap a row on the leaderboards). Every patch is our own drawing (an SVG made here) — never a photo, no City or department marks,
-   no Star Wars marks. PROFILE.patches = {id: when first earned}; signed in, they go to the account (SUPABASE-SETUP Step 16, set_patches),
+   CARD (tap a row on the leaderboards). The art is the owner's (Nov 12: embroidered patches made with ChatGPT, full size in art/, shrunk by
+   tools/bake-patches.py to assets/patches/*.webp) — no City or department marks, no movie logos or characters. PROFILE.patches = {id: when first earned}; signed in, they go to the account (SUPABASE-SETUP Step 16, set_patches),
    so a patch follows the player to another phone and shows on their member card. */
 const PATCHES=[
-  {id:'ripshorts', name:'RIP SHORTS', line:'Gone, but not forgotten.', how:'Ride out once.'},
-  {id:'gearbag', name:'FINALLY GOT MY GEAR BAG', line:'Only took years.', how:'500 runs.'},
-  {id:'may4', name:'MAY THE 4TH', line:"International Firefighters' Day.", how:'Ride on May 4.'},
-  {id:'xmas', name:'HOLIDAY SHIFT', line:'Working the holidays.', how:'Ride between December 1 and January 6.'}];
+  {id:'ripshorts', img:'ripshorts-v1', name:'RIP SHORTS', line:'Gone, but not forgotten.', how:'Ride out once.'},
+  {id:'gearbag', img:'gearbag-v1', name:'FINALLY GOT MY GEAR BAG', line:'Only took years.', how:'500 runs.'},
+  {id:'may4', img:'may4-v2', name:'MAY THE 4TH', line:"International Firefighters' Day.", how:'Ride on May 4.'},
+  {id:'xmas', img:'xmas-v1', name:'HOLIDAY SHIFT', line:'Working the holidays.', how:'Ride between December 1 and January 6.'}];
 const PATCH_BY=Object.fromEntries(PATCHES.map(p=>[p.id,p]));
 const PATCH_GEAR_RUNS=500;
 /* 🎖 THE REWARD REVEAL (Nov 7, 2026; notes/ideas-nov6-plan.md). Saved at once (patchGive), celebrated later: REVEAL.q (pfd_reveal) waits for
    a safe screen (revealSafe — never while driving); one big card, the rest on ALSO EARNED; VIEW IN LOCKER / CONTINUE. RIP SHORTS is a memo. */
-const REVEAL={ q:[], on:false, t0:0 };
-try{ const a=JSON.parse(localStorage.getItem('pfd_reveal')||'[]'); if(Array.isArray(a)) REVEAL.q=a.filter(id=>PATCH_BY[id]); }catch(e){}
+const REVEAL={ q:[], on:false, t0:0, pre:{} };   // pre: each queued patch's picture, fetched and held so the card never opens on a blank
+try{ const a=JSON.parse(localStorage.getItem('pfd_reveal')||'[]'); if(Array.isArray(a)) REVEAL.q=a.filter(id=>PATCH_BY[id]); }catch(e){} REVEAL.q.forEach(patchPre);
 function revealSave(){ try{ localStorage.setItem('pfd_reveal',JSON.stringify(REVEAL.q)); }catch(e){} }
-function revealAdd(ids){ for(const id of ids) if(PATCH_BY[id]&&!REVEAL.q.includes(id)) REVEAL.q.push(id); revealSave(); revealPump(); }
+function revealAdd(ids){ for(const id of ids) if(PATCH_BY[id]&&!REVEAL.q.includes(id)){ REVEAL.q.push(id); patchPre(id); } revealSave(); revealPump(); }
 function revealSafe(){ if(!window.__booted) return false; if(REVEAL.t0&&performance.now()-REVEAL.t0<4000) return false;   // a shift is starting (startShift checks patches before it is running)
   const coach=document.getElementById('coachCard'); if(coach&&coach.classList.contains('show')) return true;   // the end-of-run card
   if(!state.running||state.over) return true;                                                                 // home, game over
   return !state.target&&!!DRIVE.parked; }                                   // parked at quarters, no call (a patrol), not the shift's first seconds
-function revealPump(){ if(REVEAL.on||!REVEAL.q.length||!revealSafe()) return; revealShow(REVEAL.q.slice()); REVEAL.q=[]; revealSave(); }
+function patchPre(id){ if(PATCH_BY[id]&&!REVEAL.pre[id]) (REVEAL.pre[id]=new Image()).src=patchSrc(PATCH_BY[id]); }
+function revealPump(){ if(REVEAL.on||!REVEAL.q.length||!revealSafe()||REVEAL.q.some(id=>REVEAL.pre[id]&&!REVEAL.pre[id].complete)) return; revealShow(REVEAL.q.slice()); REVEAL.q=[]; revealSave(); }
 function revealShow(ids){ const p=PATCH_BY[ids[0]], el=document.getElementById('rewardCard'); if(!p||!el) return; REVEAL.on=true;
   const memo=p.id==='ripshorts';
   document.getElementById('rwKick').textContent=memo?'A MEMO CAME DOWN':'NEW PATCH';
   document.getElementById('rwTitle').textContent=p.name;
   document.getElementById('rwArt').classList.toggle('memo',memo); document.getElementById('rwArt').innerHTML=memo
-    ?'<div class="rwMemo"><i class="pin"></i><div class="mH">MEMO</div><div class="mR"><b>TO:</b> All Members</div><div class="mR"><b>RE:</b> Shorts</div><hr><p>Effective immediately, shorts are no longer authorized year-round.</p><div class="mS">— The Front Office</div><div class="rwStamp">'+patchSVG(p.id,86)+'</div></div>'
-    :'<div class="rwP">'+patchSVG(p.id,190)+'</div>';
+    ?'<div class="rwMemo"><i class="pin"></i><div class="mH">MEMO</div><div class="mR"><b>TO:</b> All Members</div><div class="mR"><b>RE:</b> Shorts</div><hr><p>Effective immediately, shorts are no longer authorized year-round.</p><div class="mS">— The Front Office</div><div class="rwStamp">'+patchArt(p.id,86)+'</div></div>'
+    :'<div class="rwP">'+patchArt(p.id,190)+'</div>';
   document.getElementById('rwLine').textContent=memo?'Gone, but not forgotten. The RIP SHORTS patch is in your Locker.':p.line;
   const also=document.getElementById('rwAlso'), rest=ids.slice(1).map(id=>PATCH_BY[id]).filter(Boolean);
-  also.classList.toggle('on',rest.length>0); also.innerHTML=rest.length?'<b>ALSO EARNED</b>'+rest.map(q=>'<span>'+patchSVG(q.id,28)+q.name+'</span>').join(''):'';
+  also.classList.toggle('on',rest.length>0); also.innerHTML=rest.length?'<b>ALSO EARNED</b>'+rest.map(q=>'<span>'+patchArt(q.id,28)+q.name+'</span>').join(''):'';
   const n=Object.keys(PROFILE.patches||{}).filter(k=>PATCH_BY[k]).length;
   document.getElementById('rwFoot').textContent='LOCKER · '+n+' OF '+PATCHES.length+' PATCHES';
   el.classList.add('show'); el.setAttribute('aria-hidden','false');
@@ -9982,20 +9983,9 @@ function revealClose(){ const el=document.getElementById('rewardCard'); el.class
 document.getElementById('rwGo').addEventListener('click',e=>{ e.preventDefault(); revealClose(); });
 document.getElementById('rwLocker').addEventListener('click',e=>{ e.preventDefault(); revealClose(); openLocker(); });
 setInterval(revealPump,700);
-function patchSVG(id,px){ const T=(t,y,fs)=>'<text x="50" y="'+y+'" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="'+fs+'" fill="#fff" letter-spacing="0.5">'+t+'</text>';
-  const ring=(bg,edge)=>'<circle cx="50" cy="50" r="47" fill="'+bg+'" stroke="'+edge+'" stroke-width="5"/><circle cx="50" cy="50" r="41.5" fill="none" stroke="'+edge+'" stroke-width="1.2" stroke-dasharray="2.4 2.2" opacity=".85"/>';
-  let b='';
-  if(id==='ripshorts') b=ring('#2b2f36','#c9ced6')+T('RIP',27,13)+'<ellipse cx="50" cy="35" rx="13" ry="3.6" fill="none" stroke="#ffd23b" stroke-width="2.6"/>'+
-    '<path d="M33 41 H67 L71 69 H55 L50 54 L45 69 H29 Z" fill="#23407a"/><rect x="33" y="41" width="34" height="5" fill="#dfe4ea"/><path d="M30 63 H46 M54 63 H70" stroke="#e7e36a" stroke-width="2.4"/>'+T('SHORTS',86,11);
-  else if(id==='gearbag') b=ring('#1e3a5f','#ffd23b')+T('FINALLY',29,11)+'<path d="M39 47 Q50 33 61 47" fill="none" stroke="#151515" stroke-width="4.2" stroke-linecap="round"/>'+
-    '<rect x="23" y="45" width="54" height="25" rx="10" fill="#262626"/><rect x="23" y="54.5" width="54" height="5" fill="#d8e05a"/><circle cx="28" cy="57.5" r="3.2" fill="#3a3a3a"/><circle cx="72" cy="57.5" r="3.2" fill="#3a3a3a"/>'+T('GEAR BAG',86,10.5);
-  else if(id==='may4') b=ring('#0f1630','#e5484d')+T('MAY THE 4TH',24,9.6)+'<rect x="46.5" y="28" width="7" height="30" rx="3.5" fill="#5cc8ff"/><rect x="48.8" y="29" width="2.4" height="28" rx="1.2" fill="#effcff"/>'+
-    '<rect x="43" y="57" width="14" height="11" rx="2" fill="#9aa3ad"/><rect x="45" y="68" width="10" height="5" fill="#6d7680"/><rect x="38.5" y="59" width="4.5" height="9" rx="1.5" fill="#c8231b"/>'+
-    '<path d="M36 79 L50 74 L50 84 Z" fill="#d3263a"/><path d="M64 79 L50 74 L50 84 Z" fill="#2f6fd0"/>';
-  else if(id==='xmas') b=ring('#14532d','#e5484d')+T('HOLIDAY',28,11)+'<circle cx="50" cy="52" r="15" fill="none" stroke="#2f7d3f" stroke-width="8"/><circle cx="50" cy="52" r="15" fill="none" stroke="#1d5c2e" stroke-width="3" stroke-dasharray="3 4"/>'+
-    [[38,44],[61,45],[64,58],[39,61],[50,38]].map(p=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="2.3" fill="#e0182e"/>').join('')+'<path d="M50 66 L41 62 L41 71 Z M50 66 L59 62 L59 71 Z" fill="#d0182a"/>'+T('SHIFT',88,11);
-  else return '';
-  return '<svg viewBox="0 0 100 100" width="'+(px||64)+'" height="'+(px||64)+'" aria-hidden="true">'+b+'</svg>'; }
+function patchSrc(p){ return 'assets/patches/'+p.img+'.webp'; }
+function patchArt(id,px){ const p=PATCH_BY[id]; if(!p) return ''; px=px||64;
+  return '<img class="patchImg" src="'+patchSrc(p)+'" width="'+px+'" height="'+px+'" alt="" decoding="async" draggable="false">'; }
 const XMAS_REAL=()=>{ const d=new Date(), m=d.getMonth(), day=d.getDate(); return (m===11&&day>=1)||(m===0&&day<=6); };   // earning reads the real date, never the ?xmas test switch
 function patchRuns(){ let n=0; for(const id in PROFILE.engines) n+=PROFILE.engines[id].runs|0; return n; }
 function patchGive(id){ PROFILE.patches=PROFILE.patches||{}; if(PROFILE.patches[id]||!PATCH_BY[id]) return false; PROFILE.patches[id]=Date.now(); return true; }
@@ -10014,7 +10004,7 @@ function patchMerge(row){ if(!row) return; let ch=false; PROFILE.patches=PROFILE
 // a Locker: the four patches, the earned ones in colour (has: a list or an object of ids); runs (your own) shows the gear bag's count
 function lockerHTML(has,runs){ const H=new Set(Array.isArray(has)?has:Object.keys(has||{}));
   return '<div class="lkGrid">'+PATCHES.map(p=>{ const got=H.has(p.id), prog=p.id==='gearbag'&&!got&&runs!=null?' ('+Math.min(runs,PATCH_GEAR_RUNS)+'/'+PATCH_GEAR_RUNS+')':'';
-    return '<div class="lkTile'+(got?' got':'')+'">'+patchSVG(p.id,64)+'<b>'+p.name+'</b><span>'+(got?p.line:'🔒 '+p.how+prog)+'</span></div>'; }).join('')+'</div>'; }
+    return '<div class="lkTile'+(got?' got':'')+'">'+patchArt(p.id,64)+'<b>'+p.name+'</b><span>'+(got?p.line:'🔒 '+p.how+prog)+'</span></div>'; }).join('')+'</div>'; }
 function lockerRender(){ xferUI(); const el=document.getElementById('lockerBody'); if(!el) return; const n=Object.keys(PROFILE.patches||{}).length;
   el.innerHTML='<div class="lkNote">'+(n?'Your patches. Members see your Locker when they tap your name on the leaderboards.':'Patches are earned by riding — your first comes with your first ride. Members see your Locker when they tap your name on the leaderboards.')+'</div>'+lockerHTML(PROFILE.patches,patchRuns()); }
 /* 📋 PUT IN A TRANSFER (owner, Nov 6, 2026): a signed-in member moves the account to another email — PUT /auth/v1/user, then the code
